@@ -26,11 +26,11 @@ and the stop (`:188-189`) of each committable unit. PyPSA refuses a modular
 committable unit under the keyword (`optimize.py:790-791`). The other rows of
 the integer run have their scenarios, periods and `active` conditions.
 
-Four steps of the PyPSA ladder ([rungs](../reference/glossary.md#rung)),
-numbered 12, 44, 47 and 67, run under the keyword. The four rungs on this page
-start from a shared two-bus network (the spine), in
+Five steps of the PyPSA ladder ([rungs](../reference/glossary.md#rung)),
+numbered 12, 44, 47, 67 and 74, run under the keyword. Four of them start from
+a shared two-bus network (the spine), in
 [`spine.py`](https://github.com/energy-models/math-spec/blob/main/examples/references/pypsa/spine.py),
-with the additions of the rung script.
+with the additions of the rung script. Rung 74 builds a network of its own.
 
 ## Rung 12 — linearised unit commitment
 
@@ -251,7 +251,7 @@ the optimum, and PyPSA solves the rung and its variants to these objectives:
 | network | objective |
 | --- | --- |
 | the rung as built | `12862.5` |
-| the missing limits as `0` in the two partly rows | `14085.64` |
+| the missing limits as `0` in the two partly rows | `36126.875` |
 | the ramp limit at `0.25` in every snapshot | `14554.75` |
 | without the `p_init` | `8437.5` |
 | without the fixed unit's ramp limits | `12800.0` |
@@ -455,6 +455,87 @@ def build():
 
 </details>
 <!-- reference:rung_67_linearized_link_process:end -->
+
+## Rung 74 — a relaxed unit that opens in a later period
+
+Under the keyword and `multi_investment_periods`, a committable unit built in
+the later period has no output or status before its first snapshot. PyPSA
+fills both with zero there (`constraints.py:665`), so the four tightening rows
+open on a unit that was off. The patch reads `Generator_previous_p`, which is
+zero at the first snapshot a unit is active in past the first of the horizon.
+
+The rung's unit has equal start and stop costs, so PyPSA tightens it. It opens
+in 2030 and its start-up ramp of `30` is tight at the period's first snapshot.
+PyPSA solves to `24825.2778`. With the unit built in 2020, PyPSA solves to
+`3462.5`. With a start that costs more than a stop, PyPSA does not tighten
+the unit, and it solves to `23226.3333` (#PRNUM).
+
+| PyPSA | status | note |
+| --- | --- | --- |
+| [`Generator-com-p-before`](#generator-com-p-before), [`-partly-start-up`](#generator-com-partly-start-up), [`-partly-shut-down`](#generator-com-partly-shut-down) at a unit's first snapshot past the horizon's first | done | `Generator_previous_p` and `Generator_previous_status` are zero there |
+
+<!-- reference:rung_74_linearized_late_opening:begin -->
+> ✔ `pypsa 1.4.0.post1.dev40+gd21e028d3` solves this rung's network at objective `24825.277777777777`, 74 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_74_linearized_late_opening.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 74: a relaxed committable unit built in the later period — its tightening rows open on a zero output and a zero status at its first snapshot."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+import pandas as pd
+
+PATCH = 'variants/pypsa_linearized_uc.yaml'
+OPTIMIZE = {'linearized_unit_commitment': True, 'multi_investment_periods': True}
+
+
+def build():
+    """A whole network, not the spine: eight snapshots over two periods, a cheap tightened unit built in 2030, and a dear peaker."""
+    import pypsa
+
+    n = pypsa.Network()
+    n.snapshots = pd.MultiIndex.from_tuples(
+        [(2020, datetime(2020, 1, 1, t)) for t in range(4)] + [(2030, datetime(2030, 1, 1, t)) for t in range(4)]
+    )
+    n.investment_periods = [2020, 2030]
+    n.investment_period_weightings['objective'] = [1.0, 0.5]
+    n.investment_period_weightings['years'] = [10.0, 10.0]
+    n.snapshot_weightings['objective'] = [2.0, 1.5, 2.5, 2.0, 2.0, 1.5, 2.5, 2.0]
+    n.add('Bus', 'hub')
+    n.add('Generator', 'peak74', bus='hub', p_nom=300, marginal_cost=50)
+    n.add(
+        'Generator',
+        'late74',
+        bus='hub',
+        committable=True,
+        p_nom=60,
+        p_min_pu=0.2,
+        marginal_cost=2,
+        start_up_cost=10,
+        shut_down_cost=10,
+        ramp_limit_up=0.25,
+        ramp_limit_down=0.25,
+        ramp_limit_start_up=0.5,
+        ramp_limit_shut_down=0.5,
+        build_year=2030,
+        lifetime=30,
+    )
+    n.add('Load', 'hub_load74', bus='hub', p_set=[40, 60, 70, 50, 50, 60, 55, 20])
+    return n
+```
+
+</details>
+<!-- reference:rung_74_linearized_late_opening:end -->
 
 ## The file
 

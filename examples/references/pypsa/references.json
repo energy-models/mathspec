@@ -2408,5 +2408,129 @@
       "Link-fix-p-lower": 8,
       "Link-fix-p-upper": 8
     }
+  },
+  "rung_71_running_unless_committable": {
+    "columns": {
+      "Generator-p": 16,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 4836.111111111111,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev40+gd21e028d3",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-com-p-lower": 4,
+      "Generator-com-p-upper": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p-ramp_limit_down": 0,
+      "Generator-p-ramp_limit_up": 4,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_72_modular_down_time": {
+    "columns": {
+      "Generator-n_mod": 1,
+      "Generator-p": 20,
+      "Generator-p_nom": 1,
+      "Generator-shut_down": 8,
+      "Generator-start_up": 8,
+      "Generator-status": 8,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 17190.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev40+gd21e028d3",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-com-down-time": 8,
+      "Generator-com-mod-p-lower": 8,
+      "Generator-com-mod-p-upper": 8,
+      "Generator-com-transition-shut-down": 8,
+      "Generator-com-transition-start-up": 8,
+      "Generator-ext-p_nom-lower": 1,
+      "Generator-ext-p_nom-upper": 1,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p_nom_modularity": 1,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-shut_down-p_nom-variable-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-start_up-p_nom-variable-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Generator-status-p_nom-variable-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_73_fixed_modular_ramp": {
+    "columns": {
+      "Generator-p": 16,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 12300.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev40+gd21e028d3",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-com-mod-p-lower": 4,
+      "Generator-com-mod-p-upper": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p-ramp_limit_down": 4,
+      "Generator-p-ramp_limit_up": 4,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_74_linearized_late_opening": {
+    "columns": {
+      "Generator-p": 12,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4
+    },
+    "global_constraints": {},
+    "objective": 24825.277777777777,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev40+gd21e028d3",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-com-p-before": 4,
+      "Generator-com-p-current": 4,
+      "Generator-com-p-lower": 4,
+      "Generator-com-p-upper": 4,
+      "Generator-com-partly-shut-down": 4,
+      "Generator-com-partly-start-up": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Generator-p-ramp_limit_down": 3,
+      "Generator-p-ramp_limit_up": 3,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4
+    }
   }
 }

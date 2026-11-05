@@ -650,7 +650,7 @@ def build():
 | [`{c}-com-transition-start-up/shut-down`](#generator-com-transition-start-up)                   | done   | the carried-in state stated with `cases:`, no entry for the first snapshot, and zero carried in for a unit built in a later period (rung 64)                                  |
 | [`{c}-com-up-time`, `-down-time`](#generator-com-up-time)                                       | done   | [`sum_back`](../reference/language/operators.md#sum_back)`(window=min_up_time)` from the first snapshot. The up or down time brought in counts as a start or a stop before it, from data prep (rung 24). A modular unit's down time counts modules |
 | [`stand_by_cost`, `start_up_cost`, `shut_down_cost`](#objective)                                | done   | the period weight and no snapshot weight on a start or a stop (rung 48), and a cost that may change per snapshot (rung 62)                                                                |
-| [`{c}-com-p-before/-current/-partly-*`](pypsa_linearized_uc.md)                                 | done   | under `linearized_unit_commitment`, in a file laid over this one ([a patch](../reference/glossary.md#patch)): rungs 12, 44 and 47 for Generator, rung 67 for Link and Process |
+| [`{c}-com-p-before/-current/-partly-*`](pypsa_linearized_uc.md)                                 | done   | under `linearized_unit_commitment`, in a file laid over this one ([a patch](../reference/glossary.md#patch)): rungs 12, 44, 47 and 74 for Generator, rung 67 for Link and Process |
 
 <!-- reference:rung_07_commitment:begin -->
 > ✔ `pypsa 1.4.0.post1.dev40+gd21e028d3` solves this rung's network at objective `7775.0`, 118 rows.
@@ -3887,8 +3887,8 @@ is `{c}_status_initial * {c}_p_init`. The first-snapshot `where:` is
 
 PyPSA warns where a committable generator came in off and has a `p_init`, and
 ignores the value (`consistency.py:666-677`). The product with
-`{c}_status_initial` is zero there too. A unit that is not committable and came
-in off is refused: see [Refusals](#refusals).
+`{c}_status_initial` is zero there too. A unit that is not committable comes in
+running, whatever its `up_time_before` (rung 71).
 
 PyPSA sets the first-snapshot condition without the `active` condition. A unit
 that is not active at the first snapshot still gets a row there, with no
@@ -5525,6 +5525,215 @@ def build():
 
 </details>
 <!-- reference:rung_70_risk_preference_zero:end -->
+
+### Rung 71 — a unit that is not committable comes in running
+
+This rung runs `n.optimize()` with a unit that is not committable and has
+`up_time_before = 0`, a `p_init` and a ramp limit, beside a committable unit.
+PyPSA reads the status brought in as one for every unit that is not
+committable (`constraints.py:286`). The unit ramps from its `p_init` into the
+first snapshot, and its ramp row gets no start-up term
+(`constraints.py:1067-1073`). Before PyPSA/PyPSA#1973, the same unit came in
+off, and its first-snapshot ramp depended on whether another unit was
+committable (PyPSA/PyPSA#1943).
+
+The file states `Generator_status_initial` as one for a unit that is not
+committable, so `Generator_previous_p` opens on its `p_init`.
+
+The cheap unit ramps from `10` by `10` a snapshot, and its ramp row is tight at
+the optimum. PyPSA solves to `4836.1111`. With `up_time_before = 1`, or without
+the committable unit, it solves to the same objective. Without the `p_init`,
+it solves to `4500.0` (#PRNUM).
+
+| PyPSA                                                                                                           | status | note                                                         |
+| --------------------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------ |
+| [`Generator-p-ramp_limit_up`](#generator-p-ramp_limit_up) at the first snapshot, for a unit that is not committable | done   | `Generator_status_initial` is one, whatever `up_time_before` |
+
+<!-- reference:rung_71_running_unless_committable:begin -->
+> ✔ `pypsa 1.4.0.post1.dev40+gd21e028d3` solves this rung's network at objective `4836.111111111111`, 72 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_71_running_unless_committable.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 71: a unit that is not committable comes in running — its first-snapshot ramp starts from its `p_init`, whatever its `up_time_before` and whether another unit is committable."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus a cheap ramp-limited unit that is not committable, with `up_time_before=0` and a `p_init`, beside a committable one."""
+    n = spine.build()
+    n.add(
+        'Generator',
+        'flex71',
+        bus='south',
+        p_nom=40,
+        marginal_cost=5,
+        ramp_limit_up=0.25,
+        ramp_limit_start_up=0.5,
+        up_time_before=0,
+        p_init=10,
+    )
+    n.add('Generator', 'unit71', bus='south', committable=True, p_nom=20, p_min_pu=0.5, marginal_cost=20)
+    return n
+```
+
+</details>
+<!-- reference:rung_71_running_unless_committable:end -->
+
+### Rung 72 — modular down time
+
+This rung runs `n.optimize()` with a fixed and an extendable committable
+modular generator, each with a minimum down time. The status of a modular unit
+counts the modules that are on. PyPSA bounds its down-time row by the module
+count: `p_nom / p_nom_mod` for a fixed build, and `n_mod` for an extendable one
+(`constraints.py:605-632`). Before PyPSA/PyPSA#2051, the bound was one, so a
+modular unit with a minimum down time ran one module at most.
+
+The file states the bound as `Generator_modules`, which is `Generator_n_mod`
+for an extendable modular build and `Generator_modules_installed` otherwise.
+
+Both units come in off, and the load dips below what one module can run at its
+minimum part load. Modules that stop at the dip stay off for two snapshots.
+PyPSA solves to `17190.0`. Without the minimum down times, it solves to
+`9390.0`. At `51986084`, before PyPSA/PyPSA#2051, it solved to `43495.0`
+(#PRNUM).
+
+| PyPSA                                                                 | status | note                                       |
+| --------------------------------------------------------------------- | ------ | ------------------------------------------ |
+| [`Generator-com-down-time`](#generator-com-down-time), modular        | done   | bound by `Generator_modules`, not by one   |
+
+<!-- reference:rung_72_modular_down_time:begin -->
+> ✔ `pypsa 1.4.0.post1.dev40+gd21e028d3` solves this rung's network at objective `17190.0`, 111 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_72_modular_down_time.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 72: modular down time — a committable modular unit that stops some modules keeps the others running, because its down-time row is bound by its module count, not by one."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus a dip bus served by a fixed and an extendable committable modular unit, each with a minimum down time, and a dear backup."""
+    n = spine.build()
+    n.add('Bus', 'dip')
+    common = {
+        'committable': True,
+        'p_nom_mod': 10,
+        'p_min_pu': 0.8,
+        'min_down_time': 2,
+        'up_time_before': 0,
+        'start_up_cost': 5,
+    }
+    n.add('Generator', 'fixed72', bus='dip', p_nom=40, marginal_cost=2, **common)
+    n.add(
+        'Generator',
+        'ext72',
+        bus='dip',
+        p_nom_extendable=True,
+        p_nom_max=30,
+        capital_cost=1,
+        marginal_cost=3,
+        **common,
+    )
+    n.add('Generator', 'dip_backup', bus='dip', p_nom=200, marginal_cost=100)
+    n.add('Load', 'dip_load', bus='dip', p_set=[60, 15, 60, 70])
+    return n
+```
+
+</details>
+<!-- reference:rung_72_modular_down_time:end -->
+
+### Rung 73 — the ramp of a fixed modular unit
+
+This rung runs `n.optimize()` with a fixed committable modular generator that
+has ramp limits and came in running at a `p_init`. Each module that is on
+ramps by its own share, `ramp_limit_up * p_nom_mod`
+(`constraints.py:1057-1060`). At the first snapshot, PyPSA counts every
+installed module as on, since the status brought in is on or off
+(`constraints.py:1078-1083`). Before PyPSA/PyPSA#2055, the share was
+`ramp_limit_up * p_nom`, so a fixed modular unit ramped as many times faster
+as it had modules (PyPSA/PyPSA#1985).
+
+The file states the share against `Generator_p_nom_committed`, one module for
+any modular build. `Generator_ramp_previous_status` counts every installed
+module at the first snapshot.
+
+The unit has three modules of `20` and ramps by `10` per module that is on.
+Its first-snapshot ramp from `15` to `45` and the ramps that follow are tight
+at the optimum. PyPSA solves to `12300.0`. Without the `p_init`, it solves to
+`11320.0`, and without the ramp limits, to `8135.0`. At `51986084`, before
+PyPSA/PyPSA#2055, it solved to `8135.0` (#PRNUM).
+
+| PyPSA                                                                                        | status | note                                                                                 |
+| -------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| [`Generator-p-ramp_limit_up`](#generator-p-ramp_limit_up), `-down`, fixed modular committable | done   | per module, and every installed module on at the first snapshot after a running start |
+
+<!-- reference:rung_73_fixed_modular_ramp:begin -->
+> ✔ `pypsa 1.4.0.post1.dev40+gd21e028d3` solves this rung's network at objective `12300.0`, 80 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_73_fixed_modular_ramp.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 73: the ramp of a fixed modular committable unit — each running module ramps by its own share, and a unit that came in running counts all its modules on at the first snapshot."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus a step bus served by a fixed committable modular unit that came in running at a `p_init`, with a dear backup."""
+    n = spine.build()
+    n.add('Bus', 'step')
+    n.add(
+        'Generator',
+        'modramp73',
+        bus='step',
+        committable=True,
+        p_nom=60,
+        p_nom_mod=20,
+        p_min_pu=0.2,
+        marginal_cost=2,
+        ramp_limit_up=0.5,
+        ramp_limit_down=0.5,
+        ramp_limit_start_up=0.5,
+        ramp_limit_shut_down=0.5,
+        p_init=15,
+    )
+    n.add('Generator', 'step_backup', bus='step', p_nom=200, marginal_cost=100)
+    n.add('Load', 'step_load', bus='step', p_set=[60, 20, 55, 30])
+    return n
+```
+
+</details>
+<!-- reference:rung_73_fixed_modular_ramp:end -->
 
 ## Refusals
 
