@@ -23,13 +23,14 @@ parameters:
     description: >-
       which formula the row takes: `primary_energy`, `operational_limit`,
       `transmission_volume_expansion_limit`,
-      `transmission_expansion_cost_limit` or `tech_capacity_expansion_limit`
+      `transmission_expansion_cost_limit`, `tech_capacity_expansion_limit` or
+      `flow_based`
     dims: [global_constraint]
     dtype: str
   GlobalConstraint_sense:
     description: >-
       the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
-      row's sense per scenario (`global_constraints.py:551`, `:749`, `:829`)
+      row's sense per scenario (`global_constraints.py:553`, `:751`, `:831`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
@@ -38,7 +39,7 @@ parameters:
       is folded in here in data prep. That is an initial charge, times its
       period's years for each counted period where the storage reopens per
       period, or a non-extendable build. PyPSA reads it per scenario
-      (`global_constraints.py:552`, `:750`, `:829`)
+      (`global_constraints.py:554`, `:752`, `:831`)
     dims: [scenario, global_constraint]
 
 constraints:

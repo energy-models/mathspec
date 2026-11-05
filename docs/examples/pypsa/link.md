@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Links
 
-This file states PyPSA's `Link`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `Link_output_arrival` is what a link delivers at an output port: its flow, delayed by the port's `delay` within its investment period.
+This file states PyPSA's `Link`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions` and `Bus_injection`. `Link_output_arrival` is what a link delivers at an output port: its flow, delayed by the port's `delay` within its investment period.
 
 <!-- gallery:begin -->
 ```yaml
@@ -22,6 +22,7 @@ given:
     Link_maintenance: { dims: [scenario, snapshot, link] }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
   expressions:
+    energy_limit_weight: { dims: [snapshot] }
     transmission_volume_expansion: { dims: [scenario, global_constraint] }
     transmission_expansion_cost: { dims: [scenario, global_constraint] }
     tech_capacity_expansion: { dims: [global_constraint] }
@@ -99,7 +100,7 @@ parameters:
       share of the flow that arrives at an output port, PyPSA's `efficiency`,
       `efficiency2`, … read long: negative where that port consumes rather
       than delivers. Read at the snapshot the flow arrives, so a delayed port
-      delivers at its arrival snapshot's efficiency (`constraints.py:1491`)
+      delivers at its arrival snapshot's efficiency (`constraints.py:1505`)
     dims: [scenario, snapshot, link_output]
   Link_output_delay:
     description: >-
@@ -108,7 +109,7 @@ parameters:
       `snapshot_weightings.generators` value and round it up. It is zero for a
       port that delivers at once. A port has the same delay in every scenario,
       because PyPSA refuses a delay that differs by scenario
-      (`constants.py:52`)
+      (`constants.py:55`)
     dims: [link_output]
     dtype: int
   Link_output_cyclic_delay:
@@ -152,7 +153,7 @@ parameters:
       whether a link is one of PyPSA's `active_assets`, by its `active` flag
       alone, without build year and lifetime. A unit that is active in no
       snapshot of the horizon still counts. PyPSA refuses one that differs by
-      scenario (`constants.py:51`)
+      scenario (`constants.py:54`)
     dims: [link]
     dtype: bool
   Link_capital_weight:
@@ -167,6 +168,12 @@ parameters:
     description: a given flow schedule. A link without one has no row here
     dims: [scenario, snapshot, link]
     missing: absent
+  Link_e_sum_min:
+    description: least energy of its flow at `bus0`, the withdrawal there, over the horizon. It is minus infinity where no floor is meant
+    dims: [scenario, link]
+  Link_e_sum_max:
+    description: most energy of its flow at `bus0`, the withdrawal there, over the horizon. It is infinity where no cap is meant
+    dims: [scenario, link]
   Link_p_nom_min:
     description: least nominal power an extendable link may be built at
     dims: [scenario, link]
@@ -188,7 +195,7 @@ parameters:
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:847-848`), data prep. A link outside it, or one
+      (`global_constraints.py:849-850`), data prep. A link outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, link]
     missing: absent
@@ -200,7 +207,7 @@ parameters:
       periods the link is active in. A link outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Link_capital_cost` without `fom_cost`
-      (`components.py:1153-1171`, `global_constraints.py:870-879`)
+      (`components.py:1153-1171`, `global_constraints.py:872-881`)
     dims: [scenario, global_constraint, link]
     missing: absent
   Link_tech_capacity_weight:
@@ -244,7 +251,7 @@ expressions:
     description: >-
       how many modules a committed link's status counts: the chosen number
       where the build is extendable and modular, and the modules installed
-      otherwise (`constraints.py:605-610`)
+      otherwise (`constraints.py:619-624`)
     dims: [scenario, link]
     cases:
       chosen: { when: Link_p_nom_extendable AND Link_p_nom_mod > 0, expression: Link_n_mod }
@@ -253,7 +260,7 @@ expressions:
     description: >-
       the build a committed link's ramp rows are taken against: one module
       where the build is modular, since its status counts modules, and the
-      given build otherwise (`constraints.py:1057-1060`)
+      given build otherwise (`constraints.py:1071-1074`)
     dims: [scenario, link]
     cases:
       modular_build: { when: "Link_p_nom_mod > 0", expression: Link_p_nom_mod }
@@ -318,6 +325,16 @@ constraints:
     dims: [scenario, snapshot, link]
     where: not Link_p_nom_extendable AND not Link_committable AND Link_active
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
+  Link_e_sum_min:
+    description: "`Link-e_sum_min` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    dims: [scenario, link]
+    where: Link_e_sum_min
+    expression: sum(Link_p * energy_limit_weight, over=snapshot) >= Link_e_sum_min
+  Link_e_sum_max:
+    description: "`Link-e_sum_max` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    dims: [scenario, link]
+    where: Link_e_sum_max
+    expression: sum(Link_p * energy_limit_weight, over=snapshot) <= Link_e_sum_max
   Link_ext_p_lower:
     description: "`Link-ext-p-lower` — an extendable link carries at least its minimum of the chosen build, negative for the other way"
     dims: [scenario, snapshot, link]
@@ -371,7 +388,7 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:477-484`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set
 ```
 
@@ -388,6 +405,7 @@ assumptions:
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
 | $`\mu^{f}`$ | `Link_maintenance` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
+| $`\mathit{w}^{E}`$ | `energy_limit_weight` over $`\mathcal{T}`$, an expression another file defines |
 | $`\mathit{transmission\_volume\_expansion}`$ | `transmission_volume_expansion` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Link_transmission_volume_expansion` to |
 | $`\mathit{transmission\_expansion\_cost}`$ | `transmission_expansion_cost` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Link_transmission_expansion_cost` to |
 | $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Link_tech_capacity_expansion` to |
@@ -417,8 +435,8 @@ assumptions:
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$ — whether the nominal power is a decision |
 | $`\underline{\mathrm{f}}`$ | `Link_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — least flow, per unit of nominal power: negative for a link that carries both ways |
 | $`\overline{\mathrm{f}}`$ | `Link_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — most flow, per unit of nominal power |
-| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long: negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1491`) |
-| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow (PyPSA's `delay`, `delay2`, … read long). In data prep you divide it by the `snapshot_weightings.generators` value and round it up. It is zero for a port that delivers at once. A port has the same delay in every scenario, because PyPSA refuses a delay that differs by scenario (`constants.py:52`) |
+| $`\eta`$ | `Link_efficiency` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long: negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1505`) |
+| $`\mathrm{d}^{f}`$ | `Link_output_delay` over $`\mathcal{O}`$ — snapshots a port's delivery lags its link's flow (PyPSA's `delay`, `delay2`, … read long). In data prep you divide it by the `snapshot_weightings.generators` value and round it up. It is zero for a port that delivers at once. A port has the same delay in every scenario, because PyPSA refuses a delay that differs by scenario (`constants.py:55`) |
 | $`\mathrm{cyc}^{f}`$ | `Link_output_cyclic_delay` over $`\mathcal{O}`$ — whether a delayed port's flow wraps from the end of its investment period (PyPSA's `cyclic_delay`, `cyclic_delay2`, …). Where it does not, the flow still in transit at each period's first snapshots is lost. The flag is the same in every scenario, as the delay is |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of the square of one unit of flow |
@@ -426,16 +444,18 @@ assumptions:
 | $`\mathrm{N}^{f,\mathrm{fix}}`$ | `Link_modules_installed` over $`\Xi \times \mathcal{L}`$ — how many whole modules a committable build has in place, data prep. It is `Link_p_nom / Link_p_nom_mod` where a fixed build is modular, and one where it is not. PyPSA refuses a fixed modular build whose nominal power is not a whole number of modules |
 | $`\mathrm{nonneg}^{f}`$ | `Link_p_min_pu_nonneg` over $`\mathcal{L}`$ — true where none of the link's own minimums-per-unit is negative. It is PyPSA's per-unit `(p_min_pu >= 0).all()` over every snapshot and scenario, data prep |
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{T} \times \mathcal{L}`$ — whether a link is active in a snapshot's period. It is PyPSA's `active`, data prep |
-| $`\mathrm{act}^{f}`$ | `Link_active_asset` over $`\mathcal{L}`$ — whether a link is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{act}^{f}`$ | `Link_active_asset` over $`\mathcal{L}`$ — whether a link is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{W}^{f}`$ | `Link_capital_weight` over $`\mathcal{L}`$ — the sum of period weights a link is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{new}^{f}`$ | `Link_first_active` over $`\mathcal{Y} \times \mathcal{L}`$ — one in the first period a link is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{f}^{\mathrm{set}}`$ | `Link_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$, `absent` where the data has no row — a given flow schedule. A link without one has no row here |
+| $`\underline{\mathrm{E}}^{f}`$ | `Link_e_sum_min` over $`\Xi \times \mathcal{L}`$ — least energy of its flow at `bus0`, the withdrawal there, over the horizon. It is minus infinity where no floor is meant |
+| $`\overline{\mathrm{E}}^{f}`$ | `Link_e_sum_max` over $`\Xi \times \mathcal{L}`$ — most energy of its flow at `bus0`, the withdrawal there, over the horizon. It is infinity where no cap is meant |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\Xi \times \mathcal{L}`$ — least nominal power an extendable link may be built at |
 | $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\Xi \times \mathcal{L}`$ — most nominal power an extendable link may be built at |
 | $`\mathrm{c}^{\mathrm{cap},f}`$ | `Link_capital_cost` over $`\Xi \times \mathcal{L}`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
 | $`\mathrm{f}^{\mathrm{nom,set}}`$ | `Link_p_nom_set` over $`\mathcal{L}`$, `absent` where the data has no row — a given nominal power for an extendable link. One without a value has no row here |
-| $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:847-848`), data prep. A link outside it, or one that is not active in the row's `investment_period`, has no row |
-| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — the link's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the link is active in. A link outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1153-1171`, `global_constraints.py:870-879`) |
+| $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:849-850`), data prep. A link outside it, or one that is not active in the row's `investment_period`, has no row |
+| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\Xi \times \mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — the link's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the link is active in. A link outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1153-1171`, `global_constraints.py:872-881`) |
 | $`\mathrm{m}^{f}`$ | `Link_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — one where the link is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
@@ -457,8 +477,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\Xi \times \mathcal{L}`$ — the build a link's limits are taken against: the chosen one where it is extendable, the given one otherwise |
-| $`\mathrm{M}^{f}`$ | `Link_modules` over $`\Xi \times \mathcal{L}`$ — how many modules a committed link's status counts: the chosen number where the build is extendable and modular, and the modules installed otherwise (`constraints.py:605-610`) |
-| $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\Xi \times \mathcal{L}`$ — the build a committed link's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1057-1060`) |
+| $`\mathrm{M}^{f}`$ | `Link_modules` over $`\Xi \times \mathcal{L}`$ — how many modules a committed link's status counts: the chosen number where the build is extendable and modular, and the modules installed otherwise (`constraints.py:619-624`) |
+| $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\Xi \times \mathcal{L}`$ — the build a committed link's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1071-1074`) |
 | $`\overrightarrow{f}`$ | `Link_output_arrival` over $`\Xi \times \mathcal{T} \times \mathcal{O}`$ — what a link delivers to an output port at a snapshot. It is its flow delayed by the port's `delay` within its investment period. It is multiplied by the port's efficiency at the snapshot the flow arrives. Where the port is `cyclic_delay`, the delayed flow wraps from the period's end. Where it is not, the flow still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) delivers its flow unshifted, cyclic or not |
 | $`\mathit{Link\_transmission\_volume\_expansion}`$ | `Link_transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Link\_transmission\_expansion\_cost}`$ | `Link_transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$ |
@@ -586,6 +606,18 @@ f_{\xi,t,l} \ge \underline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}
 f_{\xi,t,l} \le \overline{\mathrm{f}}_{\xi,t,l} \cdot \mathrm{f}^{\mathrm{nom}}_{\xi,l} \cdot \left( 1 - \gamma^{f}_{\xi,l} \cdot \mu^{f}_{\xi,t,l} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ l \in \mathcal{L} \,:\, \neg \mathrm{ext}^{f}_{l} \wedge \neg \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{t,l}
 ```
 
+**`Link_e_sum_min`**
+
+```math
+\sum_{t \in \mathcal{T}} f_{\xi,t,l} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{f}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \underline{\mathrm{E}}^{f}_{\xi,l} \text{ is defined}
+```
+
+**`Link_e_sum_max`**
+
+```math
+\sum_{t \in \mathcal{T}} f_{\xi,t,l} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{f}_{\xi,l} \qquad \forall\, \xi \in \Xi,\ l \in \mathcal{L} \,:\, \overline{\mathrm{E}}^{f}_{\xi,l} \text{ is defined}
+```
+
 **`Link_ext_p_lower`**
 
 ```math
@@ -645,5 +677,5 @@ f_{\xi,t,l} = \mathrm{f}^{\mathrm{set}}_{\xi,t,l} \qquad \forall\, \xi \in \Xi,\
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

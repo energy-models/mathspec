@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Link commitment
 
-This file states the commitment rows of PyPSA's `Link`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Link_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Link_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+This file states the commitment rows of PyPSA's `Link`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Link_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Link_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -72,7 +72,7 @@ parameters:
       one where the link was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable link, and one for
       a link that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:286`), data prep
+      (`constraints.py:300`), data prep
     dims: [scenario, link]
     dtype: int
   Link_up_time_brought_in:
@@ -80,7 +80,7 @@ parameters:
       one while the up time a link brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
     dtype: int
   Link_down_time_brought_in:
@@ -88,7 +88,7 @@ parameters:
       one while the down time a link brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, link]
     dtype: int
   Link_start_up_cost:
@@ -144,7 +144,7 @@ expressions:
     description: >-
       the commitment state a link carries into a snapshot. It is off at the
       first snapshot it is active in past the first of the horizon. PyPSA reads a
-      status it did not build as off there (`constraints.py:354`). It is the
+      status it did not build as off there (`constraints.py:368`). It is the
       state carried over otherwise
     dims: [scenario, snapshot, link]
     cases:
@@ -213,7 +213,7 @@ constraints:
       `Link-com-down-time` — a link stopped within its own minimum down time
       is still off, and so are the modules of a modular link that stopped.
       The down time it brought into the horizon counts as one stop before the
-      first snapshot, also where the link is modular (`constraints.py:605-632`)
+      first snapshot, also where the link is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, link]
     where: Link_committed AND Link_min_down_time > 0
     expression: >-
@@ -353,9 +353,9 @@ assumptions:
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
 | $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays on once started |
 | $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\Xi \times \mathcal{L}`$ — least snapshots a link stays off once stopped |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable link, and one for a link that is not, whose ramp rows PyPSA starts from on (`constraints.py:286`), data prep |
-| $`\mathrm{hold}^{f}`$ | `Link_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the up time a link brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
-| $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\Xi \times \mathcal{L}`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable link, and one for a link that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}^{f}`$ | `Link_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the up time a link brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
+| $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — cost of one snapshot spent on |
@@ -379,7 +379,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:354`). It is the state carried over otherwise |
+| $`\overleftarrow{u}^{f}`$ | `Link_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the commitment state a link carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ — the state a link carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Link\_commitment\_opex}`$ | `Link_commitment_opex` over $`\Xi`$ |
 
@@ -558,5 +558,5 @@ u^{f}_{\xi,t,l} \le N^{f}_{l} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

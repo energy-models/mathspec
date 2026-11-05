@@ -74,7 +74,7 @@ expressions:
     description: >-
       the output a generator carries into a snapshot. It is nothing at the
       first snapshot it is active in past the first of the horizon: PyPSA
-      fills an output it did not build with zero (`constraints.py:665`).
+      fills an output it did not build with zero (`constraints.py:679`).
       It is the output carried over otherwise
     dims: [scenario, snapshot, generator]
     cases:
@@ -128,7 +128,7 @@ expressions:
       the status a committed unit's ramp rows carry into a snapshot. At the
       first snapshot, a fixed modular unit that came in running has every
       module on, since the state it brought in is on or off
-      (`constraints.py:1078-1083`). It is the state carried in otherwise
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
     dims: [scenario, snapshot, generator]
     cases:
       opening_modules:

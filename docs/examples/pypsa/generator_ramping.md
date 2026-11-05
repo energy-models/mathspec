@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generator ramping
 
-This file states the ramping rows of PyPSA's `Generator`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Generator_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Generator_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
+This file states the ramping rows of PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. `Generator_previous_p` is the output carried into each snapshot, from `p_init` at the first where the unit came in running. `Generator_ramp_up_allowance` adds the start-up ramp in the snapshot the unit turns on.
 
 <!-- gallery:begin -->
 ```yaml
@@ -81,7 +81,7 @@ expressions:
     description: >-
       the output a generator carries into a snapshot. It is nothing at the
       first snapshot it is active in past the first of the horizon: PyPSA
-      fills an output it did not build with zero (`constraints.py:665`).
+      fills an output it did not build with zero (`constraints.py:679`).
       It is the output carried over otherwise
     dims: [scenario, snapshot, generator]
     cases:
@@ -135,7 +135,7 @@ expressions:
       the status a committed unit's ramp rows carry into a snapshot. At the
       first snapshot, a fixed modular unit that came in running has every
       module on, since the state it brought in is on or off
-      (`constraints.py:1078-1083`). It is the state carried in otherwise
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
     dims: [scenario, snapshot, generator]
     cases:
       opening_modules:
@@ -320,13 +320,13 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:665`). It is the output carried over otherwise |
+| $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:679`). It is the output carried over otherwise |
 | $`\overleftarrow{p}^{\circ}`$ | `Generator_p_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the output a generator carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
 | $`\widetilde{\mathrm{ru}}`$ | `Generator_ramp_up_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit in a unit's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}`$ | `Generator_ramp_down_rate` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the ramp limit in a unit's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
 | $`\widetilde{\mathrm{ru}}^{\mathrm{up}}`$ | `Generator_start_up_rate` over $`\Xi \times \mathcal{G}`$ — the start-up ramp in a unit's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\widetilde{\mathrm{rd}}^{\mathrm{dn}}`$ | `Generator_shut_down_rate` over $`\Xi \times \mathcal{G}`$ — the shut-down ramp in a unit's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
-| $`\overleftarrow{\bar u}`$ | `Generator_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the status a committed unit's ramp rows carry into a snapshot. At the first snapshot, a fixed modular unit that came in running has every module on, since the state it brought in is on or off (`constraints.py:1078-1083`). It is the state carried in otherwise |
+| $`\overleftarrow{\bar u}`$ | `Generator_ramp_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the status a committed unit's ramp rows carry into a snapshot. At the first snapshot, a fixed modular unit that came in running has every module on, since the state it brought in is on or off (`constraints.py:1092-1097`). It is the state carried in otherwise |
 | $`\Delta^{+}`$ | `Generator_ramp_up_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may raise output between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — how far a generator may lower output between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 
@@ -442,5 +442,5 @@ p_{\xi,t,g} - \overleftarrow{p}_{\xi,t,g} \le \Delta^{+}_{\xi,t,g} \qquad \foral
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
