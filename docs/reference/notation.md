@@ -1152,6 +1152,77 @@ Written out by `spec.expand()`:
 \mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
 ```
 
+#### Incremental method
+
+`method: incremental` — a filled fraction per segment, each filled only once the one before it is full, ordered by a binary, in `examples/piecewise_incremental.yaml`.
+
+```yaml
+piecewise:
+  cost_curve:
+    along: bp
+    dims: [snapshot, generator]
+    where: on_curve
+    method: incremental
+    activity: status
+    links:
+      p: [p, p_bp]
+      cost: [cost, cost_bp, ">="]
+```
+
+```math
+\mathit{cost}_{t,g} \ge \begin{cases} \mathit{status}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b}}(\mathrm{p}^{\mathrm{bp}}_{g,b},\ \mathrm{cost}^{\mathrm{bp}}_{g,b})(p_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+Written out by `spec.expand()`:
+
+```math
+0 \le \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \mathrm{on\_curve}_{g,b + 1}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,order}}_{t,g,b} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \mathrm{on\_curve}_{g,b + 1}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{t,g,b} \le \mathit{cost}^{\mathrm{curve,order}}_{t,g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{t,g,b} \le \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b - 1} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,order}}_{t,g,b} \le \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b - 1} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{t,g,b} \le \mathit{status}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+```
+
+```math
+p_{t,g} = \mathrm{p}^{\mathrm{bp}}_{g,b} \cdot \mathit{status}_{t,g} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b'} \cdot \left( \mathrm{p}^{\mathrm{bp}}_{g,b' \boxplus_{0} 1} - \mathrm{p}^{\mathrm{bp}}_{g,b'} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \wedge \mathit{status}_{t,g} \text{ exists}
+```
+
+```math
+p_{t,g} = \mathrm{p}^{\mathrm{bp}}_{g,b} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b'} \cdot \left( \mathrm{p}^{\mathrm{bp}}_{g,b' \boxplus_{0} 1} - \mathrm{p}^{\mathrm{bp}}_{g,b'} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \wedge \neg \left( \mathit{status}_{t,g} \text{ exists} \right)
+```
+
+```math
+\mathit{cost}_{t,g} \ge \mathrm{cost}^{\mathrm{bp}}_{g,b} \cdot \mathit{status}_{t,g} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b'} \cdot \left( \mathrm{cost}^{\mathrm{bp}}_{g,b' \boxplus_{0} 1} - \mathrm{cost}^{\mathrm{bp}}_{g,b'} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \wedge \mathit{status}_{t,g} \text{ exists}
+```
+
+```math
+\mathit{cost}_{t,g} \ge \mathrm{cost}^{\mathrm{bp}}_{g,b} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{t,g,b'} \cdot \left( \mathrm{cost}^{\mathrm{bp}}_{g,b' \boxplus_{0} 1} - \mathrm{cost}^{\mathrm{bp}}_{g,b'} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \wedge \neg \left( \mathit{status}_{t,g} \text{ exists} \right)
+```
+
+```math
+\mathrm{p}^{\mathrm{bp}}_{g,b} \text{ is defined} \wedge \mathrm{cost}^{\mathrm{bp}}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b}
+```
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \} \rvert > 0
+```
+
 #### Convex method
 
 `method: convex` — nothing, so the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.

@@ -55,6 +55,7 @@ MODELS = {
     'piecewise_adjacency.md': ROOT / 'examples' / 'piecewise_adjacency.yaml',
     'sos.md': ROOT / 'examples' / 'sos.yaml',
     'piecewise_lp.md': ROOT / 'examples' / 'piecewise_lp.yaml',
+    'piecewise_incremental.md': ROOT / 'examples' / 'piecewise_incremental.yaml',
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',

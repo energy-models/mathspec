@@ -35,6 +35,10 @@ like yours, and what each line of the file means.
     the solver, as a declaration in place of the binaries and their rows.
 - **[A curve as segment lines](piecewise_lp.md)** states the curve as
     inequalities, and declares no variable of its own.
+- **[A curve filled segment by segment](piecewise_incremental.md)** states
+    the curve as linopy does for a gated or non-convex curve, and shows the
+    PyPSA cost curve: curves of different lengths on some generators, switched
+    by a status that only committable generators have.
 - **[A component library](library/index.md)** is several files that
     [`merge`](../reference/composition.md#merge) composes into one spec, each
     written against one shared [fragment](../reference/glossary.md#fragment)

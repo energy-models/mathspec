@@ -303,6 +303,7 @@ def _emitted(program: Program) -> set[str]:
     curves = (
         Emitted.of(name, curve).written(
             curve.method,
+            gated=curve.activity is not None,
             ungated=leaves_ungated(program.variables[curve.activity] if curve.activity is not None else None),
         )
         for name, curve in program.piecewise.items()

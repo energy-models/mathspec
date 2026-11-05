@@ -806,6 +806,7 @@
           "enum": [
             "adjacency",
             "sos2",
+            "incremental",
             "convex",
             "lp"
           ],

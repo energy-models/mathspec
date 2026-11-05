@@ -98,6 +98,13 @@ def _edge(over: str, mask: str | None, end: Literal['first', 'last']) -> str:
     return f'{_operand(mask)} AND NOT {_shifted(over, mask, 1 if end == "first" else -1)}'
 
 
+def _pieces(over: str, mask: str | None) -> str:
+    """Where a breakpoint and the one after it are both there: the rows a segment, sat at its lower breakpoint, is true of."""
+    if mask is None:
+        return f'position({over}) != -1'
+    return f'{_operand(mask)} AND {_shifted(over, mask, -1)}'
+
+
 def _interior(over: str, mask: str | None) -> str:
     """Where a breakpoint has one on either side: the rows a claim about a bend is true of."""
     if mask is None:
@@ -212,6 +219,7 @@ _GAP: dict[PiecewiseMethod, str] = {
     'convex': 'the checks on the shape compare a breakpoint with its neighbours, so a bend across a gap goes unchecked',
     'lp': "the chord row joins a breakpoint to the one before it, and the domain rows sit on the curve's own first "
     'and last',
+    'incremental': 'a segment is filled only once the one before it is full, and a gap leaves a segment with no end',
 }
 
 
@@ -310,6 +318,12 @@ class Emitted:
     chord: str
     domain_lo: str
     domain_hi: str
+    delta: str
+    order: str
+    delta_bound: str
+    fill_order: str
+    binary_order: str
+    active_bound: str
     links: tuple[str, ...]
     assumptions: tuple[str, ...]
 
@@ -324,6 +338,12 @@ class Emitted:
             f'{name}_chord',
             f'{name}_domain_lo',
             f'{name}_domain_hi',
+            f'{name}_delta',
+            f'{name}_order',
+            f'{name}_delta_bound',
+            f'{name}_fill_order',
+            f'{name}_binary_order',
+            f'{name}_active_bound',
             tuple(f'{name}_{link.name}' for link in curve.links),
             (
                 *(f'{name}_{what}' for what in _ASSUMED),
@@ -336,15 +356,20 @@ class Emitted:
         """The second gate row, where the gate variable does not exist."""
         return self.convexity + _UNGATED
 
-    def written(self, method: PiecewiseMethod, *, ungated: bool) -> tuple[str, ...]:
+    def written(self, method: PiecewiseMethod, *, gated: bool, ungated: bool) -> tuple[str, ...]:
         """The variables and constraints [`expand`][mathspec.spec.Spec.expand] declares for an entry of *method*.
 
-        *ungated* is [`leaves_ungated`][] of the entry's gate. The set a
+        *gated* is whether the entry names an ``activity:``, and *ungated*
+        [`leaves_ungated`][] of that gate. The set a
         ``sos2`` or ``adjacency`` entry states is written out too, since
         ``expand()`` writes every set.
         """
         if method == 'lp':
             return (self.chord, self.domain_lo, self.domain_hi)
+        if method == 'incremental':
+            links = (*self.links, *(row + _UNGATED for row in self.links)) if ungated else self.links
+            order = (self.delta_bound, self.fill_order, self.binary_order)
+            return (self.delta, self.order, *order, *((self.active_bound,) if gated else ()), *links)
         convexity = (self.convexity, self.ungated) if ungated else (self.convexity,)
         restriction = (self.set.seg, self.set.pick, self.set.link) if method in ('sos2', 'adjacency') else ()
         return (self.lam, *convexity, *self.links, *restriction)
@@ -361,19 +386,24 @@ class Emitted:
             self.chord,
             self.domain_lo,
             self.domain_hi,
+            self.delta_bound,
+            self.fill_order,
+            self.binary_order,
+            self.active_bound,
+            *(row + _UNGATED for row in self.links),
         )
 
     @property
     def reused(self) -> tuple[str, ...]:
         """Each link row whose name the entry's own rows or variables already take."""
-        own = {self.lam, self.set.seg, *self.rows}
+        own = {self.lam, self.set.seg, self.delta, self.order, *self.rows}
         return tuple(row for row in self.links if row in own)
 
     @property
     def by_kind(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
         """Each name by the kind of declaration it would collide with."""
         return (
-            ('variable', (self.lam, self.set.seg)),
+            ('variable', (self.lam, self.set.seg, self.delta, self.order)),
             ('constraint', (*self.rows, *self.links)),
             ('sos', (self.name,)),
             ('assumption', self.assumptions),
@@ -697,6 +727,8 @@ class _Expansion:
         """Write the entry's declarations into the raw spec."""
         if self.pw.method == 'lp':
             self._segment_lines()
+        elif self.pw.method == 'incremental':
+            self._increments()
         else:
             self._weights()
         self._assumptions()
@@ -746,6 +778,56 @@ class _Expansion:
             )
         if pw.method in ('sos2', 'adjacency'):
             sos.section(self.raw, 'sos')[self.name] = {'variable': emitted.lam, 'along': d, 'type': 2}
+
+    def _increments(self) -> None:
+        """The incremental form: a fill fraction per segment, filled in order, and a row per link.
+
+        ``linopy``'s ``_add_incremental`` under its names. A segment sits at
+        its lower breakpoint, so ``delta`` exists where the next breakpoint
+        does too. Each link is its value at the curve's first breakpoint, times
+        the gate, plus every filled fraction of each segment's rise; the row
+        stands at that first breakpoint, where the value is read. A gate that
+        does not exist everywhere splits each link row in two, as it splits
+        the convexity row of the weights.
+        """
+        pw, emitted, d = self.pw, self.emitted, self.pw.along
+        dims = [*self.frame, d]
+        pieces = _all_of(self.frame_mask, _pieces(d, self.mask))
+        variables = sos.section(self.raw, 'variables')
+        variables[emitted.delta] = {
+            'dims': dims,
+            'where': pieces,
+            'bounds': {'lower': 0.0, 'upper': 1.0},
+            'description': 'the filled fraction of a segment',
+        }
+        variables[emitted.order] = {
+            'dims': dims,
+            'where': pieces,
+            'domain': 'binary',
+            'description': '1 where a segment may be filled, which the one before it must be first',
+        }
+        self._constraint(emitted.delta_bound, dims, f'{emitted.delta} <= {emitted.order}')
+        self._constraint(emitted.fill_order, dims, f'{emitted.delta} <= shift({emitted.delta}, along={d}, offset=1)')
+        self._constraint(emitted.binary_order, dims, f'{emitted.order} <= shift({emitted.delta}, along={d}, offset=1)')
+        if pw.activity is not None:
+            self._constraint(emitted.active_bound, dims, f'{emitted.delta} <= {pw.activity}')
+        first = _all_of(self.frame_mask, _edge(d, self.mask, 'first'))
+        for cname, written, link in zip(emitted.links, pw.links.values(), self.curve.links, strict=True):
+            filled = f'sum({self._read(emitted.delta, link)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
+            for suffix, gate, on in self._gate_rows():
+                start = link.values if on == '1' else f'{link.values} * ({self._read(pw.activity, link)})'
+                self._constraint(
+                    cname + suffix,
+                    [*link.dims, d],
+                    f'({written.expression}) {link.sign} {start} + {filled}',
+                    _all_of(through(first, link), self._read(gate, link)),
+                )
+
+    def _read(self, text: str | None, link: Link) -> str | None:
+        """*text*, over the curve's own dims, as *link*'s row reads it: through the link's relation where it walks one."""
+        if text is None or link.walk is None:
+            return text
+        return f'at({text}, by={link.by})'
 
     def _weights_read(self, link: Link) -> str:
         """How one link reads the curve's weights: by name, or through the relation that refines its frame.

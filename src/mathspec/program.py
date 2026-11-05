@@ -171,7 +171,7 @@ SosType = Literal[1, 2]
 #: How a ``piecewise:`` entry restricts its interpolation weights. Kept in step
 #: with [`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS], which says what each one
 #: emits, by ``tests/test_schema.py``.
-PiecewiseMethod = Literal['adjacency', 'sos2', 'convex', 'lp']
+PiecewiseMethod = Literal['adjacency', 'sos2', 'incremental', 'convex', 'lp']
 
 
 # --------------------------------------------------------------------------

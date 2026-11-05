@@ -142,7 +142,7 @@ def test_a_written_name_is_refused_once_the_rest_of_the_file_lowers():
         spec_of(NONCONVEX_YAML, **clash)
 
 
-@pytest.mark.parametrize('method', [pytest.param('incremental', id='unknown'), pytest.param(['sos2'], id='a list')])
+@pytest.mark.parametrize('method', [pytest.param('disjunctive', id='unknown'), pytest.param(['sos2'], id='a list')])
 def test_a_method_this_project_does_not_have_is_refused(method):
     """A list used to escape the membership test as a `TypeError`."""
     with pytest.raises(SchemaError, match='unknown piecewise method'):
@@ -1034,6 +1034,8 @@ def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
         pytest.param('convexity', "link 'convexity' names its row 'coupling_convexity'", id='the-convexity-row'),
         pytest.param('lam', "link 'lam' names its row 'coupling_lam'", id='the-weights'),
         pytest.param('adjacency_below', "link 'adjacency_below'", id='a-row-the-set-writes'),
+        pytest.param('delta', "link 'delta' names its row 'coupling_delta'", id='a-variable-incremental-writes'),
+        pytest.param('fill_order', "link 'fill_order'", id='a-row-incremental-writes'),
     ],
 )
 def test_a_link_named_after_a_row_the_block_writes_is_refused(link, match):
@@ -1467,3 +1469,94 @@ def test_every_assumption_a_block_may_derive_is_a_name_it_reserves(method):
     assert derived <= set(Emitted.of('cost_curve', curve).assumptions), (
         'a condition the block derives under no reserved name'
     )
+
+
+#: The walked curve stated incrementally, switched by a status only committable generators have.
+INCREMENTAL = varied(
+    WALKED,
+    **{
+        'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+        'variables.status': {'dims': ['generator', 'snapshot'], 'domain': 'binary', 'where': 'committable'},
+        'piecewise.coupling.method': 'incremental',
+        'piecewise.coupling.activity': 'status',
+    },
+)
+#: What every incremental link adds to its value at the first breakpoint: each segment's filled rise.
+FILLED = 'sum({delta} * (shift({v}, along=bp, offset=-1, edge=0) - {v}), over=bp)'
+
+
+@pytest.mark.parametrize(
+    ('row', 'where', 'expression'),
+    [
+        pytest.param(
+            'coupling_fuel',
+            '(position(bp) == 0) AND (status)',
+            '(fuel) == bp_fuel * (status) + ' + FILLED.format(delta='coupling_delta', v='bp_fuel'),
+            id='gated',
+        ),
+        pytest.param(
+            'coupling_fuel_ungated',
+            '(position(bp) == 0) AND (NOT status)',
+            '(fuel) == bp_fuel + ' + FILLED.format(delta='coupling_delta', v='bp_fuel'),
+            id='ungated-where-the-status-does-not-exist',
+        ),
+        pytest.param(
+            'coupling_power',
+            '(position(bp) == 0) AND (at(status, by=generator_of[generator]))',
+            '(power) == bp_power * (at(status, by=generator_of[generator])) + '
+            + FILLED.format(delta='at(coupling_delta, by=generator_of[generator])', v='bp_power'),
+            id='walked',
+        ),
+    ],
+)
+def test_an_incremental_link_is_its_first_breakpoint_plus_each_filled_segment(row, where, expression):
+    """linopy's incremental link, which PyPSA's gated cost and efficiency curves are built as.
+
+    A status that only committable generators have leaves the others
+    ungated, so each link row is written once where the status exists and
+    once where it does not, and a walked link reads the fill and the status
+    through its relation.
+    """
+    rows = expand_piecewise(spec_of(INCREMENTAL)).constraints
+    assert (rows[row].dims[-1], rows[row].where, rows[row].expression) == ('bp', where, expression)
+
+
+@pytest.mark.parametrize(
+    ('row', 'expression'),
+    [
+        pytest.param('coupling_delta_bound', 'coupling_delta <= coupling_order', id='a-segment-fills-once-ordered'),
+        pytest.param(
+            'coupling_fill_order',
+            'coupling_delta <= shift(coupling_delta, along=bp, offset=1)',
+            id='a-segment-fills-no-further-than-the-one-before',
+        ),
+        pytest.param(
+            'coupling_binary_order',
+            'coupling_order <= shift(coupling_delta, along=bp, offset=1)',
+            id='a-segment-is-ordered-only-once-the-one-before-is-full',
+        ),
+        pytest.param('coupling_active_bound', 'coupling_delta <= status', id='the-gate-bounds-every-fill'),
+    ],
+)
+def test_an_incremental_curve_orders_its_segments_as_linopy_does(row, expression):
+    assert expand_piecewise(spec_of(INCREMENTAL)).constraints[row].expression == expression
+
+
+def test_an_incremental_segment_stands_where_the_curve_reaches_its_next_breakpoint():
+    """A segment sits at its lower breakpoint, so a ragged curve's last breakpoint has none."""
+    expanded = expand_piecewise(
+        spec_of(
+            INCREMENTAL,
+            **WALKED_RAGGED,
+            **{'parameters.reach': {'dims': ['generator', 'bp'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'reach'},
+        )
+    )
+    assert expanded.variables['coupling_delta'].where == 'reach AND shift(reach, along=bp, offset=-1)'
+    assert (
+        expanded.constraints['coupling_fuel'].where == '(reach AND NOT shift(reach, along=bp, offset=1)) AND (status)'
+    )
+
+
+def test_an_incremental_curve_written_out_loads_back_to_the_same_program():
+    expanded = spec_of(INCREMENTAL).expand()
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'

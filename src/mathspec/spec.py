@@ -928,13 +928,14 @@ class PiecewiseLinkSpec(_StrictSpec):
 
 #: How a ``piecewise:`` entry restricts its interpolation weights, and what
 #: each one emits. The key is ``method:`` because that is
-#: ``linopy.Spec.add_piecewise_formulation``'s (#695); ``sos2`` and ``lp`` are
-#: its words too, and mean the same things. ``adjacency`` and ``convex`` are
+#: ``linopy.Spec.add_piecewise_formulation``'s (#695); ``sos2``, ``incremental``
+#: and ``lp`` are its words too, and mean the same things. ``adjacency`` and ``convex`` are
 #: ours, linopy having no name for the first and reaching the second only as a
 #: fallback.
 PIECEWISE_METHODS = {
     'adjacency': 'a binary per segment, and a row making the two nonzero weights neighbours',
     'sos2': 'the same weights, restricted by a set the solver branches on (the sos rules)',
+    'incremental': 'a filled fraction per segment, each filled only once the one before it is full, ordered by a binary',
     'convex': 'nothing, so the weights range over the hull, which is a pure LP',
     'lp': 'no weights, but one row per segment line, plus the two rows holding the domain',
 }
