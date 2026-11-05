@@ -988,7 +988,7 @@ class PiecewiseSpec(_StrictSpec):
     """Which of [`PIECEWISE_METHODS`][] restricts the weights."""
     activity: str | None = None
     """What the weights sum to: 1 when the key is left out, or a binary variable that sets the formulation to 0 when the
-    variable is 0.
+    variable is 0. Written as the name of the variable, or as ``at(<variable>, by=<relation>[<column>])``.
     """
     description: str | None = None
 

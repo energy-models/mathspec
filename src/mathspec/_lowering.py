@@ -25,6 +25,7 @@ from mathspec._piecewise import (
     declaration_of,
     lp_domain_refusal,
     refused_under_where,
+    resolve_gate,
     resolve_links,
     resolve_walks,
 )
@@ -66,7 +67,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Expression, JoinColumns
+    from mathspec.program import Expression, Gate, JoinColumns
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -186,18 +187,23 @@ def lower(spec: Spec) -> Program:
         if (assumption := _assumption(aname, adef, ns, errors)) is not None:
             assumptions[aname] = assumption
 
-    curves: dict[str, tuple[tuple[Expression, ...], dict[str, JoinColumns], Mask | None]] = {}
+    curves: dict[str, tuple[tuple[Expression, ...], dict[str, JoinColumns], Mask | None, Gate | None]] = {}
     for pname, pdef in spec.piecewise.items():
         links = resolve_links(pname, pdef, ns, errors)
         walks = resolve_walks(pname, pdef, ns, errors)
         where = mask_of(resolve_condition_text(pdef.where, ns, f"piecewise '{pname}' where", errors))
+        gate = None
+        if pdef.activity is not None:
+            gate = resolve_gate(pname, pdef, variables, ns, errors)
+            if gate is None:
+                continue
         if links is None or walks is None:
             continue
         if pdef.method == 'lp' and (refusal := lp_domain_refusal(pname, pdef, links)) is not None:
             errors.append(refusal)
-        curves[pname] = (links, walks, where)
+        curves[pname] = (links, walks, where, gate)
 
-    linked = {pname: links for pname, (links, _, _) in curves.items()}
+    linked = {pname: links for pname, (links, *_) in curves.items()}
     errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, linked))
     if errors:
         raise ns.error(errors)
@@ -210,8 +216,8 @@ def lower(spec: Spec) -> Program:
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, ExpressionReference))
 
     piecewise = {}
-    for pname, (links, walks, where) in curves.items():
-        piecewise[pname] = declaration_of(pname, spec.piecewise[pname], links, walks, where, spec)
+    for pname, (links, walks, where, gate) in curves.items():
+        piecewise[pname] = declaration_of(pname, spec.piecewise[pname], links, walks, where, gate, spec)
         for aname, assumed in assumptions_of(pname, piecewise[pname], spec.piecewise[pname].where).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'

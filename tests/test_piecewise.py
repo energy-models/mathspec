@@ -16,7 +16,7 @@ from typing import get_args
 
 import pytest
 
-from mathspec import to_spec
+from mathspec import to_spec, typeset_line
 from mathspec._piecewise import Emitted, assumptions_of, expand_piecewise
 from mathspec.errors import LanguageError, SchemaError
 from mathspec.program import Assumption, VariableReference, assumption_message
@@ -505,8 +505,10 @@ def test_a_link_reading_a_dual_entry_is_refused():
     ('activity', 'match'),
     [
         pytest.param('at(u_unit, by=unit_of[unit])', 'is not a declared variable', id='a-lookup-through-a-relation'),
-        pytest.param('shift(u, along=snapshot, offset=1)', 'is not a declared variable', id='a-shifted-gate'),
-        pytest.param('u * 2', 'is not a declared variable', id='an-arithmetic-gate'),
+        pytest.param(
+            'shift(u, along=snapshot, offset=1)', 'is neither a binary variable nor one read', id='a-shifted-gate'
+        ),
+        pytest.param('u * 2', 'is neither a binary variable nor one read', id='an-arithmetic-gate'),
     ],
 )
 def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
@@ -1229,6 +1231,217 @@ def test_a_gate_over_fewer_dims_than_the_block_switches_each_curve_it_covers():
     assert expanded.variables['cost_curve_lam'].dims == ['snapshot', 'generator', 'bp']
 
 
+#: The status binary as the curve of each converter reads it.
+RUNNING = 'at(running, by=pw_status_of[status_entity])'
+#: fluxopt's unit commitment: the on/off binary is over the entities that carry a status, and the curve over converters.
+COMMITTED = {
+    'dimensions': {
+        'converter': {'dtype': 'str'},
+        'status_entity': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int'},
+        'bp': {'dtype': 'int', 'ordered': True},
+    },
+    'relations': {'pw_status_of': {'key': 'converter', 'values': 'status_entity', 'missing': 'absent'}},
+    'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
+    'variables': {
+        'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
+        'p': {'dims': ['converter', 'snapshot']},
+        'fuel': {'dims': ['converter', 'snapshot']},
+    },
+    'piecewise': {
+        'curve': {
+            'along': 'bp',
+            'dims': ['converter', 'snapshot'],
+            'links': {'p': ['p', 'bp_p'], 'fuel': ['fuel', 'bp_fuel']},
+            'method': 'sos2',
+            'activity': RUNNING,
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(fuel)'},
+}
+#: The status only committable entities have.
+STATUS_MASKED = {
+    'parameters.committable': {'dims': ['status_entity'], 'dtype': 'bool'},
+    'variables.running.where': 'committable',
+}
+#: The status only committable entities have, read as 0 elsewhere.
+COMMITTABLE = STATUS_MASKED | {'variables.running.missing': 0}
+#: A relation with a row for every converter.
+REFUSED = {'relations.pw_status_of.missing': 'refused'}
+
+
+def test_a_gate_read_through_a_relation_switches_the_curves_it_maps_to():
+    """The gate was a variable over `dims:` alone, so fluxopt declared a copy of `running` per converter.
+
+    The copy was a binary per gated curve and step, and a constraint whose
+    only job was to re-index it.
+    """
+    rows = expand_piecewise(spec_of(COMMITTED)).constraints
+    assert (rows['curve_convexity'].where, rows['curve_convexity'].expression) == (
+        RUNNING,
+        f'sum(curve_lam, over=bp) == ({RUNNING})',
+    ), 'a converter with a status sums its weights to that status'
+    assert (rows['curve_convexity_ungated'].where, rows['curve_convexity_ungated'].expression) == (
+        f'NOT ({RUNNING})',
+        'sum(curve_lam, over=bp) == 1',
+    ), 'a converter with no row in the relation is ungated'
+
+
+def test_a_gate_read_through_a_relation_is_written_as_the_at_call_it_reads():
+    """The walked gate was a mapping of `variable` and `by`, a second spelling of the `at()` call it is read as."""
+    spec = to_spec(f"""
+dimensions:
+  converter: {{dtype: str}}
+  status_entity: {{dtype: str}}
+  snapshot: {{dtype: int}}
+  bp: {{dtype: int, ordered: true}}
+relations:
+  pw_status_of: {{key: converter, values: status_entity}}
+parameters:
+  bp_p: {{dims: [converter, bp]}}
+  bp_fuel: {{dims: [converter, bp]}}
+variables:
+  running: {{dims: [status_entity, snapshot], domain: binary}}
+  p: {{dims: [converter, snapshot]}}
+  fuel: {{dims: [converter, snapshot]}}
+piecewise:
+  curve:
+    along: bp
+    dims: [converter, snapshot]
+    links:
+      p: [p, bp_p]
+      fuel: [fuel, bp_fuel]
+    activity: {RUNNING}
+objective:
+  sense: minimize
+  expression: sum(fuel)
+""")
+    assert spec.piecewise['curve'].activity == RUNNING, 'block YAML reads the call unquoted, as a string'
+    assert to_spec(spec.to_yaml()) == spec, 'the string round-trips'
+    written_out = spec.expand()
+    assert to_spec(written_out.to_yaml()).program == written_out.program, 'the rows it writes load again'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'convexity'),
+    [
+        pytest.param(REFUSED, {'curve_convexity': None}, id='every-row-without-a-where'),
+        pytest.param(
+            REFUSED | STATUS_MASKED,
+            {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'},
+            id='every-row-with-a-where',
+        ),
+        pytest.param(REFUSED | COMMITTABLE, {'curve_convexity': None}, id='every-row-with-a-where-under-missing-0'),
+        pytest.param(
+            {}, {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'}, id='a-row-may-be-absent'
+        ),
+        pytest.param(
+            STATUS_MASKED,
+            {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'},
+            id='a-row-may-be-absent-with-a-where',
+        ),
+        pytest.param(
+            COMMITTABLE,
+            {'curve_convexity': 'pw_status_of', 'curve_convexity_ungated': 'NOT pw_status_of'},
+            id='a-row-may-be-absent-with-a-where-under-missing-0',
+        ),
+    ],
+)
+def test_a_gate_read_through_a_relation_is_ungated_only_where_its_read_may_be_absent(patch, convexity):
+    """A walked gate always wrote the `_ungated` row, and the typesetter printed its `1 otherwise` branch.
+
+    Under the relation's default `missing: refused` every curve has a row,
+    so a gate with no `where:`, or one read as 0 off it, is read at every
+    curve, and the second row stood for no coordinate.
+    """
+    spec = spec_of(COMMITTED, **patch)
+    rows = expand_piecewise(spec).constraints
+    assert {name: rows[name].where for name in rows if name.startswith('curve_convexity')} == convexity
+    printed = typeset_line(spec, 'curve', 'latex')
+    assert (r'\text{otherwise}' in printed) == (len(convexity) == 2), 'the 1 branch prints with the ungated row'
+
+
+def test_a_gate_read_through_a_relation_prints_as_the_read():
+    printed = typeset_line(spec_of(COMMITTED), 'curve', 'latex')
+    assert r'\mathit{running}_{\mathrm{pw\_status\_of}(c),t}' in printed, 'the gate is read at each converter'
+    assert r'\text{otherwise}' in printed, 'and a converter the relation does not map is ungated'
+
+
+#: What every malformed gate is refused with: the two shapes it may take.
+SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<relation>\[<column>\]\)\.'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param(
+            {'dimensions.period': {'dtype': 'int'}, 'variables.running.dims': ['status_entity', 'snapshot', 'period']},
+            r"activity 'running' is over \['period'\] after the lookup, which is not in dims: \['converter', 'snapshot'\]",
+            id='a-gate-landing-outside-dims',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=pw_status_of)'},
+            r"piecewise 'curve' activity: at\(by=pw_status_of\) names the relation and none of its columns",
+            id='a-walk-naming-no-column',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=bp_p[converter])'},
+            r"piecewise 'curve' activity: at\(by=bp_p\[\.\.\.\]\) does not name a relation",
+            id='a-walk-through-something-no-relation',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=pw_status_of[snapshot])'},
+            r"at\(by=pw_status_of\[snapshot\]\) names \['snapshot'\], which is no column of 'pw_status_of'",
+            id='a-walk-naming-a-column-the-relation-lacks',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': {'variable': 'running', 'by': 'pw_status_of[status_entity]'}},
+            'Input should be a valid string',
+            id='a-mapping',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': f'{RUNNING} * 2'},
+            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a binary variable nor one read through a relation\. "
+            + SHAPES,
+            id='a-product',
+        ),
+        pytest.param({'piecewise.curve.activity': '1 - running'}, SHAPES, id='a-complement'),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running + running, by=pw_status_of[status_entity])'},
+            SHAPES,
+            id='a-lookup-of-a-sum',
+        ),
+        pytest.param({'piecewise.curve.activity': 'at(running)'}, SHAPES, id='a-lookup-without-by'),
+        pytest.param({'piecewise.curve.activity': 'shift(running, along=snapshot, offset=1)'}, SHAPES, id='a-shift'),
+        pytest.param({'piecewise.curve.activity': 'at(running, by=pw_status_of[status_entity]'}, SHAPES, id='unparsed'),
+    ],
+)
+def test_a_gate_read_through_a_relation_is_held_to_the_rules_of_at(patch, match):
+    with pytest.raises(LanguageError, match=match):
+        spec_of(COMMITTED, **patch)
+
+
+@pytest.mark.parametrize(
+    ('activity', 'match'),
+    [
+        pytest.param(
+            'at(running, by=pw_status_of)',
+            r"piecewise 'curve' activity: at\(by=pw_status_of\) names the relation and none of its columns",
+            id='a-walk-naming-no-column',
+        ),
+        pytest.param(f'{RUNNING} * (2)', SHAPES, id='a-walk-closing-the-call-early'),
+    ],
+)
+def test_a_malformed_gate_under_missing_0_is_refused_as_written(activity, match):
+    """Under `missing: 0` the gate's where was read off its `by:` text before the read itself was resolved.
+
+    A `by:` naming no column, or one closing the call early, failed an
+    assertion inside mathspec instead of being refused.
+    """
+    with pytest.raises(LanguageError, match=match):
+        spec_of(COMMITTED, **COMMITTABLE, **{'piecewise.curve.activity': activity})
+
+
 #: fluxopt's system: only some generators run on a curve, and the rest have none at all.
 CURVED = varied(
     WALKED,
@@ -1694,6 +1907,130 @@ def test_an_incremental_link_is_its_first_breakpoint_plus_each_filled_segment(ro
 )
 def test_an_incremental_curve_orders_its_segments_as_linopy_does(row, expression):
     assert expand_piecewise(spec_of(INCREMENTAL)).constraints[row].expression == expression
+
+
+#: PyPSA's committable link: one efficiency curve per output port, switched by the status of the link it belongs to.
+#: The link's status as the curve of each of its output ports reads it.
+STATUS = 'at(Link_status, by=Link_output_link[link])'
+PORTED = {
+    'dimensions': {
+        'link': {'dtype': 'str'},
+        'link_output': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int'},
+        'bp': {'dtype': 'int', 'ordered': True},
+    },
+    'relations': {'Link_output_link': {'key': 'link_output', 'values': 'link'}},
+    'parameters': {
+        'bp_in': {'dims': ['link_output', 'bp']},
+        'bp_out': {'dims': ['link_output', 'bp']},
+        'Link_committed': {'dims': ['link', 'snapshot'], 'dtype': 'bool'},
+    },
+    'variables': {
+        'Link_status': {'dims': ['link', 'snapshot'], 'domain': 'binary', 'where': 'Link_committed'},
+        'Link_p': {'dims': ['link', 'snapshot']},
+        'Link_p_out': {'dims': ['link_output', 'snapshot']},
+    },
+    'piecewise': {
+        'efficiency': {
+            'along': 'bp',
+            'dims': ['link_output', 'snapshot'],
+            'method': 'incremental',
+            'links': {'input': ['at(Link_p, by=Link_output_link[link])', 'bp_in'], 'output': ['Link_p_out', 'bp_out']},
+            'activity': STATUS,
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(Link_p)'},
+}
+#: Where an incremental link row stands: its first breakpoint.
+FIRST = 'position(bp) == 0'
+#: A status per unit, which each generator reads through the unit it belongs to.
+UNITS = {
+    'dimensions.unit': {'dtype': 'str'},
+    'relations.unit_of': {'key': 'generator', 'values': 'unit'},
+    'variables.status': {'dims': ['unit', 'snapshot'], 'domain': 'binary'},
+    'piecewise.coupling.activity': 'at(status, by=unit_of[unit])',
+}
+#: The unit's status as a flow's row reads it, through its generator.
+UNIT_STATUS = 'at(at(status, by=unit_of[unit]), by=generator_of[generator])'
+
+
+@pytest.mark.parametrize(
+    ('raw', 'patch', 'row', 'where', 'start'),
+    [
+        pytest.param(PORTED, {}, 'efficiency_output', f'({FIRST}) AND ({STATUS})', f'bp_out * ({STATUS})', id='pypsa'),
+        pytest.param(
+            PORTED, {}, 'efficiency_output_ungated', f'({FIRST}) AND (NOT ({STATUS}))', 'bp_out', id='pypsa-ungated'
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS,
+            'coupling_power',
+            FIRST,
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-reads-the-read-through-its-own-relation',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.unit_of': {'key': 'generator', 'values': 'unit', 'missing': 'absent'}},
+            'coupling_power',
+            f'({FIRST}) AND ({UNIT_STATUS})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-reads-the-read-through-its-own-relation-where-it-may-be-absent',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.generator_of.missing': 'absent'},
+            'coupling_power',
+            f'(generator_of) AND ({FIRST})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-with-no-row-of-its-own-is-absent-whole',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            {'variables.status': {'dims': ['snapshot'], 'domain': 'binary'}},
+            'coupling_power',
+            FIRST,
+            'bp_power * (status)',
+            id='a-walked-link-reads-a-gate-without-the-dim-it-drops-as-written',
+        ),
+        pytest.param(
+            COMMITTED,
+            {
+                **COMMITTABLE,
+                'piecewise.curve.method': 'incremental',
+                'dimensions.hour': {'dtype': 'int'},
+                'relations.hour_of': {'key': 'hour', 'values': 'snapshot'},
+                'variables.heat': {'dims': ['converter', 'hour']},
+                'parameters.bp_heat': {'dims': ['converter', 'bp']},
+                'piecewise.curve.links.heat': {'expression': 'heat', 'values': 'bp_heat', 'by': 'hour_of[snapshot]'},
+            },
+            'curve_heat',
+            f'({FIRST}) AND (pw_status_of)',
+            f'bp_heat * (at({RUNNING}, by=hour_of[snapshot]))',
+            id='a-walked-link-reads-the-relation-where-as-written',
+        ),
+    ],
+)
+def test_an_incremental_link_reads_a_gate_read_through_a_relation(raw, patch, row, where, start):
+    """A gate read through a relation replaces the bare name in each link row, and a walked link reads it once more.
+
+    The walked link reads the gate through its own relation only where the gate
+    carries a dim the walk drops: a status over `snapshot` alone was read at
+    `generator`, which it does not carry, and the expansion was refused. A
+    gate whose relation has a row for every generator also wrote an ungated
+    row, which stood for no coordinate.
+    """
+    spec = spec_of(raw, **patch)
+    built = expand_piecewise(spec).constraints[row]
+    assert built.where == where
+    assert f'== {start} + sum(' in built.expression, 'the first breakpoint is read times the gate'
+    written_out = spec.expand()
+    assert to_spec(written_out.to_yaml()).program == written_out.program, 'the rows it writes load again'
+
+
+def test_an_incremental_curve_bounds_every_fill_by_a_gate_read_through_a_relation():
+    rows = expand_piecewise(spec_of(PORTED)).constraints
+    assert rows['efficiency_active_bound'].expression == f'efficiency_delta <= {STATUS}'
 
 
 def test_an_incremental_segment_stands_where_the_curve_reaches_its_next_breakpoint():
