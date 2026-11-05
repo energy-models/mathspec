@@ -30,6 +30,7 @@ from mathspec._resolution import (
     resolve_expression_text,
     self_existence,
 )
+from mathspec._sealed import Sealed
 from mathspec._validation import emitted_name_errors, reference_errors
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.program import (
@@ -44,6 +45,7 @@ from mathspec.program import (
     GivenTargets,
     Link,
     Mask,
+    MissingBy,
     NamedCondition,
     NamedExpression,
     Objective,
@@ -57,11 +59,12 @@ from mathspec.program import (
     variables_of,
     walk,
 )
+from mathspec.spec import MissingBySpec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Expression
+    from mathspec.program import Expression, ParameterMissing, ParameterReading
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -220,7 +223,9 @@ def lower(spec: Spec) -> Program:
 
     program = Program(
         parameters={
-            name: Parameter(tuple(pdef.dims), pdef.dtype, pdef.missing, pdef.description, parameter_masks.get(name))
+            name: Parameter(
+                tuple(pdef.dims), pdef.dtype, _missing(pdef.missing), pdef.description, parameter_masks.get(name)
+            )
             for name, pdef in spec.parameters.items()
         },
         variables=variables,
@@ -470,3 +475,10 @@ def _decided_where(context: str, text: str, *, value: bool) -> str:
         f'{context}: the `where:` condition {text!r} folds to false, so the assumption is checked on no row. '
         f'Delete the entry, or write a `where:` condition the data can satisfy.'
     )
+
+
+def _missing(missing: ParameterReading | MissingBySpec) -> ParameterMissing:
+    """The program's ``missing``: a [`MissingBySpec`][mathspec.spec.MissingBySpec] sealed into a [`MissingBy`][mathspec.program.MissingBy]."""
+    if isinstance(missing, MissingBySpec):
+        return MissingBy(missing.by, Sealed(missing.fill), missing.otherwise)
+    return missing

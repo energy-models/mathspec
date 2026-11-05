@@ -38,6 +38,7 @@ from mathspec.program import (
     DimensionDtype,
     ObjectiveSense,
     ParameterDtype,
+    ParameterReading,
     PiecewiseMethod,
     Program,
     RelationMissing,
@@ -71,6 +72,7 @@ __all__ = [
     'GivenSpec',
     'GivenVariableSpec',
     'MacroSpec',
+    'MissingBySpec',
     'ObjectiveSpec',
     'ParameterSpec',
     'PiecewiseLinkSpec',
@@ -341,6 +343,92 @@ class DimensionSpec(_StrictSpec):
         return written
 
 
+def _a_reading(v: object) -> object:
+    """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
+    if v is None:
+        raise _missing_null(
+            'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
+        )
+    if v in ('inf', '-inf'):
+        return float(cast('str', v))
+    if isinstance(v, str) and v not in get_args(RelationMissing):
+        msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
+        raise ValueError(msg)
+    if isinstance(v, float) and math.isnan(v):
+        msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
+        raise ValueError(msg)
+    return v
+
+
+def _misfit(v: ParameterReading, dtype: ParameterDtype) -> str | None:
+    """Why *v* cannot fill a row of a *dtype* column, or ``None`` where it can: a label has no value to fill."""
+    if dtype == 'str' and not isinstance(v, str):
+        return (
+            f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
+        )
+    if isinstance(v, str):
+        return None
+    if dtype == 'bool' and not isinstance(v, bool):
+        return f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
+    if dtype != 'bool' and isinstance(v, bool):
+        return f'missing: {_as_yaml(v)} on a {dtype} parameter, which takes a number. Write 1 or 0.'
+    if dtype == 'int' and isinstance(v, float):
+        return (
+            f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+        )
+    return None
+
+
+_Reading = Annotated[RelationMissing | bool | int | float, BeforeValidator(_a_reading), WithJsonSchema(_MISSING_SCHEMA)]
+
+
+class MissingBySpec(_StrictSpec):
+    """A ``missing:`` that reads a missing row by the label the relation ``by:`` gives its coordinate.
+
+    ``by:`` names a relation with one value column, keyed by dimensions of the
+    parameter. ``fill:`` maps labels of that column to a reading each, and
+    ``otherwise:`` reads every other coordinate, ``refused`` where it is left out.
+    Each reading is one that a plain ``missing:`` takes::
+
+        relations:
+          component_of: {key: entity, values: component}
+        parameters:
+          sign:
+            dims: [entity]
+            missing:
+              by: component_of
+              fill: {Load: -1, ShuntImpedance: -1}
+              otherwise: 1
+    """
+
+    _label: ClassVar[str] = "a parameter's 'missing:'"
+
+    by: str
+    fill: dict[str, _Reading]
+    otherwise: _Reading = 'refused'
+
+    @field_validator('fill', mode='before')
+    @classmethod
+    def _names_a_label(cls, v: object) -> object:
+        """A ``fill:`` with no label reads every missing row as ``otherwise:``, which a plain ``missing:`` says."""
+        if v == {}:
+            raise ValueError('lists no label. Name at least one, or write the reading itself as missing:.')
+        return v
+
+    @model_serializer(mode='wrap')
+    def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
+        """``otherwise`` is written where it is not ``refused``: refused is what leaving it out says."""
+        written = cast('dict[str, object]', handler(self))
+        if written.get('otherwise') == 'refused':
+            written.pop('otherwise')
+        return written
+
+    @property
+    def readings(self) -> tuple[ParameterReading, ...]:
+        """Every reading a missing row may take, in file order, ``otherwise`` last."""
+        return (*self.fill.values(), self.otherwise)
+
+
 class ParameterSpec(_StrictSpec):
     """A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means."""
 
@@ -352,26 +440,14 @@ class ParameterSpec(_StrictSpec):
     """The condition that limits the coordinates of the parameter, in the condition grammar. Where it is false, the
     parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
-    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: _Reading | MissingBySpec = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _a_reading_or_a_value(cls, v: object) -> object:
-        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
-        if v is None:
-            raise _missing_null(
-                'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
-            )
-        if v in ('inf', '-inf'):
-            return float(cast('str', v))
-        if isinstance(v, str) and v not in get_args(RelationMissing):
-            msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
-            raise ValueError(msg)
-        if isinstance(v, float) and math.isnan(v):
-            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
-            raise ValueError(msg)
-        return v
+    def _a_mapping_is_by(cls, v: object) -> object:
+        """A mapping is a [`MissingBySpec`][], so a refusal names the form written and not each form ``missing:`` takes."""
+        return MissingBySpec.model_validate(v) if isinstance(v, dict) else _a_reading(v)
 
     @model_serializer(mode='wrap')
     def _as_written(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
@@ -381,22 +457,14 @@ class ParameterSpec(_StrictSpec):
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
         """A value fills rows of the column, so it has the column's dtype, and a label has none."""
-        v = self.missing
-        if self.dtype == 'str' and not isinstance(v, str):
-            msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
-            raise ValueError(msg)
-        if isinstance(v, str):
-            return self
-        if self.dtype == 'bool' and not isinstance(v, bool):
-            msg = f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
-            raise ValueError(msg)
-        if self.dtype != 'bool' and isinstance(v, bool):
-            msg = f'missing: {_as_yaml(v)} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
-            raise ValueError(msg)
-        if self.dtype == 'int' and isinstance(v, float):
-            msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
+        if msg := next(filter(None, (_misfit(v, self.dtype) for v in self.readings)), None):
             raise ValueError(msg)
         return self
+
+    @property
+    def readings(self) -> tuple[ParameterReading, ...]:
+        """Every reading a missing row may take: the one ``missing:`` names, or each of a [`MissingBySpec`][]."""
+        return self.missing.readings if isinstance(self.missing, MissingBySpec) else (self.missing,)
 
 
 class BoundsSpec(_StrictSpec):

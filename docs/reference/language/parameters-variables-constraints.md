@@ -313,8 +313,8 @@ A `str` parameter takes any label. A dimension with
 ### `missing`
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
-no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
-of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
+no row. It takes `refused` (the default), `absent`, a value of the `dtype`
+of the parameter, or [a reading per label](#a-reading-per-label). On a parameter with a [`where:`](#where), `missing:` applies
 only where the condition is true.
 
 ```yaml
@@ -372,6 +372,46 @@ A value has the `dtype` of the parameter:
 | `bool`  | `true` or `false`                                       |
 | `str`   | none. A label has no value to fill                      |
 
+#### A reading per label
+
+`missing:` also takes a mapping that reads a missing row by the label that a
+relation gives its coordinate:
+
+```yaml
+dimensions:
+  component:
+    dtype: str
+    one_of: [Generator, Link, Load, ShuntImpedance, StorageUnit]
+  entity:
+    dtype: str
+relations:
+  component_of:
+    key: entity
+    values: component
+parameters:
+  sign:
+    dims: [entity]
+    missing:
+      by: component_of
+      fill:
+        Load: -1
+        ShuntImpedance: -1
+      otherwise: 1
+```
+
+A missing row of `sign` reads `-1` at a load or a shunt impedance, and `1` at
+every other entity.
+
+| Key         | Value                                                                      | Default   |
+| ----------- | -------------------------------------------------------------------------- | --------- |
+| `by`        | a relation with one value column, keyed by dimensions of the parameter     | required  |
+| `fill`      | a reading for each of one or more labels of that value column              | required  |
+| `otherwise` | the reading at every other label, and at a key with no row in the relation | `refused` |
+
+Each reading is one that a plain `missing:` takes. mathspec refuses at load a
+`by:` that names no such relation, and a `fill:` label that the
+[`one_of`](dimensions.md#one_of) of the value column does not list.
+
 mathspec refuses a NaN, a quoted number and `missing: null` at load, and in
 each message mathspec suggests what to write. For `missing: null` it prints:
 
@@ -388,7 +428,8 @@ A values parameter of a curve with `points:` must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
-as `` `0` where the data has no row ``. It lists nothing for `refused`.
+as `` `0` where the data has no row ``. It lists nothing for `refused`. For a
+reading per label, it lists each reading with its labels, then `otherwise`.
 
 ### `where`
 

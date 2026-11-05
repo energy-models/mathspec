@@ -109,7 +109,9 @@ class Namespace:
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
         self.defaults: dict[str, bool | float] = {
-            p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str) and pd.where is None
+            p: pd.missing
+            for p, pd in spec.parameters.items()
+            if isinstance(pd.missing, bool | int | float) and pd.where is None
         }
         self.relations: dict[str, Relation] = {
             n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
