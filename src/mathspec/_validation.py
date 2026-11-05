@@ -359,12 +359,6 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                 f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
                 f'Declare it domain: binary.'
             )
-        elif by is None and (stray := [d for d in spec.variables[activity].dims if d not in pw.dims]):
-            yield (
-                f"{context}: activity '{activity}' is over {stray}, which is not in dims: {pw.dims}. The gate "
-                f'switches the curve of one coordinate of dims:. Add {stray} to dims:, gate with a variable over '
-                f'dims:, or read the gate through a relation with activity: at({activity}, by=<relation>[<column>]).'
-            )
 
 
 def _piecewise_link_shape(spec: Spec, name: str, pw: PiecewiseSpec, key: str, link: PiecewiseLinkSpec) -> Iterator[str]:

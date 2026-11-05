@@ -50,10 +50,10 @@ variables:
 piecewise:
   cost_curve:
     description: >-
-      cost bounded below by the curve — the `>=` is what says which side of the
-      lines the cost sits on, and the curvature has to match it: lines that
-      envelope a convex curve would cut a concave one, and the solve comes back
-      optimal either way
+      cost bounded below by the curve — the `>=` sets which side of the lines
+      the cost lies on, and the curvature has to match it: the lines of a
+      concave curve lie above it, and the solver reports an optimal solution
+      either way
     along: bp
     dims: [snapshot, generator]
     links:

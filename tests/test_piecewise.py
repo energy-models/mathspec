@@ -343,6 +343,12 @@ def test_any_affine_expression_is_a_legal_link(link):
             r"where 'reach' tests \['generator'\], which is not in dims: \['snapshot'\]",
             id='a-where-adding-a-coordinate-the-curve-does-not-have',
         ),
+        pytest.param(
+            NONCONVEX_YAML,
+            {'piecewise.cost_curve.dims': ['snapshot', 'snapshot']},
+            r"dims repeats a dimension: \['snapshot', 'snapshot'\]",
+            id='dims-naming-a-dimension-twice',
+        ),
     ],
 )
 def test_a_malformed_entry_is_refused(model, patch, match):
@@ -390,10 +396,20 @@ def test_an_entry_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_woul
     assert 'cost_curve_' not in str(exc.value), 'the refusal names the block, not a declaration the expansion writes'
 
 
-def test_an_undeclared_breakpoint_dimension_is_refused_once():
-    """`along: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first."""
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'piecewise.cost_curve.along': 'nope'}, id='along'),
+        pytest.param({'piecewise.cost_curve.dims': ['snapshot', 'nope']}, id='dims'),
+    ],
+)
+def test_an_undeclared_dimension_is_refused_once(patch):
+    """`along: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first.
+
+    Without its own check, `dims: [nope]` was refused as a link expression not over `['nope']`.
+    """
     with pytest.raises(SchemaError) as exc:
-        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.along': 'nope'})
+        spec_of(NONCONVEX_YAML, **patch)
     assert str(exc.value).splitlines() == [
         "piecewise 'cost_curve' references undeclared dimension 'nope'. Declare it under 'dimensions:'."
     ]
@@ -1031,6 +1047,73 @@ def test_a_walked_block_the_language_cannot_read_is_refused(patch, match):
         spec_of(WALKED, **patch)
 
 
+#: A relation with a column over the breakpoint dim that a walk can name.
+SLOT_OF = {'relations.slot_of': {'key': 'flow', 'values': {'generator': 'generator', 'slot': 'bp'}}}
+
+
+@pytest.mark.parametrize(
+    ('model', 'refused', 'match', 'rewrite'),
+    [
+        pytest.param(
+            WALKED,
+            SLOT_OF | _walk(by='slot_of[slot]'),
+            r"by: slot_of looks the curve up at 'bp', the breakpoint dimension",
+            _walk(by='slot_of[generator]'),
+            id='a-walk-naming-a-column-over-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {'relations.generator_of': {'key': ['flow', 'bp'], 'values': 'generator'}},
+            r"by: generator_of is keyed on 'bp', the breakpoint dimension",
+            {'relations.generator_of.key': 'flow'},
+            id='a-walk-keyed-on-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {'parameters.bp_power.dims': ['generator', 'bp']},
+            r"by: generator_of\[generator\] sets that row, so declare 'bp_power' over dimensions of \['flow', ",
+            {'parameters.bp_power.dims': ['flow', 'bp']},
+            id='walked-values-over-the-curves-dims',
+        ),
+        pytest.param(
+            WALKED,
+            {'variables.u': {'dims': ['flow', 'snapshot'], 'domain': 'binary'}, 'piecewise.coupling.activity': 'u'},
+            r"activity 'u' is over \['flow'\], which is not in dims: \['generator', 'snapshot'\]",
+            {'variables.u.dims': ['generator', 'snapshot']},
+            id='a-gate-over-a-dim-a-walk-adds',
+        ),
+        pytest.param(
+            raw_of(NONCONVEX_YAML),
+            {'variables.u': {'dims': ['snapshot', 'bp'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
+            r"activity 'u' is over \['bp'\], which is not in dims: \['snapshot'\]",
+            {'variables.u.dims': ['snapshot']},
+            id='a-gate-over-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {
+                'dimensions.period': {'dtype': 'int'},
+                'relations.generator_of': {'key': ['flow', 'period'], 'values': 'generator'},
+            },
+            r"link 'power' expression is not over \['period'\], which by: generator_of\[generator\] adds",
+            {'relations.generator_of.key': 'flow'},
+            id='a-walk-adding-a-dim-the-expression-lacks',
+        ),
+    ],
+)
+def test_a_refusal_suggests_a_rewrite_that_loads(model, refused, match, rewrite):
+    """Each refusal advised adding a dim to `dims:` that `dims:` refuses, or already lists, or dropping one it lacks.
+
+    The breakpoint dim cannot be listed, a dim a walk adds is then refused as
+    one the curve is already over, and a walked link's values are over its
+    own row, which `dims:` does not set.
+    """
+    with pytest.raises(LanguageError, match=match) as refused_at_load:
+        spec_of(model, **refused)
+    assert not re.search(r'(to|from) dims:', str(refused_at_load.value)), 'no advice that the language refuses'
+    spec_of(varied(model, **refused), **rewrite)
+
+
 def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
     """A row finer than the curve is reached through a relation, which says which curve each fine row reads."""
     model = varied(
@@ -1058,6 +1141,13 @@ def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
 )
 def test_a_link_named_after_a_row_the_block_writes_is_refused(link, match):
     with pytest.raises(LanguageError, match=match):
+        spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
+
+
+@pytest.mark.parametrize('link', ['complete', 'increasing', 'curvature', 'breakpoints', 'contiguous', 'power_complete'])
+def test_a_link_named_after_a_condition_the_block_writes_is_refused(link):
+    """A link `complete` wrote the row `coupling_complete` beside the assumption of that name, and the file loaded."""
+    with pytest.raises(LanguageError, match=f"link '{link}' has the row 'coupling_{link}'"):
         spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
 
 
