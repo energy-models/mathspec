@@ -166,15 +166,13 @@ comparison in a condition. Under `'absent'`, a tool leaves a bound open where
 the parameter has no row.
 
 `program.parameters[name].where` is a [`Mask`](#nodes-and-conditions) for the
-`where:` of the parameter, or `None` where the parameter has every coordinate
-of its `dims`. With data attached, an engine applies the condition first.
-Where it is false, the parameter is absent in every expression that uses it,
-and the engine drops the rows of the data there. Where it is true, the engine
-applies `missing:`: a value fills a missing row, and `'refused'` requires a
-row. The condition contains no variable and no parameter with a `where:` of
-its own. So an engine can evaluate every such condition before it reads any
-parameter that has a `where:`
-([`where` on a parameter](language/parameters-variables-constraints.md#where)).
+`where:` of the parameter, or `None` when the parameter has every coordinate
+of its `dims`. With data attached, an engine applies the condition before
+`missing:`, as
+[`where` on a parameter](language/parameters-variables-constraints.md#where)
+describes. The condition contains no variable and no parameter with a `where:`
+of its own. So an engine can evaluate every such condition before it reads any
+parameter that has a `where:`.
 
 With data attached, an engine must refuse a divisor that is `0` in a row it
 builds, and name the divisor. The same applies to a term of a sum that it

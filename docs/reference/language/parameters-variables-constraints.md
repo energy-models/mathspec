@@ -279,8 +279,8 @@ because `dims: []` declares a scalar.
 | --------- | ---------------------------------------------------------------- | --------- |
 | `dims`    | required. The dimensions it is indexed over. `[]` means a scalar |           |
 | `dtype`   | `float`, `int`, `bool` or `str`                                  | `float`   |
-| `where`   | the condition that limits its coordinates ([`where`](#where))    | `null`    |
 | `missing` | what a missing row of the data means ([`missing`](#missing))     | `refused` |
+| `where`   | the condition that limits its coordinates ([`where`](#where))    | `null`    |
 
 With data attached, a tool requires the column to match the `dtype`:
 
@@ -393,9 +393,9 @@ as `` `0` where the data has no row ``. It lists nothing for `refused`.
 ### `where`
 
 `where:` limits a parameter to the coordinates where a
-[condition](expressions.md#conditions) is true. It suits a table that is
-declared over several dimensions but has values only at some combinations of
-their labels:
+[condition](expressions.md#conditions) is true. The dimensions keep every
+label, and only the parameter loses coordinates. In this example, `efficiency`
+has a value only at the pairs of an entity and a bus that are wired:
 
 ```yaml
 dimensions:
@@ -436,16 +436,18 @@ steps:
    A missing row there is refused, absent or a value, as
    [`missing:`](#missing) sets.
 
-Under `refused`, a tool would instead require a row at each wired pair and
-snapshot, and nowhere else.
+Under `missing: refused`, a tool requires a row at each wired pair and
+snapshot of the example, and drops every other row.
 
-A dropped row is not an error. An [assumption](assumptions.md) on the
-parameter cannot see that row either, because the parameter has no row there.
+A tool drops a row of the data outside the condition without refusing the
+data. An [assumption](assumptions.md) on the parameter does not test that row
+either, because the parameter has no row there.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
-[relations](relations.md) and parameters without a `where:`. mathspec refuses
-four conditions at load:
+[relations](relations.md) and parameters without a `where:`.
+
+mathspec refuses four conditions at load:
 
 - a condition that contains a variable
 - a condition that contains the parameter itself
@@ -462,8 +464,8 @@ Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates
 mathspec suggests a parameter or a relation as the rewrite.
 
 The typeset legend lists the condition beside the dimensions, after
-`only where`. For `efficiency` it lists only where
-$(e, b) \in \mathrm{connection}$.
+`only where`. For `efficiency`, the legend entry ends in
+`only where` $(e, b) \in \mathrm{connection}$.
 
 ## `variables`
 

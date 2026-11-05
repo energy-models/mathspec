@@ -25,9 +25,9 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="16" y="20" font-weight="bold">connection</text>
     <text x="96" y="20" fill-opacity="0.7">a relation</text>
     <text x="16" y="140" font-weight="bold">efficiency</text>
-    <text x="90" y="140" fill-opacity="0.7">the data</text>
+    <text x="90" y="140" fill-opacity="0.7">the data, at one snapshot</text>
     <text x="500" y="80" font-weight="bold">efficiency</text>
-    <text x="574" y="80" fill-opacity="0.7">a parameter</text>
+    <text x="574" y="80" fill-opacity="0.7">a parameter, at one snapshot</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="44" font-weight="bold">entity</text><text x="96" y="44" font-weight="bold">bus</text>
       <text x="24" y="68">chp</text><text x="96" y="68">el</text>
