@@ -11,11 +11,17 @@ A generator's cost curve, tied to its dispatch by a
 another method.
 
 The typesetter prints the curve as the convex hull of its breakpoints,
-$`\mathrm{conv}`$, and lists the assumptions under which the hull is the
-curve. Dispatch increases along `bp`, and the cost curve bends one way only. A
-minimised cost on a convex curve then lies on the curve without a binary.
+$`\mathrm{conv}`$, which also contains points off the curve. The objective
+minimises the cost, so each point lies on the lower edge of the hull. Where
+dispatch increases along `bp` and the cost curve is convex, that edge is the
+curve. The cost then lies on the curve without a binary. The assumptions
+`cost_curve_increasing` and `cost_curve_curvature` state that dispatch
+increases and that the curve bends one way only.
+
+When the spec is expanded, the entry becomes the weights `cost_curve_lam`, a
+row that makes them sum to one, and one row per link.
 [See what a piecewise curve expands to](../howto/see-an-expansion.md) shows
-the weights `cost_curve_lam` and the rows that `expand()` writes.
+how to print an expansion.
 
 <!-- gallery:begin -->
 ```yaml

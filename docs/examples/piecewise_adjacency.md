@@ -6,22 +6,23 @@ SPDX-License-Identifier: CC-BY-4.0
 # A curve that is not convex
 
 The dispatch of [the convex page](piecewise.md), with a cost curve that is not
-convex. A minimised cost no longer keeps the weights on one segment, so the
-entry takes the default method, `adjacency`, which holds them there with
-binaries.
+convex. Minimising the cost no longer puts the weights on one segment, so the
+entry takes the default method, `adjacency`. Its expansion adds binaries and
+rows that require the non-zero weights to lie on one segment.
 
 The typesetter prints the curve as a piecewise-linear function,
 $`\mathrm{pwl}`$, with no assumption about its shape. When the spec is
-expanded, `cost_curve_seg` is one binary per segment and `cost_curve_pick`
-picks one segment. `cost_curve_adjacency` then holds each weight at zero
-unless a segment next to it is picked.
+expanded, `cost_curve_seg` is one binary per breakpoint. `cost_curve_pick`
+requires at most one of them to be 1. `cost_curve_adjacency` requires each
+weight to be zero unless the binary at its breakpoint or the one before is 1.
+The non-zero weights then lie at the picked breakpoint and the one after it.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
   The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is
-  not convex. Under the default method, the expansion holds the weights on one
-  segment with binaries.
+  not convex. Under the default method, the expansion states binaries and rows
+  that require the non-zero weights to lie on one segment.
 
 dimensions:
   snapshot:
@@ -86,7 +87,7 @@ objective:
   expression: sum(op_cost)
 ```
 
-The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not convex. Under the default method, the expansion holds the weights on one segment with binaries.
+The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not convex. Under the default method, the expansion states binaries and rows that require the non-zero weights to lie on one segment.
 
 #### Sets
 

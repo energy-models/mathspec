@@ -87,8 +87,9 @@ dimension must be declared [ordered](dimensions.md#ordered), because
 
 ### What a set is written out as
 
-`spec.expand('sos')` states the set as binary variables: one per member for
-`type: 1`, and one per segment between two members for `type: 2`. A member
+`spec.expand('sos')` states the set as one binary variable per member. Under
+`type: 1`, the binary of a member admits that member. Under `type: 2`, it
+admits that member and the next, so it picks the segment between them. A member
 that the binaries do not admit is held at zero, from above and from below. For
 a set `s` over the variable `x` along `d`, let `admitted` be `s_seg` for
 `type: 1`, and `s_seg + shift(s_seg, along=d, offset=1, edge=0)` for `type: 2`:
@@ -196,7 +197,10 @@ breakpoint tables.
 Under the default `method`, the expansion writes a weight in [0, 1] per
 breakpoint and a row that makes the weights sum to one. It also writes one row
 per link, which ties the expression of the link to the weighted breakpoints.
-`incremental` and `lp` write other rows ([`method`](#method)).
+The weights get an [`sos:`](#sos) entry, written out as one binary per
+breakpoint in `chp_seg` and the rows `chp_pick` and `chp_adjacency`. Those rows
+require that only the weights of one segment are non-zero. Each other method
+writes other rows ([`method`](#method)).
 
 Each item under `links:` is a **link**: a name and a list of two or three
 parts. The name of a link sets the name of its row, `<entry>_<link>`, so the
@@ -307,10 +311,19 @@ snapshot has its own point on it.
 
 A link with no sign, or with `==`, is pinned to the curve: its expression
 equals the weighted breakpoints. A link with `<=` or `>=` is bounded by the
-curve instead. In the first spec on this page, with the entry `fuel_cap` below
-in place of `chp`, the fuel use may lie anywhere below the curve:
+curve instead. In the spec below, the fuel use of each generator may lie
+anywhere below the curve:
 
 ```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [generator], bounds: { lower: 0 } }
+  fuel: { dims: [generator], bounds: { lower: 0 } }
 piecewise:
   fuel_cap:
     along: bp
@@ -318,6 +331,9 @@ piecewise:
     links:
       power: [power, power_bp]
       fuel: [fuel, fuel_bp, "<="]
+objective:
+  sense: minimize
+  expression: sum(fuel, over=generator)
 ```
 
 ```math
@@ -335,9 +351,20 @@ read. With a sign on every link, mathspec refuses the file at load:
 piecewise.chp.links: every link has a '<=' or '>=' sign, so nothing pins the point the curve is read at. Write '==' on at least one link.
 ```
 
-With a sign on two of three links, the entry below loads in place of `chp`:
+The first spec on this page also loads with a sign on two of its three links:
 
 ```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+  heat_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [generator], bounds: { lower: 0 } }
+  fuel: { dims: [generator], bounds: { lower: 0 } }
+  heat: { dims: [generator], bounds: { lower: 0 } }
 piecewise:
   chp:
     along: bp
@@ -346,6 +373,9 @@ piecewise:
       power: [power, power_bp]
       fuel: [fuel, fuel_bp, ">="]
       heat: [heat, heat_bp, "<="]
+objective:
+  sense: minimize
+  expression: sum(fuel, over=generator)
 ```
 
 ```math
@@ -423,6 +453,9 @@ These rules apply to a walked link:
   converter has no row.
 - `method: convex` and `method: lp` take no walked link, and the other methods
   do.
+- In YAML flow style, `{…}`, the `by:` value needs quotes, as in
+  `by: "converter_of[converter]"`. Inside braces, a YAML parser takes `[` as the
+  start of a list. In block style the value needs no quotes.
 
 ### `where`
 
@@ -463,8 +496,11 @@ objective:
 ```
 
 Only a generator where `has_curve` is true has a curve. For any other
-generator, the expansion writes no weights and no rows. There `p` and
-`op_cost` are free, and `bp_x` and `bp_y` need no rows.
+generator, the expansion writes no weights and no row that ties `p` or
+`op_cost` to a curve. There `p` and `op_cost` are free, and `bp_x` and `bp_y`
+need no rows. Under `adjacency`, and under `sos2` once its set is written out,
+the row `cost_curve_pick` still exists there. At that generator it states that
+a sum of no binaries is at most 1.
 
 A coordinate outside the `where:` has no curve. A coordinate with an
 [`activity:`](#activity) gate has a curve that the solver may switch off.
@@ -605,9 +641,15 @@ has no row there, so a term that uses it is absent.
 | `convex`                | nothing                                                                     | the curve's smallest convex region (its convex hull), with no binary |
 | `lp`                    | no weights at all: one row per segment, plus two rows that bound the domain | the curve as its own segment lines                                   |
 
-`convex` takes exactly two links, no walked link and no `activity:`. Its hull
-equals the curve only when the curve has the right shape, and an
-[assumption](assumptions.md#what-a-curve-assumes) states that shape.
+`convex` takes exactly two links, no walked link and no `activity:`. The hull
+contains points off the curve, so `convex` states the curve exactly from one
+side only. With `>=` on the second link, the lower edge of the hull bounds that link
+from below. With `<=`, the upper edge bounds it from above. With both
+links pinned, the point lies on an edge only where the objective minimises or
+maximises the second link. The lower edge is the curve where the curve is
+convex, and the upper edge is the curve where it is concave. The
+`<entry>_curvature` [assumption](assumptions.md#what-a-curve-assumes) states
+the shape that makes the edge the curve.
 
 `lp` needs **exactly two links**, **exactly one** of them with a `<=` or `>=`
 sign, no walked link and no `activity:`:

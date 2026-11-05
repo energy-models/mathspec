@@ -6,14 +6,17 @@ SPDX-License-Identifier: CC-BY-4.0
 # A curve as segment lines
 
 The dispatch of [the convex page](piecewise.md), with each cost curve stated as
-the lines that its segments lie on. The `>=` on the cost link holds the cost
-above every line. The expansion declares no variable, so the model stays a
-linear program.
+the lines that its segments lie on. Under the `>=` on the cost link, the cost
+lies on or above every line. The expansion declares no variable, so the model
+stays a linear program.
 
 The assumptions are the point of this page. The lines bound the cost exactly
 only where dispatch increases along `bp` and the cost curve is convex. On a
-concave curve the lines cut below it, and the solver still reports an optimal
-solution. A tool checks `cost_curve_curvature` when the data is attached.
+concave curve, each line lies above the curve away from its own segment, so
+between breakpoints the cost must lie above the curve. With breakpoints (0, 0), (1, 2) and (2, 3)
+and a dispatch of 0.5, the cost must be at least 1.5, where the curve gives 1.
+The solver still reports an optimal solution. A tool checks
+`cost_curve_curvature` when the data is attached.
 
 <!-- gallery:begin -->
 ```yaml
@@ -65,10 +68,10 @@ variables:
 piecewise:
   cost_curve:
     description: >-
-      cost bounded below by the curve — the `>=` is what says which side of the
-      lines the cost sits on, and the curvature has to match it: lines that
-      envelope a convex curve would cut a concave one, and the solve comes back
-      optimal either way
+      cost bounded below by the curve — the `>=` sets which side of the lines
+      the cost lies on, and the curvature has to match it: the lines of a
+      concave curve lie above it, and the solver reports an optimal solution
+      either way
     along: bp
     dims: [snapshot, generator]
     links:
