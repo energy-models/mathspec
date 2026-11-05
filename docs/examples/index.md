@@ -49,7 +49,7 @@ An open-source power system modelling framework
 ([PyPSA](https://pypsa.org)) has its own pages in the Development section,
 which start at [PyPSA in one file](pypsa_ladder.md). They state the model that PyPSA
 builds, as a proof that the language can state it.
-[PyPSA in 24 files](pypsa/index.md) states the same spec in fragments
+[PyPSA in 25 files](pypsa/index.md) states the same spec in fragments
 that `merge` composes.
 
 !!! info "See also"

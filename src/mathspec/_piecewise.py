@@ -254,6 +254,20 @@ def _walked(text: str, dims: Iterable[str], link: Link | None) -> str:
     return f'at({text}, by={link.by})'
 
 
+def _on_walk(text: str | None, link: Link) -> str | None:
+    """*text* as *link*'s row reads it, admitted only at the keys its relation has a row for.
+
+    A relation declared ``missing: absent`` may lack a key, and there the
+    walked read of the curve is absent, so the row would pin the link's
+    expression to an empty sum, or to the first breakpoint under
+    ``incremental``. A where read through the relation is already false
+    there, and under ``missing: refused`` every key has a row.
+    """
+    if link.walk is None or link.reads or link.walk.relation.missing == 'refused':
+        return through(text, link)
+    return _all_of(link.walk.name, text)
+
+
 def _quoted(names: Iterable[str]) -> str:
     """Parameter names as a refusal lists them, in link order and without repeats."""
     return ', '.join(f"'{name}'" for name in dict.fromkeys(names))
@@ -489,22 +503,29 @@ def resolve_walks(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
     for key, link in pw.links.items():
         if link.by is None:
             continue
-        context = f"piecewise '{name}' link '{key}'"
-        resolver = ExpressionResolver(ns, context, errors)
-        if (columns := _columns_of(link.by)) is None:
-            errors.append(
-                f'{context}: by: {link.by!r} is not a relation with its columns in brackets. Write '
-                f'by: <relation>[<column>], as in at(..., by=).'
-            )
-            failed = True
-        elif (problem := resolver.not_a_relation(columns.relation, 'at', 'by')) is not None:
-            errors.append(problem)
-            failed = True
-        elif (walk := resolver.lookup(columns, weights)) is None:
+        resolver = ExpressionResolver(ns, f"piecewise '{name}' link '{key}'", errors)
+        columns = walked_columns(link.by, resolver)
+        if columns is None or (walk := resolver.lookup(columns, weights)) is None:
             failed = True
         else:
             walks[key] = walk
     return None if failed else walks
+
+
+def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
+    """A ``by:`` key as ``at(..., by=)`` reads it, or ``None`` with its refusal appended to *resolver*'s errors.
+
+    The expansion pastes *by* into an ``at`` call as text, so anything but
+    ``relation[column, ...]`` is refused before the text is read, and the
+    columns are then held to every rule ``at`` holds them to.
+    """
+    if (columns := _columns_of(by)) is None:
+        resolver.errors.append(
+            f'{resolver.context}: by: {by!r} is not a relation with its columns in brackets. Write '
+            f'by: <relation>[<column>], as in at(..., by=).'
+        )
+        return None
+    return resolver.columns_ref(columns, 'at', 'by')
 
 
 def _columns_of(text: str) -> ColumnsNode | None:
@@ -577,8 +598,8 @@ def declaration_of(
 
     Raises:
         DimensionError: A walk that does not fit ``dims:``, a link that does
-            not fit its row, a where outside ``dims:``, a mask carrying part
-            of what a walk reads through, or a gate landing outside ``dims:``.
+            not fit its row, a where outside ``dims:``, or a gate landing
+            outside ``dims:``.
     """
     ctx = f"piecewise '{name}'"
     if gate is not None:
@@ -601,7 +622,7 @@ def declaration_of(
             link.sign,
             link.by,
             walks.get(key),
-            _reads(ctx, key, pw, walks.get(key), carried),
+            _reads(walks.get(key), carried),
         )
         for node, (key, link) in zip(links, pw.links.items(), strict=True)
     )
@@ -666,34 +687,17 @@ def _row(entry: PiecewiseSpec, walk: JoinColumns | None) -> tuple[str, ...]:
     return tuple(refined)
 
 
-def _reads(ctx: str, key: str, entry: PiecewiseSpec, walk: JoinColumns | None, carried: frozenset[str]) -> bool:
+def _reads(walk: JoinColumns | None, carried: frozenset[str]) -> bool:
     """Whether a walked link's row reads the entry's ``where:`` through its relation; ``False`` for one that does not walk.
 
     A walked row is over the dims the walk adds, where a mask over a dim it
     drops cannot be read as written. Read through the relation it can, as
-    ``at`` reads it, when the mask carries every dim the walk joins on
-    (*carried* is what the mask carries, the breakpoint dim aside). A mask
-    carrying none the walk drops is over dims the row keeps, and reads as
-    written.
-
-    Raises:
-        DimensionError: The mask carries a dim the walk drops, and not every
-            dim the walk joins on.
+    ``at`` reads it: the read joins the mask on the dims it carries and
+    brings in the rest of the key, which the row is over too (*carried* is
+    what the mask carries, the breakpoint dim aside). A mask carrying none
+    the walk drops is over dims the row keeps, and reads as written.
     """
-    if walk is None:
-        return False
-    dropped = frozenset(walk.dropped_dims)
-    if not dropped & carried:
-        return False
-    needed = frozenset(walk.joined_dims)
-    if partial := sorted(needed - carried):
-        raise DimensionError(
-            f"{ctx} link '{key}': where {entry.where!r} tests {sorted(needed & carried)} but not {partial}, and "
-            f"the link looks the curve up through '{walk.name}' at all of {sorted(needed)}. Test all of them in "
-            f'the where:, so that it applies to the row through the relation, or none of {sorted(dropped)}, so '
-            f'that it applies to the row as written.'
-        )
-    return True
+    return walk is not None and bool(frozenset(walk.dropped_dims) & carried)
 
 
 def _link_fits(ctx: str, key: str, entry: PiecewiseSpec, found: frozenset[str], own: tuple[str, ...]) -> None:
@@ -843,7 +847,7 @@ class _Expansion:
                 cname,
                 link.dims,
                 f'({written.expression}) {link.sign} sum({self._weights_read(link)} * {link.values}, over={d})',
-                through(self.exists, link),
+                _on_walk(self.exists, link),
             )
         if pw.method in ('sos2', 'adjacency'):
             sos.section(self.raw, 'sos')[self.name] = {'variable': emitted.lam, 'along': d, 'type': 2}
@@ -889,7 +893,7 @@ class _Expansion:
                     cname + suffix,
                     [*link.dims, d],
                     f'({written.expression}) {link.sign} {start} + {filled}',
-                    _all_of(through(first, link), where),
+                    _all_of(_on_walk(first, link), where),
                 )
 
     def _weights_read(self, link: Link) -> str:

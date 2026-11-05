@@ -418,6 +418,9 @@ These rules apply to a walked link:
   the others.
 - mathspec holds a walk to every rule of [`at`](relations.md#lookups), and quotes
   the link in the refusal.
+- If the relation declares [`missing: absent`](relations.md#missing), the
+  expansion adds `converter_of` to the `where:` of the row, so a flow with no
+  converter has no row.
 - `method: convex` and `method: lp` take no walked link, and the other methods
   do.
 

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Transformers
 
-This file states PyPSA's `Transformer`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `total_cost`, `Bus_injection` and `Cycle_angle_sum`. `Transformer_v_ang_var_lower` and `Transformer_v_ang_var_upper` limit the angle of a transformer whose phase shift is a decision.
+This file states PyPSA's `Transformer`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `total_cost`, `Bus_injection` and `Cycle_angle_sum`. `Transformer_v_ang_var_lower` and `Transformer_v_ang_var_upper` limit the angle of a transformer whose phase shift is a decision.
 
 <!-- gallery:begin -->
 ```yaml
@@ -70,7 +70,7 @@ parameters:
       whether a transformer is one of PyPSA's `active_assets`, by its `active`
       flag alone, without build year and lifetime. A unit that is active in no
       snapshot of the horizon still counts. PyPSA refuses one that differs by
-      scenario (`constants.py:51`)
+      scenario (`constants.py:54`)
     dims: [transformer]
     dtype: bool
   Transformer_capital_weight:
@@ -129,8 +129,8 @@ parameters:
     description: >-
       the transformer's effective series reactance, `x` times its tap ratio,
       signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the
-      cycle basis, data prep. A transformer in no cycle has no row. From the
-      first scenario only, as a line's
+      cycle basis, data prep. A transformer in no cycle has no row. It is the
+      same in every scenario, as a line's
     dims: [period, transformer, cycle]
     missing: absent
   Transformer_phase_shift_weight:
@@ -148,8 +148,8 @@ parameters:
       whether a transformer's phase shift is a decision (PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep). False
       is a fixed shift, set by `phase_shift`. The shift parameters have no
-      scenario, but PyPSA reads them per scenario (`variables.py:447-457`,
-      `constraints.py:1645`, `:1728`). The spec and PyPSA differ here (#783)
+      scenario, but PyPSA reads them per scenario (`variables.py:432-442`,
+      `constraints.py:1660`, `:1743`). The spec and PyPSA differ here (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
@@ -398,7 +398,7 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$ — whether a transformer is active in a snapshot's period. It is PyPSA's `active`, data prep |
-| $`\mathrm{act}^{\sigma}`$ | `Transformer_active_asset` over $`\mathcal{M}`$ — whether a transformer is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:51`) |
+| $`\mathrm{act}^{\sigma}`$ | `Transformer_active_asset` over $`\mathcal{M}`$ — whether a transformer is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$ — nominal apparent power |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$ — whether the nominal apparent power is a decision |
@@ -411,9 +411,9 @@ constraints:
 | $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a given flow schedule. A transformer without one has no row here |
 | $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, `absent` where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
 | $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance. It is PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
-| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. From the first scenario only, as a line's |
+| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. It is the same in every scenario, as a line's |
 | $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
-| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. The shift parameters have no scenario, but PyPSA reads them per scenario (`variables.py:447-457`, `constraints.py:1645`, `:1728`). The spec and PyPSA differ here (\#783) |
+| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. The shift parameters have no scenario, but PyPSA reads them per scenario (`variables.py:432-442`, `constraints.py:1660`, `:1743`). The spec and PyPSA differ here (\#783) |
 | $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
 | $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed transformer |
 | $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees. It is PyPSA's `phase_shift`, zero by default. A varying transformer's shift is a decision instead |
@@ -614,5 +614,5 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

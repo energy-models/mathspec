@@ -75,7 +75,7 @@ expressions:
     description: >-
       the output a process carries into a snapshot. It is nothing at the first
       snapshot it is active in past the first of the horizon: PyPSA fills an
-      output it did not build with zero (`constraints.py:665`). It is the
+      output it did not build with zero (`constraints.py:679`). It is the
       output carried over otherwise
     dims: [scenario, snapshot, process]
     cases:
@@ -129,7 +129,7 @@ expressions:
       the status a committed process's ramp rows carry into a snapshot. At the
       first snapshot, a fixed modular process that came in running has every
       module on, since the state it brought in is on or off
-      (`constraints.py:1078-1083`). It is the state carried in otherwise
+      (`constraints.py:1092-1097`). It is the state carried in otherwise
     dims: [scenario, snapshot, process]
     cases:
       opening_modules:

@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Generator commitment
 
-This file states the commitment rows of PyPSA's `Generator`. It is one of the 24 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+This file states the commitment rows of PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
 
 <!-- gallery:begin -->
 ```yaml
@@ -72,7 +72,7 @@ parameters:
       one where the unit was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable unit, and one for
       a unit that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:286`), data prep
+      (`constraints.py:300`), data prep
     dims: [scenario, generator]
     dtype: int
   Generator_up_time_brought_in:
@@ -80,7 +80,7 @@ parameters:
       one while the up time a unit brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, generator]
     dtype: int
   Generator_down_time_brought_in:
@@ -88,7 +88,7 @@ parameters:
       one while the down time a unit brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:265-286`, `:626-627`), data prep
+      (`constraints.py:279-300`, `:640-641`), data prep
     dims: [scenario, snapshot, generator]
     dtype: int
   Generator_start_up_cost:
@@ -144,7 +144,7 @@ expressions:
     description: >-
       the commitment state a generator carries into a snapshot. It is off at
       the first snapshot it is active in past the first of the horizon. PyPSA
-      reads a status it did not build as off there (`constraints.py:354`). It
+      reads a status it did not build as off there (`constraints.py:368`). It
       is the state carried over otherwise
     dims: [scenario, snapshot, generator]
     cases:
@@ -213,7 +213,7 @@ constraints:
       `Generator-com-down-time` — a unit stopped within its own minimum down time
       is still off, and so are the modules of a modular unit that stopped.
       The down time it brought into the horizon counts as one stop before the
-      first snapshot, also where the unit is modular (`constraints.py:605-632`)
+      first snapshot, also where the unit is modular (`constraints.py:619-646`)
     dims: [scenario, snapshot, generator]
     where: Generator_committed AND Generator_min_down_time > 0
     expression: >-
@@ -356,9 +356,9 @@ assumptions:
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays on once started |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\Xi \times \mathcal{G}`$ — least snapshots a unit stays off once stopped |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:286`), data prep |
-| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
-| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:265-286`, `:626-627`), data prep |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\Xi \times \mathcal{G}`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:300`), data prep |
+| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
+| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:279-300`, `:640-641`), data prep |
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one start in this snapshot |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — cost of one snapshot spent on |
@@ -382,7 +382,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:354`). It is the state carried over otherwise |
+| $`\overleftarrow{u}`$ | `Generator_previous_status` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the commitment state a generator carries into a snapshot. It is off at the first snapshot it is active in past the first of the horizon. PyPSA reads a status it did not build as off there (`constraints.py:368`). It is the state carried over otherwise |
 | $`\overleftarrow{u}^{\circ}`$ | `Generator_status_carried_over` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$ — the state a generator carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
 | $`\mathit{Generator\_commitment\_opex}`$ | `Generator_commitment_opex` over $`\Xi`$ |
 
@@ -561,5 +561,5 @@ u_{\xi,t,g} \le N_{g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \
 
 !!! info "See also"
 
-    - [PyPSA in 24 files](index.md), for how the fragments compose
+    - [PyPSA in 25 files](index.md), for how the fragments compose
     - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

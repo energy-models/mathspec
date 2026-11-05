@@ -103,7 +103,7 @@ nav:
           - Every construct, as math: reference/notation.md
           - PyPSA in one file: examples/pypsa_ladder.md
           - Linearised unit commitment in PyPSA: examples/pypsa_linearized_uc.md
-          - PyPSA in 24 files:
+          - PyPSA in 25 files:
               - examples/pypsa/index.md
               - Settings: examples/pypsa/settings.md
               - The network: examples/pypsa/network.md
@@ -112,6 +112,7 @@ nav:
               - Carriers: examples/pypsa/carrier.md
               - Global constraints: examples/pypsa/global_constraints.md
               - Security: examples/pypsa/security.md
+              - Flow-based market coupling: examples/pypsa/flow_based.md
               - Generators: examples/pypsa/generator.md
               - Generator commitment: examples/pypsa/generator_commitment.md
               - Generator ramping: examples/pypsa/generator_ramping.md

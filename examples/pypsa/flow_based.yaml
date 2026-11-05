@@ -1,0 +1,116 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+given:
+  parameters:
+    GlobalConstraint_type: { dims: [global_constraint], dtype: str }
+    GlobalConstraint_sense: { dims: [scenario, global_constraint], dtype: str }
+    GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
+  variables:
+    Link_p: { dims: [scenario, snapshot, link] }
+  expressions:
+    Bus_injection: { dims: [scenario, snapshot, bus] }
+
+dimensions:
+  scenario:
+    description: the futures dispatch is chosen in, each with a weight
+  snapshot:
+    description: dispatch periods
+    dtype: datetime
+    ordered: true
+  bus:
+    description: network nodes
+  link:
+    description: controllable connections, each from one bus to the buses it delivers to
+  global_constraint:
+    description: PyPSA's `GlobalConstraint` rows, one label per declared limit
+  flow_based_domain:
+    description: >-
+      the flow-based domains, each with its own zero-sum balance of net
+      positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose
+      flow-based rows name no domain has one. A run without them has none
+
+relations:
+  Bus_flow_based_domain:
+    description: >-
+      the flow-based domain a zone bus belongs to: the domain whose rows set
+      the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
+      row
+    key: bus
+    values: flow_based_domain
+    missing: absent
+
+parameters:
+  GlobalConstraint_ram:
+    description: >-
+      the remaining available margin of a `flow_based` row, one critical
+      network element (CNEC). It may differ by snapshot. No value drops the
+      row in that snapshot (`flow_based.py:201`)
+    dims: [scenario, snapshot, global_constraint]
+    missing: absent
+  GlobalConstraint_zonal_ptdf:
+    description: >-
+      the zonal power transfer distribution factor of a `flow_based` row for a
+      zone bus: PyPSA's `ptdf_<bus>` column read long, data prep. It may differ
+      by snapshot. No value is zero, as PyPSA fills it
+    dims: [scenario, snapshot, global_constraint, bus]
+    missing: 0
+  GlobalConstraint_link_ptdf:
+    description: >-
+      the factor of a `flow_based` row for a corridor link, whose flow enters
+      the row: PyPSA's `ptdf_<link>` column read long, data prep. No value is
+      zero
+    dims: [scenario, snapshot, global_constraint, link]
+    missing: 0
+  Bus_flow_based_zone:
+    description: >-
+      whether a bus is a zone of a flow-based domain: some `flow_based` row
+      has its `ptdf_<bus>` column, data prep
+    dims: [bus]
+    dtype: bool
+
+variables:
+  FlowBased_net_position:
+    description: >-
+      `FlowBased-net_position` — what a zone bus exports to the flow-based
+      domain, unbounded. It leaves the zone's nodal balance
+      (`flow_based.py:207-234`). A bus that is no zone has none
+    dims: [scenario, snapshot, bus]
+    where: Bus_flow_based_zone
+    missing: 0
+
+expressions:
+  FlowBased_injection:
+    description: what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1508`)
+    dims: [scenario, snapshot, bus]
+    expression: -FlowBased_net_position
+    adds_to: Bus_injection
+
+constraints:
+  GlobalConstraint_flow_based_ub:
+    description: >-
+      `flow_based` — a CNEC's flow, the zones' net positions and the corridor
+      links' flows each times its factor, is at most its remaining available
+      margin. PyPSA names the rows `GlobalConstraint-ram`, one per CNEC and
+      snapshot, and reads no `constant` (`flow_based.py:262-293`)
+    dims: [scenario, snapshot, global_constraint]
+    where: >-
+      GlobalConstraint_type == 'flow_based' AND GlobalConstraint_sense == '<='
+      AND GlobalConstraint_ram AND GlobalConstraint_counts_snapshot
+    expression: >-
+      sum(GlobalConstraint_zonal_ptdf * FlowBased_net_position, over=bus)
+      + sum(GlobalConstraint_link_ptdf * Link_p, over=link)
+      <= GlobalConstraint_ram
+  FlowBased_balance:
+    description: "`FlowBased-balance` — the net positions of each domain's zones sum to zero"
+    dims: [scenario, snapshot, flow_based_domain]
+    expression: sum(FlowBased_net_position, over=bus, by=Bus_flow_based_domain[flow_based_domain]) == 0
+
+assumptions:
+  GlobalConstraint_flow_based_sense_is_le:
+    holds: "GlobalConstraint_sense == '<='"
+    where: "GlobalConstraint_type == 'flow_based'"
+    description: >-
+      PyPSA refuses a `flow_based` row whose sense is not `<=`
+      (`flow_based.py:109-114`)
