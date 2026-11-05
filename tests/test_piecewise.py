@@ -200,8 +200,8 @@ def test_the_emitted_frame_is_sorted_by_name_whatever_order_the_file_declares(or
     same way for the same names within one process — so a run that reads the
     set rather than sorting it fails one of the two orderings."""
     spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['generator', 'snapshot', 'bp'], (
-        'the frame sorted by name, then the breakpoint dimension'
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ('bp', 'generator', 'snapshot'), (
+        'the frame and the breakpoint dimension, sorted by name'
     )
 
 
@@ -630,12 +630,12 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     program = expanded(LP_MASKED, 'piecewise').program
 
     assert list(program.assumptions) == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
+        'cost_curve_complete',
         'cost_curve_contiguous',
-    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it'
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it, sorted by name'
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )

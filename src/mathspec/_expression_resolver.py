@@ -193,13 +193,13 @@ class ExpressionResolver:
                 return None
         match self.ns.kind(node.name):
             case 'variable':
-                return VariableReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
+                return VariableReference(node.name, dims=self.ns.leaf_dims[node.name])
             case 'parameter':
                 dtype = self.ns.dtypes.get(node.name)
                 if dtype is not None and dtype not in NUMERIC_DTYPES:
                     self.errors.append(not_a_number(node.name, dtype, self.context))
                     return None
-                return ParameterReference(node.name, dims=sorted_dims(self.ns.leaf_dims[node.name]))
+                return ParameterReference(node.name, dims=self.ns.leaf_dims[node.name])
             case 'dimension':
                 self.errors.append(
                     f"{self.context}: '{node.name}' is a dimension, and a dimension is "
@@ -663,7 +663,7 @@ class ExpressionResolver:
                 )
                 return None
         kept = tuple(r for r in shape.key if r not in from_roles and r not in into_roles)
-        return JoinColumns(name, shape, (*from_roles, *kept), (*into_roles, *kept))
+        return JoinColumns(name, shape, shape.in_order((*from_roles, *kept)), shape.in_order((*into_roles, *kept)))
 
     def partition(self, columns: ColumnsNode, operator: str, along_dim: str) -> Partition | None:
         """How a partition (``shift``, ``sum_back``, ``position``) steps along the relation *columns* names.
@@ -754,7 +754,7 @@ def _columns_over(shape: Relation, dims: tuple[str, ...]) -> str:
     over = {d: [r for r in shape.roles if shape.dim(r) == d] for d in dims}
     if named := [f'the columns over {d!r} are {roles}' for d, roles in over.items() if roles]:
         return ', '.join(named)
-    return f'its columns are {list(shape.roles)}, over {sorted(set(shape.dims))}'
+    return f'its columns are {list(shape.roles)}, over {list(shape.dims)}'
 
 
 def _or_a_formal(formals: frozenset[str]) -> str:

@@ -185,7 +185,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b},\ \mathrm{heat}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G}
+\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g},\ \mathrm{heat}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The [typesetter](../typeset.md) prints the entry as one membership. For each generator, the
@@ -244,7 +244,7 @@ piecewise:
 ```
 
 ```math
-\mathit{fuel}_{g} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b})(\mathit{power}_{g}) \qquad \forall\, g \in \mathcal{G}
+\mathit{fuel}_{g} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g})(\mathit{power}_{g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The typesetter now prints the curve as a function of `power`, with `fuel`
@@ -300,7 +300,7 @@ objective:
 ```
 
 ```math
-\mathit{op\_cost}_{g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b})(p_{g}) \qquad \forall\, g \in \mathcal{G}
+\mathit{op\_cost}_{g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The cost of each generator is bounded below by the curve, and no weight
@@ -349,7 +349,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \begin{cases} \mathit{running}_{g,t} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 <figure class="diagram">
@@ -400,7 +400,7 @@ objective:
 ```
 
 ```math
-\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{g,b} \text{ is defined}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G}
+\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 <figure class="diagram">

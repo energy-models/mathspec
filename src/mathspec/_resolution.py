@@ -115,9 +115,9 @@ class Namespace:
             n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
-            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
+            **{p: pd.dims for p, pd in parameters.items()},
+            **{m: md.dims for m, md in spec.given.conditions.items()},
+            **{v: vd.dims or () for v, vd in variables.items()},
         }
         self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
         self._loading: list[str] = []
@@ -554,7 +554,7 @@ def self_existence(where: Condition, variable: str, context: str) -> str | None:
     return (
         f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
         f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
-        f'variable declared before it.'
+        f'variable.'
     )
 
 

@@ -83,40 +83,40 @@ Units that draw power from one bus and deliver it to others, through numbered po
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{connection}: \mathcal{P} \times \mathcal{U} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — nodes of the network |
+| $`\mathcal{P}`$ | index $`p`$ — `port` with $`\mathrm{connection}: \mathcal{P} \times \mathcal{U} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — an attachment of a unit, numbered as PyPSA's bus0, bus1, ... |
+| $`\mathcal{R}`$ | index $`r`$ — `role` with $`\mathrm{connection}: \mathcal{P} \times \mathcal{U} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — input or output |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{connection}: \mathcal{U} \times \mathcal{P} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — nodes of the network |
-| $`\mathcal{U}`$ | index $`u`$ — `unit` with $`\mathrm{connection}: \mathcal{U} \times \mathcal{P} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — converters, such as an electrolyser or a heat pump |
-| $`\mathcal{P}`$ | index $`p`$ — `port` with $`\mathrm{connection}: \mathcal{U} \times \mathcal{P} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — an attachment of a unit, numbered as PyPSA's bus0, bus1, ... |
-| $`\mathcal{R}`$ | index $`r`$ — `role` with $`\mathrm{connection}: \mathcal{U} \times \mathcal{P} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — input or output |
+| $`\mathcal{U}`$ | index $`u`$ — `unit` with $`\mathrm{connection}: \mathcal{P} \times \mathcal{U} \to \mathcal{B} \times \mathcal{R}`$, `connection` is `absent` where the data has no row — converters, such as an electrolyser or a heat pump |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{U}`$ — the most a unit can draw at its input |
-| $`\mathrm{efficiency}`$ | `efficiency` over $`\mathcal{U} \times \mathcal{P} \times \mathcal{T}`$, only where $`\mathrm{connection.role}(u,\ p) = \text{'}\mathrm{output}\text{'}`$, $`1`$ where the data has no row — share of the drawn power that an output port delivers |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{B} \times \mathcal{T}`$ — demand to be met |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{B}`$ — price of power bought at a bus |
+| $`\mathrm{efficiency}`$ | `efficiency` over $`\mathcal{P} \times \mathcal{T} \times \mathcal{U}`$, only where $`\mathrm{connection.role}(p,\ u) = \text{'}\mathrm{output}\text{'}`$, $`1`$ where the data has no row — share of the drawn power that an output port delivers |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{B} \times \mathcal{T}`$ — demand to be met |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{flow}`$ | `flow` over $`\mathcal{U} \times \mathcal{T}`$ — power a unit draws at its input |
+| $`\mathit{flow}`$ | `flow` over $`\mathcal{T} \times \mathcal{U}`$ — power a unit draws at its input |
 | $`\mathit{supply}`$ | `supply` over $`\mathcal{B} \times \mathcal{T}`$ — power bought at a bus |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{injection}`$ | `injection` over $`\mathcal{U} \times \mathcal{P} \times \mathcal{T}`$ — what a port puts into its bus |
+| $`\mathit{injection}`$ | `injection` over $`\mathcal{P} \times \mathcal{T} \times \mathcal{U}`$ — what a port puts into its bus |
 
 #### Variable domains
 
 **`flow`**
 
 ```math
-0 \le \mathit{flow}_{u,t} \le \mathrm{capacity}_{u} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+0 \le \mathit{flow}_{t,u} \le \mathrm{capacity}_{u} \qquad \forall\, t \in \mathcal{T},\ u \in \mathcal{U}
 ```
 
 **`supply`**
@@ -130,13 +130,13 @@ Units that draw power from one bus and deliver it to others, through numbered po
 **`injection`**
 
 ```math
-\mathit{injection}_{u,p,t} = \begin{cases} -\mathit{flow}_{u,t} & \text{if } \mathrm{connection.role}(u,\ p) = \text{'}\mathrm{input}\text{'} \\ \mathrm{efficiency}_{u,p,t} \cdot \mathit{flow}_{u,t} & \text{otherwise} \end{cases} \qquad \forall\, u \in \mathcal{U},\ p \in \mathcal{P},\ t \in \mathcal{T}
+\mathit{injection}_{p,t,u} = \begin{cases} -\mathit{flow}_{t,u} & \text{if } \mathrm{connection.role}(p,\ u) = \text{'}\mathrm{input}\text{'} \\ \mathrm{efficiency}_{p,t,u} \cdot \mathit{flow}_{t,u} & \text{otherwise} \end{cases} \qquad \forall\, p \in \mathcal{P},\ t \in \mathcal{T},\ u \in \mathcal{U}
 ```
 
 #### Objective
 
 ```math
-\min \sum_{t \in \mathcal{T},\ b \in \mathcal{B}} \mathrm{cost}_{b} \cdot \mathit{supply}_{b,t}
+\min \sum_{b \in \mathcal{B},\ t \in \mathcal{T}} \mathrm{cost}_{b} \cdot \mathit{supply}_{b,t}
 ```
 
 #### Subject to
@@ -144,6 +144,6 @@ Units that draw power from one bus and deliver it to others, through numbered po
 **`balance`**
 
 ```math
-\mathit{supply}_{b,t} + \sum_{u \in \mathcal{U},\ p \in \mathcal{P} \,:\, \mathrm{connection.bus}(u,\ p) = b} \mathit{injection}_{u,p,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\mathit{supply}_{b,t} + \sum_{p \in \mathcal{P},\ u \in \mathcal{U} \,:\, \mathrm{connection.bus}(p,\ u) = b} \mathit{injection}_{p,t,u} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->

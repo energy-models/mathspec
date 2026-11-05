@@ -68,7 +68,7 @@ def test_a_named_condition_stands_where_its_name_is_written_with_its_condition_u
         'a named condition is indexed over the dims its condition reads, sorted by name'
     )
     assert where.names_read == {'build_year', 'lifetime', 'period_year'}, 'a mask reads what its condition reads'
-    assert where.dims == {'period', 'generator'}
+    assert where.dims == ('generator', 'period')
 
 
 @pytest.mark.parametrize(
@@ -137,7 +137,7 @@ def test_a_variable_that_asks_through_a_named_condition_whether_it_exists_is_ref
 def test_a_named_condition_may_ask_whether_another_variable_exists():
     spec = to_spec(varied(CORE, **{'conditions.dispatched': 'p', 'constraints.cap.where': 'dispatched'}))
     where = spec.program.constraints['cap'].where
-    assert where is not None and VariableDefined('p', ('period', 'generator')) in where.atoms
+    assert where is not None and VariableDefined('p', ('generator', 'period')) in where.atoms
 
 
 @pytest.mark.parametrize(
@@ -189,7 +189,7 @@ def test_cases_split_by_a_named_condition_are_proved_apart_through_its_condition
         'cases': {'on': {'when': 'a', 'expression': 1}, 'off': {'when': 'flag', 'expression': 2}},
         'otherwise': 0,
     }
-    with pytest.raises(LanguageError, match=r"cases 'on' and 'off' both claim the value where flag is true"):
+    with pytest.raises(LanguageError, match=r"cases 'off' and 'on' both claim the value where flag is true"):
         to_spec(varied(SMALL_MODEL, **{'conditions.a': 'flag', 'expressions.e': case}))
     apart = varied(case, **{'cases.off.when': 'NOT a'})
     assert to_spec(varied(SMALL_MODEL, **{'conditions.a': 'flag', 'expressions.e': apart}))
@@ -204,7 +204,7 @@ def test_a_fragment_reads_another_file_s_named_condition_as_boolean_data():
     """#803's ramp read `active == 1` under `given: expressions:`, which a where may not read."""
     program = to_spec(RAMPING).program
     where = program.constraints['ramp_up'].where
-    assert where is not None and ParameterDefined('stands', ('period', 'generator')) in where.atoms, (
+    assert where is not None and ParameterDefined('stands', ('generator', 'period')) in where.atoms, (
         'alone, the reading is data the host provides'
     )
     assert sorted(program.given.conditions) == ['stands']
@@ -266,7 +266,7 @@ def test_a_reader_that_states_a_frame_wider_than_the_named_condition_s_is_refuse
     reader = varied(RAMPING, **{'constraints.ramp_up.where': 'stands'})
     with pytest.raises(LanguageError) as raised:
         merge([definer, reader])
-    assert "reads the given condition 'stands' as {'dims': ['period', 'generator']}" in str(raised.value), (
+    assert "reads the given condition 'stands' as {'dims': ['generator', 'period']}" in str(raised.value), (
         'the refusal names the frame the reader states'
     )
     assert "introduces it over ['generator']" in str(raised.value), "and the frame the definer's condition reads"

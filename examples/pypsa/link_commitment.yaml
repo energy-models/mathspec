@@ -22,7 +22,7 @@ given:
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
     Link_p_nom_ext: { dims: [link] }
   expressions:
-    Link_modules: { dims: [scenario, link] }
+    Link_modules: { dims: [link, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Link_committed: { dims: [link, snapshot] }

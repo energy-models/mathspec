@@ -414,7 +414,7 @@ constraints:
     expression: sum(efficiency * p, over=entity) == 0
 ```
 
-$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
 <figure class="diagram">
 --8<-- "docs/static/parameters-where.svg"

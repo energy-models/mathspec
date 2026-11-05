@@ -22,7 +22,7 @@ given:
     Process_maintenance_status: { dims: [scenario, snapshot, process] }
     Process_p_nom_ext: { dims: [process] }
   expressions:
-    Process_modules: { dims: [scenario, process] }
+    Process_modules: { dims: [process, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
     Process_committed: { dims: [process, snapshot] }

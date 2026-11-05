@@ -46,8 +46,8 @@ Check the file:
     ```
 
 ```text
-dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
 dimension 'generator' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
+dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
 ```
 
 mathspec accepts the file. `check` prints one remark that is not a refusal (a line of
@@ -110,7 +110,7 @@ Print the math with `markdown` or [`to_markdown`](../reference/typeset.md). The 
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{capacity}_{g} > 0
     ```
 
 In the equation, `dispatch` lies between zero and the capacity for every snapshot $t$ and every generator $g$ whose capacity is more than zero.
@@ -270,35 +270,35 @@ The file contains every entry the steps above added. Print the whole spec:
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
     | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+    | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
 
     | Symbol | Meaning |
     |---|---|
     | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-    | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
     | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+    | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
 
     #### Variables
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — output of a generator in a snapshot |
+    | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{T}`$ — output of a generator in a snapshot |
 
     #### Variable domains
 
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{capacity}_{g} > 0
     ```
 
     #### Objective
 
     ```math
-    \min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+    \min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
     ```
 
     #### Subject to
@@ -306,7 +306,7 @@ The file contains every entry the steps above added. Print the whole spec:
     **`power_balance`**
 
     ```math
-    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+    \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
     ```
 
 The tables at the top list the symbol and description of each set, parameter

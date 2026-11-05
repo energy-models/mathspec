@@ -82,7 +82,7 @@ entry the number of flows is fixed in the file. Instead, write out by hand the p
     `converter_of`. mathspec prints the constraint as:
 
     ```math
-    \mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{weight}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{f,b} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
+    \mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{weight}_{b,\mathrm{converter\_of}(f),t} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
     ```
 
     The weight has the index $\mathrm{converter\_of}(f)$, so each flow

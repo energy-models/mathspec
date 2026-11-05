@@ -549,10 +549,10 @@ class TestADimensionWithOneOf:
         with pytest.raises(ValidationError, match=refusal):
             DimensionSpec(one_of=labels)
 
-    def test_the_program_carries_one_of_and_the_dtype_str(self):
-        dimension = _spec(**_ONE_OF).program.dimensions['h']
+    def test_the_program_carries_one_of_sorted_and_the_dtype_str(self):
+        dimension = _spec(**{'dimensions.h': {'one_of': ['south', 'north']}}).program.dimensions['h']
         assert (dimension.dtype, dimension.one_of) == ('str', ('north', 'south')), (
-            'the labels in file order, and str wherever a dtype is read'
+            'the labels sorted by name, and str wherever a dtype is read'
         )
 
     @pytest.mark.parametrize(
@@ -2104,18 +2104,43 @@ class TestTheFrontDoor:
         """`dims: []` is a scalar entry, not an absence — stripping it would put the variable on every dim it names."""
         model = _spec(**{'variables.p.dims': []})
         assert model.to_dict()['variables']['p']['dims'] == [], 'the empty frame is written out, not dropped'
-        assert to_spec(model.to_dict()).variables['p'].dims == [], 'and reads back as the scalar it declares'
+        assert to_spec(model.to_dict()).variables['p'].dims == (), 'and reads back as the scalar it declares'
 
     def test_an_empty_section_is_not_written(self):
         written = to_spec(DISPATCH_MODEL).to_yaml()
         assert 'relations' not in written and 'macros' not in written, 'a section declaring nothing says nothing'
 
-    def test_a_default_is_written_out_and_an_absence_is_not(self):
-        written = to_spec(DISPATCH_MODEL).to_dict()
-        assert written['variables']['p']['domain'] == 'continuous', 'a default is a fact the reviewer reads'
-        assert 'upper' in written['variables']['p']['bounds'] and 'where' not in written['variables']['p'], (
-            'a null and an infinite bound say nothing, so they are not written'
-        )
+    def test_an_empty_kind_under_given_is_not_written(self):
+        """`given: {parameters: {}}` was written back, though an empty section says nothing."""
+        written = to_spec(varied(DISPATCH_MODEL, **{'given.parameters': {}})).to_dict()
+        assert 'given' not in written, 'a kind of given entry that declares nothing is not written'
+
+    def test_an_entry_whose_only_field_is_null_still_declares_it(self):
+        """`g: {description: null}` wrote back as nothing, so the written file named a dimension it did not declare."""
+        spec = to_spec({'dimensions': {'g': {'description': None}}, 'parameters': {'p': {'dims': ['g']}}})
+        assert spec.to_dict()['dimensions'] == {'g': {}}, 'the null goes and the entry stays'
+        assert to_spec(spec.to_dict()) == spec
+
+    def test_a_spec_writes_the_fields_its_file_wrote_and_its_version(self):
+        """A spec wrote back some defaults its file left out, such as `domain: continuous`, and dropped
+        others its file wrote, such as `ordered: false`."""
+        parameters = {'c': {'dims': ['g'], 'missing': 'refused'}, 'w': {'dims': ['g'], 'where': 'c > 0'}}
+        written = to_spec(
+            {
+                'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
+                'parameters': parameters,
+                'variables': {
+                    'p': {'dims': ['g'], 'domain': 'continuous', 'missing': 'absent'},
+                    'q': {'dims': ['g'], 'where': None},
+                },
+            }
+        ).to_dict()
+        assert written == {
+            'version': 0,
+            'dimensions': {'g': {}, 't': {'dtype': 'int', 'ordered': False}},
+            'parameters': parameters,
+            'variables': {'p': {'dims': ['g'], 'domain': 'continuous', 'missing': 'absent'}, 'q': {'dims': ['g']}},
+        }, 'every field the file wrote, a default included, no field it left out, no null, and the version'
 
 
 #: A model with room for a cased expression: two dimensions, so an arm can be
@@ -2145,6 +2170,51 @@ def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
             **entry,
         }
     )
+
+
+#: Every kind of thing a spec holds: an entry, a field two levels down, a list,
+#: a section, the given sections, the cases of an expression, and a relation's
+#: columns written as a mapping.
+_PROBED = {
+    **DISPATCH_MODEL,
+    'relations': {'pair': {'key': {'from_gen': 'generator', 'to_gen': 'generator'}}},
+    'expressions': {
+        'price': {
+            'dims': ['generator'],
+            'cases': {'cheap': {'when': 'cost < 1', 'expression': 'cost'}},
+            'otherwise': '2 * cost',
+        }
+    },
+}
+
+
+@pytest.mark.parametrize(
+    'write',
+    [
+        pytest.param(lambda s: setattr(s, 'description', 'edited'), id='a-top-level-field'),
+        pytest.param(lambda s: setattr(s.variables['p'], 'where', 'p_max > 1'), id='a-field-of-an-entry'),
+        pytest.param(lambda s: setattr(s.variables['p'].bounds, 'upper', 1), id='a-field-two-levels-down'),
+        pytest.param(lambda s: s.variables['p'].dims.append('extra'), id='a-name-appended-to-a-list'),
+        pytest.param(lambda s: s.parameters.__setitem__('extra', s.parameters['cost']), id='an-entry-added'),
+        pytest.param(lambda s: s.parameters.pop('cost'), id='an-entry-removed'),
+        pytest.param(lambda s: s.given.parameters.__setitem__('extra', None), id='a-given-entry-added'),
+        pytest.param(lambda s: s.expressions['price'].cases.pop('cheap'), id='a-case-removed'),
+        pytest.param(lambda s: s.relations['pair'].key.pop('to_gen'), id='a-relation-column-removed'),
+    ],
+)
+def test_a_loaded_spec_cannot_be_written_to(write):
+    """A spec edited after load would write out a file its program was never lowered from.
+
+    The program is lowered once, as the spec loads, so an edit in place left
+    `to_yaml()` writing what `program` did not hold, and the file need not
+    load. `override` is the edit: it lays a patch over the spec and loads the
+    result.
+    """
+    spec = to_spec(_PROBED)
+    before = spec.to_yaml()
+    with pytest.raises((ValidationError, TypeError, AttributeError)):
+        write(spec)
+    assert spec.to_yaml() == before, 'the spec still reads as it loaded'
 
 
 class TestExpressionCases:
@@ -2773,7 +2843,7 @@ def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
     }
     assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
     masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair'}}
-    assert "cases 'low' and 'high' both claim the value where cost has no row" in _refusal(**masked)
+    assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**masked)
 
 
 @pytest.mark.parametrize('fmt', FORMATS)
@@ -2861,6 +2931,12 @@ def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
 def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared, fragment):
     """The number stands for the variable where the mask leaves it out, so the file contradicted itself."""
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
+
+
+def test_a_variable_missing_is_not_blamed_for_a_where_that_failed_to_load():
+    """A `where:` that fails to load is absent from what `missing:` is checked against, not null."""
+    message = _refusal(**{'variables.p': {'dims': ['g'], 'where': 3, 'missing': 0}})
+    assert 'needs a `where:`' not in message, f'only the where: is refused: {message}'
 
 
 @pytest.mark.parametrize(
@@ -3191,17 +3267,33 @@ def test_a_type_1_set_reads_no_order():
 
 
 @pytest.mark.parametrize(
-    ('ordered', 'written'),
+    'declared',
     [
-        pytest.param(False, {'dtype': 'int'}, id='unordered'),
-        pytest.param(True, {'dtype': 'int', 'ordered': True}, id='ordered'),
+        pytest.param({'dtype': 'int'}, id='left-out'),
+        pytest.param({'dtype': 'int', 'ordered': False}, id='written-false'),
+        pytest.param({'dtype': 'int', 'ordered': True}, id='written-true'),
     ],
 )
-def test_a_dimension_writes_ordered_only_where_it_is_true(ordered, written):
-    """Leaving it out is what `false` says, so a file that never wrote it round-trips unchanged."""
-    spec = to_spec({'dimensions': {'t': {'dtype': 'int', 'ordered': ordered}}})
-    assert spec.to_dict()['dimensions'] == {'t': written}
+def test_a_dimension_writes_ordered_as_its_file_wrote_it(declared):
+    """`ordered: false` was dropped on the way back out, so a file that wrote it did not round-trip unchanged."""
+    spec = to_spec({'dimensions': {'t': declared}})
+    assert spec.to_dict()['dimensions'] == {'t': declared}, 'the dimension writes the fields its file wrote'
     assert to_spec(spec.to_dict()) == spec
+
+
+def test_the_canonical_form_writes_no_default():
+    """Two files that differ only in a default they write out state one spec, so they write one canonical text."""
+    spelled = {
+        'dimensions': {'g': {'dtype': 'str', 'ordered': False}},
+        'variables': {'p': {'dims': ['g'], 'domain': 'continuous'}},
+    }
+    left_out = {'dimensions': {'g': {}}, 'variables': {'p': {'dims': ['g']}}}
+    assert to_spec(spelled).to_yaml(canonical=True) == to_spec(left_out).to_yaml(canonical=True), (
+        'every default is left out of the canonical form'
+    )
+    assert (
+        to_spec(left_out).to_yaml(canonical=True) == 'version: 0\ndimensions:\n  g: {}\nvariables:\n  p: {dims: [g]}\n'
+    ), 'an entry that sets no field still declares it, and the version is written'
 
 
 @pytest.mark.parametrize(

@@ -362,8 +362,8 @@ Print the whole spec:
     | Symbol | Meaning |
     |---|---|
     | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{S}`$ — energy a battery holds when full |
-    | $`\mathrm{rate}`$ | `rate` over $`\mathcal{S}`$ — most power a battery takes in or gives out |
     | $`\mathrm{price}`$ | `price` over $`\mathcal{T}`$ — price of power |
+    | $`\mathrm{rate}`$ | `rate` over $`\mathcal{S}`$ — most power a battery takes in or gives out |
 
     #### Variables
 
