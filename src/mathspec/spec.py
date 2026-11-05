@@ -1094,27 +1094,6 @@ changes, so it is separate from the package version. Version ``0`` is unstable a
 """
 
 
-def _without_absence(value: object) -> object:
-    """*value* with every absent entry stripped, recursively — see [`Spec._drop_absence`][].
-
-    A mapping that stripping emptied goes, and one written empty stays: an
-    entry that sets no field, such as ``generator: {}``, still declares it.
-    """
-    if not isinstance(value, dict):
-        return value
-    kept = {}
-    for key, before in value.items():
-        after = _without_absence(before)
-        if not _is_absent(after) and (after != {} or before == {}):
-            kept[key] = after
-    return kept
-
-
-def _is_absent(value: object) -> bool:
-    """Whether *value* is a null."""
-    return value is None
-
-
 class Spec(_StrictSpec):
     """The declared math — one YAML file, or one dict, validated. Nothing here has seen data.
 
@@ -1230,7 +1209,7 @@ class Spec(_StrictSpec):
 
     @model_serializer(mode='wrap')
     def _drop_absence(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
-        """Absence is not serialised: a null, a mapping that stripping emptied, a section declaring nothing.
+        """Absence is not serialised: a null, an empty mapping, a section declaring nothing, each part dropping its own.
 
         An empty list stays, being a value rather than an absence (``dims:
         []`` is a scalar). On the serializer so that ``model_dump``,
@@ -1238,8 +1217,7 @@ class Spec(_StrictSpec):
         the file wrote it or not, so a written file states the language it is
         read in.
         """
-        written = _as_set(self, cast('dict[str, object]', handler(self)))
-        return {'version': self.version, **cast('dict[str, object]', _without_absence(written))}
+        return {'version': self.version, **_as_set(self, cast('dict[str, object]', handler(self)))}
 
     def to_dict(self) -> dict[str, object]:
         """The spec as plain data. ``to_spec(m.to_dict())`` reproduces it."""
