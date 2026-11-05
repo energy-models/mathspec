@@ -282,12 +282,15 @@ class Legend:
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')
-            clauses.extend(
-                f', {self.format.mono(c)} is {self.format.mono(lk.missing)} {_NO_ROW}'
-                for c, lk in carried.items()
-                if lk.missing != 'refused'
-            )
+            clauses.extend(f', {self._relation_missing(c, lk)}' for c, lk in carried.items() if lk.missing != 'refused')
         return ''.join(clauses)
+
+    def _relation_missing(self, name: str, relation: Relation) -> str:
+        """What a key combination with no row of relation *name* means, which under ``excluded`` falls on parameters."""
+        mono = self.format.mono
+        if relation.missing == 'excluded':
+            return f'every parameter over the key of {mono(name)} is {mono("excluded")} where {mono(name)} has no row'
+        return f'{mono(name)} is {mono(relation.missing)} {_NO_ROW}'
 
     def _notation(self, noticed: Noticed) -> list[LegendItem]:
         """A row for each translation and position symbol printed; plain ``t-k`` needs none.

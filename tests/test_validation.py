@@ -2639,6 +2639,12 @@ def test_inf_and_dot_inf_load_as_one_number():
             'float', 'zero', "missing is the string 'zero'. It takes refused, absent, or a value", id='a-word'
         ),
         pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
+        pytest.param(
+            'float',
+            'excluded',
+            'Declare missing: excluded on a relation keyed by dimensions of the parameter',
+            id='a-word-only-a-relation-takes',
+        ),
         pytest.param('float', float('nan'), 'missing is nan', id='nan'),
         pytest.param(
             'float', True, 'missing: true on a float parameter, which takes a number', id='a-flag-on-a-number'
@@ -2715,13 +2721,36 @@ _CONFINED = {
 }
 
 
-def test_an_excluded_relation_confines_every_parameter_over_its_key():
+@pytest.mark.parametrize(
+    ('patch', 'confined'),
+    [
+        pytest.param(
+            {'parameters.v': {'dims': ['h', 'g'], 'missing': 'absent'}},
+            {'w': ('pair',), 'v': ('pair',)},
+            id='every-parameter-over-the-key-in-any-order',
+        ),
+        pytest.param(
+            {'dimensions.t': {'dtype': 'int'}, 'parameters.v': {'dims': ['g', 'h', 't'], 'missing': 'absent'}},
+            {'w': ('pair',), 'v': ('pair',)},
+            id='a-parameter-over-one-more-dimension',
+        ),
+        pytest.param(
+            {'relations.pair': {'key': {'a': 'g', 'b': 'h'}, 'missing': 'excluded'}},
+            {'w': ('pair',)},
+            id='a-key-whose-columns-are-named-apart-from-their-dimensions',
+        ),
+        pytest.param(
+            {'relations.pair': {'key': 'g', 'values': 'h', 'missing': 'excluded'}},
+            {'c': ('pair',), 'flag': ('pair',), 'tag': ('pair',), 'w': ('pair',)},
+            id='a-key-of-one-column-confines-by-that-column-alone',
+        ),
+    ],
+)
+def test_an_excluded_relation_confines_every_parameter_over_its_key(patch, confined):
     """A tool reads which relations confine a parameter off the program, for every parameter over the key at once."""
-    spec = _spec(**_CONFINED, **{'parameters.v': {'dims': ['h', 'g'], 'missing': 'absent'}})
-    confined = {name: spec.program.confining(name) for name in spec.program.parameters}
-    assert confined == {'c': (), 'k': (), 'flag': (), 'tag': (), 'w': ('pair',), 'v': ('pair',)}, (
-        'every parameter over both g and h is confined, in any order of its dims, and no other'
-    )
+    spec = _spec(**{**_CONFINED, **patch})
+    read = {name: entry.confined_by for name, entry in spec.program.parameters.items() if entry.confined_by}
+    assert read == confined, 'exactly the parameters over every dimension of the key are confined'
     assert spec.program.parameters['w'].where is None, 'the confinement is not written into the `where:`'
     assert to_spec(spec.to_yaml()).program == spec.program, 'missing: excluded survives a round trip through YAML'
 
@@ -2785,9 +2814,19 @@ def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
     [
         pytest.param(
             {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'pair'}},
-            "Parameter 'w': relation 'pair' declares missing: excluded, so it already confines 'w' to its rows, and "
-            '`where: pair` narrows nothing. Delete the `where:`.',
+            "Parameter 'w': 'w' has coordinates only where 'pair' has a row, under missing: excluded, so "
+            '`where: pair` narrows nothing. Delete the `where:`, or the relation from it.',
             id='a-mask-that-repeats-the-confining-relation',
+        ),
+        pytest.param(
+            {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'pair OR flag'}},
+            '`where: pair OR flag` narrows nothing.',
+            id='a-mask-the-confining-relation-already-satisfies',
+        ),
+        pytest.param(
+            {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'NOT pair'}},
+            "`where: NOT pair` leaves 'w' no coordinate. Write a `where:` that holds somewhere inside the relation.",
+            id='a-mask-the-confining-relation-leaves-empty',
         ),
         pytest.param(
             {'relations.next': {'key': {'from': 'g', 'to': 'g'}, 'missing': 'excluded'}},

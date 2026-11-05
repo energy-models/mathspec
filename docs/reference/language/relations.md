@@ -189,16 +189,25 @@ bus it is not wired to is refused. The file declares this once, on the
 relation, for every parameter over `entity` and `bus`. A parameter over
 `entity` alone, or over `bus` alone, is not confined.
 
+`missing:` applies to the key, so a relation confines by its key columns and
+not by its values. Under `gen_bus: { key: generator, values: bus, missing: excluded }`,
+every parameter over `generator` has coordinates only at the generators that
+`gen_bus` lists, at every bus. To confine a parameter to the pairs, key the
+relation by both columns, as `connection` is keyed by `[entity, bus]`.
+
 A `where:` on a confined parameter narrows the coordinates further, and the
-tool drops the rows outside it, as in step 2. mathspec refuses a `where:` that
-is only the name of a relation that already confines the parameter, because
-it narrows nothing:
+tool drops the rows outside it, as in step 2. mathspec reads the `where:` as
+if each relation that confines the parameter held. A `where:` that is then
+always true narrows nothing, as `where: connection` on `efficiency`:
 
 ```text
-Parameter 'efficiency': relation 'connection' declares missing: excluded, so it already confines 'efficiency' to its rows, and `where: connection` narrows nothing. Delete the `where:`.
+Parameter 'efficiency': 'efficiency' has coordinates only where 'connection' has a row, under missing: excluded, so `where: connection` narrows nothing. Delete the `where:`, or the relation from it.
 ```
 
-mathspec suggests the rewrite: no `where:`.
+mathspec suggests two rewrites: no `where:`, or a `where:` without the
+relation. A `where:` that is then always false, such as `where: NOT connection`,
+leaves the parameter no coordinate, and mathspec suggests a `where:` that
+holds somewhere inside the relation.
 
 A parameter has each dimension once, so a key with two columns over one
 dimension confines no parameter. For `next: { key: { from: snapshot, to: snapshot }, missing: excluded }`,
@@ -211,7 +220,8 @@ Relation 'next': missing: excluded confines each parameter over every dimension 
 mathspec suggests two rewrites: one key column over each dimension, or
 `missing: absent`.
 
-The typeset legend lists `` `connection` is `excluded` where the data has no row ``
+The typeset legend lists
+``every parameter over the key of `connection` is `excluded` where `connection` has no row``
 beside each dimension of the relation. Beside each confined parameter, it lists
 the relation after `only where`, as it lists a `where:`.
 

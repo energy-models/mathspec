@@ -718,7 +718,7 @@ class Walk:
         relations = self.program.relations
         conjuncts: list[Condition] = [
             RelationDefined(name, tuple(relations[name].dim(role) for role in relations[name].key))
-            for name in self.program.confining(parameter)
+            for name in self.program.parameters[parameter].confined_by
         ]
         if (where := self.program.parameters[parameter].where) is not None:
             conjuncts.append(where.root)

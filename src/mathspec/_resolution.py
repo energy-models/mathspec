@@ -128,7 +128,7 @@ class Namespace:
         self.follow_ons: set[str] = set()
 
     def confining(self, dims: Iterable[str]) -> list[str]:
-        """The ``missing: excluded`` relations that confine a parameter over *dims*, by name."""
+        """The ``missing: excluded`` relations that confine a parameter over *dims*, by name, in file order."""
         return [name for name, relation in self.relations.items() if relation.confines(dims)]
 
     def refused_dims(self, refusal: DimensionError) -> str:

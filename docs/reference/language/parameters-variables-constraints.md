@@ -445,7 +445,14 @@ either, because the parameter has no row there. To have a tool refuse a row at
 a pair that is not wired, declare the relation
 [`missing: excluded`](relations.md#excluded) instead. It then confines
 `efficiency`, and every other parameter over `entity` and `bus`, and the
-parameter takes no `where:`.
+parameter needs no `where:`. `missing: excluded` on the parameter itself is
+refused, and mathspec prints:
+
+```text
+parameters.efficiency.missing: missing: excluded on a parameter, which takes refused, absent, or a value. Declare missing: excluded on a relation keyed by dimensions of the parameter, and the parameter has coordinates only at its rows.
+```
+
+mathspec suggests the rewrite: `missing: excluded` on the relation.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),

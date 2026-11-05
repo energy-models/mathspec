@@ -36,6 +36,7 @@ from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
     DimensionDtype,
+    MissingWord,
     ObjectiveSense,
     ParameterDtype,
     PiecewiseMethod,
@@ -131,7 +132,7 @@ NUMERIC_DTYPES: frozenset[ParameterDtype] = frozenset({'float', 'int'})
 
 _MISSING_SCHEMA: dict[str, object] = {
     'anyOf': [
-        {'enum': ['refused', 'absent']},
+        {'enum': list(get_args(MissingWord))},
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
@@ -140,7 +141,7 @@ _MISSING_SCHEMA: dict[str, object] = {
 
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
-_WORDS = 'refused, absent'
+_WORDS = ', '.join(get_args(MissingWord))
 
 
 def _without_refused(written: dict[str, object]) -> dict[str, object]:
@@ -351,10 +352,11 @@ class ParameterSpec(_StrictSpec):
     dims: list[str]
     dtype: ParameterDtype = 'float'
     where: str | None = None
-    """The condition that limits the coordinates of the parameter, in the condition grammar. Where it is false, the
-    parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
+    """The condition that limits the coordinates of the parameter, in the condition grammar, inside each relation under
+    ``missing: excluded`` that confines it. Where it is false, the parameter is absent and a tool drops its rows of data
+    there. ``missing:`` applies where it is true.
     """
-    missing: Annotated[Literal['refused', 'absent'] | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[MissingWord | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -367,7 +369,13 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str) and v not in ('refused', 'absent'):
+        if v == 'excluded':
+            msg = (
+                f'missing: excluded on a parameter, which takes {_WORDS}, or a value. Declare missing: excluded on a '
+                f'relation keyed by dimensions of the parameter, and the parameter has coordinates only at its rows.'
+            )
+            raise ValueError(msg)
+        if isinstance(v, str) and v not in get_args(MissingWord):
             msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):

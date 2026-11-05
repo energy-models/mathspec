@@ -72,6 +72,7 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
+    'MissingWord',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -145,14 +146,17 @@ column has the dtype of its dimension.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 """The domains a variable may declare."""
 
-RelationMissing = Literal['refused', 'absent', 'excluded']
+MissingWord = Literal['refused', 'absent']
+"""What a missing row of data means, in the words a parameter and a relation share."""
+
+RelationMissing = Literal[MissingWord, 'excluded']
 """The values of ``missing:`` on a relation. Under ``refused``, a tool refuses data that leaves out a combination of the
 key. Under ``absent``, that combination has no row. Under ``excluded``, it has no row, and no parameter over every
 dimension of the key has a coordinate there.
 """
 
-ParameterMissing = Literal['refused', 'absent'] | bool | float
-"""The values of ``missing:`` on a parameter: ``refused``, ``absent``, or the value that a missing row takes."""
+ParameterMissing = MissingWord | bool | float
+"""The values of ``missing:`` on a parameter: a value of [`MissingWord`][], or the value that a missing row takes."""
 
 VariableMissing = Literal['absent'] | float
 """The values of ``missing:`` on a variable. Under ``absent``, the default, a term that contains the variable has no row
@@ -725,8 +729,13 @@ class Parameter:
     description: str | None = None
     where: Mask | None = None
     """The condition that limits the coordinates of the parameter, or ``None`` when it has every coordinate of its
-    ``dims``. Where the condition is false, the parameter is absent and a tool drops its rows of data there. ``missing``
-    applies where the condition is true.
+    ``dims`` inside [`confined_by`][mathspec.program.Parameter.confined_by]. Where the condition is false, the parameter
+    is absent and a tool drops its rows of data there. ``missing`` applies where the condition is true.
+    """
+    confined_by: tuple[str, ...] = ()
+    """The ``missing: excluded`` relations whose key dimensions the parameter has, by name, in file order. A tool
+    attaching the data refuses a row at a key combination one of them has no row for, and reads the parameter as absent
+    there, before ``where`` drops anything and before ``missing`` fills anything.
     """
 
 
@@ -1129,17 +1138,6 @@ class Program:
     def relations_of(self, dimension: str) -> Mapping[str, Relation]:
         """The relations with a column over *dimension*, by name."""
         return Sealed({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
-
-    def confining(self, parameter: str) -> tuple[str, ...]:
-        """The ``missing: excluded`` relations that confine *parameter*, by name, in file order.
-
-        A tool attaching the data refuses a row of *parameter* at a key
-        combination one of them has no row for, and reads the parameter as
-        absent there, before its ``where:`` drops anything and before
-        ``missing:`` fills anything.
-        """
-        dims = self.parameters[parameter].dims
-        return tuple(name for name, relation in self.relations.items() if relation.confines(dims))
 
     @property
     def roots(self) -> tuple[Expression, ...]:
