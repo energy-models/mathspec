@@ -539,8 +539,7 @@ def declaration_of(
 
     Raises:
         DimensionError: A walk that does not fit ``dims:``, a link that does
-            not fit its row, a where outside ``dims:``, or a mask carrying
-            part of what a walk reads through.
+            not fit its row, or a where outside ``dims:``.
     """
     ctx = f"piecewise '{name}'"
     for key, walk in walks.items():
@@ -561,7 +560,7 @@ def declaration_of(
             link.sign,
             link.by,
             walks.get(key),
-            _reads(ctx, key, pw, walks.get(key), carried),
+            _reads(walks.get(key), carried),
         )
         for node, (key, link) in zip(links, pw.links.items(), strict=True)
     )
@@ -618,34 +617,17 @@ def _row(entry: PiecewiseSpec, walk: JoinColumns | None) -> tuple[str, ...]:
     return tuple(refined)
 
 
-def _reads(ctx: str, key: str, entry: PiecewiseSpec, walk: JoinColumns | None, carried: frozenset[str]) -> bool:
+def _reads(walk: JoinColumns | None, carried: frozenset[str]) -> bool:
     """Whether a walked link's row reads the entry's ``where:`` through its relation; ``False`` for one that does not walk.
 
     A walked row is over the dims the walk adds, where a mask over a dim it
     drops cannot be read as written. Read through the relation it can, as
-    ``at`` reads it, when the mask carries every dim the walk joins on
-    (*carried* is what the mask carries, the breakpoint dim aside). A mask
-    carrying none the walk drops is over dims the row keeps, and reads as
-    written.
-
-    Raises:
-        DimensionError: The mask carries a dim the walk drops, and not every
-            dim the walk joins on.
+    ``at`` reads it: the read joins the mask on the dims it carries and
+    brings in the rest of the key, which the row is over too (*carried* is
+    what the mask carries, the breakpoint dim aside). A mask carrying none
+    the walk drops is over dims the row keeps, and reads as written.
     """
-    if walk is None:
-        return False
-    dropped = frozenset(walk.dropped_dims)
-    if not dropped & carried:
-        return False
-    needed = frozenset(walk.joined_dims)
-    if partial := sorted(needed - carried):
-        raise DimensionError(
-            f"{ctx} link '{key}': where {entry.where!r} tests {sorted(needed & carried)} but not {partial}, and "
-            f"the link looks the curve up through '{walk.name}' at all of {sorted(needed)}. Test all of them in "
-            f'the where:, so that it applies to the row through the relation, or none of {sorted(dropped)}, so '
-            f'that it applies to the row as written.'
-        )
-    return True
+    return walk is not None and bool(frozenset(walk.dropped_dims) & carried)
 
 
 def _link_fits(ctx: str, key: str, entry: PiecewiseSpec, found: frozenset[str], own: tuple[str, ...]) -> None:

@@ -1287,16 +1287,32 @@ def test_a_mask_over_a_dim_the_walk_joins_on_reaches_the_walked_row_as_written()
     assert expanded.constraints['coupling_power'].where == 'season'
 
 
-def test_a_mask_carrying_part_of_what_a_walk_reads_through_is_refused():
-    """The relation is keyed by flow and snapshot, so the read joins on snapshot and needs the mask to carry it too."""
-    model = varied(
+@pytest.mark.parametrize(
+    ('method', 'where'),
+    [
+        pytest.param('sos2', 'at(curved, by=generator_of[generator])', id='sos2'),
+        pytest.param(
+            'incremental', 'at((curved) AND (position(bp) == 0), by=generator_of[generator])', id='incremental'
+        ),
+    ],
+)
+def test_a_mask_over_part_of_what_a_walk_joins_on_reaches_the_walked_row_through_its_relation(method, where):
+    """The relation is keyed by flow and snapshot, and `curved` tests only `generator`.
+
+    The mask was refused for not testing `snapshot` too, though reading it
+    through the relation at each flow and snapshot is the row a hand-written
+    constraint with that where loads to.
+    """
+    expanded = spec_of(
         CURVED,
         **{
             'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
+            'piecewise.coupling.method': method,
         },
-    )
-    with pytest.raises(LanguageError, match=r"where 'curved' tests \['generator'\] but not \['snapshot'\]"):
-        spec_of(model)
+    ).expand()
+    assert expanded.constraints['coupling_power'].where == where
+    assert expanded.assumptions['coupling_power_complete'].where == 'at(curved, by=generator_of[generator])'
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
 
 
 @pytest.mark.parametrize(
