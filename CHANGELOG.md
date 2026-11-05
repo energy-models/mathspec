@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))
 - docs(pypsa): the PyPSA reference targets master at 061974e3, where a Store charges, spills and is rated like a StorageUnit, and the spec states energy limits on every dispatching component, a Store's cycle limit and flow-based market coupling ([#977](https://github.com/energy-models/mathspec/pull/977))
 - docs(pypsa): the PyPSA reference targets master at d21e028, where starts and stops take the period weight and the commitment rows start at the first snapshot ([#976](https://github.com/energy-models/mathspec/pull/976))
