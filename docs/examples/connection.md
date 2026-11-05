@@ -16,10 +16,10 @@ the port, not the bus, so two ports of one unit may attach to the same bus.
 `efficiency` is declared over every unit, port and snapshot. Its
 [`where:`](../reference/language/parameters-variables-constraints.md#where)
 keeps only the output ports, and `missing: 1` applies only there. Where
-`connection` has no row, no case of `injection` applies and `efficiency` is
-[absent](../reference/language/absence.md), so `injection` is absent too. The
-sum in `balance` therefore has a term only for the ports that attach to each
-bus.
+`connection` has no row, `injection` takes its `otherwise:` and `efficiency`
+is [absent](../reference/language/absence.md), so `injection` is absent too.
+The sum in `balance` therefore has a term only for the ports that attach to
+each bus.
 
 <!-- gallery:begin -->
 ```yaml
