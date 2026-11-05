@@ -19,7 +19,7 @@ from mathspec._typesetting import FORMATS, to_markdown, typeset, typeset_line
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
-from mathspec.program import DimensionPosition
+from mathspec.program import DimensionPosition, MissingBy
 from mathspec.spec import DimensionSpec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
@@ -2783,6 +2783,98 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName):
     row = next(line for line in typeset(spec, fmt).splitlines() if 'only where' in line)
     assert 'pair' in row, 'the legend row names the relation the mask reads'
     assert row.index('only where') < row.index('where the data has no row'), 'the mask comes before the fill'
+
+
+#: `c` reads a missing row by the label `lk` gives its `g`.
+_BY = {'by': 'lk', 'fill': {'north': 0, 'south': -1}, 'otherwise': 1}
+
+
+@pytest.mark.parametrize(
+    ('written', 'read'),
+    [
+        pytest.param(_BY, MissingBy('lk', {'north': 0, 'south': -1}, 1), id='a-value-per-label'),
+        pytest.param(
+            {'by': 'lk', 'fill': {'north': 'absent'}}, MissingBy('lk', {'north': 'absent'}), id='otherwise-refused'
+        ),
+        pytest.param({**_BY, 'fill': {'north': 'inf'}}, MissingBy('lk', {'north': float('inf')}, 1), id='inf-in-fill'),
+    ],
+)
+def test_a_parameter_reads_a_missing_row_by_a_relation(written, read):
+    spec = _spec(**{'parameters.c.missing': written})
+    assert spec.program.parameters['c'].missing == read
+    assert to_spec(spec.to_dict()) == spec, 'the mapping form writes back the file it read'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'fragment'),
+    [
+        pytest.param(
+            {'parameters.c.missing.by': 'kl'}, "reads missing: by 'kl', which is not a relation", id='no-relation'
+        ),
+        pytest.param(
+            {'relations.lk.values': ['h', 'g2'], 'dimensions.g2': {}},
+            'which has 2 value columns, so it gives a coordinate no one label',
+            id='two-value-columns',
+        ),
+        pytest.param(
+            {'parameters.c.dims': ['h'], 'parameters.c.missing.by': 'lk'},
+            "which is keyed by ['g'], and the parameter is not over them",
+            id='key-off-the-frame',
+        ),
+        pytest.param(
+            {'dimensions.h.one_of': ['north', 'sout']},
+            "fill: names 'south', which is not a label of its value column",
+            id='label-off-one-of',
+        ),
+        pytest.param({'parameters.c.missing.fill': {}}, 'fill: lists no label', id='empty-fill'),
+        pytest.param({'parameters.c.missing.cases': {}}, "unknown key 'cases'", id='cases-is-not-fill'),
+        pytest.param(
+            {'parameters.c.missing.fill.north': True}, 'missing: true on a float parameter', id='a-flag-on-a-number'
+        ),
+        pytest.param({'parameters.c.missing.otherwise': 'zero'}, "missing is the string 'zero'", id='a-word'),
+    ],
+)
+def test_a_missing_by_that_gives_no_reading_is_refused(patch, fragment):
+    message = _refusal(**{'parameters.c.missing': copy.deepcopy(_BY)}, **patch)
+    assert fragment in message
+
+
+def test_a_divisor_that_a_fill_reads_as_zero_is_refused():
+    """A label filled with 0 makes the divisor 0 at a missing row of that label, as `missing: 0` does."""
+    patch = {'constraints.cap': {'dims': ['g'], 'expression': 'p / c <= 1'}}
+    message = _refusal(**{'parameters.c.missing': _BY, **patch})
+    assert "so a missing row of 'c' makes the divisor 0" in message
+
+
+def test_a_values_table_refused_at_some_label_under_points_is_refused():
+    """`otherwise:` left out reads `refused`, which `points:` contradicts at that label as a plain `refused` does."""
+    patch = {
+        'dimensions.kind': {},
+        'relations.kind_of': {'key': 'bp', 'values': 'kind'},
+        'parameters.x_bp.missing': {'by': 'kind_of', 'fill': {'end': 0}},
+    }
+    assert "parameter 'x_bp' is refused where a row is missing" in _refusal(read_yaml(CURVE_UNDER_POINTS), **patch)
+
+
+def test_cases_that_a_fill_may_both_claim_are_refused():
+    """The case check reads no label, so it reads a missing row of a `missing: {by: ...}` parameter as no row.
+
+    It took the mapping as the one value a missing row reads, and stopped on comparing it with a number.
+    """
+    cases = {
+        'low': {'when': 'NOT c > -1', 'expression': 1},
+        'high': {'when': 'NOT c < 1', 'expression': 2},
+    }
+    patch = {'parameters.c.missing': _BY, 'expressions.level': {'dims': ['g'], 'cases': cases, 'otherwise': 0}}
+    assert "cases 'low' and 'high' both claim the value where c has no row" in _refusal(**patch)
+
+
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_legend_lists_the_reading_of_each_label(fmt: FormatName):
+    row = next(
+        line for line in typeset(_spec(**{'parameters.c.missing': _BY}), fmt).splitlines() if 'otherwise' in line
+    )
+    assert row.index('north') < row.index('south') < row.index('otherwise'), 'labels in file order, otherwise last'
 
 
 def test_a_given_parameter_has_no_missing():

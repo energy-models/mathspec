@@ -16,7 +16,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
 / $upright("cost")$: `cost` over $cal(G)$, $0$ where the data has no row
-/ $upright("load")$: `load` over $cal(T) times cal(B)$
+/ $upright("load")$: `load` over $cal(T) times cal(B)$, where the data has no row: $0$ where `zone_of` is `north`, `absent` where `zone_of` is `south`, `refused` otherwise
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
 / $upright("tech_cap")$: `tech_cap` over $cal(B) times cal(E)$, `absent` where the data has no row

@@ -27,8 +27,8 @@ from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError, unordered
-from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
+from mathspec.errors import SchemaError, did_you_mean, unordered
+from mathspec.spec import NUMERIC_DTYPES, MissingBySpec, Spec, side_columns
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -84,6 +84,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
+        *_missing_by(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -202,6 +203,37 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
                 if count > 1
             )
+
+
+def _missing_by(spec: Spec) -> Iterator[str]:
+    """A ``missing: {by: ...}`` names a relation that gives each coordinate of the parameter one label it can fill."""
+    for name, p in spec.parameters.items():
+        if not isinstance(by := p.missing, MissingBySpec):
+            continue
+        context = f"Parameter '{name}' reads missing: by '{by.by}'"
+        if (lk := spec.relations.get(by.by)) is None:
+            yield f'{context}, which is not a relation. {did_you_mean(by.by, spec.relations)}'
+            continue
+        if len(lk.value_roles) != 1:
+            yield (
+                f'{context}, which has {len(lk.value_roles)} value columns, so it gives a coordinate no one label. '
+                f'Name a relation with one value column.'
+            )
+            continue
+        if stray := [d for _, d in side_columns(lk.key) if d not in p.dims]:
+            yield (
+                f'{context}, which is keyed by {stray}, and the parameter is not over them (dims {p.dims}). '
+                f'Key the relation by dimensions of the parameter.'
+            )
+        dimension = spec.dimensions.get(side_columns(lk.values)[0][1])
+        if dimension is None or dimension.one_of is None:
+            continue
+        yield from (
+            f"{context}, and fill: names '{label}', which is not a label of its value column. "
+            f'{did_you_mean(label, dimension.one_of, label="Labels")}'
+            for label in by.fill
+            if label not in dimension.one_of
+        )
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

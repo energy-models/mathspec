@@ -481,7 +481,7 @@ def refused_under_points(spec: Spec) -> Iterator[str]:
         if pw.points is None:
             continue
         for name in dict.fromkeys(link.values for link in pw.links):
-            if spec.parameters[name].missing == 'refused':
+            if 'refused' in spec.parameters[name].readings:
                 yield (
                     f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
                     f"points: '{pw.points}', which stops the curve where its rows stop. Declare missing: absent, "

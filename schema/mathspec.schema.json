@@ -600,6 +600,72 @@
       "title": "MacroSpec",
       "type": "object"
     },
+    "MissingBySpec": {
+      "additionalProperties": false,
+      "description": "A ``missing:`` that reads a missing row by the label the relation ``by:`` gives its coordinate.\n\n``by:`` names a relation with one value column, keyed by dimensions of the\nparameter. ``fill:`` maps labels of that column to a reading each, and\n``otherwise:`` reads every other coordinate, ``refused`` where it is left out.\nEach reading is one that a plain ``missing:`` takes::\n\n    relations:\n      component_of: {key: entity, values: component}\n    parameters:\n      sign:\n        dims: [entity]\n        missing:\n          by: component_of\n          fill: {Load: -1, ShuntImpedance: -1}\n          otherwise: 1",
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "fill": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "enum": [
+                  "refused",
+                  "absent"
+                ]
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "enum": [
+                  "inf",
+                  "-inf"
+                ]
+              }
+            ]
+          },
+          "title": "Fill",
+          "type": "object"
+        },
+        "otherwise": {
+          "anyOf": [
+            {
+              "enum": [
+                "refused",
+                "absent"
+              ]
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
+            }
+          ],
+          "default": "refused",
+          "title": "Otherwise"
+        }
+      },
+      "required": [
+        "by",
+        "fill"
+      ],
+      "title": "MissingBySpec",
+      "type": "object"
+    },
     "ObjectiveSpec": {
       "additionalProperties": false,
       "description": "A declared objective function.",
@@ -689,6 +755,9 @@
                 "inf",
                 "-inf"
               ]
+            },
+            {
+              "$ref": "#/$defs/MissingBySpec"
             }
           ],
           "default": "refused",

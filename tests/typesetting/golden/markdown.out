@@ -21,7 +21,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$, where the data has no row: $`0`$ where `zone_of` is `north`, `absent` where `zone_of` is `south`, `refused` otherwise |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |

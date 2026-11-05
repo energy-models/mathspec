@@ -72,6 +72,7 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
+    'MissingBy',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -85,6 +86,7 @@ __all__ = [
     'ParameterDefined',
     'ParameterDtype',
     'ParameterMissing',
+    'ParameterReading',
     'ParameterReference',
     'Partition',
     'Piecewise',
@@ -150,9 +152,34 @@ RelationMissing = Literal['refused', 'absent']
 key. Under ``absent``, that combination has no row.
 """
 
-ParameterMissing = RelationMissing | bool | float
-"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], or the value that a missing row takes.
-"""
+ParameterReading = RelationMissing | bool | float
+"""What a missing row of a parameter reads as: a value of [`RelationMissing`][], or the value that the row takes."""
+
+
+@dataclass(frozen=True)
+class MissingBy:
+    """A ``missing:`` that reads a missing row by the label a relation gives its coordinate.
+
+    The relation [`by`][] has one value column. At a coordinate with no row,
+    the parameter reads as the [`fill`][] of the label that the relation maps
+    the coordinate to, and as [`otherwise`][] where [`fill`][] names no such label.
+    """
+
+    by: str
+    """The relation that gives each coordinate its label. Its key columns are over dimensions of the parameter."""
+    fill: Mapping[str, ParameterReading]
+    """The reading of a missing row, per label of the value column of [`by`][]."""
+    otherwise: ParameterReading = 'refused'
+    """The reading of a missing row at a label that [`fill`][] does not name, or at a key with no row in [`by`][]."""
+
+    @property
+    def readings(self) -> tuple[ParameterReading, ...]:
+        """Every reading a missing row may take, in file order, [`otherwise`][] last."""
+        return (*self.fill.values(), self.otherwise)
+
+
+ParameterMissing = ParameterReading | MissingBy
+"""The values of ``missing:`` on a parameter: one reading for every missing row, or a [`MissingBy`][]."""
 
 VariableMissing = Literal['absent'] | float
 """The values of ``missing:`` on a variable. Under ``absent``, the default, a term that contains the variable has no row
@@ -717,6 +744,11 @@ class Parameter:
     ``dims``. Where the condition is false, the parameter is absent and a tool drops its rows of data there. ``missing``
     applies where the condition is true.
     """
+
+    @property
+    def readings(self) -> tuple[ParameterReading, ...]:
+        """Every reading a missing row may take: the one ``missing`` names, or each of a [`MissingBy`][]."""
+        return self.missing.readings if isinstance(self.missing, MissingBy) else (self.missing,)
 
 
 @dataclass(frozen=True)
