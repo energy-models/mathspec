@@ -32,7 +32,7 @@ from mathspec.errors import did_you_mean
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
 
 
 __all__ = [
@@ -72,7 +72,6 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
-    'MissingWord',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -146,17 +145,14 @@ column has the dtype of its dimension.
 VariableDomain = Literal['continuous', 'integer', 'binary']
 """The domains a variable may declare."""
 
-MissingWord = Literal['refused', 'absent']
-"""What a missing row of data means, in the words a parameter and a relation share."""
-
-RelationMissing = Literal[MissingWord, 'excluded']
+RelationMissing = Literal['refused', 'absent']
 """The values of ``missing:`` on a relation. Under ``refused``, a tool refuses data that leaves out a combination of the
-key. Under ``absent``, that combination has no row. Under ``excluded``, it has no row, and no parameter over every
-dimension of the key has a coordinate there.
+key. Under ``absent``, that combination has no row.
 """
 
-ParameterMissing = MissingWord | bool | float
-"""The values of ``missing:`` on a parameter: a value of [`MissingWord`][], or the value that a missing row takes."""
+ParameterMissing = RelationMissing | bool | float
+"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], or the value that a missing row takes.
+"""
 
 VariableMissing = Literal['absent'] | float
 """The values of ``missing:`` on a variable. Under ``absent``, the default, a term that contains the variable has no row
@@ -507,10 +503,12 @@ class Relation:
     columns: tuple[tuple[str, str], ...]
     key: tuple[str, ...]
     missing: RelationMissing = 'refused'
-    """Whether every combination of the key needs a row: ``refused``, ``absent``, or ``excluded``, under which the
-    relation also confines parameters ([`confines`][]).
-    """
+    """Whether every combination of the key needs a row: ``refused`` or ``absent``."""
     description: str | None = None
+    confines: bool = False
+    """Whether every parameter over each dimension of the key has coordinates only at the relation's rows, listed per
+    parameter in [`confined_by`][mathspec.program.Parameter.confined_by].
+    """
 
     @property
     def roles(self) -> tuple[str, ...]:
@@ -532,15 +530,6 @@ class Relation:
 
     def dim(self, role: str) -> str:
         return self._dim_of[role]
-
-    def confines(self, dims: Iterable[str]) -> bool:
-        """Whether a parameter over *dims* has coordinates only at this relation's rows.
-
-        It does under ``missing: excluded`` where *dims* carry every dimension
-        of the key. The key then has one column per dimension, which the
-        relation entry is refused without.
-        """
-        return self.missing == 'excluded' and {self.dim(role) for role in self.key} <= set(dims)
 
 
 @dataclass(frozen=True)
@@ -733,7 +722,7 @@ class Parameter:
     is absent and a tool drops its rows of data there. ``missing`` applies where the condition is true.
     """
     confined_by: tuple[str, ...] = ()
-    """The ``missing: excluded`` relations whose key dimensions the parameter has, by name, in file order. A tool
+    """The relations under ``confines: true`` whose key dimensions the parameter has, by name, in file order. A tool
     attaching the data refuses a row at a key combination one of them has no row for, and reads the parameter as absent
     there, before ``where`` drops anything and before ``missing`` fills anything.
     """

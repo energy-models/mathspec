@@ -706,25 +706,34 @@ class Walk:
         return [self.definition(name) for name in self.defined()]
 
     def parameter_masks(self) -> dict[str, str]:
-        """Each masked or confined parameter's coordinates, printed over its own indices for its legend row."""
+        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
         return {
-            name: self._condition(condition, self._context(entry.dims))
+            name: self._condition(entry.where.root, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
-            if (condition := self._coordinates(name)) is not None
+            if entry.where is not None
         }
 
-    def _coordinates(self, parameter: str) -> Condition | None:
-        """Where *parameter* has coordinates: each relation confining it, then its ``where:``. ``None`` for everywhere."""
+    def parameter_confinements(self) -> dict[str, str]:
+        """Each confined parameter's relation rows, printed over its own indices for its legend row.
+
+        They print apart from the mask, because a tool refuses a row of data
+        outside a relation and drops one outside the mask.
+        """
         relations = self.program.relations
-        conjuncts: list[Condition] = [
-            RelationDefined(name, tuple(relations[name].dim(role) for role in relations[name].key))
-            for name in self.program.parameters[parameter].confined_by
-        ]
-        if (where := self.program.parameters[parameter].where) is not None:
-            conjuncts.append(where.root)
-        if not conjuncts:
-            return None
-        return functools.reduce(And, conjuncts)
+        return {
+            name: self._condition(
+                functools.reduce(
+                    And,
+                    [
+                        RelationDefined(r, tuple(relations[r].dim(role) for role in relations[r].key))
+                        for r in entry.confined_by
+                    ],
+                ),
+                self._context(entry.dims),
+            )
+            for name, entry in self.program.parameters.items()
+            if entry.confined_by
+        }
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.

@@ -459,7 +459,7 @@ def _decided_by_relations(context: str, pname: str, text: str | None, confining:
     named = ' and '.join(f"'{r}'" for r in confining)
     head = (
         f"{context}: '{pname}' has coordinates only where {named} {'has' if len(confining) == 1 else 'have'} a row, "
-        f'under missing: excluded, so `where: {text}`'
+        f'under confines: true, so `where: {text}`'
     )
     if value:
         return f'{head} narrows nothing. Delete the `where:`, or the relation from it.'
