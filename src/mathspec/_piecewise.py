@@ -813,19 +813,25 @@ class _Expansion:
             self._constraint(emitted.active_bound, dims, f'{emitted.delta} <= {pw.activity}')
         first = _all_of(self.frame_mask, _edge(d, self.mask, 'first'))
         for cname, written, link in zip(emitted.links, pw.links.values(), self.curve.links, strict=True):
-            filled = f'sum({self._read(emitted.delta, link)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
+            filled = f'sum({self._read(emitted.delta, link, self.frame)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
+            gated = self.spec.variables[pw.activity].dims if pw.activity is not None else []
             for suffix, gate, on in self._gate_rows():
-                start = link.values if on == '1' else f'{link.values} * ({self._read(pw.activity, link)})'
+                start = link.values if on == '1' else f'{link.values} * ({self._read(pw.activity, link, gated)})'
                 self._constraint(
                     cname + suffix,
                     [*link.dims, d],
                     f'({written.expression}) {link.sign} {start} + {filled}',
-                    _all_of(through(first, link), self._read(gate, link)),
+                    _all_of(through(first, link), self._read(gate, link, gated)),
                 )
 
-    def _read(self, text: str | None, link: Link) -> str | None:
-        """*text*, over the curve's own dims, as *link*'s row reads it: through the link's relation where it walks one."""
-        if text is None or link.walk is None:
+    @staticmethod
+    def _read(text: str | None, link: Link, dims: Iterable[str]) -> str | None:
+        """*text*, over *dims* of the curve's own, as *link*'s row reads it: through the relation where it walks one off them.
+
+        A text over none of the dims the walk drops is over dims the row
+        keeps, and the lookup would have nothing to join on.
+        """
+        if text is None or link.walk is None or not set(link.walk.dropped_dims) & set(dims):
             return text
         return f'at({text}, by={link.by})'
 
