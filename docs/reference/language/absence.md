@@ -128,7 +128,7 @@ Three declarations set a bound only where the data has one: `missing: absent`,
 `missing: .inf` or `-.inf` on the parameter, or a `where:` on the variable.
 Elsewhere, that side of the variable is open.
 
-A curve requires a row at each breakpoint within its `points:`, and [missing breakpoints](piecewise.md#missing-breakpoints) describes a missing row in its table.
+A curve requires a row at each breakpoint within its `where:`, and [missing breakpoints](piecewise.md#missing-breakpoints) describes a missing row in its table.
 
 ### Required rows in an `absent` table
 
