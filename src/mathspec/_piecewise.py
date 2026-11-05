@@ -165,9 +165,9 @@ def assumptions_of(name: str, curve: Piecewise, where: str | None) -> dict[str, 
     if mask is not None:
         rewrite = f'Attach the rows, or narrow where: {mask!r} to where the curve runs.'
     elif where is not None:
-        rewrite = f"Attach the rows, or let where: {where!r} test '{d}' too, to say how far each curve runs."
+        rewrite = f"Attach the rows, or test '{d}' in where: {where!r} too, so that it sets how far each curve runs."
     else:
-        rewrite = 'Attach the rows, or declare where: to say how far the curve runs.'
+        rewrite = 'Attach the rows, or declare a where: that sets how far the curve runs.'
     assumed: dict[str, AssumptionSpec] = {}
     if values := [link.values for link in curve.links if not link.walks]:
         assumed[f'{name}_complete'] = AssumptionSpec(
@@ -182,7 +182,7 @@ def assumptions_of(name: str, curve: Piecewise, where: str | None) -> dict[str, 
                 holds=link.values,
                 where=through(where, link) if link.reads else _all_of(link.walk.name if link.walk else None, where),
                 description=f"piecewise '{name}' link '{link.name}': every breakpoint the curve runs through needs a "
-                f"row in '{link.values}' at every row the link reads the curve at. A missing row does not shorten "
+                f"row in '{link.values}' at every row of the link. A missing row does not shorten "
                 f'the curve. {rewrite}',
             )
     curvature = _curvature_required(curve)
@@ -455,8 +455,8 @@ def resolve_walks(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
         resolver = ExpressionResolver(ns, context, errors)
         if (columns := _columns_of(link.by)) is None:
             errors.append(
-                f'{context}: by: {link.by!r} is not a relation and its columns. Write by: <relation>[<column>], '
-                f'as at(..., by=) takes it.'
+                f'{context}: by: {link.by!r} is not a relation with its columns in brackets. Write '
+                f'by: <relation>[<column>], as in at(..., by=).'
             )
             failed = True
         elif (problem := resolver.not_a_relation(columns.relation, 'at', 'by')) is not None:
@@ -560,23 +560,23 @@ def _walk_fits(ctx: str, entry: PiecewiseSpec, walk: JoinColumns) -> None:
     dropped, added = set(walk.dropped_dims), set(walk.added_dims)
     if missing := sorted(dropped - set(entry.dims)):
         raise DimensionError(
-            f'{ctx}: by: {walk.name} reads the curve at {missing}, which dims {entry.dims} does not carry. Name a '
-            f'column over one of {entry.dims}, or add it to dims:.'
+            f'{ctx}: by: {walk.name} looks the curve up at {missing}, which is not in dims: {entry.dims}. Name a '
+            f'column over one of {entry.dims}, or add {missing} to dims:.'
         )
     if not added:
         raise DimensionError(
-            f'{ctx}: by: {walk.name} adds no dimension, because the curve already carries its key '
-            f'{sorted(walk.joined_dims)}. Drop the key column from dims:, so the walk adds it.'
+            f'{ctx}: by: {walk.name} adds no dimension, because its key {sorted(walk.joined_dims)} is already '
+            f'in dims:. Drop the key from dims:, so that the walk adds it.'
         )
     if framed := sorted(added & {*entry.dims, entry.along}):
         raise DimensionError(
-            f'{ctx}: by: {walk.name} adds {framed}, which the curve already carries. Walk through a relation '
-            f'whose key is over a dimension of its own.'
+            f'{ctx}: by: {walk.name} adds {framed}, which the curve is already over. Walk through a relation '
+            f'whose key is over a dimension outside dims: and along:.'
         )
     if joined := sorted(set(walk.joined_dims) - set(entry.dims)):
         raise DimensionError(
-            f'{ctx}: by: {walk.name} also joins on {joined}, which dims {entry.dims} does not carry. Add {joined} '
-            f'to dims:, or walk through a relation keyed by the columns the link adds.'
+            f'{ctx}: by: {walk.name} also joins on {joined}, which is not in dims: {entry.dims}. Add {joined} '
+            f'to dims:, or walk through a relation whose key is only the columns that the link adds.'
         )
 
 
@@ -619,10 +619,10 @@ def _reads(ctx: str, key: str, entry: PiecewiseSpec, walk: JoinColumns | None, c
     needed = frozenset(walk.joined_dims)
     if partial := sorted(needed - carried):
         raise DimensionError(
-            f"{ctx} link '{key}': where {entry.where!r} carries {sorted(needed & carried)} and not {partial}, and "
-            f"the link reads the curve through '{walk.name}' at all of {sorted(needed)}. Carry all of them in the "
-            f'where, so the row reads it through the relation, or none of {sorted(dropped)}, so the row reads it '
-            f'as written.'
+            f"{ctx} link '{key}': where {entry.where!r} tests {sorted(needed & carried)} but not {partial}, and "
+            f"the link looks the curve up through '{walk.name}' at all of {sorted(needed)}. Test all of them in "
+            f'the where:, so that it applies to the row through the relation, or none of {sorted(dropped)}, so '
+            f'that it applies to the row as written.'
         )
     return True
 
@@ -637,19 +637,21 @@ def _link_fits(ctx: str, key: str, entry: PiecewiseSpec, found: frozenset[str], 
     so neither is guessed.
     """
     if entry.along in found:
-        raise DimensionError(f"{ctx}: link '{key}' expression already carries the breakpoint dim '{entry.along}'")
+        raise DimensionError(
+            f"{ctx}: link '{key}' expression is over the breakpoint dimension '{entry.along}', which only its "
+            f'values parameter is over. Sum the expression over {entry.along!r}, or index it by another dimension.'
+        )
     if stray := sorted(found - set(own)):
         raise DimensionError(
-            f"{ctx}: link '{key}' expression carries {stray}, which its row {list(own)} does not — "
-            f'every stray dim multiplies the rows the link builds. Add it to dims:, sum it out, or read '
-            f'it through a relation with by: <relation>[<column>].'
+            f"{ctx}: link '{key}' expression is over {stray}, and its row {list(own)} is not, so every "
+            f'coordinate of {stray} would share one curve. Add {stray} to dims:, sum it out, or look the curve '
+            f'up through a relation with by: <relation>[<column>].'
         )
     if missing := sorted(set(own) - found):
         raise DimensionError(
-            f"{ctx}: link '{key}' expression does not carry {missing}, which its row {list(own)} does — "
-            f'the same row would repeat across {missing}, pinning the expression to one operating point '
-            f'along {"it" if len(missing) == 1 else "them"}. Drop {missing} from dims:, or vary the '
-            f'expression along {missing}.'
+            f"{ctx}: link '{key}' expression is not over {missing}, and its row {list(own)} is, so one value "
+            f'of the expression would lie on every curve along {missing} at once. Drop {missing} from dims:, '
+            f'or write an expression over {missing}.'
         )
 
 
@@ -664,10 +666,9 @@ def _values_fit(
     """
     if stray := [d for d in spec.parameters[link.values].dims if d != entry.along and d not in own]:
         raise DimensionError(
-            f"{ctx}: link '{key}' values parameter '{link.values}' carries {stray}, which its row "
-            f'{list(own)} does not — the link reads one curve per coordinate of {list(own)}, so a curve '
-            f"varying along {stray} has nothing to vary against. Drop it from '{link.values}', or add it to "
-            f'dims:.'
+            f"{ctx}: link '{key}' values parameter '{link.values}' is over {stray}, and its row {list(own)} "
+            f'is not, so a row of the link would have no single curve. Drop {stray} from '
+            f"'{link.values}', or add {stray} to dims:."
         )
 
 
@@ -684,16 +685,15 @@ def _where_fits(ctx: str, entry: PiecewiseSpec, where: Mask | None, walks: dict[
     for key, walk in walks.items():
         if into := [d for d in stray if d in walk.added_dims]:
             raise DimensionError(
-                f"{ctx}: where {entry.where!r} tests {into}, and {into} is what link '{key}' walks into — the "
-                f'where says which curves exist, one per coordinate of dims {entry.dims}, and {into} indexes only '
-                f"that link's rows. Test {entry.dims} in the where, or mask the link's own variable over {into} "
-                f'to leave its rows unbuilt.'
+                f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through its relation. A "
+                f'where: sets which curves exist, one per coordinate of dims: {entry.dims}, and only the rows of '
+                f'the link are over {into}. Test {entry.dims} in the where:, or declare a where: over {into} on '
+                f'the variable of the link, so that its rows are absent.'
             )
     if stray:
         raise DimensionError(
-            f'{ctx}: where {entry.where!r} tests {stray}, which dims {entry.dims} does not carry — a mask says '
-            f'which of the curves the entry builds exist, and cannot add coordinates. Add {stray} to dims:, '
-            f'or drop it from the where.'
+            f'{ctx}: where {entry.where!r} tests {stray}, which is not in dims: {entry.dims}. A where: sets '
+            f'which curves exist, and cannot add coordinates. Add {stray} to dims:, or drop it from the where:.'
         )
 
 
@@ -914,9 +914,9 @@ def refused_under_where(program: Program, spec: Spec) -> Iterator[str]:
         for name in dict.fromkeys(link.values for link in curve.links):
             if spec.parameters[name].missing == 'refused':
                 yield (
-                    f"parameter '{name}' is refused where a row is missing, and piecewise '{entry_name}' reads it under "
-                    f"where: '{spec.piecewise[entry_name].where}', which stops the curve where its rows stop. Declare "
-                    f'missing: absent, or a value of its dtype.'
+                    f"parameter '{name}' is refused where a row is missing, and it is a values parameter of "
+                    f"piecewise '{entry_name}' under where: '{spec.piecewise[entry_name].where}', which sets where "
+                    f'each curve ends. Declare missing: absent, or a value of its dtype.'
                 )
 
 

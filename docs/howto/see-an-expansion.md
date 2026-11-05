@@ -133,7 +133,7 @@ every `sos:` entry. Then write out both with `spec.expand()`:
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
               'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows,
-              or declare where: to say how far the curve runs.
+              or declare a where: that sets how far the curve runs.
         ```
 
     === "Math"
@@ -239,7 +239,7 @@ every `sos:` entry. Then write out both with `spec.expand()`:
             description: >-
               piecewise 'curve': every breakpoint the curve runs through needs a row in
               'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows,
-              or declare where: to say how far the curve runs.
+              or declare a where: that sets how far the curve runs.
         ```
 
     === "Math"

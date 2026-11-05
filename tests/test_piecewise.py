@@ -305,7 +305,7 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.bp_x.dims': []},
-            r"link 'p': values parameter 'bp_x' has dims \[\], without 'bp'",
+            r"link 'p': values parameter 'bp_x' is over \[\], without 'bp'",
             id='a-breakpoint-parameter-without-the-breakpoint-dim',
         ),
         pytest.param(
@@ -317,19 +317,19 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': {'p': ['p + bp_x', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}},
-            "link 'p' expression already carries the breakpoint dim 'bp'",
-            id='a-link-carrying-the-breakpoint-dim',
+            "link 'p' expression is over the breakpoint dimension 'bp'",
+            id='a-link-over-the-breakpoint-dimension',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'variables.u': {'dims': ['snapshot', 'bp'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
-            r"activity 'u' carries \['bp'\], which dims \['snapshot'\] does not",
+            r"activity 'u' is over \['bp'\], which is not in dims: \['snapshot'\]",
             id='a-gate-carrying-a-dim-the-block-does-not',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'dimensions.generator': {'dtype': 'str'}, 'parameters.bp_x.dims': ['generator', 'bp']},
-            r"link 'p' values parameter 'bp_x' carries \['generator'\], which its row",
+            r"link 'p' values parameter 'bp_x' is over \['generator'\], and its row",
             id='a-breakpoint-varying-along-a-dim-no-link-carries',
         ),
         pytest.param(
@@ -339,7 +339,7 @@ def test_any_affine_expression_is_a_legal_link(link):
                 'parameters.reach': {'dims': ['generator', 'bp'], 'dtype': 'bool'},
                 'piecewise.cost_curve.where': 'reach',
             },
-            r"where 'reach' tests \['generator'\], which dims \['snapshot'\] does not carry",
+            r"where 'reach' tests \['generator'\], which is not in dims: \['snapshot'\]",
             id='a-where-adding-a-coordinate-the-curve-does-not-have',
         ),
     ],
@@ -653,8 +653,8 @@ def test_a_curves_conditions_cannot_collide_with_a_written_assumption():
 @pytest.mark.parametrize(
     ('where', 'advice'),
     [
-        pytest.param(None, 'declare where: to say how far the curve runs', id='no-where'),
-        pytest.param('curved', "let where: 'curved' test 'bp' too", id='a-where-over-dims'),
+        pytest.param(None, 'declare a where: that sets how far the curve runs', id='no-where'),
+        pytest.param('curved', "test 'bp' in where: 'curved' too", id='a-where-over-dims'),
         pytest.param('curved AND bp_power_on', "narrow where: 'curved AND bp_power_on'", id='a-ragged-where'),
     ],
 )
@@ -807,7 +807,7 @@ def test_a_where_the_block_cannot_read_is_refused(patch, match):
 
 def test_a_where_over_a_dim_a_link_walks_into_is_not_sent_to_dims():
     """The refusal said to add `flow` to `dims:`, and the walk into `flow` was then refused for that very edit."""
-    with pytest.raises(LanguageError, match=r"\['flow'\] is what link 'power' walks into") as refused:
+    with pytest.raises(LanguageError, match=r"which link 'power' adds through its relation") as refused:
         spec_of(
             WALKED,
             **{'parameters.on_flow': {'dims': ['flow'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'on_flow'},
@@ -947,9 +947,9 @@ def _walk(**written: object) -> dict[str, object]:
 @pytest.mark.parametrize(
     ('patch', 'match'),
     [
-        pytest.param({'piecewise.coupling.dims': None}, 'one curve per coordinate of', id='a-block-without-dims'),
-        pytest.param(_walk(by='generator_of'), 'is not a relation and its columns', id='a-walk-naming-no-column'),
-        pytest.param(_walk(by='generator_of[]'), 'is not a relation and its columns', id='an-empty-column-list'),
+        pytest.param({'piecewise.coupling.dims': None}, 'with one curve per coordinate', id='a-block-without-dims'),
+        pytest.param(_walk(by='generator_of'), 'is not a relation with its columns', id='a-walk-naming-no-column'),
+        pytest.param(_walk(by='generator_of[]'), 'is not a relation with its columns', id='an-empty-column-list'),
         pytest.param(
             {'piecewise.coupling.dims': ['generator', 'snapshot', 'bp']},
             'breakpoint dim',
@@ -957,13 +957,13 @@ def _walk(**written: object) -> dict[str, object]:
         ),
         pytest.param(
             {'piecewise.coupling.dims': ['generator']},
-            r"link 'power' expression carries \['snapshot'\], which its row \['flow'\] does not",
+            r"link 'power' expression is over \['snapshot'\], and its row \['flow'\] is not",
             id='dims-a-link-expression-leaves',
         ),
         pytest.param(_walk(by='nowhere_of[generator]'), 'nowhere_of', id='a-walk-through-an-undeclared-relation'),
         pytest.param(
             {'piecewise.coupling.dims': ['snapshot']},
-            r"link 'power': by: generator_of reads the curve at \['generator'\], which dims \['snapshot'\] does not carry",
+            r"link 'power': by: generator_of looks the curve up at \['generator'\], which is not in dims: \['snapshot'\]",
             id='a-walk-consuming-a-dim-the-block-lacks',
         ),
         pytest.param(
@@ -997,12 +997,12 @@ def _walk(**written: object) -> dict[str, object]:
                 'dimensions.period': {'dtype': 'int'},
                 'relations.generator_of': {'key': ['flow', 'period'], 'values': 'generator'},
             },
-            r"link 'power' expression does not carry \['period'\]",
+            r"link 'power' expression is not over \['period'\]",
             id='a-walk-joining-on-a-dim-the-block-lacks',
         ),
         pytest.param(
             {'relations.generator_of': {'key': {'flow': 'flow', 'site': 'generator'}, 'values': 'generator'}},
-            r"link 'power': by: generator_of adds \['generator'\], which the curve already carries",
+            r"link 'power': by: generator_of adds \['generator'\], which the curve is already over",
             id='a-walk-joining-on-the-dim-it-consumes',
         ),
     ],
@@ -1024,17 +1024,17 @@ def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
             'piecewise.coupling.links.rate': ['rate', 'bp_rate'],
         },
     )
-    with pytest.raises(LanguageError, match=r'read it through a relation with by: <relation>\[<column>\]'):
+    with pytest.raises(LanguageError, match=r'look the curve up through a relation with by: <relation>\[<column>\]'):
         spec_of(model)
 
 
 @pytest.mark.parametrize(
     ('link', 'match'),
     [
-        pytest.param('convexity', "link 'convexity' names its row 'coupling_convexity'", id='the-convexity-row'),
-        pytest.param('lam', "link 'lam' names its row 'coupling_lam'", id='the-weights'),
+        pytest.param('convexity', "link 'convexity' has the row 'coupling_convexity'", id='the-convexity-row'),
+        pytest.param('lam', "link 'lam' has the row 'coupling_lam'", id='the-weights'),
         pytest.param('adjacency_below', "link 'adjacency_below'", id='a-row-the-set-writes'),
-        pytest.param('delta', "link 'delta' names its row 'coupling_delta'", id='a-variable-incremental-writes'),
+        pytest.param('delta', "link 'delta' has the row 'coupling_delta'", id='a-variable-incremental-writes'),
         pytest.param('fill_order', "link 'fill_order'", id='a-row-incremental-writes'),
     ],
 )
@@ -1097,7 +1097,7 @@ def test_a_link_name_no_row_could_take_is_refused():
 def test_a_gate_over_more_than_the_blocks_dims_is_refused():
     """The gate widened a declared `dims:` silently, and built the weights over a dimension the file never gave the curve."""
     with pytest.raises(
-        LanguageError, match=r"activity 'u' carries \['generator'\], which dims \['snapshot'\] does not"
+        LanguageError, match=r"activity 'u' is over \['generator'\], which is not in dims: \['snapshot'\]"
     ):
         spec_of(
             TWO_DIM,
@@ -1248,7 +1248,7 @@ def test_a_mask_carrying_part_of_what_a_walk_reads_through_is_refused():
             'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
         },
     )
-    with pytest.raises(LanguageError, match=r"where 'curved' carries \['generator'\] and not \['snapshot'\]"):
+    with pytest.raises(LanguageError, match=r"where 'curved' tests \['generator'\] but not \['snapshot'\]"):
         spec_of(model)
 
 
@@ -1313,7 +1313,7 @@ def test_one_link_that_walks_nothing_is_still_a_bound_rather_than_a_curve():
 @pytest.mark.parametrize(
     ('method', 'match'),
     [
-        pytest.param('convex', 'a walk puts them on different frames', id='convex'),
+        pytest.param('convex', 'a walk puts them over different dimensions', id='convex'),
         pytest.param('lp', 'one quantity at many coordinates', id='lp'),
     ],
 )
@@ -1328,7 +1328,7 @@ def test_the_two_restricted_methods_refuse_a_walked_link_for_their_own_reasons(m
 
 def test_links_that_disagree_on_their_dims_are_refused_rather_than_read_as_one_curve_each():
     """A link finer than `dims:` would multiply the rows it builds, each pinning the same `fuel` to a curve of its own."""
-    with pytest.raises(LanguageError, match=r"link 'power' expression carries \['flow'\]"):
+    with pytest.raises(LanguageError, match=r"link 'power' expression is over \['flow'\]"):
         spec_of(WALKED, **{'piecewise.coupling.links': {'power': ['power', 'bp_power'], 'fuel': ['fuel', 'bp_fuel']}})
 
 
@@ -1337,7 +1337,7 @@ def test_links_that_disagree_on_their_dims_are_refused_rather_than_read_as_one_c
     [
         pytest.param(
             {'variables.power.dims': ['flow', 'snapshot', 'period']},
-            r'carries \[.period.\]',
+            r'is over \[.period.\]',
             id='finer-than-its-row',
         ),
         pytest.param(
@@ -1345,7 +1345,7 @@ def test_links_that_disagree_on_their_dims_are_refused_rather_than_read_as_one_c
                 'piecewise.coupling.dims': ['generator', 'snapshot', 'period'],
                 'variables.fuel.dims': ['generator', 'snapshot', 'period'],
             },
-            r'does not carry \[.period.\]',
+            r'is not over \[.period.\]',
             id='coarser-than-its-row',
         ),
     ],

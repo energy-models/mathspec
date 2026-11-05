@@ -4,8 +4,8 @@
 
 description: >-
   The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is
-  not convex. The weights need binaries to hold them on one segment, which is
-  what the default method builds.
+  not convex. Under the default method, the expansion holds the weights on one
+  segment with binaries.
 
 dimensions:
   snapshot:

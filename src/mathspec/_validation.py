@@ -77,8 +77,8 @@ def emitted_name_errors(spec: Spec, program: Program) -> list[str]:
         *((f"piecewise '{name}'", EmittedCurve.of(name, curve).by_kind) for name, curve in program.piecewise.items()),
     ]
     errors = [
-        f"piecewise '{name}': link '{row.removeprefix(f'{name}_')}' names its row '{row}', which the entry "
-        f'already writes for itself. Rename the link.'
+        f"piecewise '{name}': link '{row.removeprefix(f'{name}_')}' has the row '{row}', which the "
+        f'expansion of the entry already writes. Rename the link.'
         for name, curve in program.piecewise.items()
         for row in EmittedCurve.of(name, curve).reused
     ]
@@ -332,7 +332,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                 yield undeclared_dimension('piecewise', name, d)
             elif d == pw.along:
                 yield (
-                    f"{context}: dims carries '{pw.along}', the breakpoint dim. Every curve runs along it, so drop "
+                    f"{context}: dims: lists '{pw.along}', the breakpoint dimension. Every curve runs along it, so drop "
                     f'it from dims:.'
                 )
         if len(set(pw.dims)) != len(pw.dims):
@@ -353,7 +353,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             )
         elif stray := [d for d in spec.variables[activity].dims if d not in pw.dims]:
             yield (
-                f"{context}: activity '{activity}' carries {stray}, which dims {pw.dims} does not. The gate "
+                f"{context}: activity '{activity}' is over {stray}, which is not in dims: {pw.dims}. The gate "
                 f'switches the curve of one coordinate of dims:. Add {stray} to dims:, or gate with a variable '
                 f'over dims:.'
             )
@@ -371,8 +371,8 @@ def _piecewise_link_shape(spec: Spec, name: str, pw: PiecewiseSpec, key: str, li
         )
     elif pw.along not in spec.parameters[link.values].dims:
         yield (
-            f"{context}: values parameter '{link.values}' has dims {spec.parameters[link.values].dims}, without "
-            f"'{pw.along}'. Add '{pw.along}' to its dims."
+            f"{context}: values parameter '{link.values}' is over {spec.parameters[link.values].dims}, without "
+            f"'{pw.along}'. Add '{pw.along}' to its dims:."
         )
 
 

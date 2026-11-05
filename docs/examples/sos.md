@@ -3,23 +3,22 @@ SPDX-FileCopyrightText: math-spec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# A curve as a special-ordered set
+# A curve as a special ordered set
 
-The same restriction as [the adjacency page](piecewise_adjacency.md), handed to
-the solver instead of built. `method: sos2` says that at most two weights may
-be non-zero and they must be neighbours, which is the definition of a type-2
-set.
+The dispatch of [the adjacency page](piecewise_adjacency.md) under
+`method: sos2`. At most two neighbouring weights are non-zero, as under
+`adjacency`. The weights form a set that the solver handles itself (a special
+ordered set of type 2).
 
-Read the two pages together. The binaries are gone here, and so are the two
-rows that constrained them. What replaces them is a declaration rather than a
-row, because a special-ordered set is something a solver enforces directly.
-Whether a given solver does is that solver's business, not the file's.
+The two pages print the same math. They differ in what
+`spec.expand('piecewise')` writes. Here it writes the weights and an `sos:`
+entry over them, in place of the binary `cost_curve_seg` and its two rows.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  A piecewise-linear cost curve stated as a special-ordered set, so the solver
-  is handed the adjacency restriction rather than binaries that encode it.
+  A piecewise-linear cost curve whose weights form a special ordered set, so
+  the solver handles the adjacency restriction itself, without binaries.
 
 dimensions:
   snapshot:
@@ -84,7 +83,7 @@ objective:
   expression: sum(op_cost)
 ```
 
-A piecewise-linear cost curve stated as a special-ordered set, so the solver is handed the adjacency restriction rather than binaries that encode it.
+A piecewise-linear cost curve whose weights form a special ordered set, so the solver handles the adjacency restriction itself, without binaries.
 
 #### Sets
 

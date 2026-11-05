@@ -2678,7 +2678,7 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
     refusal of a curve parameter read outside the curve suggested that reading.
     """
     message = _refusal(read_yaml(CURVE_UNDER_WHERE), **{f'parameters.{parameter}': declared})
-    assert f"parameter '{parameter}' is refused where a row is missing, and piecewise 'curve'" in message
+    assert f"'{parameter}' is refused where a row is missing, and it is a values parameter of" in message
     assert 'Declare missing: absent, or a value of its dtype' in message, 'the refusal names the rewrite'
 
 

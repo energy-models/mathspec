@@ -25,20 +25,19 @@ like yours, and what each line of the file means.
     [`dual`](../reference/language/named.md#dual), each file beside its
     typeset equation.
 - **[A curve by convex combination](piecewise.md)** is the smallest
-    [`piecewise`](../reference/language/piecewise.md) entry: one weight per
-    breakpoint, one row that sums them to 1, and one row per link. The three
-    pages after it state the same spec with another method.
-- **[A curve that is not convex](piecewise_adjacency.md)** adds a binary per
-    segment and the two rows that hold the weights on it. The default method
-    writes these.
-- **[A curve as a special-ordered set](sos.md)** hands the same restriction to
-    the solver, as a declaration in place of the binaries and their rows.
+    [`piecewise`](../reference/language/piecewise.md) entry, with one weight
+    per breakpoint. The three pages after it state the same dispatch with
+    another method.
+- **[A curve that is not convex](piecewise_adjacency.md)** holds the weights
+    on one segment with a binary per segment, under the default method.
+- **[A curve as a special ordered set](sos.md)** leaves the same restriction
+    to the solver, in place of the binaries and their rows.
 - **[A curve as segment lines](piecewise_lp.md)** states the curve as
-    inequalities, and declares no variable of its own.
-- **[A curve filled segment by segment](piecewise_incremental.md)** states
-    the curve as linopy does for a gated or non-convex curve, and shows the
-    PyPSA cost curve: curves of different lengths on some generators, switched
-    by a status that only committable generators have.
+    inequalities, and its expansion declares no variable.
+- **[A curve filled segment by segment](piecewise_incremental.md)** fills
+    each segment only once the one before it is full. Its curves have
+    different lengths, and a status switches the curve only of a committable
+    generator.
 - **[A component library](library/index.md)** is several files that
     [`merge`](../reference/composition.md#merge) composes into one spec, each
     written against one shared [fragment](../reference/glossary.md#fragment)
