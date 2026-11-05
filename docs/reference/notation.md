@@ -49,7 +49,7 @@ parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
-  load: { dims: [snapshot, bus] }
+  load: { dims: [snapshot, bus], missing: { by: zone_of, fill: { north: 0, south: absent } } } # a reading per label of a relation: the legend lists each, then otherwise
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
@@ -84,7 +84,7 @@ parameters:
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$, where the data has no row: $`0`$ where `zone_of` is `north`, `absent` where `zone_of` is `south`, `refused` otherwise |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
