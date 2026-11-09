@@ -377,7 +377,7 @@ A value has the `dtype` of the parameter:
 #### A reading per label
 
 `missing:` also takes a mapping that reads a missing row by the label that a
-relation gives its coordinate:
+column of a relation gives its coordinate:
 
 ```yaml
 dimensions:
@@ -394,7 +394,7 @@ parameters:
   sign:
     dims: [entity]
     missing:
-      by: component_of
+      by: component_of[component]
       fill:
         Load: -1
         ShuntImpedance: -1
@@ -404,15 +404,25 @@ parameters:
 A missing row of `sign` reads `-1` at a load or a shunt impedance, and `1` at
 every other entity.
 
-| Key         | Value                                                                      | Default   |
-| ----------- | -------------------------------------------------------------------------- | --------- |
-| `by`        | a relation with one value column, keyed by dimensions of the parameter     | required  |
-| `fill`      | a reading for each of one or more labels of that value column              | required  |
-| `otherwise` | the reading at every other label, and at a key with no row in the relation | `refused` |
+| Key         | Value                                                                                   | Default   |
+| ----------- | --------------------------------------------------------------------------------------- | --------- |
+| `by`        | `relation[column]`: one value column of a relation keyed by dimensions of the parameter | required  |
+| `fill`      | a reading for each of one or more labels of that column                                 | required  |
+| `otherwise` | the reading at every other label, and at a key with no row in the relation              | `refused` |
 
-Each reading is one that a plain `missing:` takes. mathspec refuses at load a
-`by:` that names no such relation, and a `fill:` label that the
-[`one_of`](dimensions.md#one_of) of the value column does not list.
+Each reading is one that a plain `missing:` takes. As in
+[`at(x, by=)`](relations.md), `by:` names the column, so the relation may have
+other value columns. In a flow mapping, quote it:
+`missing: { by: "component_of[component]", fill: { Load: -1 } }`.
+
+mathspec refuses at load a `by:` that names a relation and no column, a key
+column, more than one column, or a column the relation does not have. It also
+refuses a `fill:` label that the [`one_of`](dimensions.md#one_of) of the column
+does not list. For `by: component_of`, it prints:
+
+```text
+Parameter 'sign': missing: by: component_of names the relation and none of its columns. Write by: component_of[<column>], with a value column of 'component_of': ['component'].
+```
 
 The relation may be one that the parameter names under
 [`confined_by:`](#confined_by). Every coordinate then has a row in it, so

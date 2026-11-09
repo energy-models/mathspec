@@ -267,13 +267,13 @@ class Legend:
         return self.format.math(number(value, self.format))
 
     def _by(self, value: MissingBy) -> str:
-        """Each reading with the labels of ``by`` that take it, by label, and ``otherwise`` last."""
+        """Each reading with the labels of ``by[column]`` that take it, by label, and ``otherwise`` last."""
         labels: dict[ParameterReading, list[str]] = {}
         for label, reading in value.fill.items():
             labels.setdefault(reading, []).append(self.format.mono(label))
+        column = self.format.mono(f'{value.by}[{value.column}]')
         cases = [
-            f'{self._reading(reading)} where {self.format.mono(value.by)} is {" or ".join(named)}'
-            for reading, named in labels.items()
+            f'{self._reading(reading)} where {column} is {" or ".join(named)}' for reading, named in labels.items()
         ]
         return ', '.join([*cases, f'{self._reading(value.otherwise)} otherwise'])
 

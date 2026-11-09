@@ -295,8 +295,8 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
         pytest.param(
             raw_of(GOLDEN_MODEL),
             'parameters.load.missing',
-            {'by': 'zone_of', 'fill': {'south': 'absent', 'north': 0}, 'otherwise': 2},
-            {'by': 'zone_of', 'fill': {'north': 0.0, 'south': 'absent'}, 'otherwise': 2.0},
+            {'by': 'zone_of[zone]', 'fill': {'south': 'absent', 'north': 0}, 'otherwise': 2},
+            {'by': 'zone_of[zone]', 'fill': {'north': 0.0, 'south': 'absent'}, 'otherwise': 2.0},
             id='a-reading-per-label-of-a-float-parameter',
         ),
         pytest.param(

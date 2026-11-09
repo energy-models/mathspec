@@ -162,15 +162,17 @@ ParameterReading = RelationMissing | bool | float
 class MissingBy:
     """A ``missing:`` that reads a missing row by the label a relation gives its coordinate.
 
-    The relation [`by`][] has one value column. At a coordinate with no row,
-    the parameter reads as the [`fill`][] of the label that the relation maps
-    the coordinate to, and as [`otherwise`][] where [`fill`][] names no such label.
+    At a coordinate with no row, the parameter reads as the [`fill`][] of the
+    label in [`column`][] of the relation [`by`][] at that coordinate, and as
+    [`otherwise`][] where [`fill`][] names no such label.
     """
 
     by: str
     """The relation that gives each coordinate its label. Its key columns are over dimensions of the parameter."""
+    column: str
+    """The value column of [`by`][] that holds the label."""
     fill: Mapping[str, ParameterReading]
-    """The reading of a missing row, per label of the value column of [`by`][]."""
+    """The reading of a missing row, per label of [`column`][]."""
     otherwise: ParameterReading = 'refused'
     """The reading of a missing row at a label that [`fill`][] does not name, or at a key with no row in [`by`][]."""
 

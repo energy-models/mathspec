@@ -31,7 +31,7 @@
 \item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
 \item[{$\mathrm{link\_eff}$}] \texttt{link\_eff} over $\mathcal{U} \times \mathcal{G}$, only where $\left( u,\ g \right) \in \mathrm{connection}$, $1$ where the data has no row
-\item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{U} \times \mathcal{T}$, where the data has no row: $0$ where \texttt{zone\_of} is \texttt{north}, \texttt{absent} where \texttt{zone\_of} is \texttt{south}, \texttt{refused} otherwise
+\item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{U} \times \mathcal{T}$, where the data has no row: $0$ where \texttt{zone\_of[zone]} is \texttt{north}, \texttt{absent} where \texttt{zone\_of[zone]} is \texttt{south}, \texttt{refused} otherwise
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$

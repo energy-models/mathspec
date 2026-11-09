@@ -1824,7 +1824,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'variables.p.where': 'n'},
                 (
-                    "'n' is declared dtype: int and missing: refused",
+                    "'n' is declared dtype: int, and missing: refuses every missing row",
                     'Declare `missing: absent` or a value, or compare the value',
                 ),
                 id='where-a-bare-int-parameter-under-refused',
@@ -1832,14 +1832,14 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {'variables.p.where': 'tag'},
                 (
-                    "'tag' is declared dtype: str and missing: refused",
+                    "'tag' is declared dtype: str, and missing: refuses every missing row",
                     'Declare `missing: absent`, or compare the label',
                 ),
                 id='where-a-bare-str-parameter-under-refused',
             ),
             pytest.param(
                 {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'conditions.held': 'NOT n'},
-                ("'n' is declared dtype: int and missing: refused",),
+                ("'n' is declared dtype: int, and missing: refuses every missing row",),
                 id='a-mask-reading-a-bare-int-parameter-under-refused',
             ),
             pytest.param(
@@ -2888,6 +2888,10 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
         pytest.param(
+            {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': {'by': 'lk[h]', 'fill': {'north': 0}}}},
+            id='an-int-under-a-value-at-one-label',
+        ),
+        pytest.param(
             {
                 'parameters.n': {'dims': ['g'], 'dtype': 'int', 'confined_by': ['on']},
                 'relations.on': {'key': 'g', 'values': 'h', 'missing': 'absent'},
@@ -2900,6 +2904,18 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
     """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
     spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
     assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
+
+
+@pytest.mark.parametrize('dtype', ['int', 'str'])
+def test_a_bare_parameter_refused_at_every_label_is_refused(dtype: str):
+    """A `missing: {by: ...}` that reads `refused` at every label has a row at every coordinate, as `refused` does.
+
+    The check compared `missing` with `refused`, which a mapping never equals, so the bare name loaded as a mask
+    that drops nothing.
+    """
+    declared = {'dims': ['g'], 'dtype': dtype, 'missing': {'by': 'lk[h]', 'fill': {'north': 'refused'}}}
+    message = _refusal(**{'parameters.n': declared, 'variables.p.where': 'n'})
+    assert f"'n' is declared dtype: {dtype}, and missing: refuses every missing row" in message
 
 
 #: A parameter over the pairs of `g` and `h` that a bare relation lists, with a fill.
@@ -3121,52 +3137,100 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName, decl
     assert row.index(clause) < row.index('where the data has no row'), 'the coordinates come before the fill'
 
 
-#: `c` reads a missing row by the label `lk` gives its `g`.
-_BY = {'by': 'lk', 'fill': {'north': 0, 'south': -1}, 'otherwise': 1}
+#: `c` reads a missing row by the label `lk` gives its `g` in the column `h`.
+_BY = {'by': 'lk[h]', 'fill': {'north': 0, 'south': -1}, 'otherwise': 1}
 
 
 @pytest.mark.parametrize(
     ('written', 'read'),
     [
-        pytest.param(_BY, MissingBy('lk', {'north': 0, 'south': -1}, 1), id='a-value-per-label'),
+        pytest.param(_BY, MissingBy('lk', 'h', {'north': 0, 'south': -1}, 1), id='a-value-per-label'),
         pytest.param(
-            {'by': 'lk', 'fill': {'north': 'absent'}}, MissingBy('lk', {'north': 'absent'}), id='otherwise-refused'
+            {'by': 'lk[h]', 'fill': {'north': 'absent'}},
+            MissingBy('lk', 'h', {'north': 'absent'}),
+            id='otherwise-refused',
         ),
-        pytest.param({**_BY, 'fill': {'north': 'inf'}}, MissingBy('lk', {'north': float('inf')}, 1), id='inf-in-fill'),
+        pytest.param(
+            {**_BY, 'fill': {'north': 'inf'}}, MissingBy('lk', 'h', {'north': float('inf')}, 1), id='inf-in-fill'
+        ),
     ],
 )
 def test_a_parameter_reads_a_missing_row_by_a_relation(written, read):
     spec = _spec(**{'parameters.c.missing': written})
     assert spec.program.parameters['c'].missing == read
-    assert to_spec(spec.to_dict()) == spec, 'the mapping form writes back the file it read'
+    assert to_spec(spec.to_yaml()) == spec, 'the mapping form writes back the file it read'
+
+
+def test_a_parameter_reads_a_missing_row_by_one_of_several_value_columns():
+    """The column names which label a coordinate reads, so the relation may hold others beside it."""
+    spec = _spec(
+        **{
+            'dimensions.technology': {'dtype': 'str', 'one_of': ['solar', 'wind']},
+            'relations.gen_bt': {'key': 'g', 'values': ['h', 'technology']},
+            'parameters.c.missing': {'by': 'gen_bt[technology]', 'fill': {'wind': 0}},
+        }
+    )
+    assert spec.program.parameters['c'].missing == MissingBy('gen_bt', 'technology', {'wind': 0})
+    assert to_spec(spec.to_yaml()) == spec, 'the column survives a round trip through YAML'
 
 
 def test_a_parameter_reads_a_missing_row_by_the_relation_it_is_confined_by():
     """Confinement leaves no coordinate without a row in `by`, so the two name one relation without contradiction."""
     spec = _spec(**{'relations.lk.missing': 'absent', 'parameters.c.confined_by': ['lk'], 'parameters.c.missing': _BY})
     c = spec.program.parameters['c']
-    assert (c.confined_by, c.missing) == (('lk',), MissingBy('lk', {'north': 0, 'south': -1}, 1))
+    assert (c.confined_by, c.missing) == (('lk',), MissingBy('lk', 'h', {'north': 0, 'south': -1}, 1))
 
 
 @pytest.mark.parametrize(
     ('patch', 'fragment'),
     [
         pytest.param(
-            {'parameters.c.missing.by': 'kl'}, "reads missing: by 'kl', which is not a relation", id='no-relation'
+            {'parameters.c.missing.by': 'lk'},
+            "Parameter 'c': missing: by: lk names the relation and none of its columns. Write by: lk[<column>], "
+            "with a value column of 'lk': ['h'].",
+            id='a-bare-relation',
         ),
         pytest.param(
-            {'relations.lk.values': ['h', 'g2'], 'dimensions.g2': {}},
-            'which has 2 value columns, so it gives a coordinate no one label',
-            id='two-value-columns',
+            {'parameters.c.missing.by': 'lk[hh]'},
+            "Parameter 'c': missing: by: lk[hh] names 'hh', which is no column of 'lk'. Did you mean 'h'?",
+            id='an-unknown-column',
         ),
         pytest.param(
-            {'parameters.c.dims': ['h'], 'parameters.c.missing.by': 'lk'},
-            "which is keyed by ['g'], and the parameter is not over them",
+            {'parameters.c.missing.by': 'lk[g]'},
+            "Parameter 'c': missing: by: lk[g] names 'g', a key column of 'lk': it holds the coordinate, not a label "
+            "of it. Write by: lk[<column>], with a value column of 'lk': ['h'].",
+            id='a-key-column',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'lk[g, h]'},
+            "Parameter 'c': missing: by: lk[g, h] names 2 columns, and a missing row reads one label. Write by: "
+            "lk[<column>], with a value column of 'lk': ['h'].",
+            id='several-columns',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'lk(h)'},
+            "Parameter 'c': missing: by: 'lk(h)' is not a relation with its column in brackets. Write by: "
+            '<relation>[<column>].',
+            id='not-a-column',
+        ),
+        pytest.param(
+            {'relations.pair': {'key': ['g', 'h']}, 'parameters.c.missing.by': 'pair[h]'},
+            "names 'pair', which has no value column, so it gives a coordinate no label",
+            id='a-relation-with-no-value-column',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'kl[h]'},
+            "names 'kl', which is not a relation. Relations: lk.",
+            id='no-relation',
+        ),
+        pytest.param(
+            {'parameters.c.dims': ['h']},
+            "names 'lk', which is keyed by ['g'], and the parameter is not over them",
             id='key-off-the-frame',
         ),
         pytest.param(
             {'dimensions.h.one_of': ['north', 'sout']},
-            "fill: names 'south', which is not a label of its value column",
+            "fill: names 'south', which is not a label of lk[h]. Did you mean 'sout'?",
             id='label-off-one-of',
         ),
         pytest.param({'parameters.c.missing.fill': {}}, 'fill: lists no label', id='empty-fill'),
@@ -3194,7 +3258,7 @@ def test_a_values_table_refused_at_some_label_under_a_ragged_where_is_refused():
     patch = {
         'dimensions.kind': {},
         'relations.kind_of': {'key': 'bp', 'values': 'kind'},
-        'parameters.x_bp.missing': {'by': 'kind_of', 'fill': {'end': 0}},
+        'parameters.x_bp.missing': {'by': 'kind_of[kind]', 'fill': {'end': 0}},
     }
     assert "parameter 'x_bp' is refused where a row is missing" in _refusal(read_yaml(CURVE_UNDER_WHERE), **patch)
 

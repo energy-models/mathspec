@@ -21,6 +21,7 @@ from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._exclusivity import Existence, Undecidable, left_out
 from mathspec._expansion import expand, parse_template
+from mathspec._expression_parser import columns_of
 from mathspec._piecewise import (
     assumptions_of,
     declaration_of,
@@ -550,5 +551,7 @@ def _decided_where(context: str, text: str, *, value: bool) -> str:
 def _missing(missing: ParameterReading | MissingBySpec) -> ParameterMissing:
     """The program's ``missing``: a [`MissingBySpec`][mathspec.spec.MissingBySpec] sealed into a [`MissingBy`][mathspec.program.MissingBy]."""
     if isinstance(missing, MissingBySpec):
-        return MissingBy(missing.by, missing.fill, missing.otherwise)
+        by = columns_of(missing.by)
+        assert by is not None and len(by.columns) == 1, 'reference_errors refuses any other by:'
+        return MissingBy(by.relation, by.columns[0], missing.fill, missing.otherwise)
     return missing

@@ -92,12 +92,12 @@ with no row means.
 The [`missing:`](parameters-variables-constraints.md#missing) key of a
 parameter takes one of four values:
 
-| `missing:`              | Result                                                                                                                                                             |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `refused`, by default   | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                                           |
-| `absent`                | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                                         |
-| a value                 | a missing row takes that value, wherever an expression uses the parameter                                                                                          |
-| `{by, fill, otherwise}` | a missing row takes the reading of the label that a relation gives its coordinate ([a reading per label](parameters-variables-constraints.md#a-reading-per-label)) |
+| `missing:`              | Result                                                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refused`, by default   | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                                                  |
+| `absent`                | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                                                |
+| a value                 | a missing row takes that value, wherever an expression uses the parameter                                                                                                 |
+| `{by, fill, otherwise}` | a missing row takes the reading of the label that a relation column gives its coordinate ([a reading per label](parameters-variables-constraints.md#a-reading-per-label)) |
 
 <figure class="diagram">
 --8<-- "docs/static/absence-missing-parameter.svg"

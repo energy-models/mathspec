@@ -18,10 +18,12 @@ a macro formal against a dimension, a curve's links, and every dim rule.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from mathspec._expression_parser import NAME, columns_of
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._piecewise import gate_of
@@ -32,9 +34,10 @@ from mathspec.errors import SchemaError, did_you_mean, unordered
 from mathspec.spec import NUMERIC_DTYPES, MissingBySpec, Spec, side_columns
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
+    from mathspec._expression_parser import ColumnsNode
     from mathspec.program import Program
     from mathspec.spec import PiecewiseLinkSpec, PiecewiseSpec
 
@@ -261,34 +264,66 @@ def _confinements(spec: Spec) -> Iterator[str]:
 
 
 def _missing_by(spec: Spec) -> Iterator[str]:
-    """A ``missing: {by: ...}`` names a relation that gives each coordinate of the parameter one label it can fill."""
+    """A ``missing: {by: ...}`` names a value column of a relation, which gives each coordinate one label to fill."""
     for name, p in spec.parameters.items():
         if not isinstance(by := p.missing, MissingBySpec):
             continue
-        context = f"Parameter '{name}' reads missing: by '{by.by}'"
-        if (lk := spec.relations.get(by.by)) is None:
-            yield f'{context}, which is not a relation. {did_you_mean(by.by, spec.relations)}'
+        selected = _by_column(name, p.dims, by.by, spec)
+        if isinstance(selected, str):
+            yield selected
             continue
-        if len(lk.value_roles) != 1:
-            yield (
-                f'{context}, which has {len(lk.value_roles)} value columns, so it gives a coordinate no one label. '
-                f'Name a relation with one value column.'
-            )
-            continue
-        if stray := [d for _, d in side_columns(lk.key) if d not in p.dims]:
-            yield (
-                f'{context}, which is keyed by {stray}, and the parameter is not over them (dims {p.dims}). '
-                f'Key the relation by dimensions of the parameter.'
-            )
-        dimension = spec.dimensions.get(side_columns(lk.values)[0][1])
+        lk = spec.relations[selected.relation]
+        dimension = spec.dimensions.get(dict(lk.pairs)[selected.columns[0]])
         if dimension is None or dimension.one_of is None:
             continue
         yield from (
-            f"{context}, and fill: names '{label}', which is not a label of its value column. "
-            f'{did_you_mean(label, dimension.one_of, label="Labels")}'
+            f"Parameter '{name}': missing: by: {by.by}, and fill: names '{label}', which is not a label of "
+            f'{selected}. {did_you_mean(label, dimension.one_of, label="Labels")}'
             for label in by.fill
             if label not in dimension.one_of
         )
+
+
+def _by_column(name: str, dims: Sequence[str], by: str, spec: Spec) -> ColumnsNode | str:
+    """The column *by* names, or why it is not one value column of a relation keyed by dimensions in *dims*.
+
+    A bare relation name is refused as ``at(..., by=)`` refuses it, so a
+    relation may gain a value column without changing what the file means.
+    """
+    context = f"Parameter '{name}': missing: by: {by}"
+    selected = columns_of(by)
+    if selected is None and re.fullmatch(NAME, by) is None:
+        return f"Parameter '{name}': missing: by: {by!r} is not a relation with its column in brackets. Write by: <relation>[<column>]."
+    rname = by if selected is None else selected.relation
+    if (lk := spec.relations.get(rname)) is None:
+        hint = did_you_mean(rname, spec.relations, label='Relations')
+        return f"{context} names '{rname}', which is not a relation. {hint}"
+    if not lk.value_roles:
+        return (
+            f"{context} names '{rname}', which has no value column, so it gives a coordinate no label. "
+            f'Name a relation with a value column.'
+        )
+    pick = f"Write by: {rname}[<column>], with a value column of '{rname}': {list(lk.value_roles)}."
+    if selected is None:
+        return f'{context} names the relation and none of its columns. {pick}'
+    if len(selected.columns) > 1:
+        return f'{context} names {len(selected.columns)} columns, and a missing row reads one label. {pick}'
+    column = selected.columns[0]
+    if column in lk.key_roles:
+        return (
+            f"{context} names '{column}', a key column of '{rname}': it holds the coordinate, not a label of it. {pick}"
+        )
+    if column not in lk.value_roles:
+        return (
+            f"{context} names '{column}', which is no column of '{rname}'. "
+            f'{did_you_mean(column, lk.value_roles, label="Value columns")}'
+        )
+    if stray := [d for _, d in side_columns(lk.key) if d not in dims]:
+        return (
+            f"{context} names '{rname}', which is keyed by {stray}, and the parameter is not over them "
+            f'(dims {list(dims)}). Key the relation by dimensions of the parameter.'
+        )
+    return selected
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

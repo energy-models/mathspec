@@ -24,7 +24,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("lead")$: `lead` over $cal(G)$
 / $upright("link_eff")$: `link_eff` over $cal(U) times cal(G)$, only where $(u, g) in upright("connection")$, $1$ where the data has no row
-/ $upright("load")$: `load` over $cal(U) times cal(T)$, where the data has no row: $0$ where `zone_of` is `north`, `absent` where `zone_of` is `south`, `refused` otherwise
+/ $upright("load")$: `load` over $cal(U) times cal(T)$, where the data has no row: $0$ where `zone_of[zone]` is `north`, `absent` where `zone_of[zone]` is `south`, `refused` otherwise
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$

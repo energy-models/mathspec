@@ -170,7 +170,7 @@ class ConditionResolver:
                 declared = ns.spec.parameters.get(node.name)
                 if (
                     declared is not None
-                    and declared.missing == 'refused'
+                    and set(declared.readings) == {'refused'}
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
                     and not declared.confined_by
@@ -181,9 +181,9 @@ class ConditionResolver:
                         else f'Declare `missing: absent` or a value, or compare the value: where: "{node.name} > 0".'
                     )
                     self.errors.append(
-                        f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
-                        f'has a row at every coordinate and the bare name is true at every coordinate — the mask '
-                        f'has no effect. {rewrite}'
+                        f"{context}: '{node.name}' is declared dtype: {declared.dtype}, and missing: refuses every "
+                        f'missing row, so it has a row at every coordinate and the bare name is true at every '
+                        f'coordinate — the mask has no effect. {rewrite}'
                     )
                     return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])

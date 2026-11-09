@@ -421,12 +421,12 @@ _Reading = Annotated[RelationMissing | bool | int | float, BeforeValidator(_a_re
 
 
 class MissingBySpec(_StrictSpec):
-    """A ``missing:`` that reads a missing row by the label the relation ``by:`` gives its coordinate.
+    """A ``missing:`` that reads a missing row by the label a column of a relation gives its coordinate.
 
-    ``by:`` names a relation with one value column, keyed by dimensions of the
-    parameter. ``fill:`` maps labels of that column to a reading each, and
-    ``otherwise:`` reads every other coordinate, ``refused`` where it is left out.
-    Each reading is one that a plain ``missing:`` takes::
+    ``by:`` names one value column of a relation keyed by dimensions of the
+    parameter, as ``relation[column]``. ``fill:`` maps labels of that column to
+    a reading each, and ``otherwise:`` reads every other coordinate, ``refused``
+    where it is left out. Each reading is one that a plain ``missing:`` takes::
 
         relations:
           component_of: {key: entity, values: component}
@@ -434,7 +434,7 @@ class MissingBySpec(_StrictSpec):
           sign:
             dims: [entity]
             missing:
-              by: component_of
+              by: component_of[component]
               fill: {Load: -1, ShuntImpedance: -1}
               otherwise: 1
     """
