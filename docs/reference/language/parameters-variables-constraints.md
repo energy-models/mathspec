@@ -315,9 +315,8 @@ A `str` parameter takes any label. A dimension with
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
 no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
 of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
-only where the condition is true. On a parameter that a relation confines
-([`confines`](relations.md#confines)), it applies only where the relation has
-a row.
+only where the condition is true. On a parameter with a
+[`confined_by:`](#confined_by), it applies only where each relation has a row.
 
 ```yaml
 dimensions:
@@ -444,10 +443,8 @@ snapshot of the example, and drops every other row.
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
 either, because the parameter has no row there. To have a tool refuse a row at
-a pair that is not wired, declare
-[`confines: true`](relations.md#confines) on the relation instead. It then
-confines `efficiency`, and every other parameter over `entity` and `bus`, and
-the parameter needs no `where:`.
+a pair that is not wired, write
+[`confined_by: [connection]`](#confined_by) instead, and no `where:`.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
@@ -472,6 +469,90 @@ mathspec suggests a parameter or a relation as the rewrite.
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
 `only where` $(e, b) \in \mathrm{connection}$.
+
+### `confined_by`
+
+`confined_by:` names the relations at whose rows the parameter has its
+coordinates. A tool refuses a row of the data outside them, where a `where:`
+drops it. In this example, `efficiency` and `p_nom_max` have values only at
+the pairs that `connection` lists:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+relations:
+  connection: { key: [entity, bus], missing: absent }
+parameters:
+  efficiency: { dims: [entity, bus, snapshot], confined_by: [connection], missing: 1 }
+  p_nom_max: { dims: [entity, bus], confined_by: [connection], missing: .inf }
+  distance: { dims: [entity, bus] }
+variables:
+  p: { dims: [entity, snapshot] }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * p, over=entity) == 0
+```
+
+Each parameter names its own relations. `distance` is also over `entity` and
+`bus`, names none, and needs a row at every pair.
+
+With data attached, a tool decides the coordinates of `efficiency` in three
+steps:
+
+1. Where `connection` has no row, `efficiency` is [absent](absence.md), and
+   the tool refuses any row of the data of `efficiency` there.
+2. Where the [`where:`](#where) of `efficiency` is false, the tool drops the
+   row. `efficiency` has no `where:`, so the tool drops nothing.
+3. At each remaining coordinate with no row, `missing: 1` sets the value.
+
+So `missing: 1` fills only the wired pairs, and a data row for an entity at a
+bus it is not wired to is refused.
+
+A relation confines by its key columns, not by its values. A parameter
+confined by `gen_bus: { key: generator, values: bus, missing: absent }` has
+coordinates only at the generators that `gen_bus` lists, at every bus. To
+confine a parameter to the pairs, key the relation by both columns, as
+`connection` is. A parameter that names several relations has coordinates
+only where each of them has a row.
+
+mathspec refuses five confinements at load:
+
+- a name that is not a relation
+- a relation under `missing: refused`, which has a row at every key
+  combination and so confines nothing
+- a relation whose key has two columns over one dimension
+- a relation keyed by a dimension that the parameter does not have
+- a `where:` that each relation makes always true or always false
+
+For `p_nom_max: { dims: [entity], confined_by: [connection] }`, the message
+is:
+
+```text
+Parameter 'p_nom_max': confined_by: names 'connection', keyed by ['bus', 'entity'], and 'p_nom_max' is not over ['bus']. Add ['bus'] to its dims:, or delete 'connection' from confined_by:.
+```
+
+mathspec suggests both rewrites.
+
+A `where:` on a confined parameter narrows the coordinates further, and the
+tool drops the rows outside it, as in step 2. mathspec reads the `where:` as
+if each relation held. `where: connection` on `efficiency` is then always
+true, and narrows nothing:
+
+```text
+Parameter 'efficiency': confined_by: gives 'efficiency' coordinates only where 'connection' has a row, so `where: connection` narrows nothing. Delete the `where:`, or the relation from it.
+```
+
+mathspec suggests two rewrites: no `where:`, or a `where:` without the
+relation. A `where:` that is always false, such as `where: NOT connection`,
+leaves the parameter no coordinate, and mathspec suggests a `where:` that
+holds somewhere inside the relation.
+
+The typeset legend lists the relations beside the dimensions, after
+`a row of data refused unless`. For `efficiency`, the legend entry contains
+`a row of data refused unless` $(e, b) \in \mathrm{connection}$.
 
 ## `variables`
 

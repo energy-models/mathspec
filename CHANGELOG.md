@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a relation may confine its parameters ([#980](https://github.com/energy-models/mathspec/pull/980))
+- feat(language): a relation may confine a parameter ([#980](https://github.com/energy-models/mathspec/pull/980))
 - docs(pypsa): the reference pins PyPSA at 72a12418 ([#986](https://github.com/energy-models/mathspec/pull/986))
 - feat(spec)!: a loaded spec is sorted and read-only ([#924](https://github.com/energy-models/mathspec/pull/924))
   - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:`, a macro's `kwargs:` and a dimension's `one_of:`.

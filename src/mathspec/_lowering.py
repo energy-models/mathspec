@@ -234,7 +234,7 @@ def lower(spec: Spec) -> Program:
                 pdef.missing,
                 pdef.description,
                 parameter_masks.get(name),
-                tuple(ns.confining(pdef.dims)),
+                pdef.confined_by,
             )
             for name, pdef in spec.parameters.items()
         },
@@ -411,7 +411,7 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
         if mask is None:
             continue
         if (
-            (confining := ns.confining(spec.parameters[pname].dims))
+            (confining := spec.parameters[pname].confined_by)
             and (decided := Mask(_inside(mask.root, frozenset(confining))).root) != mask.root
             and isinstance(decided, BooleanLiteral)
         ):
@@ -451,12 +451,14 @@ def _inside(node: Condition, confining: frozenset[str]) -> Condition:
             return node
 
 
-def _decided_by_relations(context: str, pname: str, text: str | None, confining: list[str], *, value: bool) -> str:
+def _decided_by_relations(
+    context: str, pname: str, text: str | None, confining: tuple[str, ...], *, value: bool
+) -> str:
     """The refusal for a parameter's ``where:`` that the relations confining the parameter already decide."""
     named = ' and '.join(f"'{r}'" for r in confining)
     head = (
-        f"{context}: '{pname}' has coordinates only where {named} {'has' if len(confining) == 1 else 'have'} a row, "
-        f'under confines: true, so `where: {text}`'
+        f"{context}: confined_by: gives '{pname}' coordinates only where {named} "
+        f'{"has" if len(confining) == 1 else "have"} a row, so `where: {text}`'
     )
     if value:
         return f'{head} narrows nothing. Delete the `where:`, or the relation from it.'

@@ -155,7 +155,7 @@ class ConditionResolver:
                     and declared.missing == 'refused'
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
-                    and not ns.confining(declared.dims)
+                    and not declared.confined_by
                 ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'

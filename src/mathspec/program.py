@@ -507,10 +507,6 @@ class Relation:
     missing: RelationMissing = 'refused'
     """Whether every combination of the key needs a row: ``refused`` or ``absent``."""
     description: str | None = None
-    confines: bool = False
-    """Whether every parameter over each dimension of the key has coordinates only at the relation's rows, listed per
-    parameter in [`confined_by`][mathspec.program.Parameter.confined_by].
-    """
 
     @property
     def roles(self) -> tuple[str, ...]:
@@ -732,7 +728,7 @@ class Parameter:
     is absent and a tool drops its rows of data there. ``missing`` applies where the condition is true.
     """
     confined_by: tuple[str, ...] = ()
-    """The relations under ``confines: true`` whose key dimensions the parameter has, by name, in file order. A tool
+    """The relations the parameter names under ``confined_by:``, sorted by name. A tool
     attaching the data refuses a row at a key combination one of them has no row for, and reads the parameter as absent
     there, before ``where`` drops anything and before ``missing`` fills anything.
     """
