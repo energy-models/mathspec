@@ -292,12 +292,6 @@ class Legend:
                 for c, lk in carried.items()
                 if lk.missing == 'absent'
             )
-            clauses.extend(
-                f', every parameter over the key of {self.format.mono(c)} has data only where {self.format.mono(c)} '
-                f'has a row'
-                for c, lk in carried.items()
-                if lk.confines and dim in {lk.dim(role) for role in lk.key}
-            )
         return ''.join(clauses)
 
     def _notation(self, noticed: Noticed) -> list[LegendItem]:

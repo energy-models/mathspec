@@ -69,7 +69,7 @@ parameters:
       sub-network the period's active branches form. A row exists only where
       the line and the outage are active in the period and share a
       sub-network. It is -1 at the outaged line itself. PyPSA takes the factors
-      of the first scenario (`abstract.py:645`), and refuses impedances that
+      of the first scenario (`abstract.py:652`), and refuses impedances that
       differ by scenario (`constants.py:33-35`). So the factors are the same in
       every scenario
     dims: [period, line, outage]
@@ -217,7 +217,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}} \times \mathcal{Y}`$, `absent` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out (PyPSA's `BODF`), data prep. It comes from the PTDF of the sub-network the period's active branches form. A row exists only where the line and the outage are active in the period and share a sub-network. It is -1 at the outaged line itself. PyPSA takes the factors of the first scenario (`abstract.py:645`), and refuses impedances that differ by scenario (`constants.py:33-35`). So the factors are the same in every scenario |
+| $`\beta`$ | `Line_BODF` over $`\mathcal{K} \times \mathcal{K}^{\mathrm{out}} \times \mathcal{Y}`$, `absent` where the data has no row — the share of an outaged branch's flow a line takes on when that branch goes out (PyPSA's `BODF`), data prep. It comes from the PTDF of the sub-network the period's active branches form. A row exists only where the line and the outage are active in the period and share a sub-network. It is -1 at the outaged line itself. PyPSA takes the factors of the first scenario (`abstract.py:652`), and refuses impedances that differ by scenario (`constants.py:33-35`). So the factors are the same in every scenario |
 | $`\beta^{\sigma}`$ | `Transformer_BODF` over $`\mathcal{K}^{\mathrm{out}} \times \mathcal{Y} \times \mathcal{M}`$, `absent` where the data has no row — the share of an outaged branch's flow a transformer takes on when that branch goes out, as a line's. A row only where the transformer and the outage are active in the period and share a sub-network. It is the same in every scenario, as a line's |
 
 #### Definitions
