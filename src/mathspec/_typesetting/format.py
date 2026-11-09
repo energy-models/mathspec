@@ -58,8 +58,8 @@ OperatorName = Literal[
     'nonpositive',
     'position',
     'dual',
-    'minimize',
-    'maximize',
+    'min',
+    'max',
 ]
 
 OPERATOR_SPELLINGS: dict[OperatorName, tuple[str, str]] = {
@@ -99,8 +99,8 @@ OPERATOR_SPELLINGS: dict[OperatorName, tuple[str, str]] = {
     'nonpositive': (r'\mathbb{R}_{\le 0}', 'RR_(<= 0)'),
     'position': (r'\mathrm{pos}', 'upright("pos")'),
     'dual': (r'\lambda', 'lambda'),
-    'minimize': (r'\min', 'min'),
-    'maximize': (r'\max', 'max'),
+    'min': (r'\min', 'min'),
+    'max': (r'\max', 'max'),
 }
 
 OPERATOR_NAMES = frozenset(get_args(OperatorName))

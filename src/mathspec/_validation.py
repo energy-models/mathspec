@@ -344,8 +344,8 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             continue
         if (activity := gate_of(pw.activity)) is None:
             yield (
-                f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
-                f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
+                f'{context}: activity: {pw.activity!r} is neither a variable nor one read through a relation. '
+                f'Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
             )
             continue
         if activity not in spec.variables:
@@ -353,10 +353,12 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                 f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
                 f'variable, or delete activity:.'
             )
-        elif spec.variables[activity].domain != 'binary':
+        elif (domain := spec.variables[activity].domain) == 'continuous':
+            yield f"{context}: activity variable '{activity}' is continuous. Declare it domain: binary."
+        elif domain == 'integer' and pw.method != 'incremental':
             yield (
-                f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
-                f'Declare it domain: binary.'
+                f"{context}: activity variable '{activity}' is integer, and method: {pw.method} takes a binary "
+                f"gate only. Write method: incremental, or declare '{activity}' domain: binary."
             )
 
 

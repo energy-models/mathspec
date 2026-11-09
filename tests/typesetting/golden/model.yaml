@@ -151,6 +151,15 @@ piecewise:
       p: [p, bp_x]
       fuel: [fuel, bp_y, ">="]
       heat: [heat, bp_heat, "<="]
+  module_curve: # an integer gate, which only the incremental method takes: off at 0, and from 1 up the curve moved by its first point
+    along: bp
+    dims: [snapshot, generator]
+    method: incremental
+    where: bp_run
+    activity: units
+    links:
+      p: [p, bp_x]
+      fuel: [fuel, bp_y, ">="]
   bus_curve: # one curve per bus, read by each generator on it: a link that walks a relation prints as the family it ties, and the mask is read through the relation too
     along: bp
     dims: [snapshot, bus]

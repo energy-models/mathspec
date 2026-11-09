@@ -120,7 +120,7 @@ parameters:
   Generator_first_active:
     description: >-
       one in the first period a generator is active in, zero elsewhere, data prep.
-      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:278`)
     dims: [period, generator]
   Generator_p_set:
     description: a given output schedule. A generator without one has no row here
@@ -138,7 +138,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1128-1149`, `costs.py:102-203`)
+      (`components.py:1176-1197`, `costs.py:102-203`)
     dims: [scenario, generator]
   Generator_p_nom_set:
     description: a given nominal power for an extendable generator. One without a value has no row here
@@ -200,7 +200,7 @@ expressions:
     description: >-
       how many modules a committed unit's status counts: the chosen number
       where the build is extendable and modular, and the modules installed
-      otherwise (`constraints.py:619-624`)
+      otherwise (`constraints.py:656-661`)
     dims: [scenario, generator]
     cases:
       chosen: { when: Generator_p_nom_extendable AND Generator_p_nom_mod > 0, expression: Generator_n_mod }
@@ -209,7 +209,7 @@ expressions:
     description: >-
       the build a committed unit's ramp rows are taken against: one module
       where the build is modular, since its status counts modules, and the
-      given build otherwise (`constraints.py:1071-1074`)
+      given build otherwise (`constraints.py:1131-1134`)
     dims: [scenario, generator]
     cases:
       modular_build: { when: "Generator_p_nom_mod > 0", expression: Generator_p_nom_mod }
@@ -312,5 +312,5 @@ assumptions:
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:506-513`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set

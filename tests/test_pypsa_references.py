@@ -205,7 +205,7 @@ def test_a_fixed_modular_committable_unit_gets_only_its_per_module_commitment_ro
     ],
 )
 def test_the_cvar_entries_stand_exactly_where_a_risk_preference_is_set(section: str, name: str):
-    """PyPSA builds the CVaR columns and rows, and refuses a quadratic cost, under any risk preference (`optimize.py:492`, `:501-508`).
+    """PyPSA builds the CVaR columns and rows, and refuses a quadratic cost, under any risk preference (`optimize.py:497`, `:506-513`).
 
     The file built the columns always, and the rows and the refusal only where
     `omega > 0`, so a risk preference with `omega = 0` got neither. Rung 70.
@@ -255,7 +255,7 @@ def test_a_delayed_port_assumes_one_generators_weighting_over_the_horizon(compon
     ],
 )
 def test_a_build_stands_only_for_an_extendable_unit_that_is_active(component: str, attr: str):
-    """PyPSA builds `{c}-{attr}`, `{c}-n_mod` and their rows over `c.extendables` and `c.active_assets` (`variables.py:353`, `:379`, `constraints.py:902`, `:1857`).
+    """PyPSA builds `{c}-{attr}`, `{c}-n_mod` and their rows over `c.extendables` and `c.active_assets` (`variables.py:359`, `:387`, `constraints.py:949`, `:1967`).
 
     `c.active_assets` is the `active` flag alone, without build year and
     lifetime. The file built the build column and its bound rows for a

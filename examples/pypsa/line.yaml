@@ -84,7 +84,7 @@ parameters:
   Line_first_active:
     description: >-
       one in the first period a line is active in, zero elsewhere, data prep.
-      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:278`)
     dims: [period, line]
   Line_s_nom:
     description: nominal apparent power
@@ -112,7 +112,7 @@ parameters:
       (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
       annuity over `lifetime` at `discount_rate`, times `nyears`, where
       `overnight_cost` is given, and `capital_cost` where it is not. Both add
-      `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`)
+      `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`)
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line. One without a value has no row here
@@ -128,7 +128,7 @@ parameters:
       in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by
       default. A line whose carrier is not AC has no row either. The
       deprecated `v_ang_min` is ignored, as PyPSA ignores it with a
-      `DeprecationWarning` (`constraints.py:1710-1717`)
+      `DeprecationWarning` (`constraints.py:1797-1804`)
     dims: [scenario, line]
     missing: absent
   Line_x_pu_eff:
@@ -162,7 +162,7 @@ parameters:
   Line_volume_weight:
     description: >-
       the line's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:849-850`), data prep. A line outside it, or one
+      (`global_constraints.py:874-875`), data prep. A line outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, line]
     missing: absent
@@ -174,7 +174,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1153-1171`, `global_constraints.py:872-881`)
+      (`components.py:1201-1219`, `global_constraints.py:897-906`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Line_tech_capacity_weight:
