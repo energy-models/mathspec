@@ -976,6 +976,43 @@ Process_com_partly_shut_down:
 \overleftarrow{z}_{j,\xi,t} - z_{j,\xi,t} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \cdot \overleftarrow{u}^{z}_{j,\xi,t} + \left( \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} - \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \right) \cdot u^{z}_{j,\xi,t} - \left( \underline{\mathrm{z}}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} + \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} - \widetilde{\mathrm{rd}}^{z,\mathrm{dn}}_{j,\xi} \cdot \mathrm{z}^{\mathrm{nom}}_{j,\xi} \right) \cdot \mathit{up}^{z}_{j,\xi,t} \le 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \lvert \{ \xi' \in \Xi \,:\, \lvert \{ t' \in \mathcal{T} \,:\, \mathrm{c}^{z,\mathrm{up}}_{j,\xi',t'} \neq \mathrm{c}^{z,\mathrm{dn}}_{j,\xi',t'} \} \rvert > 0 \} \rvert = 0 \wedge \mathrm{on}^{z}_{j,t} \wedge \left( \mathrm{pos}(t) > 0 \vee \mathrm{u}^{z,0}_{j,\xi} = 0 \vee \mathrm{z}^{0}_{j,\xi} \text{ is defined} \right)
 ```
 
+### `Generator_marginal_cost_incremental`
+
+`Generator_marginal_cost_incremental`
+
+```yaml
+Generator_marginal_cost_incremental:
+  description: >-
+    `Generator-marginal_cost_piecewise` — the running cost of a generator
+    with a curve is at least the curve at its output, stated by segments
+    filled in order, where linopy chooses the incremental rows. No status
+    gates it, because no generator with a curve is committable under the
+    keyword
+  activity: null
+```
+
+```math
+C^{\mathrm{curve}}_{g,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}}(\mathrm{p}^{\mathrm{curve}}_{b,g},\ \mathrm{C}^{\mathrm{curve}}_{b,g})(p_{g,\xi,t}) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Generator_marginal_cost_curve_is_not_committable`
+
+`Generator_marginal_cost_curve_is_not_committable`
+
+```yaml
+Generator_marginal_cost_curve_is_not_committable:
+  holds: "NOT Generator_committable"
+  where: "Generator_marginal_cost_curve"
+  description: >-
+    a generator with a piecewise `marginal_cost` curve is not committable.
+    PyPSA gates such a curve by the status share (`optimize.py:314-318`,
+    `piecewise.py:193-203`), and a curve gate is binary or integer
+```
+
+```math
+\neg \mathrm{com}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{curve}_{g}
+```
+
 ### `Generator_committable_is_not_modular`
 
 `Generator_committable_is_not_modular`
