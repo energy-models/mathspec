@@ -26,6 +26,9 @@ understand a rule before you rely on it.
 - **[Relations as linear maps](relations-as-linear-maps.md)** describes a sum
     through a table that pairs labels
     ([a relation](../reference/language/relations.md)) as the product of a matrix and a vector.
+- **[Understanding a spec in SQL and dataframe terms](sql-and-dataframes.md)**
+    describes each declaration and operator of a spec as a table or a query, in
+    SQL and in polars.
 - **[What counts as language](what-counts-as-language.md)** describes what the
     language defines for every piece of software that reads a spec
     ([a tool](../reference/glossary.md#tool)), and what each tool decides.

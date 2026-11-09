@@ -88,7 +88,7 @@ nav:
       - The limits of the language: about/limits.md
       - Versions: about/versions.md
       - Relations as linear maps: about/relations-as-linear-maps.md
-      - A spec in SQL and dataframe terms: about/sql-and-dataframes.md
+      - Understanding a spec in SQL and dataframe terms: about/sql-and-dataframes.md
       - What counts as language: about/what-counts-as-language.md
       - What counts as public API: about/what-counts-as-public-api.md
   - Development:
