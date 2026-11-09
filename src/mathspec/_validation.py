@@ -108,6 +108,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
+        *_confinements(spec),
         *_missing_by(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
@@ -227,20 +228,36 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
                 if count > 1
             )
-        elif lk.confines:
-            yield from (
-                f"Relation '{lname}': confines: true confines each parameter over all the dimensions of the key, and "
-                f"a parameter has '{d}' once, so a key with two columns over '{d}' confines none. Key the relation "
-                f'by one column over each dimension, or delete confines:.'
-                for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
-                if count > 1
-            )
-        if lk.confines and lk.missing == 'refused':
-            yield (
-                f"Relation '{lname}': confines: true confines parameters to the rows of the relation, and under "
-                f'missing: refused it has a row at every key combination, so it confines nothing. Write '
-                f'missing: absent, or delete confines:.'
-            )
+
+
+def _confinements(spec: Spec) -> Iterator[str]:
+    """Each relation a parameter is confined by leaves a key combination out, and is keyed by its dimensions, once each."""
+    for pname, p in spec.parameters.items():
+        head = f"Parameter '{pname}': confined_by: names"
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(p.confined_by).items() if count > 1)
+        for rname in dict.fromkeys(p.confined_by):
+            if (lk := spec.relations.get(rname)) is None:
+                yield (
+                    f"{head} '{rname}', which is not a relation. "
+                    f'{did_you_mean(rname, spec.relations, label="Relations")}'
+                )
+                continue
+            if lk.missing == 'refused':
+                yield (
+                    f"{head} '{rname}', which under missing: refused has a row at every key combination, so it "
+                    f"confines nothing. Write missing: absent on '{rname}', or delete it from confined_by:."
+                )
+            key = Counter(dict(lk.pairs)[k] for k in lk.key_roles)
+            if twice := [d for d, count in key.items() if count > 1]:
+                yield (
+                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{pname}' has "
+                    f"'{twice[0]}' once. Confine it by a relation keyed by one column over each dimension."
+                )
+            elif outside := [d for d in key if d not in p.dims]:
+                yield (
+                    f"{head} '{rname}', keyed by {sorted(key)}, and '{pname}' is not over {outside}. Add "
+                    f"{outside} to its dims:, or delete '{rname}' from confined_by:."
+                )
 
 
 def _missing_by(spec: Spec) -> Iterator[str]:

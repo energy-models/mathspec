@@ -109,13 +109,12 @@ class Namespace:
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
         self.relations: dict[str, Relation] = {
-            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description, lk.confines)
-            for n, lk in spec.relations.items()
+            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
         }
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
-            if isinstance(pd.missing, bool | int | float) and pd.where is None and not self.confining(pd.dims)
+            if isinstance(pd.missing, bool | int | float) and pd.where is None and not pd.confined_by
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: pd.dims for p, pd in parameters.items()},
@@ -127,18 +126,6 @@ class Namespace:
         self._conditions: dict[str, tuple[ConditionReference | None, tuple[str, ...]]] = {}
         self.dimension_refusals: set[str] = set()
         self.follow_ons: set[str] = set()
-
-    def confining(self, dims: Iterable[str]) -> list[str]:
-        """The relations under ``confines: true`` whose key dimensions are all among *dims*, sorted by name.
-
-        The key has one column per dimension, which a confining relation is
-        refused without, so its dimensions are the key's.
-        """
-        return [
-            name
-            for name, relation in self.relations.items()
-            if relation.confines and {relation.dim(role) for role in relation.key} <= set(dims)
-        ]
 
     def refused_dims(self, refusal: DimensionError) -> str:
         """*refusal*'s text, recorded as a dim rule's."""

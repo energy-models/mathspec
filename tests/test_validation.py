@@ -1430,7 +1430,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'relations.tag': {'key': 'g', 'dtype': 'str'}},
-                ("unknown key 'dtype' in a relation entry. Valid keys: confines, description, key, missing, values.",),
+                ("unknown key 'dtype' in a relation entry. Valid keys: description, key, missing, values.",),
                 id='relation-with-a-dtype-of-its-own',
             ),
             pytest.param({'relations.tag': {'key': 'g'}}, ('has 1 column(s)',), id='relation-with-one-column'),
@@ -2889,8 +2889,8 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
         pytest.param(
             {
-                'parameters.n': {'dims': ['g'], 'dtype': 'int'},
-                'relations.on': {'key': 'g', 'values': 'h', 'missing': 'absent', 'confines': True},
+                'parameters.n': {'dims': ['g'], 'dtype': 'int', 'confined_by': ['on']},
+                'relations.on': {'key': 'g', 'values': 'h', 'missing': 'absent'},
             },
             id='a-confined-int',
         ),
@@ -2911,8 +2911,8 @@ _MASKED = {
 
 #: The same parameter, confined by the relation rather than masked by it.
 _CONFINED = {
-    'relations.pair': {'key': ['g', 'h'], 'missing': 'absent', 'confines': True},
-    'parameters.w': {'dims': ['g', 'h'], 'missing': 1},
+    'relations.pair': {'key': ['g', 'h'], 'missing': 'absent'},
+    'parameters.w': {'dims': ['g', 'h'], 'confined_by': ['pair'], 'missing': 1},
 }
 
 
@@ -2920,34 +2920,43 @@ _CONFINED = {
     ('patch', 'confined'),
     [
         pytest.param(
-            {'parameters.v': {'dims': ['h', 'g'], 'missing': 'absent'}},
-            {'w': ('pair',), 'v': ('pair',)},
-            id='every-parameter-over-the-key-in-any-order',
+            {'parameters.v': {'dims': ['g', 'h'], 'missing': 'absent'}}, {'w': ('pair',)}, id='only-the-named'
         ),
         pytest.param(
-            {'dimensions.t': {'dtype': 'int'}, 'parameters.v': {'dims': ['g', 'h', 't'], 'missing': 'absent'}},
+            {
+                'dimensions.t': {'dtype': 'int'},
+                'parameters.v': {'dims': ['g', 'h', 't'], 'confined_by': ['pair'], 'missing': 'absent'},
+            },
             {'w': ('pair',), 'v': ('pair',)},
             id='a-parameter-over-one-more-dimension',
         ),
         pytest.param(
-            {'relations.pair': {'key': {'a': 'g', 'b': 'h'}, 'missing': 'absent', 'confines': True}},
+            {'relations.pair': {'key': {'a': 'g', 'b': 'h'}, 'missing': 'absent'}},
             {'w': ('pair',)},
             id='a-key-whose-columns-are-named-apart-from-their-dimensions',
         ),
         pytest.param(
-            {'relations.pair': {'key': 'g', 'values': 'h', 'missing': 'absent', 'confines': True}},
-            {'c': ('pair',), 'flag': ('pair',), 'tag': ('pair',), 'w': ('pair',)},
+            {'relations.pair': {'key': 'g', 'values': 'h', 'missing': 'absent'}},
+            {'w': ('pair',)},
             id='a-key-of-one-column-confines-by-that-column-alone',
+        ),
+        pytest.param(
+            {
+                'relations.on': {'key': 'g', 'values': 'h', 'missing': 'absent'},
+                'parameters.w': {'dims': ['g', 'h'], 'confined_by': ['pair', 'on'], 'missing': 1},
+            },
+            {'w': ('on', 'pair')},
+            id='two-relations-sorted-by-name',
         ),
     ],
 )
-def test_a_confining_relation_confines_every_parameter_over_its_key(patch, confined):
-    """A tool reads which relations confine a parameter off the program, for every parameter over the key at once."""
+def test_a_parameter_is_confined_by_the_relations_it_names(patch, confined):
+    """A tool reads which relations confine a parameter off the program, and a parameter it does not name stays free."""
     spec = _spec(**{**_CONFINED, **patch})
     read = {name: entry.confined_by for name, entry in spec.program.parameters.items() if entry.confined_by}
-    assert read == confined, 'exactly the parameters over every dimension of the key are confined'
+    assert read == confined, 'exactly the parameters that name a relation are confined, and by it alone'
     assert spec.program.parameters['w'].where is None, 'the confinement is not written into the `where:`'
-    assert to_spec(spec.to_yaml()).program == spec.program, 'confines: true survives a round trip through YAML'
+    assert to_spec(spec.to_yaml()).program == spec.program, 'confined_by: survives a round trip through YAML'
 
 
 def test_a_parameter_mask_is_part_of_the_program():
@@ -3004,42 +3013,66 @@ def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
     assert fragment in _refusal(**patch)
 
 
+def _confined_by(relation: str, **entry: Any) -> dict[str, Any]:
+    """`_CONFINED` with `w` confined by *relation* and *entry* laid over its parameter entry."""
+    return {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'confined_by': [relation], **entry}}
+
+
 @pytest.mark.parametrize(
     ('patch', 'fragment'),
     [
         pytest.param(
-            {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'pair'}},
-            "Parameter 'w': 'w' has coordinates only where 'pair' has a row, under confines: true, so "
-            '`where: pair` narrows nothing. Delete the `where:`, or the relation from it.',
+            _confined_by('pair', where='pair'),
+            "Parameter 'w': confined_by: gives 'w' coordinates only where 'pair' has a row, so `where: pair` narrows "
+            'nothing. Delete the `where:`, or the relation from it.',
             id='a-mask-that-repeats-the-confining-relation',
         ),
         pytest.param(
-            {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'pair OR flag'}},
+            _confined_by('pair', where='pair OR flag'),
             '`where: pair OR flag` narrows nothing.',
             id='a-mask-the-confining-relation-already-satisfies',
         ),
         pytest.param(
-            {**_CONFINED, 'parameters.w': {**_CONFINED['parameters.w'], 'where': 'NOT pair'}},
+            _confined_by('pair', where='NOT pair'),
             "`where: NOT pair` leaves 'w' no coordinate. Write a `where:` that holds somewhere inside the relation.",
             id='a-mask-the-confining-relation-leaves-empty',
         ),
         pytest.param(
-            {'relations.next': {'key': {'from': 'g', 'to': 'g'}, 'missing': 'absent', 'confines': True}},
-            "Relation 'next': confines: true confines each parameter over all the dimensions of the key, and a "
-            "parameter has 'g' once, so a key with two columns over 'g' confines none. Key the relation by one "
-            'column over each dimension, or delete confines:.',
+            _confined_by('pairs'),
+            "Parameter 'w': confined_by: names 'pairs', which is not a relation. Did you mean 'pair'?",
+            id='a-name-that-is-not-a-relation',
+        ),
+        pytest.param(
+            _confined_by('c'),
+            "Parameter 'w': confined_by: names 'c', which is not a relation. Relations: lk, pair.",
+            id='a-parameter-in-place-of-a-relation',
+        ),
+        pytest.param(
+            _confined_by('pair', confined_by=['pair', 'pair']),
+            "Parameter 'w': confined_by: names 'pair' twice. Delete one.",
+            id='a-relation-named-twice',
+        ),
+        pytest.param(
+            {**_confined_by('next'), 'relations.next': {'key': {'from': 'g', 'to': 'g'}, 'missing': 'absent'}},
+            "Parameter 'w': confined_by: names 'next', whose key has two columns over 'g', and 'w' has 'g' once. "
+            'Confine it by a relation keyed by one column over each dimension.',
             id='a-key-with-two-columns-over-one-dimension',
         ),
         pytest.param(
-            {'relations.pair': {'key': ['g', 'h'], 'confines': True}},
-            "Relation 'pair': confines: true confines parameters to the rows of the relation, and under missing: "
-            'refused it has a row at every key combination, so it confines nothing. Write missing: absent, or '
-            'delete confines:.',
+            _confined_by('pair', dims=['g']),
+            "Parameter 'w': confined_by: names 'pair', keyed by ['g', 'h'], and 'w' is not over ['h']. Add ['h'] to "
+            "its dims:, or delete 'pair' from confined_by:.",
+            id='a-key-dimension-the-parameter-is-not-over',
+        ),
+        pytest.param(
+            _confined_by('lk'),
+            "Parameter 'w': confined_by: names 'lk', which under missing: refused has a row at every key "
+            "combination, so it confines nothing. Write missing: absent on 'lk', or delete it from confined_by:.",
             id='a-relation-with-a-row-everywhere',
         ),
     ],
 )
-def test_a_confining_relation_that_confines_nothing_new_is_refused(patch, fragment):
+def test_a_confinement_that_confines_nothing_new_is_refused(patch, fragment):
     assert fragment in _refusal(**patch)
 
 
@@ -3062,7 +3095,11 @@ def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
     assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
     masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair'}}
     assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**masked)
-    confined = {**patch, 'relations.pair': _CONFINED['relations.pair']}
+    confined = {
+        **patch,
+        'relations.pair': _CONFINED['relations.pair'],
+        'parameters.cost': {**patch['parameters.cost'], 'confined_by': ['pair']},
+    }
     assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**confined), (
         'outside the relation a confined parameter is absent too, so it has no fill there'
     )
@@ -3084,14 +3121,6 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName, decl
     assert row.index(clause) < row.index('where the data has no row'), 'the coordinates come before the fill'
 
 
-@pytest.mark.parametrize('fmt', FORMATS)
-def test_the_legend_lists_a_confining_relation_beside_its_key_alone(fmt: FormatName):
-    """A value column is not confined over, so its dimension's row says nothing of the confinement."""
-    spec = _spec(**{'relations.on': {'key': 'g', 'values': 'h', 'missing': 'absent', 'confines': True}})
-    lines = [line for line in typeset(spec, fmt).splitlines() if 'has data only where' in line]
-    assert len(lines) == 1, 'one line, beside g, the key, and none beside h, the value column'
-
-
 #: `c` reads a missing row by the label `lk` gives its `g`.
 _BY = {'by': 'lk', 'fill': {'north': 0, 'south': -1}, 'otherwise': 1}
 
@@ -3110,6 +3139,13 @@ def test_a_parameter_reads_a_missing_row_by_a_relation(written, read):
     spec = _spec(**{'parameters.c.missing': written})
     assert spec.program.parameters['c'].missing == read
     assert to_spec(spec.to_dict()) == spec, 'the mapping form writes back the file it read'
+
+
+def test_a_parameter_reads_a_missing_row_by_the_relation_it_is_confined_by():
+    """Confinement leaves no coordinate without a row in `by`, so the two name one relation without contradiction."""
+    spec = _spec(**{'relations.lk.missing': 'absent', 'parameters.c.confined_by': ['lk'], 'parameters.c.missing': _BY})
+    c = spec.program.parameters['c']
+    assert (c.confined_by, c.missing) == (('lk',), MissingBy('lk', {'north': 0, 'south': -1}, 1))
 
 
 @pytest.mark.parametrize(

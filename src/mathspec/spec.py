@@ -278,10 +278,6 @@ class RelationSpec(_StrictSpec):
     """Whether every combination of the dimensions of the key needs a row. Under ``refused``, a tool refuses data that
     leaves one out. Under ``absent``, that combination has no row.
     """
-    confines: bool = False
-    """Whether each parameter over all the dimensions of the key has coordinates only at the relation's rows. A tool refuses
-    a row of that parameter's data at a key combination the relation has no row for.
-    """
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -470,10 +466,15 @@ class ParameterSpec(_StrictSpec):
 
     dims: Dims
     dtype: ParameterDtype = 'float'
+    confined_by: Dims = ()
+    """The relations, by name, whose rows the parameter has its coordinates at. Each is keyed by dimensions of the
+    parameter and leaves some key combination out. A tool refuses a row of the parameter's data at a key combination one
+    of them has no row for.
+    """
     where: str | None = None
-    """The condition that limits the coordinates of the parameter, in the condition grammar, inside each relation under
-    ``confines: true`` over its dimensions. Where it is false, the parameter is absent and a tool drops its rows of data
-    there. ``missing:`` applies where it is true.
+    """The condition that limits the coordinates of the parameter, in the condition grammar, inside each relation in
+    ``confined_by:``. Where it is false, the parameter is absent and a tool drops its rows of data there. ``missing:``
+    applies where it is true.
     """
     missing: _Reading | MissingBySpec = 'refused'
     description: str | None = None
