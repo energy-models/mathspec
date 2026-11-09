@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the file states a piecewise marginal cost ([#988](https://github.com/energy-models/mathspec/pull/988))
 - feat: an incremental curve takes an integer gate ([#987](https://github.com/energy-models/mathspec/pull/987))
 - docs(pypsa): the reference pins PyPSA at 72a12418 ([#986](https://github.com/energy-models/mathspec/pull/986))
 - feat(spec)!: a loaded spec is sorted and read-only ([#924](https://github.com/energy-models/mathspec/pull/924))
