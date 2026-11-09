@@ -913,17 +913,20 @@ class Link:
 
 @dataclass(frozen=True)
 class Gate:
-    """The binary a ``piecewise:`` entry's weights sum to, as each curve reads it.
+    """The variable that switches a ``piecewise:`` entry's curves on, as each curve reads it.
 
-    ``variable`` is the binary the file named, and ``read`` the gate at one
-    curve: the variable on the entry's own frame, or the variable read through
-    a relation, as ``at(..., by=)`` reads it. ``exists`` is where a curve reads
-    the gate, and the curve is ungated elsewhere, its weights summing to 1; it
-    is ``None`` where every curve reads it. A masked variable exists only on
-    its mask, and a relation declared ``missing: absent`` may have no row for
-    a curve, so both leave curves ungated; ``missing: 0`` reads the variable
-    as 0 off its mask instead, which pins those curves off. Under the
-    relation's ``missing: refused`` every curve has a row.
+    ``variable`` is the variable the file named: a binary, or an integer under
+    ``method: incremental``, which turns the curve off at 0 and, from 1 up,
+    moves it by its point at the first breakpoint once per unit above 1.
+    ``read`` is the gate at one curve: the variable on the entry's own frame,
+    or the variable read through a relation, as ``at(..., by=)`` reads it.
+    ``exists`` is where a curve reads the gate, and the curve is ungated
+    elsewhere, its weights summing to 1; it is ``None`` where every curve
+    reads it. A masked variable exists only on its mask, and a relation
+    declared ``missing: absent`` may have no row for a curve, so both leave
+    curves ungated; ``missing: 0`` reads the variable as 0 off its mask
+    instead, which pins those curves off. Under the relation's
+    ``missing: refused`` every curve has a row.
     """
 
     variable: str

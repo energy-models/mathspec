@@ -93,17 +93,15 @@ def test_the_golden_model_asks_for_every_operator_the_vocabulary_spells(monkeypa
     the stronger claim; this one runs without `coverage` installed, and its
     failure names the operator rather than a line.
 
-    The one exemption is derived rather than listed: a model declares one
-    objective sense, so the other one cannot be asked for from here.
+    A model declares one objective sense, so the fixture reaches the other
+    one's symbol elsewhere: ``min`` clips the integer gate of a curve.
     """
     recorder = _Recorded(LATEX)
     monkeypatch.setitem(FORMATS, 'latex', recorder)
     typeset(golden.MODEL, 'latex', standalone=True)
-    sense = to_spec(golden.MODEL).objective.sense
-    unreachable = {'minimize', 'maximize'} - {sense}
-    assert recorder.asked == OPERATOR_NAMES - unreachable, (
+    assert recorder.asked == OPERATOR_NAMES, (
         f'tests/typesetting/golden/model.yaml no longer prints every operator: '
-        f'{sorted(OPERATOR_NAMES - unreachable - recorder.asked)} unrendered, '
+        f'{sorted(OPERATOR_NAMES - recorder.asked)} unrendered, '
         f'{sorted(recorder.asked - OPERATOR_NAMES)} unspelled. '
         f'Add the construct that prints it, or drop the spelling.'
     )
