@@ -17,6 +17,7 @@ given:
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
+    Link_marginal_cost_piecewise: { dims: [scenario, snapshot, link] }
     Link_n_mod: { dims: [link], domain: integer }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
@@ -25,6 +26,8 @@ given:
     Link_modules: { dims: [link, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Link_marginal_cost_curve: { dims: [link] }
+    Link_marginal_cost_as_lp: { dims: [] }
     Link_committed: { dims: [link, snapshot] }
 
 dimensions:
@@ -40,6 +43,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -48,6 +57,23 @@ relations:
     values: period
 
 parameters:
+  Link_marginal_cost_curve_p:
+    description: >-
+      the flow at each breakpoint of a link's piecewise `marginal_cost` curve:
+      PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A link with no
+      curve has no rows
+    dims: [link, breakpoint]
+    missing: absent
+  Link_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a link's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      flow times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`). A curve that starts below zero flow, where
+      `p_min_pu` is negative, costs more than nothing at zero flow
+    dims: [link, breakpoint]
+    missing: absent
   Link_committable:
     description: whether flow is gated by an on/off status decision
     dims: [link]
@@ -169,6 +195,34 @@ conditions:
       AND Link_p_nom_extendable
       AND NOT (Link_p_nom_mod > 0)
       AND Link_active
+
+piecewise:
+  Link_marginal_cost_lp:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+      is at least the curve at its flow, stated as the line of each segment,
+      where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, link]
+    where: Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Link_p, Link_marginal_cost_curve_p]
+      cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
+  Link_marginal_cost_incremental:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+      is at least the curve at its flow, stated by segments filled in order
+      and switched by the status of a committable link, where linopy chooses
+      the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, link]
+    where: NOT Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+    method: incremental
+    activity: Link_status
+    links:
+      p: [Link_p, Link_marginal_cost_curve_p]
+      cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
 
 constraints:
   Link_com_p_lower:

@@ -24,6 +24,7 @@ given:
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
     Process_p: { dims: [scenario, snapshot, process] }
+    Process_marginal_cost_piecewise: { dims: [scenario, snapshot, process] }
     Process_n_mod: { dims: [process], domain: integer }
     Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
     Process_maintenance_status: { dims: [scenario, snapshot, process] }
@@ -32,6 +33,8 @@ given:
     Process_modules: { dims: [process, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Process_marginal_cost_curve: { dims: [process] }
+    Process_marginal_cost_as_lp: { dims: [] }
     Process_committed: { dims: [process, snapshot] }
 
 dimensions:
@@ -47,6 +50,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -55,6 +64,22 @@ relations:
     values: period
 
 parameters:
+  Process_marginal_cost_curve_p:
+    description: >-
+      the internal power at each breakpoint of a process's piecewise
+      `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data
+      prep. A process with no curve has no rows
+    dims: [process, breakpoint]
+    missing: absent
+  Process_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a process's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      internal power times the `marginal_cost` at its upper breakpoint,
+      summed, data prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`)
+    dims: [process, breakpoint]
+    missing: absent
   Process_committable:
     description: whether internal power is gated by an on/off status decision
     dims: [process]
@@ -176,6 +201,34 @@ conditions:
       AND Process_p_nom_extendable
       AND NOT (Process_p_nom_mod > 0)
       AND Process_active
+
+piecewise:
+  Process_marginal_cost_lp:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process with a
+      curve is at least the curve at its internal power, stated as the line of
+      each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, process]
+    where: Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Process_p, Process_marginal_cost_curve_p]
+      cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
+  Process_marginal_cost_incremental:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process with a
+      curve is at least the curve at its internal power, stated by segments
+      filled in order and switched by the status of a committable process,
+      where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, process]
+    where: NOT Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+    method: incremental
+    activity: Process_status
+    links:
+      p: [Process_p, Process_marginal_cost_curve_p]
+      cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
 
 constraints:
   Process_com_p_lower:
@@ -334,17 +387,21 @@ assumptions:
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
+| $`C^{z,\mathrm{curve}}`$ | `Process_marginal_cost_piecewise` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ |
 | $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ |
 | $`\mathrm{M}^{z}`$ | `Process_modules` over $`\mathcal{J} \times \Xi`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Process_commitment_opex` to |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$, a condition another file defines |
+| $`\mathrm{lp}^{z}`$ | `Process_marginal_cost_as_lp` (scalar), a condition another file defines |
+| $`\mathrm{curve}^{z}`$ | `Process_marginal_cost_curve` over $`\mathcal{J}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\mathcal{J}`$ | index $`j`$ — `process` — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
@@ -357,6 +414,8 @@ assumptions:
 | $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
 | $`\mathrm{rest}^{z}`$ | `Process_down_time_brought_in` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — one while the down time a process brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{C}^{z,\mathrm{curve}}`$ | `Process_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{J}`$, `absent` where the data has no row — the running cost at each breakpoint of a process's piecewise `marginal_cost` curve: zero at the first, then each segment's width in internal power times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{z}^{\mathrm{curve}}`$ | `Process_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{J}`$, `absent` where the data has no row — the internal power at each breakpoint of a process's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A process with no curve has no rows |
 | $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays off once stopped |
 | $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays on once started |
 | $`\mathrm{c}^{z,\mathrm{dn}}`$ | `Process_shut_down_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
@@ -391,6 +450,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
 #### Conditions
@@ -551,12 +611,66 @@ u^{z}_{j,\xi,t} \le \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} \qquad \forall\, j \in \
 u^{z}_{j,\xi,t} \le N^{z}_{j} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
+**`Process_marginal_cost_incremental`**
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \ge \left( \begin{cases} u^{z}_{j,\xi,t} & \text{if } \mathrm{on}^{z,\mathrm{com}}_{j,t} \\ 1 & \text{otherwise} \end{cases} \cdot \left( \mathrm{z}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j},\ \mathrm{C}^{z,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j} \right) + \min(\begin{cases} u^{z}_{j,\xi,t} & \text{if } \mathrm{on}^{z,\mathrm{com}}_{j,t} \\ 1 & \text{otherwise} \end{cases},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}}(\mathrm{z}^{\mathrm{curve}}_{b,j},\ \mathrm{C}^{z,\mathrm{curve}}_{b,j}) - \left( \mathrm{z}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j},\ \mathrm{C}^{z,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j} \right) \right) \right)(z_{j,\xi,t}) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`Process_marginal_cost_lp`**
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}}(\mathrm{z}^{\mathrm{curve}}_{b,j},\ \mathrm{C}^{z,\mathrm{curve}}_{b,j})(z_{j,\xi,t}) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
 #### Assumptions
 
 **`Process_big_m_where_committed_and_extendable`**
 
 ```math
 \mathrm{M}^{z}_{j,\xi} \text{ is defined} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t}
+```
+
+**`Process_marginal_cost_incremental_complete`**
+
+```math
+\mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{C}^{z,\mathrm{curve}}_{b,j} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}
+```
+
+**`Process_marginal_cost_incremental_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \neg \left( \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert > 0
+```
+
+**`Process_marginal_cost_lp_complete`**
+
+```math
+\mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{C}^{z,\mathrm{curve}}_{b,j} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}
+```
+
+**`Process_marginal_cost_lp_increasing`**
+
+```math
+\mathrm{z}^{\mathrm{curve}}_{b \boxminus_{0} 1,j} < \mathrm{z}^{\mathrm{curve}}_{b,j} \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined}
+```
+
+**`Process_marginal_cost_lp_curvature`**
+
+```math
+\left( \mathrm{C}^{z,\mathrm{curve}}_{b,j} - \mathrm{C}^{z,\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{z}^{\mathrm{curve}}_{b,j} \right) \le \left( \mathrm{C}^{z,\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{C}^{z,\mathrm{curve}}_{b,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b,j} - \mathrm{z}^{\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined} \wedge \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b + 1,j} \text{ is defined}
+```
+
+**`Process_marginal_cost_lp_breakpoints`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert > 0
+```
+
+**`Process_marginal_cost_lp_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \neg \left( \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert > 0
 ```
 <!-- gallery:end -->
 

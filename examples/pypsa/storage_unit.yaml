@@ -39,6 +39,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -174,6 +180,22 @@ parameters:
   StorageUnit_marginal_cost_quadratic:
     description: cost of the square of one unit of dispatch. Storing is not charged
     dims: [scenario, snapshot, storage_unit]
+  StorageUnit_marginal_cost_curve_p:
+    description: >-
+      the dispatch at each breakpoint of a storage unit's piecewise
+      `marginal_cost` curve: PyPSA's `p_dispatch_pu` breakpoints times
+      `p_nom`, data prep. A storage unit with no curve has no rows
+    dims: [storage_unit, breakpoint]
+    missing: absent
+  StorageUnit_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a storage unit's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      dispatch times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`)
+    dims: [storage_unit, breakpoint]
+    missing: absent
   StorageUnit_marginal_cost_storage:
     description: cost of one unit of charge held over one snapshot
     dims: [scenario, snapshot, storage_unit]
@@ -217,6 +239,12 @@ variables:
     description: "`StorageUnit-p_dispatch` — power delivered to the bus"
     dims: [scenario, snapshot, storage_unit]
     where: StorageUnit_active
+  StorageUnit_marginal_cost_piecewise:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit that pays along a curve, held above the curve
+    dims: [scenario, snapshot, storage_unit]
+    where: StorageUnit_marginal_cost_curve AND StorageUnit_active
   StorageUnit_p_store:
     description: "`StorageUnit-p_store` — power drawn from the bus into charge"
     dims: [scenario, snapshot, storage_unit]
@@ -329,9 +357,19 @@ expressions:
   StorageUnit_tech_capacity_expansion:
     expression: sum(StorageUnit_p_nom_ext * StorageUnit_tech_capacity_weight, over=storage_unit)
     adds_to: tech_capacity_expansion
+  StorageUnit_running_cost:
+    description: >-
+      what a storage unit's dispatch costs in a snapshot: the value read off
+      its piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, storage_unit]
+    cases:
+      curve: { when: StorageUnit_marginal_cost_curve, expression: StorageUnit_marginal_cost_piecewise }
+    otherwise: StorageUnit_p_dispatch * StorageUnit_marginal_cost
   StorageUnit_opex:
     expression: >-
-      sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+      sum(sum((StorageUnit_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
@@ -349,6 +387,33 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  StorageUnit_marginal_cost_curve:
+    description: >-
+      a storage unit that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(StorageUnit_marginal_cost_curve_p, over=breakpoint) > 0 AND StorageUnit_active_asset
+  StorageUnit_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a storage unit's cost curve gets less steep: the
+      segment after it rises less per unit of dispatch than the one before
+    condition: >-
+      StorageUnit_marginal_cost_curve_p
+      AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (StorageUnit_marginal_cost_curve_cost - shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_p)
+      > (shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_cost)
+      * (StorageUnit_marginal_cost_curve_p - shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  StorageUnit_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all storage unit cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex, the
+      incremental rows otherwise. PyPSA calls linopy once per component, so
+      this choice is apart from every other component's. A storage unit has no
+      status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+    condition: >-
+      count(StorageUnit_marginal_cost_curve AND count(StorageUnit_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=storage_unit) == 0
   StorageUnit_fix:
     description: >-
       a storage unit with a fixed build that is active in the snapshot's period.
@@ -359,6 +424,32 @@ conditions:
       a storage unit with an extendable build that is active in the snapshot's
       period. It is PyPSA's `ext` rows
     condition: StorageUnit_p_nom_extendable AND StorageUnit_active
+
+piecewise:
+  StorageUnit_marginal_cost_lp:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit with a curve is at least the curve at its dispatch, stated as the
+      line of each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, storage_unit]
+    where: StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+      cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
+  StorageUnit_marginal_cost_incremental:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit with a curve is at least the curve at its dispatch, stated by
+      segments filled in order, where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, storage_unit]
+    where: NOT StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+    method: incremental
+    links:
+      p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+      cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
@@ -480,6 +571,14 @@ constraints:
     expression: StorageUnit_state_of_charge == StorageUnit_state_of_charge_set
 
 assumptions:
+  StorageUnit_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT StorageUnit_p_nom_extendable AND StorageUnit_p_nom > 0 AND StorageUnit_p_nom < inf"
+    where: "StorageUnit_marginal_cost_curve"
+    description: >-
+      a storage unit's cost curve is given per unit of a fixed, positive,
+      finite `p_nom`, which scales it to dispatch. PyPSA refuses an extendable
+      unit and a zero, missing or infinite `p_nom` (`piecewise.py:277-297`),
+      and takes a negative one, which the file does not state
   StorageUnit_stands_in_one_run:
     holds: "count(StorageUnit_active AND NOT shift(StorageUnit_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-

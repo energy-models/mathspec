@@ -47,6 +47,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -170,6 +176,24 @@ parameters:
   Store_marginal_cost_quadratic:
     description: cost of the square of the net power delivered, so charging costs as much as delivering
     dims: [scenario, snapshot, store]
+  Store_marginal_cost_curve_p:
+    description: >-
+      the power at each breakpoint of a store's piecewise `marginal_cost`
+      curve: PyPSA's `p_pu` breakpoints times `e_nom`, not the power rating
+      `e_nom / max_hours` that bounds `p`, data prep. A store with no curve
+      has no rows
+    dims: [store, breakpoint]
+    missing: absent
+  Store_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a store's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      power times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`). A curve that starts below zero, in charging,
+      costs more than nothing at zero power
+    dims: [store, breakpoint]
+    missing: absent
   Store_marginal_cost_storage:
     description: cost of one unit of energy held over one snapshot
     dims: [scenario, snapshot, store]
@@ -262,6 +286,12 @@ variables:
     description: "`Store-p` — net power delivered to the bus. Charging is negative"
     dims: [scenario, snapshot, store]
     where: Store_active
+  Store_marginal_cost_piecewise:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store that pays
+      along a curve, held above the curve
+    dims: [scenario, snapshot, store]
+    where: Store_marginal_cost_curve AND Store_active
   Store_p_store:
     description: >-
       `Store-p_store` — power drawn from the bus to charge, so that `p +
@@ -391,9 +421,19 @@ expressions:
   Store_tech_capacity_expansion:
     expression: sum(Store_e_nom_ext * Store_tech_capacity_weight, over=store)
     adds_to: tech_capacity_expansion
+  Store_running_cost:
+    description: >-
+      what a store's power costs in a snapshot: the value read off its
+      piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, store]
+    cases:
+      curve: { when: Store_marginal_cost_curve, expression: Store_marginal_cost_piecewise }
+    otherwise: Store_p * Store_marginal_cost
   Store_opex:
     expression: >-
-      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      sum(sum((Store_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum((((Store_p + Store_p_store) * Store_marginal_cost_dispatch) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
@@ -410,6 +450,61 @@ expressions:
   Store_injection:
     expression: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
     adds_to: Bus_injection
+
+conditions:
+  Store_marginal_cost_curve:
+    description: >-
+      a store that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Store_marginal_cost_curve_p, over=breakpoint) > 0 AND Store_active_asset
+  Store_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a store's cost curve gets less steep: the segment
+      after it rises less per unit of power than the one before
+    condition: >-
+      Store_marginal_cost_curve_p
+      AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Store_marginal_cost_curve_cost - shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_p)
+      > (shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_cost)
+      * (Store_marginal_cost_curve_p - shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Store_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all store cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex, the
+      incremental rows otherwise. PyPSA calls linopy once per component, so
+      this choice is apart from every other component's. A store has no
+      status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+    condition: >-
+      count(Store_marginal_cost_curve AND count(Store_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=store) == 0
+
+piecewise:
+  Store_marginal_cost_lp:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store with a
+      curve is at least the curve at its power, stated as the line of each
+      segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, store]
+    where: Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Store_p, Store_marginal_cost_curve_p]
+      cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
+  Store_marginal_cost_incremental:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store with a
+      curve is at least the curve at its power, stated by segments filled in
+      order, where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, store]
+    where: NOT Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+    method: incremental
+    links:
+      p: [Store_p, Store_marginal_cost_curve_p]
+      cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
 
 constraints:
   Store_e_sum_min:
@@ -549,6 +644,14 @@ constraints:
     expression: Store_p == Store_p_set
 
 assumptions:
+  Store_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Store_e_nom_extendable AND Store_e_nom > 0 AND Store_e_nom < inf"
+    where: "Store_marginal_cost_curve"
+    description: >-
+      a store's cost curve is given per unit of a fixed, positive, finite
+      `e_nom`, which scales it to power. PyPSA refuses an extendable unit and
+      a zero, missing or infinite `e_nom` (`piecewise.py:277-297`), and takes
+      a negative one, which the file does not state
   Store_stands_in_one_run:
     holds: "count(Store_active AND NOT shift(Store_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-
@@ -633,6 +736,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
@@ -671,6 +775,8 @@ assumptions:
 | $`\mathrm{idle}^{e}`$ | `Store_inactive_snapshots` over $`\mathcal{V}`$ — how many snapshots a store is not active in. It is PyPSA's `(~active).sum()`, data prep. A cyclic store reaches back this many snapshots further, so it closes on the last snapshot it is active in |
 | $`\mathrm{inflow}^{e}`$ | `Store_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{c}^{q}`$ | `Store_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of power delivered |
+| $`\mathrm{C}^{q,\mathrm{curve}}`$ | `Store_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{V}`$, `absent` where the data has no row — the running cost at each breakpoint of a store's piecewise `marginal_cost` curve: zero at the first, then each segment's width in power times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`). A curve that starts below zero, in charging, costs more than nothing at zero power |
+| $`\mathrm{q}^{\mathrm{curve}}`$ | `Store_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{V}`$, `absent` where the data has no row — the power at each breakpoint of a store's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `e_nom`, not the power rating `e_nom / max_hours` that bounds `p`, data prep. A store with no curve has no rows |
 | $`\mathrm{c}^{q,+}`$ | `Store_marginal_cost_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of discharge, `p + p_store` |
 | $`\mathrm{c}^{q,(2)}`$ | `Store_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of the square of the net power delivered, so charging costs as much as delivering |
 | $`\mathrm{c}^{e}`$ | `Store_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of energy held over one snapshot |
@@ -688,12 +794,21 @@ assumptions:
 | $`\mathrm{split}^{e}`$ | `Store_split_dispatch` over $`\Xi \times \mathcal{V}`$ — whether a store charges through `p_store` apart from its net dispatch `p`. It is PyPSA's `split_dispatch()`: true where an efficiency differs from one, a cost applies to one direction only, or `cycles_max` is finite, in any snapshot (`stores.py:88-116`), data prep. Where it is false, `p_store` is held at zero and the charging bound applies to `p` |
 | $`\mathrm{m}^{e}`$ | `Store_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{V}`$, `absent` where the data has no row — one where the store is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
+#### Conditions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{lp}^{q}`$ | `Store_marginal_cost_as_lp` (scalar) — linopy's choice of method for all store cost curves at once (`method="auto"`): the segment lines where every curve is convex, the incremental rows otherwise. PyPSA calls linopy once per component, so this choice is apart from every other component's. A store has no status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{q}`$ | `Store_marginal_cost_curve` over $`\mathcal{V}`$ — a store that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{q}`$ | `Store_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{V}`$ — a breakpoint where a store's cost curve gets less steep: the segment after it rises less per unit of power than the one before |
+
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
 | $`e`$ | `Store_e` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-e` — energy held at the end of a snapshot |
 | $`E`$ | `Store_e_nom_ext` over $`\mathcal{V}`$ — `Store-e_nom` — nominal capacity where it is a decision, for a store that is active. A fixed build is the parameter of the same PyPSA name |
+| $`C^{q,\mathrm{curve}}`$ | `Store_marginal_cost_piecewise` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-marginal_cost_piecewise` — the running cost of a store that pays along a curve, held above the curve |
 | $`N^{e}`$ | `Store_n_mod` over $`\mathcal{V}`$ — `Store-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`q`$ | `Store_p` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p` — net power delivered to the bus. Charging is negative |
 | $`q^{-}`$ | `Store_p_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p_store` — power drawn from the bus to charge, so that `p + p_store` is the discharge. It is held at zero by its rows where the store does not split its dispatch |
@@ -715,6 +830,7 @@ assumptions:
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
 | $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
+| $`C^{q,\mathrm{run}}`$ | `Store_running_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — what a store's power costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
 
 #### Notation
@@ -722,10 +838,31 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`t \ominus k`$ | `edge='wrap'` — $`t-k`$, cyclic |
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
 | $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
+
+#### Conditions
+
+**`Store_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp}^{q} \iff \lvert \{ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{q}_{b,v} \} \rvert > 0 \} \rvert = 0
+```
+
+**`Store_marginal_cost_curve`**
+
+```math
+\mathrm{curve}^{q}_{v} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{e}_{v} \qquad \forall\, v \in \mathcal{V}
+```
+
+**`Store_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}^{q}_{b,v} \iff \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined} \wedge \mathrm{q}^{\mathrm{curve}}_{b + 1,v} \text{ is defined} \wedge \left( \mathrm{C}^{q,\mathrm{curve}}_{b,v} - \mathrm{C}^{q,\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{q}^{\mathrm{curve}}_{b,v} \right) > \left( \mathrm{C}^{q,\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{C}^{q,\mathrm{curve}}_{b,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b,v} - \mathrm{q}^{\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \qquad \forall\, b \in \mathcal{B},\ v \in \mathcal{V}
+```
 
 #### Variable domains
 
@@ -739,6 +876,12 @@ e_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v 
 
 ```math
 E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+```
+
+**`Store_marginal_cost_piecewise`**
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_n_mod`**
@@ -830,13 +973,19 @@ q^{-}_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 **`Store_opex`**
 
 ```math
-\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} C^{q,\mathrm{run}}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Store_primary_energy`**
 
 ```math
 \mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{g,\xi,t,v} \cdot \mathrm{a}^{e}_{g,\xi,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`Store_running_cost`**
+
+```math
+C^{q,\mathrm{run}}_{\xi,t,v} = \begin{cases} C^{q,\mathrm{curve}}_{\xi,t,v} & \text{if } \mathrm{curve}^{q}_{v} \\ q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 **`Store_tech_capacity_expansion`**
@@ -979,7 +1128,25 @@ q_{\xi,t,v} + q^{-}_{\xi,t,v} \le \frac{\overline{\mathrm{q}}_{\xi,t,v}}{\mathrm
 q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \text{ is defined} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
+**`Store_marginal_cost_incremental`**
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}}(\mathrm{q}^{\mathrm{curve}}_{b,v},\ \mathrm{C}^{q,\mathrm{curve}}_{b,v})(q_{\xi,t,v}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_marginal_cost_lp`**
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}}(\mathrm{q}^{\mathrm{curve}}_{b,v},\ \mathrm{C}^{q,\mathrm{curve}}_{b,v})(q_{\xi,t,v}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
 #### Assumptions
+
+**`Store_marginal_cost_curve_on_a_fixed_build`**
+
+```math
+\neg \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom}}_{\xi,v} > 0 \wedge \mathrm{e}^{\mathrm{nom}}_{\xi,v} < \infty \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v}
+```
 
 **`Store_marginal_cost_quadratic_without_risk_preference`**
 
@@ -1027,6 +1194,48 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 
 ```math
 \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \wedge \neg \mathrm{on}^{e}_{t - 1,v} \} \rvert \le 1 \qquad \forall\, v \in \mathcal{V}
+```
+
+**`Store_marginal_cost_incremental_complete`**
+
+```math
+\mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{C}^{q,\mathrm{curve}}_{b,v} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}
+```
+
+**`Store_marginal_cost_incremental_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \neg \left( \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert > 0
+```
+
+**`Store_marginal_cost_lp_complete`**
+
+```math
+\mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{C}^{q,\mathrm{curve}}_{b,v} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}
+```
+
+**`Store_marginal_cost_lp_increasing`**
+
+```math
+\mathrm{q}^{\mathrm{curve}}_{b \boxminus_{0} 1,v} < \mathrm{q}^{\mathrm{curve}}_{b,v} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined}
+```
+
+**`Store_marginal_cost_lp_curvature`**
+
+```math
+\left( \mathrm{C}^{q,\mathrm{curve}}_{b,v} - \mathrm{C}^{q,\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{q}^{\mathrm{curve}}_{b,v} \right) \le \left( \mathrm{C}^{q,\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{C}^{q,\mathrm{curve}}_{b,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b,v} - \mathrm{q}^{\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined} \wedge \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b + 1,v} \text{ is defined}
+```
+
+**`Store_marginal_cost_lp_breakpoints`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert > 0
+```
+
+**`Store_marginal_cost_lp_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \neg \left( \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert > 0
 ```
 <!-- gallery:end -->
 

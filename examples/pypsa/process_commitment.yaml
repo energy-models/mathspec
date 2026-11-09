@@ -17,6 +17,7 @@ given:
     Process_active: { dims: [snapshot, process], dtype: bool }
   variables:
     Process_p: { dims: [scenario, snapshot, process] }
+    Process_marginal_cost_piecewise: { dims: [scenario, snapshot, process] }
     Process_n_mod: { dims: [process], domain: integer }
     Process_maintenance_capacity: { dims: [scenario, snapshot, process] }
     Process_maintenance_status: { dims: [scenario, snapshot, process] }
@@ -25,6 +26,8 @@ given:
     Process_modules: { dims: [process, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Process_marginal_cost_curve: { dims: [process] }
+    Process_marginal_cost_as_lp: { dims: [] }
     Process_committed: { dims: [process, snapshot] }
 
 dimensions:
@@ -40,6 +43,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -48,6 +57,22 @@ relations:
     values: period
 
 parameters:
+  Process_marginal_cost_curve_p:
+    description: >-
+      the internal power at each breakpoint of a process's piecewise
+      `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data
+      prep. A process with no curve has no rows
+    dims: [process, breakpoint]
+    missing: absent
+  Process_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a process's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      internal power times the `marginal_cost` at its upper breakpoint,
+      summed, data prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`)
+    dims: [process, breakpoint]
+    missing: absent
   Process_committable:
     description: whether internal power is gated by an on/off status decision
     dims: [process]
@@ -169,6 +194,34 @@ conditions:
       AND Process_p_nom_extendable
       AND NOT (Process_p_nom_mod > 0)
       AND Process_active
+
+piecewise:
+  Process_marginal_cost_lp:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process with a
+      curve is at least the curve at its internal power, stated as the line of
+      each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, process]
+    where: Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Process_p, Process_marginal_cost_curve_p]
+      cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
+  Process_marginal_cost_incremental:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process with a
+      curve is at least the curve at its internal power, stated by segments
+      filled in order and switched by the status of a committable process,
+      where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, process]
+    where: NOT Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+    method: incremental
+    activity: Process_status
+    links:
+      p: [Process_p, Process_marginal_cost_curve_p]
+      cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
 
 constraints:
   Process_com_p_lower:

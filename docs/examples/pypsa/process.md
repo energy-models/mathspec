@@ -12,6 +12,8 @@ This file states PyPSA's `Process`. It is one of the 25 whole specs of one topic
 given:
   parameters:
     snapshot_weightings_objective: { dims: [snapshot] }
+    Process_marginal_cost_curve_p: { dims: [process, breakpoint] }
+    Process_marginal_cost_curve_cost: { dims: [process, breakpoint] }
     Process_committable: { dims: [process], dtype: bool }
     Process_maintenance_pu: { dims: [scenario, process] }
     scenario_weight: { dims: [scenario] }
@@ -53,6 +55,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -203,6 +211,12 @@ variables:
       injecting where it is positive
     dims: [scenario, snapshot, process]
     where: Process_active
+  Process_marginal_cost_piecewise:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process that
+      pays along a curve, held above the curve
+    dims: [scenario, snapshot, process]
+    where: Process_marginal_cost_curve AND Process_active
   Process_n_mod:
     description: "`Process-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [process]
@@ -261,9 +275,19 @@ expressions:
   Process_tech_capacity_expansion:
     expression: sum(Process_p_nom_ext * Process_tech_capacity_weight, over=process)
     adds_to: tech_capacity_expansion
+  Process_running_cost:
+    description: >-
+      what a process's internal power costs in a snapshot: the value read off
+      its piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, process]
+    cases:
+      curve: { when: Process_marginal_cost_curve, expression: Process_marginal_cost_piecewise }
+    otherwise: Process_p * Process_marginal_cost
   Process_opex:
     expression: >-
-      sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+      sum(sum((Process_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
       + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
     adds_to: scenario_opex
   Process_capex:
@@ -279,6 +303,35 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  Process_marginal_cost_curve:
+    description: >-
+      a process that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Process_marginal_cost_curve_p, over=breakpoint) > 0 AND Process_active_asset
+  Process_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a process's cost curve gets less steep: the segment
+      after it rises less per unit of internal power than the one before
+    condition: >-
+      Process_marginal_cost_curve_p
+      AND shift(Process_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Process_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Process_marginal_cost_curve_cost - shift(Process_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Process_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Process_marginal_cost_curve_p)
+      > (shift(Process_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Process_marginal_cost_curve_cost)
+      * (Process_marginal_cost_curve_p - shift(Process_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Process_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all process cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      process with a curve is committable, the incremental rows otherwise.
+      PyPSA gates the curves by `Process-status` where one is committable, and
+      linopy states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
+    condition: >-
+      count(Process_marginal_cost_curve AND count(Process_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=process) == 0
+      AND count(Process_marginal_cost_curve AND Process_committable, over=process) == 0
   Process_committed:
     description: >-
       a committable process that is active in the snapshot's period: every
@@ -343,6 +396,14 @@ constraints:
     expression: Process_p == Process_p_set
 
 assumptions:
+  Process_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Process_p_nom_extendable AND Process_p_nom > 0 AND Process_p_nom < inf"
+    where: "Process_marginal_cost_curve"
+    description: >-
+      a process's cost curve is given per unit of a fixed, positive, finite
+      `p_nom`, which scales it to internal power. PyPSA refuses an extendable
+      unit and a zero, missing or infinite `p_nom` (`piecewise.py:277-297`),
+      and takes a negative one, which the file does not state
   Process_output_delay_under_uniform_weighting:
     holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
     where: "Process_output_delay > 0"
@@ -365,6 +426,8 @@ assumptions:
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$, data another file declares |
+| $`\mathrm{C}^{z,\mathrm{curve}}`$ | `Process_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{J}`$, data another file declares |
+| $`\mathrm{z}^{\mathrm{curve}}`$ | `Process_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{J}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
@@ -382,6 +445,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
@@ -425,11 +489,15 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process that is active in the snapshot's period: every unit-commitment row's set |
+| $`\mathrm{lp}^{z}`$ | `Process_marginal_cost_as_lp` (scalar) — linopy's choice of method for all process cost curves at once (`method="auto"`): the segment lines where every curve is convex and no process with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Process-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{z}`$ | `Process_marginal_cost_curve` over $`\mathcal{J}`$ — a process that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{z}`$ | `Process_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{J}`$ — a breakpoint where a process's cost curve gets less steep: the segment after it rises less per unit of internal power than the one before |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
+| $`C^{z,\mathrm{curve}}`$ | `Process_marginal_cost_piecewise` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-marginal_cost_piecewise` — the running cost of a process that pays along a curve, held above the curve |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-p` — PyPSA's internal power `p`. A positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision, for a process that is active. A fixed build is the parameter of the same PyPSA name |
@@ -446,6 +514,7 @@ assumptions:
 | $`\overrightarrow{z}`$ | `Process_output_arrival` over $`\mathcal{R} \times \Xi \times \mathcal{T}`$ — what a process transfers at a port at a snapshot. It is its internal power delayed by the port's `delay` within its investment period. It is multiplied by the port's rate at the snapshot the transfer arrives. Where the port is `cyclic_delay`, the delayed transfer wraps from the period's end. Where it is not, the energy still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) transfers at once, cyclic or not |
 | $`\widehat{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_committed` over $`\mathcal{J} \times \Xi`$ — the build a committed process's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1131-1134`) |
 | $`\widetilde{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_effective` over $`\mathcal{J} \times \Xi`$ — the build a process's limits are taken against: the chosen one where it is extendable, the given one otherwise |
+| $`C^{z,\mathrm{run}}`$ | `Process_running_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — what a process's internal power costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{Process\_tech\_capacity\_expansion}`$ | `Process_tech_capacity_expansion` over $`\mathcal{G}`$ |
 
 #### Notation
@@ -464,7 +533,31 @@ assumptions:
 \mathrm{on}^{z,\mathrm{com}}_{j,t} \iff \mathrm{com}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 ```
 
+**`Process_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp}^{z} \iff \lvert \{ j \in \mathcal{J} \,:\, \mathrm{curve}^{z}_{j} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{z}_{b,j} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ j \in \mathcal{J} \,:\, \mathrm{curve}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \} \rvert = 0
+```
+
+**`Process_marginal_cost_curve`**
+
+```math
+\mathrm{curve}^{z}_{j} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{z}_{j} \qquad \forall\, j \in \mathcal{J}
+```
+
+**`Process_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}^{z}_{b,j} \iff \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined} \wedge \mathrm{z}^{\mathrm{curve}}_{b + 1,j} \text{ is defined} \wedge \left( \mathrm{C}^{z,\mathrm{curve}}_{b,j} - \mathrm{C}^{z,\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{z}^{\mathrm{curve}}_{b,j} \right) > \left( \mathrm{C}^{z,\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{C}^{z,\mathrm{curve}}_{b,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b,j} - \mathrm{z}^{\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J}
+```
+
 #### Variable domains
+
+**`Process_marginal_cost_piecewise`**
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
+```
 
 **`Process_n_mod`**
 
@@ -513,7 +606,7 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_opex`**
 
 ```math
-\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} C^{z,\mathrm{run}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Process_output_arrival`**
@@ -532,6 +625,12 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 
 ```math
 \widetilde{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} = \begin{cases} Z_{j} & \text{if } \mathrm{ext}^{z}_{j} \\ \mathrm{z}^{\mathrm{nom}}_{j,\xi} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi
+```
+
+**`Process_running_cost`**
+
+```math
+C^{z,\mathrm{run}}_{j,\xi,t} = \begin{cases} C^{z,\mathrm{curve}}_{j,\xi,t} & \text{if } \mathrm{curve}^{z}_{j} \\ z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_tech_capacity_expansion`**
@@ -609,6 +708,12 @@ z_{j,\xi,t} = \mathrm{z}^{\mathrm{set}}_{j,\xi,t} \qquad \forall\, j \in \mathca
 ```
 
 #### Assumptions
+
+**`Process_marginal_cost_curve_on_a_fixed_build`**
+
+```math
+\neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom}}_{j,\xi} > 0 \wedge \mathrm{z}^{\mathrm{nom}}_{j,\xi} < \infty \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{curve}^{z}_{j}
+```
 
 **`Process_marginal_cost_quadratic_without_risk_preference`**
 

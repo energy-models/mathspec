@@ -24,6 +24,7 @@ given:
     Link_active: { dims: [snapshot, link], dtype: bool }
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
+    Link_marginal_cost_piecewise: { dims: [scenario, snapshot, link] }
     Link_n_mod: { dims: [link], domain: integer }
     Link_maintenance_capacity: { dims: [scenario, snapshot, link] }
     Link_maintenance_status: { dims: [scenario, snapshot, link] }
@@ -32,6 +33,8 @@ given:
     Link_modules: { dims: [link, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Link_marginal_cost_curve: { dims: [link] }
+    Link_marginal_cost_as_lp: { dims: [] }
     Link_committed: { dims: [link, snapshot] }
 
 dimensions:
@@ -47,6 +50,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -55,6 +64,23 @@ relations:
     values: period
 
 parameters:
+  Link_marginal_cost_curve_p:
+    description: >-
+      the flow at each breakpoint of a link's piecewise `marginal_cost` curve:
+      PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A link with no
+      curve has no rows
+    dims: [link, breakpoint]
+    missing: absent
+  Link_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a link's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      flow times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`). A curve that starts below zero flow, where
+      `p_min_pu` is negative, costs more than nothing at zero flow
+    dims: [link, breakpoint]
+    missing: absent
   Link_committable:
     description: whether flow is gated by an on/off status decision
     dims: [link]
@@ -176,6 +202,34 @@ conditions:
       AND Link_p_nom_extendable
       AND NOT (Link_p_nom_mod > 0)
       AND Link_active
+
+piecewise:
+  Link_marginal_cost_lp:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+      is at least the curve at its flow, stated as the line of each segment,
+      where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, link]
+    where: Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Link_p, Link_marginal_cost_curve_p]
+      cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
+  Link_marginal_cost_incremental:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+      is at least the curve at its flow, stated by segments filled in order
+      and switched by the status of a committable link, where linopy chooses
+      the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, link]
+    where: NOT Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+    method: incremental
+    activity: Link_status
+    links:
+      p: [Link_p, Link_marginal_cost_curve_p]
+      cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
 
 constraints:
   Link_com_p_lower:
@@ -331,17 +385,21 @@ assumptions:
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`C^{f,\mathrm{curve}}`$ | `Link_marginal_cost_piecewise` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ |
 | $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ |
 | $`\mathrm{M}^{f}`$ | `Link_modules` over $`\mathcal{L} \times \Xi`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Link_commitment_opex` to |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$, a condition another file defines |
+| $`\mathrm{lp}^{f}`$ | `Link_marginal_cost_as_lp` (scalar), a condition another file defines |
+| $`\mathrm{curve}^{f}`$ | `Link_marginal_cost_curve` over $`\mathcal{L}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
@@ -354,6 +412,8 @@ assumptions:
 | $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\mathcal{L} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable link's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the flow a solve wants, it caps that flow |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
 | $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{C}^{f,\mathrm{curve}}`$ | `Link_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{L}`$, `absent` where the data has no row — the running cost at each breakpoint of a link's piecewise `marginal_cost` curve: zero at the first, then each segment's width in flow times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`). A curve that starts below zero flow, where `p_min_pu` is negative, costs more than nothing at zero flow |
+| $`\mathrm{f}^{\mathrm{curve}}`$ | `Link_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{L}`$, `absent` where the data has no row — the flow at each breakpoint of a link's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A link with no curve has no rows |
 | $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays off once stopped |
 | $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays on once started |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
@@ -388,6 +448,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
 #### Conditions
@@ -548,12 +609,66 @@ u^{f}_{l,\xi,t} \le \mathrm{N}^{f,\mathrm{fix}}_{l,\xi} \qquad \forall\, l \in \
 u^{f}_{l,\xi,t} \le N^{f}_{l} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
+**`Link_marginal_cost_incremental`**
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \ge \left( \begin{cases} u^{f}_{l,\xi,t} & \text{if } \mathrm{on}^{f,\mathrm{com}}_{l,t} \\ 1 & \text{otherwise} \end{cases} \cdot \left( \mathrm{f}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l},\ \mathrm{C}^{f,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l} \right) + \min(\begin{cases} u^{f}_{l,\xi,t} & \text{if } \mathrm{on}^{f,\mathrm{com}}_{l,t} \\ 1 & \text{otherwise} \end{cases},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}}(\mathrm{f}^{\mathrm{curve}}_{b,l},\ \mathrm{C}^{f,\mathrm{curve}}_{b,l}) - \left( \mathrm{f}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l},\ \mathrm{C}^{f,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l} \right) \right) \right)(f_{l,\xi,t}) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`Link_marginal_cost_lp`**
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}}(\mathrm{f}^{\mathrm{curve}}_{b,l},\ \mathrm{C}^{f,\mathrm{curve}}_{b,l})(f_{l,\xi,t}) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
 #### Assumptions
 
 **`Link_big_m_where_committed_and_extendable`**
 
 ```math
 \mathrm{M}^{f}_{l,\xi} \text{ is defined} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t}
+```
+
+**`Link_marginal_cost_incremental_complete`**
+
+```math
+\mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{C}^{f,\mathrm{curve}}_{b,l} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}
+```
+
+**`Link_marginal_cost_incremental_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \neg \left( \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert > 0
+```
+
+**`Link_marginal_cost_lp_complete`**
+
+```math
+\mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{C}^{f,\mathrm{curve}}_{b,l} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}
+```
+
+**`Link_marginal_cost_lp_increasing`**
+
+```math
+\mathrm{f}^{\mathrm{curve}}_{b \boxminus_{0} 1,l} < \mathrm{f}^{\mathrm{curve}}_{b,l} \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined}
+```
+
+**`Link_marginal_cost_lp_curvature`**
+
+```math
+\left( \mathrm{C}^{f,\mathrm{curve}}_{b,l} - \mathrm{C}^{f,\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{f}^{\mathrm{curve}}_{b,l} \right) \le \left( \mathrm{C}^{f,\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{C}^{f,\mathrm{curve}}_{b,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b,l} - \mathrm{f}^{\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined} \wedge \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b + 1,l} \text{ is defined}
+```
+
+**`Link_marginal_cost_lp_breakpoints`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert > 0
+```
+
+**`Link_marginal_cost_lp_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \neg \left( \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert > 0
 ```
 <!-- gallery:end -->
 
