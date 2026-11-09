@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
+from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mathspec.program import Program
+    from mathspec.spec import PiecewiseLinkSpec, PiecewiseSpec
 
 
 def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
@@ -66,16 +68,38 @@ def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
 
 
 def emitted_name_errors(spec: Spec, program: Program) -> list[str]:
-    """Every name a set or curve of *program* would write out that *spec* already declares.
+    """Every name a set or curve of *program* would write out that *spec* declares, or another one writes too.
 
     Read off the program rather than the file, since what a curve writes is
     decided by the curve as lowered — its links, its method, its mask.
     """
-    by_entry = [
+    emitters = [
         *((f"Sos '{name}'", EmittedSet.of(name, entry.sos_type).by_kind) for name, entry in program.sos.items()),
         *((f"piecewise '{name}'", EmittedCurve.of(name, curve).by_kind) for name, curve in program.piecewise.items()),
     ]
-    return [error for context, by_kind in by_entry for error in _collisions(spec, context, by_kind)]
+    errors = [
+        f"piecewise '{name}': link '{row.removeprefix(f'{name}_')}' has the row '{row}', which the "
+        f'expansion of the entry already writes. Rename the link.'
+        for name, curve in program.piecewise.items()
+        for row in EmittedCurve.of(name, curve).reused
+    ]
+    for context, by_kind in emitters:
+        errors.extend(_collisions(spec, context, by_kind))
+    errors.extend(_shared(emitters))
+    return errors
+
+
+def _shared(emitters: Iterable[tuple[str, Iterable[tuple[str, Iterable[str]]]]]) -> Iterator[str]:
+    """The refusal for each name two expansions both write, since the second would overwrite the first."""
+    first: dict[tuple[str, str], str] = {}
+    for context, by_kind in emitters:
+        for kind, names in by_kind:
+            for one in names:
+                if (owner := first.setdefault((kind, one), context)) != context:
+                    yield (
+                        f"{context}: its expansion writes {kind} '{one}', which {owner} also writes. Rename one of "
+                        f'the entries, or the link whose row it is.'
+                    )
 
 
 def reference_errors(spec: Spec) -> list[str]:
@@ -98,7 +122,7 @@ def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
 
 
 def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
-    """Each kind of entry whose names share the one namespace an expression reads, in file order."""
+    """Each kind of entry whose names share the one namespace an expression reads."""
     return [
         ('dimension', spec.dimensions),
         ('relation', spec.relations),
@@ -151,7 +175,7 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Given constraint', name, g.dims) for name, g in spec.given.constraints.items()),
         *(('Given condition', name, g.dims) for name, g in spec.given.conditions.items()),
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
-        *(('Named expression', name, e.dims or []) for name, e in spec.expressions.items()),
+        *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
@@ -177,7 +201,7 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 f"Relation '{lname}' names dimension '{d}' twice under '{side}:'. Give the two columns roles: "
                 f'{side}: {{{d}0: {d}, {d}1: {d}}}.'
                 for d, count in Counter(dim for _, dim in side_columns(written)).items()
-                if count > 1 and not isinstance(written, dict)
+                if count > 1 and not isinstance(written, Mapping)
             )
         yield from (
             f"Relation '{lname}' names column '{role}' under both 'key:' and 'values:'. Rename the value column: "
@@ -259,7 +283,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
         elif entry.along not in spec.variables[entry.variable].dims:
             yield (
                 f"{context}: along '{entry.along}' is not a dim of variable "
-                f"'{entry.variable}' (dims {spec.variables[entry.variable].dims}). Set 'along:' "
+                f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
@@ -303,49 +327,68 @@ def _sos_bounds(spec: Spec) -> Iterator[str]:
 
 
 def _piecewise_references(spec: Spec) -> Iterator[str]:
-    """A curve runs along a declared dimension through numeric values parameters carrying it, gated by a binary, masked by a bool."""
+    """Every entry a curve names by key exists and has the shape the curve needs.
+
+    The breakpoint dim, the frame ``dims:`` states, each link's values
+    parameter, and the gate. What a link's expression, its walk and the
+    where carry is resolution's to say, and whether the pieces fit together
+    is decided as the entry is lowered
+    ([`declaration_of`][mathspec._piecewise.declaration_of]).
+    """
     for name, pw in spec.piecewise.items():
         context = f"piecewise '{name}'"
-        if pw.over not in spec.dimensions:
-            yield undeclared_dimension('piecewise', name, pw.over)
+        if pw.along not in spec.dimensions:
+            yield undeclared_dimension('piecewise', name, pw.along)
             continue
-        if not spec.dimensions[pw.over].ordered:
-            yield unordered(context, f'over: {pw.over}', pw.over)
-        for i, link in enumerate(pw.links):
-            if link.values not in spec.parameters:
-                yield f"{context}: link {i} values references undeclared parameter '{link.values}'. Declare it under 'parameters:'."
-            elif (dtype := spec.parameters[link.values].dtype) not in NUMERIC_DTYPES:
+        if not spec.dimensions[pw.along].ordered:
+            yield unordered(context, f'along: {pw.along}', pw.along)
+        for d in pw.dims:
+            if d not in spec.dimensions:
+                yield undeclared_dimension('piecewise', name, d)
+            elif d == pw.along:
                 yield (
-                    f"{context}: link {i} values parameter '{link.values}' is declared dtype: {dtype}, and a "
-                    f'breakpoint is a number. Declare it dtype: float or int.'
+                    f"{context}: dims: lists '{pw.along}', the breakpoint dimension. Every curve runs along it, so drop "
+                    f'it from dims:.'
                 )
-            elif pw.over not in spec.parameters[link.values].dims:
-                yield (
-                    f"{context}: link {i} values parameter '{link.values}' has dims "
-                    f"{spec.parameters[link.values].dims}, without '{pw.over}'. Add '{pw.over}' to its dims."
-                )
-        if (activity := pw.activity) is not None:
-            if activity not in spec.variables:
-                yield (
-                    f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
-                    f'variable, or delete activity:.'
-                )
-            elif spec.variables[activity].domain != 'binary':
-                yield (
-                    f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
-                    f'Declare it domain: binary.'
-                )
-        if (points := pw.points) is None or pw.nominated is not None:
+        if len(set(pw.dims)) != len(pw.dims):
+            yield f'{context}: dims repeats a dimension: {list(pw.dims)}. Write each dimension once.'
+        for key, link in pw.links.items():
+            yield from _piecewise_link_shape(spec, name, pw, key, link)
+        if pw.activity is None:
             continue
-        if points not in spec.parameters:
-            yield f"{context}: points references undeclared parameter '{points}'. Declare it under 'parameters:'."
-        elif (dtype := spec.parameters[points].dtype) != 'bool':
-            yield f"{context}: points parameter '{points}' is {dtype}. Declare it dtype: bool."
-        elif pw.over not in spec.parameters[points].dims:
+        if (activity := gate_of(pw.activity)) is None:
             yield (
-                f"{context}: points parameter '{points}' has dims {spec.parameters[points].dims}, "
-                f"without '{pw.over}'. Add '{pw.over}' to its dims."
+                f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
+                f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
             )
+            continue
+        if activity not in spec.variables:
+            yield (
+                f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
+                f'variable, or delete activity:.'
+            )
+        elif spec.variables[activity].domain != 'binary':
+            yield (
+                f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
+                f'Declare it domain: binary.'
+            )
+
+
+def _piecewise_link_shape(spec: Spec, name: str, pw: PiecewiseSpec, key: str, link: PiecewiseLinkSpec) -> Iterator[str]:
+    """One link's values parameter exists as the link needs it."""
+    context = f"piecewise '{name}' link '{key}'"
+    if link.values not in spec.parameters:
+        yield f"{context}: values references undeclared parameter '{link.values}'. Declare it under 'parameters:'."
+    elif (dtype := spec.parameters[link.values].dtype) not in NUMERIC_DTYPES:
+        yield (
+            f"{context}: values parameter '{link.values}' is declared dtype: {dtype}, and a breakpoint is a "
+            f'number. Declare it dtype: float or int.'
+        )
+    elif pw.along not in spec.parameters[link.values].dims:
+        yield (
+            f"{context}: values parameter '{link.values}' is over {list(spec.parameters[link.values].dims)}, without "
+            f"'{pw.along}'. Add '{pw.along}' to its dims:."
+        )
 
 
 def _collisions(spec: Spec, context: str, by_kind: Iterable[tuple[str, Iterable[str]]]) -> Iterator[str]:

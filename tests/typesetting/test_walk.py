@@ -16,7 +16,7 @@ from mathspec._typesetting.format import OPERATOR_NAMES
 from mathspec._typesetting.symbols import _derive_name_symbol, chosen_expressions, symbols_for
 from mathspec._validation import to_spec
 from mathspec.errors import LanguageError
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SPECS, entries_reversed, sets_reversed, varied
 from tests.typesetting import golden
 from tests.typesetting.fixtures import EVERY_FORMAT, LATEX
 
@@ -49,7 +49,7 @@ def test_a_dimension_index_never_steals_a_letter_a_variable_owns(name: FormatNam
     }
     text = typeset(model, name)
     assert fmt.subscript('p', ['t', 'p']) not in text, 'the dimension index took the letter the variable owns'
-    assert fmt.subscript('p', ['t', 'l']) in text
+    assert fmt.subscript('p', ['l', 't']) in text
 
 
 @EVERY_FORMAT
@@ -547,7 +547,7 @@ def test_a_parameter_is_upright_and_a_variable_is_italic(name: FormatName, fmt: 
     text = typeset(DISPATCH_MODEL, name, legend=False)
     assert fmt.subscript(fmt.upright('load'), ['t']) in text
     assert fmt.subscript(fmt.italic('load'), ['t']) not in text, 'a parameter never prints italic'
-    assert fmt.subscript('p', ['t', 'g']) in text, 'a variable is chosen, so it stays italic'
+    assert fmt.subscript('p', ['g', 't']) in text, 'a variable is chosen, so it stays italic'
 
 
 def test_nothing_the_model_is_given_prints_italic():
@@ -716,7 +716,7 @@ def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
         r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
-    ) in row, 'both columns the call touches are read, in the order the table declares them'
+    ) in row, 'both columns the call touches are read, the key column first'
 
 
 # ---------------------------------------------------------------------------
@@ -752,10 +752,10 @@ def _row(expression: str, where: str | None = None, **patch: object) -> str:
     [
         pytest.param(
             'p == at(sum(q, over=generator, by=bus_of[bus]), by=bus_of[bus])',
-            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{t,g'}",
+            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{g',t}",
             id='grouped-by-a-relation',
         ),
-        pytest.param('p == q - sum(q, over=generator)', r"\sum_{g' \in \mathcal{G}} q_{t,g'}", id='over-the-whole-dim'),
+        pytest.param('p == q - sum(q, over=generator)', r"\sum_{g' \in \mathcal{G}} q_{g',t}", id='over-the-whole-dim'),
     ],
 )
 def test_a_reduction_under_its_own_dimension_takes_a_fresh_dummy(expression: str, expected: str):
@@ -795,24 +795,24 @@ def test_a_condition_is_bracketed_exactly_where_it_could_read_otherwise(where: s
 @pytest.mark.parametrize(
     ('expression', 'expected', 'forbidden'),
     [
-        pytest.param('p == q - -(q + k)', r'q_{t,g} + q_{t,g} + \mathrm{k}', '- -', id='minus-minus-folds-to-plus'),
+        pytest.param('p == q - -(q + k)', r'q_{g,t} + q_{g,t} + \mathrm{k}', '- -', id='minus-minus-folds-to-plus'),
         pytest.param(
-            'p == q - -2 * k', r'q_{t,g} + 2 \cdot \mathrm{k}', '- -', id='a-sign-on-the-first-factor-folds-too'
+            'p == q - -2 * k', r'q_{g,t} + 2 \cdot \mathrm{k}', '- -', id='a-sign-on-the-first-factor-folds-too'
         ),
-        pytest.param('p == q + -k / 2', r'q_{t,g} - \frac{\mathrm{k}}{2}', '+ -', id='a-sign-on-a-dividend-folds-too'),
+        pytest.param('p == q + -k / 2', r'q_{g,t} - \frac{\mathrm{k}}{2}', '+ -', id='a-sign-on-a-dividend-folds-too'),
         pytest.param(
             'p == q * -(q + k)',
-            r'q_{t,g} \cdot \left( -\left( q_{t,g} + \mathrm{k} \right) \right)',
+            r'q_{g,t} \cdot \left( -\left( q_{g,t} + \mathrm{k} \right) \right)',
             r'\cdot -',
             id='a-negation-as-a-factor',
         ),
         pytest.param(
             'p == 2 * +(q + k)',
-            r'2 \cdot \left( q_{t,g} + \mathrm{k} \right)',
+            r'2 \cdot \left( q_{g,t} + \mathrm{k} \right)',
             r'\left( \left(',
             id='a-unary-plus-says-nothing',
         ),
-        pytest.param('p == -q * 2', r'-q_{t,g} \cdot 2', r'\left(', id='a-negated-first-factor'),
+        pytest.param('p == -q * 2', r'-q_{g,t} \cdot 2', r'\left(', id='a-negated-first-factor'),
     ],
 )
 def test_a_sign_beside_an_operator_is_bracketed_or_folded(expression, expected, forbidden):
@@ -824,10 +824,10 @@ def test_a_sign_beside_an_operator_is_bracketed_or_folded(expression, expected, 
 @pytest.mark.parametrize(
     ('literal', 'expected'),
     [
-        pytest.param('1e-5', r'10^{-5} \cdot q_{t,g}', id='a-power-of-ten'),
-        pytest.param('2.5e-7', r'2.5 \times 10^{-7} \cdot q_{t,g}', id='a-mantissa'),
-        pytest.param('1e6', r'1000000 \cdot q_{t,g}', id='a-whole-number-prints-whole'),
-        pytest.param('0.5', r'0.5 \cdot q_{t,g}', id='a-plain-decimal'),
+        pytest.param('1e-5', r'10^{-5} \cdot q_{g,t}', id='a-power-of-ten'),
+        pytest.param('2.5e-7', r'2.5 \times 10^{-7} \cdot q_{g,t}', id='a-mantissa'),
+        pytest.param('1e6', r'1000000 \cdot q_{g,t}', id='a-whole-number-prints-whole'),
+        pytest.param('0.5', r'0.5 \cdot q_{g,t}', id='a-plain-decimal'),
     ],
 )
 def test_a_float_prints_as_a_number_not_as_python(literal, expected):
@@ -974,7 +974,9 @@ _CURVE = {
         'on': {'dims': ['snapshot'], 'domain': 'binary'},
         'warm': {'dims': ['snapshot'], 'domain': 'binary', 'where': 'committable'},
     },
-    'piecewise': {'curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['op_cost', 'bp_y']]}},
+    'piecewise': {
+        'curve': {'along': 'bp', 'dims': ['snapshot'], 'links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}}
+    },
     'objective': {'sense': 'minimize', 'expression': 'sum(op_cost, over=snapshot)'},
 }
 
@@ -994,19 +996,31 @@ _CURVE = {
             id='the-convex-method-relaxes-it-onto-the-hull',
         ),
         pytest.param(
-            {'piecewise.curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']], 'piecewise.curve.method': 'lp'},
+            {
+                'piecewise.curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']},
+                'piecewise.curve.method': 'lp',
+            },
             r'\mathit{op\_cost}_{t} \ge \mathrm{pwl}_{b \in \mathcal{B}}'
             r'(\mathrm{bp\_x}_{b},\ \mathrm{bp\_y}_{b})(p_{t})',
             id='a-bounded-link-states-one-side-of-the-curve',
         ),
         pytest.param(
             {
-                'piecewise.curve.points': 'reaches',
-                'parameters.bp_x.missing': 0,
-                'parameters.bp_y.missing': 0,
+                'piecewise.curve.links': {
+                    'p': ['p', 'bp_x'],
+                    'op_cost': ['op_cost', 'bp_y', '>='],
+                    'twice': ['p * 2', 'bp_x', '<='],
+                },
             },
+            r'\left( p_{t},\ \mathit{op\_cost}_{t},\ p_{t} \cdot 2 \right) \in \mathrm{pwl}_{b \in \mathcal{B}}'
+            r'(\mathrm{bp\_x}_{b},\ \mathrm{bp\_y}_{b},\ \mathrm{bp\_x}_{b}) + \{0\} \times \mathbb{R}_{\ge 0} '
+            r'\times \mathbb{R}_{\le 0}',
+            id='bounded-links-beside-more-than-one-other-add-the-cone-their-signs-span',
+        ),
+        pytest.param(
+            {'piecewise.curve.where': 'reaches', 'parameters.bp_x.missing': 0, 'parameters.bp_y.missing': 0},
             r'\mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{reaches}_{b}}',
-            id='points-narrows-the-breakpoints-to-the-ones-it-admits',
+            id='a-ragged-where-narrows-the-breakpoints-to-the-ones-it-admits',
         ),
         pytest.param(
             {'piecewise.curve.activity': 'on'},
@@ -1035,11 +1049,12 @@ def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion
 
 
 def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_of():
-    """Two homes for one union, so the line's quantifier is held to the rows the expansion emits."""
+    """The quantifier is the block's `dims:`, as the rows the expansion emits are."""
     model = varied(
         _CURVE,
         **{
             'dimensions.generator': {'dtype': 'str'},
+            'piecewise.curve.dims': ['snapshot', 'generator'],
             'parameters.bp_x.dims': ['generator', 'bp'],
             'parameters.bp_y.dims': ['generator', 'bp'],
             'variables.p.dims': ['snapshot', 'generator'],
@@ -1048,11 +1063,23 @@ def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_o
         },
     )
     spec = to_spec(model)
-    emitted = spec.expand('piecewise').constraints['curve_link0'].dims
+    emitted = spec.expand('piecewise').constraints['curve_p'].dims
 
     printed = typeset_line(spec, 'curve', 'latex')
     assert printed.endswith(r'\forall\, g \in \mathcal{G},\ t \in \mathcal{T}')
-    assert emitted == ['generator', 'snapshot'], 'the quantifier above is that frame, in that order'
+    assert emitted == ('generator', 'snapshot'), 'the quantifier above is that frame, sorted by name'
+
+
+def test_a_walked_link_prints_as_the_family_of_rows_that_read_one_curve():
+    """Printed off the union of the links' dims, every flow sat on every converter's curve and no relation showed."""
+    printed = typeset_line(to_spec(EXAMPLES / 'piecewise_coupling.yaml'), 'operating_point', 'latex')
+
+    family = r'_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = o}'
+    assert printed.startswith(rf'\left( \mathit{{rate}}_{{f,t}} \right){family} \in'), 'a converter ties its own flows'
+    assert rf'(\left( \mathrm{{bp\_rate}}_{{b,f}} \right){family})' in printed, 'each flow reads its own breakpoints'
+    assert printed.endswith(r'\forall\, o \in \mathcal{O},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{o}'), (
+        'one curve per converter that has one, not per flow'
+    )
 
 
 def test_the_expansion_prints_the_rows_the_entry_states():
@@ -1077,3 +1104,25 @@ def test_a_set_is_labelled_by_the_entry_that_declares_it(name: FormatName, fmt: 
 
     assert 'pick' in text, 'the set carries the key it was declared under'
     assert 'p sos' not in text
+
+
+@pytest.mark.parametrize('fmt', sorted(FORMATS))
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_file_lists_its_entries_in_prints_nowhere(path, fmt):
+    """The document printed each section's entries, and the legend its dimensions, in the order the file listed
+    them, so two files that state one model printed two documents."""
+    spec = to_spec(path)
+    assert typeset(to_spec(entries_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+        'every section prints its entries sorted by name, whatever order the file lists them in'
+    )
+
+
+@pytest.mark.parametrize('fmt', sorted(FORMATS))
+@pytest.mark.parametrize('path', SPECS, ids=lambda path: str(path.relative_to(EXAMPLES)))
+def test_the_order_a_dims_list_is_written_in_prints_nowhere(path, fmt):
+    """An entry printed its indices in the order its `dims:` wrote them, so two files that state one model
+    printed two documents."""
+    spec = to_spec(path)
+    assert typeset(to_spec(sets_reversed(spec.to_dict())), fmt) == typeset(spec, fmt), (
+        'every index prints sorted by name, whatever order a dims: list is written in'
+    )

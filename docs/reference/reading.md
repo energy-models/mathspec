@@ -31,6 +31,22 @@ builds a model from a spec and hands the model to a solver is an
 | An engine that builds rows         | the program of an expansion                 |
 | A tool that rewrites files         | the `Spec`, the only object with the text   |
 
+Neither object changes after it loads. A section of a `Spec` is a read-only
+mapping, a list is a tuple, and no field can be set, so `spec.to_yaml()` writes
+the file that `spec.program` comes from. To change a spec, lay a patch over it
+with [`override`](api.md#mathspec.override), which loads the result as a new
+spec.
+
+At load, mathspec sorts each of these lists by name, because their order in
+the file changes nothing:
+
+- the entries of each section, and of each kind under `given:`
+- each `dims:` list
+- each side of a relation, with the columns of the key first
+- the cases under `cases:`
+- the `kwargs:` of a macro
+- the labels under `one_of:`
+
 A curve stays one entry in the program until
 [`spec.expand()`](#formulations-written-out) writes the curve out as rows. So
 the typesetter and `advice` read the curve as the author wrote it.
@@ -54,10 +70,11 @@ variables:
     bounds: { lower: 0 }
 piecewise:
   curve:
-    over: bp
+    along: bp
+    dims: [generator]
     links:
-      - [p, bp_x]
-      - [cost, bp_y, ">="]
+      p: [p, bp_x]
+      cost: [cost, bp_y, ">="]
     method: convex
 assumptions:
   cost_is_never_negative:
@@ -81,7 +98,7 @@ sorted(program.constraints)  # ['target']
 sorted(program.piecewise)  # ['curve']
 
 rows = spec.expand('piecewise').program
-sorted(rows.constraints)  # ['curve_convexity', 'curve_link0', 'curve_link1', 'target']
+sorted(rows.constraints)  # ['curve_convexity', 'curve_cost', 'curve_p', 'target']
 sorted(rows.variables)  # ['cost', 'curve_lam', 'p']
 ```
 
@@ -225,8 +242,8 @@ A `Join` also opens an index per dropped column (an `Axis`). An axis is not a di
 
 The order of `dimensions:` and the order of an entry's `dims:` do not change
 a node's `dims`. An entry that declares `dims: [snapshot, generator]` has
-`program.expressions[name].dims == ('snapshot', 'generator')`, and each
-`ExpressionReference` to it has `dims == ('generator', 'snapshot')`.
+`program.expressions[name].dims == ('generator', 'snapshot')`, and each
+`ExpressionReference` to it has the same `dims`.
 
 A `ConditionReference` is the node for a use of a `conditions:` entry. Its
 `body` is the root of `program.conditions[name].condition`, and the reference
@@ -246,7 +263,8 @@ A `Region`'s `when` is a `Mask` too, and every `Mask` has five attributes:
   or a `NOT`.
 - `.names_read` is the set of entries that the condition uses.
 - `.atoms` is the tuple of its leaves, without the connectives.
-- `.dims` is the set of dimensions that the condition is indexed over.
+- `.dims` is the tuple of dimensions that the condition is indexed over,
+  sorted by name.
 
 A comparison of expressions arrives as an `ExpressionComparison`. Its two
 sides are program expressions, as a constraint's are, and its `dims` are every
@@ -308,7 +326,7 @@ layer = to_spec(
 
 sorted(layer.variables)  # []
 sorted(layer.given.variables)  # ['p']
-layer.given.constraints['balance'].dims  # ('snapshot', 'bus')
+layer.given.constraints['balance'].dims  # ('bus', 'snapshot')
 ```
 
 A tool that builds `layer` creates no variable, and takes `p` and the rows of the constraint `balance` (a
@@ -398,13 +416,19 @@ state whether the windowed answer equals the whole-horizon answer.
 `spec.to_dict()` returns the spec as plain data, and `spec.to_yaml()` returns
 that data as a file. Both round-trip, so `to_spec(spec.to_dict()) == spec`.
 
-`to_yaml()` writes every default value, so `domain: continuous` is written
-out. It
-leaves out a `null` and an empty section, but it writes `dims: []`, because
-`dims: []` declares a scalar.
+`to_yaml()` writes the fields that the file sets, and no others. A default
+that the file states, such as `ordered: false`, is written back, and a default
+that the file leaves out, such as `domain: continuous`, is not. For a spec that
+`merge`, `override` or `expand` builds, `to_yaml()` writes the fields that the
+fragments and mathspec set.
+
+`to_yaml()` always writes `version:`, so a written file states the language
+version it is read in. It leaves out a `null` and an empty section. It writes
+`dims: []`, because `dims: []` declares a scalar. It also writes an empty
+entry, such as `generator: {}`, because the entry still declares its name.
 
 `to_yaml()` writes a short list on one line, such as
-`dims: [snapshot, generator]`, and a short mapping of numbers and names, such
+`dims: [generator, snapshot]`, and a short mapping of numbers and names, such
 as `bounds: {lower: 0, upper: p_max}`. It writes each key of an entry with a
 description or an expression on its own line, even for an expression as short
 as `sum(p)`.
@@ -434,21 +458,28 @@ has these rules:
   `dimensions`, `relations`, `parameters`, `conditions`, `variables`,
   `expressions`, `objective`, `constraints`, `sos`, `piecewise`,
   `assumptions`, `macros`. The keys of an entry also come in one order.
-- Entries are sorted by name within each section, and so is `dimensions:`.
+- Entries are sorted by name within each section, and so is every other list
+  that mathspec [sorts at load](#spec-and-program).
+- A field that has its default value is left out, whether the file wrote it
+  or not. `version` is the one exception, so `version: 0` stays.
 - Every expression is printed from its parsed tree, so the spacing and the
   brackets are the printer's rather than the author's.
 - The terms of a sum are sorted with their signs, so `y - x` is written as
-  `-x + y`. The factors of a product and the keyword arguments of a call are
-  sorted too.
+  `-x + y`. The factors of a product, the keyword arguments of a call, and a
+  list of names or the columns of a relation in a call, such as
+  `over=[generator, snapshot]`, are sorted too.
 - A sum of two or more terms is broken one term to a line, each under its
   own sign.
 - A constant is never folded into another, so `2 * 3` stays `2 * 3`.
+- Every condition under `where:`, `when:`, `condition:` and `holds:` is
+  printed from its parsed tree too. `AND`, `OR` and `NOT` print in upper
+  case, the operands of `AND` and of `OR` are sorted, and a bracket stays only
+  where the grammar needs it, or around a comparison under `NOT`.
+- The two sides of a comparison keep their places, in an expression and in a
+  condition, so `p_max > 0` and `0 < p_max` are two texts.
 - Division, exponentiation and a call's positional arguments keep the order of
-  the file. So do a condition in the `where` grammar, the regions under
-  `cases:`, an entry's `dims` and a piecewise entry's links.
-
-Sorting `dimensions:` changes no `dims` in the program, because mathspec
-already sorts every [`dims`](#nodes-and-conditions) by name.
+  the file. So do a piecewise entry's links, because mathspec names the rows of
+  each link after its position, as in `curve_link0`.
 
 The canonical form states the same spec, but it does not load to a `Spec`
 equal to the original. A reprinted expression is a different string.

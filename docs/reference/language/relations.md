@@ -52,6 +52,11 @@ Relation 'zp' names column 'period' after dimension 'period', but the column is 
 
 mathspec suggests one rewrite, which is to rename the column.
 
+The order of the columns under `key:` and under `values:` changes nothing. The
+key's columns come first, and each side is sorted by column name. The
+typesetter prints the columns in that order, so `connection` above prints as
+$`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
+
 ### Cardinalities
 
 The key and the values set how many rows each label may have (the
@@ -447,15 +452,16 @@ at every other pair, so `balance` adds up the generators wired to each bus.
 constraint:
 
 ```math
-\mathit{flow}_{g,b,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \left( g,\ b \right) \in \mathrm{connection}
+\mathit{flow}_{b,g,t} \ge 0 \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( b,\ g \right) \in \mathrm{connection}
 ```
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{flow}_{g,b,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{flow}_{b,g,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
-The domain of `flow` ends in the condition that `(g, b)` is in `connection`.
-The condition is over `(generator, bus)`, so it is the same at every snapshot.
+The domain of `flow` ends in the condition that `(b, g)` is in `connection`.
+The key lists `generator` first, and mathspec sorts it to `(bus, generator)`.
+The condition is over those two columns, so it is the same at every snapshot.
 
 !!! info "See also"
 

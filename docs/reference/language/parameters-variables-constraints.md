@@ -386,7 +386,7 @@ mathspec suggests two rewrites, `absent` and `refused`.
 A `given:` parameter has no `missing:` and no `where:`, because the file that
 declares the parameter sets both.
 
-A values parameter of a curve with `points:` must declare a
+A values parameter of a curve with a `where:` over its breakpoints must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
@@ -416,7 +416,7 @@ constraints:
     expression: sum(efficiency * p, over=entity) == 0
 ```
 
-$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
 <figure class="diagram">
 --8<-- "docs/static/parameters-where.svg"

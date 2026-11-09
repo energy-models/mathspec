@@ -34,7 +34,7 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
             nothing expanded.
 
     Returns:
-        The never-an-axis advice in file order, then one note per
+        The never-an-axis advice sorted by dimension name, then one note per
         entry the program reads and does not build, then the
         unboundedness advice; ``str()`` of each is its sentence.
 

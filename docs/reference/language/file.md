@@ -30,6 +30,12 @@ declares only `dimensions:` loads.
 | `assumptions` | what the spec expects of its data ([assumptions](assumptions.md))                                                  |
 | `macros`      | templates that take arguments, substituted into an expression before anything reads it ([macros](named.md#macros)) |
 
+The order of the sections, and the order of the entries in a section, change
+nothing. `to_spec` sorts the entries of each section by name, and the entries
+under each kind of `given:` too. The program, the typeset document and
+`to_yaml()` list them in that order. Where a file declares `p` before `flow`
+under `variables:`, the typesetter prints `flow` first.
+
 ## `version`
 
 `version` is the version of the language that the file is written against.

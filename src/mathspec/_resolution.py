@@ -118,9 +118,9 @@ class Namespace:
             if not isinstance(pd.missing, str) and pd.where is None and not self.confining(pd.dims)
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
-            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
+            **{p: pd.dims for p, pd in parameters.items()},
+            **{m: md.dims for m, md in spec.given.conditions.items()},
+            **{v: vd.dims or () for v, vd in variables.items()},
         }
         self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
         self._loading: list[str] = []
@@ -129,7 +129,7 @@ class Namespace:
         self.follow_ons: set[str] = set()
 
     def confining(self, dims: Iterable[str]) -> list[str]:
-        """The relations under ``confines: true`` whose key dimensions are all among *dims*, by name, in file order.
+        """The relations under ``confines: true`` whose key dimensions are all among *dims*, sorted by name.
 
         The key has one column per dimension, which a confining relation is
         refused without, so its dimensions are the key's.
@@ -584,7 +584,7 @@ def self_existence(where: Condition, variable: str, context: str) -> str | None:
     return (
         f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
         f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
-        f'variable declared before it.'
+        f'variable.'
     )
 
 

@@ -166,7 +166,7 @@ Use `markdown` or [`to_markdown`](../reference/typeset.md) to print the math of 
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     #### Definitions
@@ -174,13 +174,13 @@ Use `markdown` or [`to_markdown`](../reference/typeset.md) to print the math of 
     **`generation`**
 
     ```math
-    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**
 
     ```math
-    \mathit{generation}^{\mathrm{cost}} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+    \mathit{generation}^{\mathrm{cost}} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
     ```
 
 Each term appears as its own definition. The sum in `generation` covers the generators on bus $b$, the $g$ where $\mathrm{gen\_bus}(g) = b$. mathspec prints
@@ -269,33 +269,33 @@ print(ms.to_markdown(spec, legend=False))
     **`dispatch`**
 
     ```math
-    0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+    0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     #### Definitions
 
+    **`consumption`**
+
+    ```math
+    \mathrm{consumption}_{b,t} = -\mathrm{demand}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    ```
+
     **`generation`**
 
     ```math
-    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{t,g} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**
 
     ```math
-    \mathit{generation}^{\mathrm{cost}} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
-    ```
-
-    **`consumption`**
-
-    ```math
-    \mathrm{consumption}_{b,t} = -\mathrm{demand}_{t,b} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    \mathit{generation}^{\mathrm{cost}} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
     ```
 
     **`injection`**
 
     ```math
-    \mathit{injection}_{t,b} = \mathit{generation}_{b,t} + \mathrm{consumption}_{b,t} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathit{injection}_{b,t} = \mathit{generation}_{b,t} + \mathrm{consumption}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`total_cost`**
@@ -315,7 +315,7 @@ print(ms.to_markdown(spec, legend=False))
     **`balance`**
 
     ```math
-    \mathit{injection}_{t,b} = 0 \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+    \mathit{injection}_{b,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
 The merged spec defines `injection` and `total_cost` from their terms, and the

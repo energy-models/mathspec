@@ -81,7 +81,7 @@ column for `at` to read. At load, mathspec refuses `at` through a bare relation.
 call lists in `over=`:
 
 ```math
-y_{t,z} = \sum_{g} \mathbf{1}_R(g, t, z) \cdot p_{t,g} = \sum_{g \,:\, f(g,\,t) = z} p_{t,g}
+y_{t,z} = \sum_{g} \mathbf{1}_R(g, t, z) \cdot p_{g,t} = \sum_{g \,:\, f(g,\,t) = z} p_{g,t}
 ```
 
 <figure class="diagram">
@@ -132,7 +132,7 @@ matrix zero outside one block per snapshot (**block-diagonal**). A relation keye
 other index:
 
 ```math
-w_{t,g} = \sum_{z} \mathbf{1}_R(g, t, z) \cdot \mathrm{zone\_cap}_{t,z} = \mathrm{zone\_cap}_{t,\, f(g,\,t)}
+w_{g,t} = \sum_{z} \mathbf{1}_R(g, t, z) \cdot \mathrm{zone\_cap}_{t,z} = \mathrm{zone\_cap}_{t,\, f(g,\,t)}
 ```
 
 <figure class="diagram">
@@ -190,7 +190,7 @@ way by a vector in two steps:
 1. The engine pairs each row of the table with each row of the operand that
    agrees on every shared index, here $`g`$ and $`t`$. That is a join on the columns joined on that
    matches equal values (an inner equi-join). Each
-   pair is one nonzero product $`1 \cdot p_{t,g}`$, and it takes the label of
+   pair is one nonzero product $`1 \cdot p_{g,t}`$, and it takes the label of
    the column grouped by, $`z`$.
 2. The engine adds the pairs that agree on the free indices, here $`(t, z)`$.
    That is a sum grouped by the dimensions of the result.
@@ -267,3 +267,5 @@ why the language has no `join` operator.
       for the refused `join` operator and what you write instead
     - [the notation page](../reference/notation.md), for how the typesetter
       prints each use
+    - [understanding a spec in SQL and dataframe terms](sql-and-dataframes.md),
+      for the same operators as queries

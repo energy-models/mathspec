@@ -17,7 +17,7 @@ given:
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:
@@ -127,50 +127,50 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
+| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$, data another file declares |
-| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\Xi \times \mathcal{G}`$, data another file declares |
-| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, data another file declares |
-| $`f`$ | `Link_p` over $`\Xi \times \mathcal{T} \times \mathcal{L}`$ |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `FlowBased_injection` to |
+| $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `FlowBased_injection` to |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `Bus_flow_based_domain` is `absent` where the data has no row — network nodes |
+| $`\mathcal{L}`$ | index $`l`$ — `flow_based_domain` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `Bus_flow_based_domain` is `absent` where the data has no row — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
+| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
+| $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{O}`$, `Bus_flow_based_domain` is `absent` where the data has no row — network nodes |
-| $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{O}`$ | index $`o`$ — `flow_based_domain` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{O}`$, `Bus_flow_based_domain` is `absent` where the data has no row — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{RAM}`$ | `GlobalConstraint_ram` over $`\Xi \times \mathcal{T} \times \mathcal{G}`$, `absent` where the data has no row — the remaining available margin of a `flow_based` row, one critical network element (CNEC). It may differ by snapshot. No value drops the row in that snapshot (`flow_based.py:201`) |
-| $`\mathrm{PTDF}^{z}`$ | `GlobalConstraint_zonal_ptdf` over $`\Xi \times \mathcal{T} \times \mathcal{G} \times \mathcal{N}`$, $`0`$ where the data has no row — the zonal power transfer distribution factor of a `flow_based` row for a zone bus: PyPSA's `ptdf_<bus>` column read long, data prep. It may differ by snapshot. No value is zero, as PyPSA fills it |
-| $`\mathrm{PTDF}^{f}`$ | `GlobalConstraint_link_ptdf` over $`\Xi \times \mathcal{T} \times \mathcal{G} \times \mathcal{L}`$, $`0`$ where the data has no row — the factor of a `flow_based` row for a corridor link, whose flow enters the row: PyPSA's `ptdf_<link>` column read long, data prep. No value is zero |
 | $`\mathrm{zone}`$ | `Bus_flow_based_zone` over $`\mathcal{N}`$ — whether a bus is a zone of a flow-based domain: some `flow_based` row has its `ptdf_<bus>` column, data prep |
+| $`\mathrm{PTDF}^{f}`$ | `GlobalConstraint_link_ptdf` over $`\mathcal{G} \times \mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the data has no row — the factor of a `flow_based` row for a corridor link, whose flow enters the row: PyPSA's `ptdf_<link>` column read long, data prep. No value is zero |
+| $`\mathrm{RAM}`$ | `GlobalConstraint_ram` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — the remaining available margin of a `flow_based` row, one critical network element (CNEC). It may differ by snapshot. No value drops the row in that snapshot (`flow_based.py:201`) |
+| $`\mathrm{PTDF}^{z}`$ | `GlobalConstraint_zonal_ptdf` over $`\mathcal{N} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, $`0`$ where the data has no row — the zonal power transfer distribution factor of a `flow_based` row for a zone bus: PyPSA's `ptdf_<bus>` column read long, data prep. It may differ by snapshot. No value is zero, as PyPSA fills it |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{NP}`$ | `FlowBased_net_position` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, $`0`$ where the mask leaves it out — `FlowBased-net_position` — what a zone bus exports to the flow-based domain, unbounded. It leaves the zone's nodal balance (`flow_based.py:207-234`). A bus that is no zone has none |
+| $`\mathit{NP}`$ | `FlowBased_net_position` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `FlowBased-net_position` — what a zone bus exports to the flow-based domain, unbounded. It leaves the zone's nodal balance (`flow_based.py:207-234`). A bus that is no zone has none |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{NP}^{\mathrm{inj}}`$ | `FlowBased_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ — what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1508`) |
+| $`\mathit{NP}^{\mathrm{inj}}`$ | `FlowBased_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ — what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1508`) |
 
 #### Variable domains
 
 **`FlowBased_net_position`**
 
 ```math
-\mathit{NP}_{\xi,t,n} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N} \,:\, \mathrm{zone}_{n}
+\mathit{NP}_{n,\xi,t} \in \mathbb{R} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{zone}_{n}
 ```
 
 #### Definitions
@@ -178,21 +178,21 @@ assumptions:
 **`FlowBased_injection`**
 
 ```math
-\mathit{NP}^{\mathrm{inj}}_{\xi,t,n} = -\mathit{NP}_{\xi,t,n} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
+\mathit{NP}^{\mathrm{inj}}_{n,\xi,t} = -\mathit{NP}_{n,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Subject to
 
-**`GlobalConstraint_flow_based_ub`**
-
-```math
-\sum_{n \in \mathcal{N}} \mathrm{PTDF}^{z}_{\xi,t,g,n} \cdot \mathit{NP}_{\xi,t,n} + \sum_{l \in \mathcal{L}} \mathrm{PTDF}^{f}_{\xi,t,g,l} \cdot f_{\xi,t,l} \le \mathrm{RAM}_{\xi,t,g} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{flow\_based}\text{'} \wedge \mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'} \wedge \mathrm{RAM}_{\xi,t,g} \text{ is defined} \wedge \mathrm{in}_{\xi,g,t}
-```
-
 **`FlowBased_balance`**
 
 ```math
-\sum_{n \in \mathcal{N} \,:\, \mathrm{Bus\_flow\_based\_domain}(n) = o} \mathit{NP}_{\xi,t,n} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ o \in \mathcal{O}
+\sum_{n \in \mathcal{N} \,:\, \mathrm{Bus\_flow\_based\_domain}(n) = l} \mathit{NP}_{n,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`GlobalConstraint_flow_based_ub`**
+
+```math
+\sum_{n \in \mathcal{N}} \mathrm{PTDF}^{z}_{n,g,\xi,t} \cdot \mathit{NP}_{n,\xi,t} + \sum_{l \in \mathcal{L}} \mathrm{PTDF}^{f}_{g,l,\xi,t} \cdot f_{l,\xi,t} \le \mathrm{RAM}_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{flow\_based}\text{'} \wedge \mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'} \wedge \mathrm{RAM}_{g,\xi,t} \text{ is defined} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
 #### Assumptions
@@ -200,7 +200,7 @@ assumptions:
 **`GlobalConstraint_flow_based_sense_is_le`**
 
 ```math
-\mathrm{sense}_{\xi,g} = \text{'}\mathrm{<=}\text{'} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G} \,:\, \mathrm{type}_{g} = \text{'}\mathrm{flow\_based}\text{'}
+\mathrm{sense}_{g,\xi} = \text{'}\mathrm{<=}\text{'} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{type}_{g} = \text{'}\mathrm{flow\_based}\text{'}
 ```
 <!-- gallery:end -->
 

@@ -154,7 +154,7 @@ def separabilities(program: Program) -> dict[str, Separability]:
         return {label: ', '.join(dict.fromkeys(found)) for label, found in reasons[kind][dimension].items()}
 
     def linking_rows(dimension: str) -> tuple[str, ...]:
-        """Each constraint no one window of *dimension* holds whole, in file order.
+        """Each constraint no one window of *dimension* holds whole, sorted by name.
 
         Two shapes reach the border by different routes, and a constraint that
         takes both is still one name: a row the axis does not index stands in

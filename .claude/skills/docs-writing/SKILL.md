@@ -168,6 +168,10 @@ The obvious rule gets one sentence.
 - **Prefer the smallest example that still shows the point.** A spec with two
   dimensions and one variable teaches; a realistic one hides the rule in
   scenery.
+- **Name entries as a modeller would**, as the README does: `dispatch`,
+  `capacity`, `power_balance`, not `p`, `p_max` or `c`. The reader then follows
+  the example without a key. A placeholder in a signature, such as `x` and `d`
+  in `sum(x, over=d)`, stays short.
 - **Show the refused form too**, where the refusal is the lesson, with the
   message it produces.
 

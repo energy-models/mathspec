@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  Least-cost dispatch where some generators pay along a piecewise-linear cost
+  curve, as PyPSA's piecewise marginal cost does. The curves have different
+  lengths, and a generator with no curve pays a linear marginal cost. A
+  committable generator switches its curve off with its status, and the
+  others run on their curve ungated. The curve is stated incrementally, as
+  linopy states a gated or non-convex curve: each segment is filled only once
+  the one before it is full.
+
+dimensions:
+  snapshot:
+    description: dispatch periods
+    dtype: int
+    ordered: true
+  generator:
+    description: dispatchable units
+    dtype: str
+  bp:
+    description: breakpoints of the cost curve, as many as the longest curve needs
+    dtype: int
+    ordered: true
+
+parameters:
+  p_nom:
+    description: installed capacity
+    dims: [generator]
+  load:
+    description: demand to be met
+    dims: [snapshot]
+  marginal_cost:
+    description: linear cost of output, for a generator with no curve
+    dims: [generator]
+    missing: 0
+  committable:
+    description: whether the generator has a status that switches it on and off
+    dims: [generator]
+    dtype: bool
+  on_curve:
+    description: >-
+      which breakpoints this generator's curve runs through, true over one
+      consecutive run; false everywhere for a generator with no curve
+    dims: [generator, bp]
+    dtype: bool
+  p_bp:
+    description: dispatch at each breakpoint
+    dims: [generator, bp]
+    missing: absent
+  cost_bp:
+    description: cost of the dispatch at each breakpoint
+    dims: [generator, bp]
+    missing: absent
+
+conditions:
+  has_curve:
+    description: the generator pays along a cost curve
+    condition: count(on_curve, over=bp) > 0
+
+variables:
+  p:
+    description: dispatched power
+    dims: [snapshot, generator]
+    bounds:
+      lower: 0
+      upper: p_nom
+  status:
+    description: whether a committable generator is on
+    dims: [snapshot, generator]
+    where: committable
+    domain: binary
+  cost:
+    description: operating cost, held above the generator's curve
+    dims: [snapshot, generator]
+    where: has_curve
+    bounds:
+      lower: 0
+
+piecewise:
+  cost_curve:
+    description: >-
+      a curve per generator that has one, switched by the status where the
+      generator has one
+    along: bp
+    dims: [snapshot, generator]
+    where: on_curve
+    method: incremental
+    activity: status
+    links:
+      p: [p, p_bp]
+      cost: [cost, cost_bp, ">="]
+
+constraints:
+  balance:
+    dims: [snapshot]
+    expression: sum(p, over=generator) == load
+  committed:
+    description: a committable generator runs only while it is on
+    dims: [snapshot, generator]
+    where: committable
+    expression: p <= p_nom * status
+
+objective:
+  sense: minimize
+  description: the cost on each curve, and the linear cost of every other generator
+  expression: sum(cost) + sum(marginal_cost * p)

@@ -58,8 +58,6 @@ To learn the language from the start, follow the
 <div class="grid cards" markdown>
 
 <!-- prettier-ignore -->
-- **[Write a piecewise curve out by hand](curve-by-hand.md)** where the number of
-    flows on the curve is data.
 - **[See what a piecewise curve or an SOS expands to](see-an-expansion.md)**
     as plain variables and constraints, for a special ordered set
     ([an SOS](../reference/glossary.md#special-ordered-set-sos)).
