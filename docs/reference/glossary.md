@@ -257,8 +257,9 @@ document, not a section in this sense.
 A spec is the optimisation problem stated by one file, or by the files that
 `merge` joins. It declares its dimensions, its decisions, its rules and the
 data it expects, but no values. The word is short for specification. In
-Python, a spec is a `Spec`, which contains the file as written and checked, and
-which `to_spec` returns ([reading a spec and its
+Python, a spec is a `Spec`, which `to_spec` returns. A `Spec` contains the file
+as written and checked, with its entries and its lists of dimensions sorted by
+name, and it cannot be changed ([reading a spec and its
 program](reading.md#spec-and-program)). A file that declares `generator`,
 `snapshot`, `dispatch` and a balance constraint is a spec before any table of
 costs exists.

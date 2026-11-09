@@ -132,21 +132,21 @@ Least-cost dispatch where some generators pay along a piecewise-linear cost curv
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
 | $`\mathcal{B}`$ | index $`b`$ — `bp` — breakpoints of the cost curve, as many as the longest curve needs |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{p}^{\mathrm{nom}}`$ | `p_nom` over $`\mathcal{G}`$ — installed capacity |
+| $`\mathrm{committable}`$ | `committable` over $`\mathcal{G}`$ — whether the generator has a status that switches it on and off |
+| $`\mathrm{cost}^{\mathrm{bp}}`$ | `cost_bp` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — cost of the dispatch at each breakpoint |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
 | $`\mathrm{marginal\_cost}`$ | `marginal_cost` over $`\mathcal{G}`$, $`0`$ where the data has no row — linear cost of output, for a generator with no curve |
-| $`\mathrm{committable}`$ | `committable` over $`\mathcal{G}`$ — whether the generator has a status that switches it on and off |
-| $`\mathrm{on\_curve}`$ | `on_curve` over $`\mathcal{G} \times \mathcal{B}`$ — which breakpoints this generator's curve runs through, true over one consecutive run; false everywhere for a generator with no curve |
-| $`\mathrm{p}^{\mathrm{bp}}`$ | `p_bp` over $`\mathcal{G} \times \mathcal{B}`$, `absent` where the data has no row — dispatch at each breakpoint |
-| $`\mathrm{cost}^{\mathrm{bp}}`$ | `cost_bp` over $`\mathcal{G} \times \mathcal{B}`$, `absent` where the data has no row — cost of the dispatch at each breakpoint |
+| $`\mathrm{on\_curve}`$ | `on_curve` over $`\mathcal{B} \times \mathcal{G}`$ — which breakpoints this generator's curve runs through, true over one consecutive run; false everywhere for a generator with no curve |
+| $`\mathrm{p}^{\mathrm{bp}}`$ | `p_bp` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — dispatch at each breakpoint |
+| $`\mathrm{p}^{\mathrm{nom}}`$ | `p_nom` over $`\mathcal{G}`$ — installed capacity |
 
 #### Conditions
 
@@ -158,42 +158,42 @@ Least-cost dispatch where some generators pay along a piecewise-linear cost curv
 
 | Symbol | Meaning |
 |---|---|
-| $`p`$ | `p` over $`\mathcal{T} \times \mathcal{G}`$ — dispatched power |
-| $`\mathit{status}`$ | `status` over $`\mathcal{T} \times \mathcal{G}`$ — whether a committable generator is on |
-| $`\mathit{cost}`$ | `cost` over $`\mathcal{T} \times \mathcal{G}`$ — operating cost, held above the generator's curve |
+| $`\mathit{cost}`$ | `cost` over $`\mathcal{G} \times \mathcal{T}`$ — operating cost, held above the generator's curve |
+| $`p`$ | `p` over $`\mathcal{G} \times \mathcal{T}`$ — dispatched power |
+| $`\mathit{status}`$ | `status` over $`\mathcal{G} \times \mathcal{T}`$ — whether a committable generator is on |
 
 #### Conditions
 
 **`has_curve`**
 
 ```math
-\mathrm{has\_curve}_{g} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \} \rvert > 0 \qquad \forall\, g \in \mathcal{G}
+\mathrm{has\_curve}_{g} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g} \} \rvert > 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
 #### Variable domains
 
+**`cost`**
+
+```math
+\mathit{cost}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{g}
+```
+
 **`p`**
 
 ```math
-0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`status`**
 
 ```math
-\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{committable}_{g}
-```
-
-**`cost`**
-
-```math
-\mathit{cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{has\_curve}_{g}
+\mathit{status}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{committable}_{g}
 ```
 
 #### Objective
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{cost}_{t,g} + \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathrm{marginal\_cost}_{g} \cdot p_{t,g}
+\min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{cost}_{g,t} + \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathrm{marginal\_cost}_{g} \cdot p_{g,t}
 ```
 
 #### Subject to
@@ -201,19 +201,19 @@ Least-cost dispatch where some generators pay along a piecewise-linear cost curv
 **`balance`**
 
 ```math
-\sum_{g \in \mathcal{G}} p_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} p_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`committed`**
 
 ```math
-p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \cdot \mathit{status}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{committable}_{g}
+p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \cdot \mathit{status}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{committable}_{g}
 ```
 
 **`cost_curve`**
 
 ```math
-\mathit{cost}_{t,g} \ge \begin{cases} \mathit{status}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b}}(\mathrm{p}^{\mathrm{bp}}_{g,b},\ \mathrm{cost}^{\mathrm{bp}}_{g,b})(p_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{cost}_{g,t} \ge \begin{cases} \mathit{status}_{g,t} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g}}(\mathrm{p}^{\mathrm{bp}}_{b,g},\ \mathrm{cost}^{\mathrm{bp}}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions
@@ -221,12 +221,12 @@ p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \cdot \mathit{status}_{t,g} \qquad \fo
 **`cost_curve_complete`**
 
 ```math
-\mathrm{p}^{\mathrm{bp}}_{g,b} \text{ is defined} \wedge \mathrm{cost}^{\mathrm{bp}}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b}
+\mathrm{p}^{\mathrm{bp}}_{b,g} \text{ is defined} \wedge \mathrm{cost}^{\mathrm{bp}}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{on\_curve}_{b,g}
 ```
 
 **`cost_curve_contiguous`**
 
 ```math
-\lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \wedge \neg \mathrm{on\_curve}_{g,b - 1} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{g,b} \} \rvert > 0
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g} \} \rvert > 0
 ```
 <!-- gallery:end -->

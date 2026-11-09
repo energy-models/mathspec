@@ -52,35 +52,35 @@ Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units |
+| $`\mathcal{S}`$ | index $`s`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\bar p`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
-| $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 | $`c`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
+| $`\ell`$ | `load` over $`\mathcal{S}`$ — demand to be met |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{S} \times \mathcal{G}`$ — output of a generator in a snapshot |
+| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{S}`$ — output of a generator in a snapshot |
 
 #### Variable domains
 
 **`dispatch`**
 
 ```math
-0 \le \mathit{dispatch}_{s,g} \le \bar p_{g} \qquad \forall\, s \in \mathcal{S},\ g \in \mathcal{G} \,:\, \bar p_{g} > 0
+0 \le \mathit{dispatch}_{g,s} \le \bar p_{g} \qquad \forall\, g \in \mathcal{G},\ s \in \mathcal{S} \,:\, \bar p_{g} > 0
 ```
 
 #### Objective
 
 ```math
-\min \sum_{s \in \mathcal{S},\ g \in \mathcal{G}} \mathit{dispatch}_{s,g} \cdot c_{g}
+\min \sum_{g \in \mathcal{G},\ s \in \mathcal{S}} \mathit{dispatch}_{g,s} \cdot c_{g}
 ```
 
 #### Subject to
@@ -88,7 +88,7 @@ Least-cost dispatch of a generator fleet against a load in each dispatch period.
 **`power_balance`**
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,s} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
 ```
 <!-- gallery:end -->
 

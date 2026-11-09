@@ -122,7 +122,7 @@ def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
 
 
 def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
-    """Each kind of entry whose names share the one namespace an expression reads, in file order."""
+    """Each kind of entry whose names share the one namespace an expression reads."""
     return [
         ('dimension', spec.dimensions),
         ('relation', spec.relations),
@@ -175,7 +175,7 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Given constraint', name, g.dims) for name, g in spec.given.constraints.items()),
         *(('Given condition', name, g.dims) for name, g in spec.given.conditions.items()),
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
-        *(('Named expression', name, e.dims or []) for name, e in spec.expressions.items()),
+        *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
@@ -201,7 +201,7 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 f"Relation '{lname}' names dimension '{d}' twice under '{side}:'. Give the two columns roles: "
                 f'{side}: {{{d}0: {d}, {d}1: {d}}}.'
                 for d, count in Counter(dim for _, dim in side_columns(written)).items()
-                if count > 1 and not isinstance(written, dict)
+                if count > 1 and not isinstance(written, Mapping)
             )
         yield from (
             f"Relation '{lname}' names column '{role}' under both 'key:' and 'values:'. Rename the value column: "
@@ -269,7 +269,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
         elif entry.along not in spec.variables[entry.variable].dims:
             yield (
                 f"{context}: along '{entry.along}' is not a dim of variable "
-                f"'{entry.variable}' (dims {spec.variables[entry.variable].dims}). Set 'along:' "
+                f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
@@ -337,7 +337,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                     f'it from dims:.'
                 )
         if len(set(pw.dims)) != len(pw.dims):
-            yield f'{context}: dims repeats a dimension: {pw.dims}. Write each dimension once.'
+            yield f'{context}: dims repeats a dimension: {list(pw.dims)}. Write each dimension once.'
         for key, link in pw.links.items():
             yield from _piecewise_link_shape(spec, name, pw, key, link)
         if pw.activity is None:
@@ -372,7 +372,7 @@ def _piecewise_link_shape(spec: Spec, name: str, pw: PiecewiseSpec, key: str, li
         )
     elif pw.along not in spec.parameters[link.values].dims:
         yield (
-            f"{context}: values parameter '{link.values}' is over {spec.parameters[link.values].dims}, without "
+            f"{context}: values parameter '{link.values}' is over {list(spec.parameters[link.values].dims)}, without "
             f"'{pw.along}'. Add '{pw.along}' to its dims:."
         )
 

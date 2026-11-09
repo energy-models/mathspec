@@ -114,7 +114,7 @@ table:
 
 ```python
 ms.typeset_line('spec.yaml', 'balance', 'latex', symbols='dispatch.symbols.yaml')
-# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
+# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,s} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
 ```
 
 With the table, `snapshot` has the index $s$ and `load` the symbol $\ell$.
@@ -159,7 +159,7 @@ tables of symbols (the legend) follow, and the math comes last.
   Objective, Subject to and Assumptions. Under Subject to, the constraints
   come first, then the special ordered sets (SOS) of
   [`sos:`](language/piecewise.md#sos), then the
-  [curves](language/piecewise.md#piecewise). Each part is in file order.
+  [curves](language/piecewise.md#piecewise). Each part is sorted by name.
 
 The typesetter does not break lines, so a wide equation runs off the page.
 
@@ -167,7 +167,7 @@ Named expressions, named conditions, curves and assumptions each print in a
 form of their own:
 
 - The typesetter prints the symbol of a named expression in each equation
-  that contains it, and its body once, in file order, under Definitions. With
+  that contains it, and its body once under Definitions, in name order. With
   [`inline_expressions`](cli.md#latex-markdown-and-typst), the typesetter
   substitutes each named expression into its equations. Under either
   setting, the typesetter prints the definition line of an expression with
@@ -263,9 +263,9 @@ as for the other functions. `typeset_line` takes no
 
 ```python
 ms.typeset_line('spec.yaml', 'spend', 'latex')
-# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
+# \mathit{spend}_{t} = \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g} \qquad \forall\, t \in \mathcal{T}
 ms.typeset_line('spec.yaml', 'balance', 'latex')
-# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+# \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 Each line ends with its quantifier over $\mathcal{T}$, and the line of `spend`

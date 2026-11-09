@@ -52,7 +52,7 @@ constraints follow, with one equation each. The command and the Python call
 print the power balance as:
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 Without a file that maps names to symbols
@@ -94,7 +94,7 @@ Pass the table with `--symbols`, or `symbols=` in Python:
     ```
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{s,g} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,s} = \ell_{s} \qquad \forall\, s \in \mathcal{S}
 ```
 
 The power balance now has $\ell$ for `load` and $s$ for `snapshot`.

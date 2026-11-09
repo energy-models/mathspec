@@ -625,7 +625,7 @@ def declaration_of(
     _where_fits(ctx, pw, where, walks)
     if gate is not None:
         _gate_fits(ctx, pw, gate, walks)
-    carried = (where.dims if where is not None else frozenset()) - {pw.along}
+    carried = frozenset(where.dims if where is not None else ()) - {pw.along}
     typed = tuple(
         Link(
             key,
@@ -655,12 +655,12 @@ def _walk_fits(ctx: str, entry: PiecewiseSpec, walk: JoinColumns) -> None:
     if entry.along in dropped:
         raise DimensionError(
             f"{ctx}: by: {walk.name} looks the curve up at '{entry.along}', the breakpoint dimension, and the row "
-            f'of a link uses every breakpoint of its curve. Name a column over one of {entry.dims}.'
+            f'of a link uses every breakpoint of its curve. Name a column over one of {list(entry.dims)}.'
         )
     if missing := sorted(dropped - set(entry.dims)):
         raise DimensionError(
-            f'{ctx}: by: {walk.name} looks the curve up at {missing}, which is not in dims: {entry.dims}. Name a '
-            f'column over one of {entry.dims}, or add {missing} to dims:.'
+            f'{ctx}: by: {walk.name} looks the curve up at {missing}, which is not in dims: {list(entry.dims)}. Name a '
+            f'column over one of {list(entry.dims)}, or add {missing} to dims:.'
         )
     if not added:
         raise DimensionError(
@@ -775,19 +775,19 @@ def _where_fits(ctx: str, entry: PiecewiseSpec, where: Mask | None, walks: dict[
     produces is refused without the advice to add it to ``dims:``, which the
     walk would then refuse.
     """
-    dims = where.dims if where is not None else frozenset()
-    stray = sorted(dims - set(entry.dims) - {entry.along})
+    dims = where.dims if where is not None else ()
+    stray = sorted(set(dims) - set(entry.dims) - {entry.along})
     for key, walk in walks.items():
         if into := [d for d in stray if d in walk.added_dims]:
             raise DimensionError(
                 f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through its relation. A "
-                f'where: sets which curves exist, one per coordinate of dims: {entry.dims}, and only the rows of '
-                f'the link are over {into}. Test {entry.dims} in the where:, or declare a where: over {into} on '
+                f'where: sets which curves exist, one per coordinate of dims: {list(entry.dims)}, and only the rows of '
+                f'the link are over {into}. Test {list(entry.dims)} in the where:, or declare a where: over {into} on '
                 f'the variable of the link, so that its rows are absent.'
             )
     if stray:
         raise DimensionError(
-            f'{ctx}: where {entry.where!r} tests {stray}, which is not in dims: {entry.dims}. A where: sets '
+            f'{ctx}: where {entry.where!r} tests {stray}, which is not in dims: {list(entry.dims)}. A where: sets '
             f'which curves exist, and cannot add coordinates. Add {stray} to dims:, or drop it from the where:.'
         )
 
@@ -814,7 +814,7 @@ def _gate_fits(ctx: str, entry: PiecewiseSpec, gate: Gate, walks: dict[str, Join
             f'activity: at({gate.variable}, by=<relation>[<column>]).'
         )
     raise DimensionError(
-        f"{ctx}: activity '{gate.variable}' is {found}, which is not in dims: {entry.dims}. The gate switches "
+        f"{ctx}: activity '{gate.variable}' is {found}, which is not in dims: {list(entry.dims)}. The gate switches "
         f'the curve of one coordinate of dims:. {rewrite}'
     )
 

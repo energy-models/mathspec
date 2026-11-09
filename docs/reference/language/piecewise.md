@@ -187,7 +187,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b},\ \mathrm{heat}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G}
+\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g},\ \mathrm{heat}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The [typesetter](../typeset.md) prints the entry as one membership: for each
@@ -255,9 +255,10 @@ refuses the file and names both entries.
 
 ### `dims`
 
-`dims:` sets the dimensions of the curves, in the order written. The entry
-states one curve, with its own weights, at each coordinate of `dims:`. Every
-curve runs along `along`, so `dims:` must not include that dimension.
+`dims:` sets the dimensions of the curves, sorted by name as the spec loads.
+The entry states one curve, with its own weights, at each coordinate of
+`dims:`. Every curve runs along `along`, so `dims:` must not include that
+dimension.
 
 The row of a link is over `dims:`, or over the dimensions of its
 [walk](#a-link-that-walks-a-relation). The expression of a link must be over
@@ -301,7 +302,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 The entry states one curve per snapshot and generator. The breakpoint tables
@@ -338,7 +339,7 @@ objective:
 ```
 
 ```math
-\mathit{fuel}_{g} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b})(\mathit{power}_{g}) \qquad \forall\, g \in \mathcal{G}
+\mathit{fuel}_{g} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g})(\mathit{power}_{g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The typesetter now prints the curve as a function of `power`, with `fuel`
@@ -380,7 +381,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b},\ \mathrm{heat}^{\mathrm{bp}}_{g,b}) + \{0\} \times \mathbb{R}_{\ge 0} \times \mathbb{R}_{\le 0} \qquad \forall\, g \in \mathcal{G}
+\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g},\ \mathrm{heat}^{\mathrm{bp}}_{b,g}) + \{0\} \times \mathbb{R}_{\ge 0} \times \mathbb{R}_{\le 0} \qquad \forall\, g \in \mathcal{G}
 ```
 
 The typesetter prints the point on the curve plus a cone. The `{0}` keeps the
@@ -424,7 +425,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{rate}_{f,t} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_rate}_{f,b} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c}) \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
+\left( \mathit{rate}_{f,t} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_rate}_{b,f} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c}) \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
 ```
 
 For each converter and snapshot, the rates of all flows of the converter lie
@@ -435,7 +436,7 @@ The expansion writes the row `operating_point_rate` over `[flow, snapshot]`.
 Each flow uses the weights of its converter:
 
 ```math
-\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{f,b} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
 ```
 
 These rules apply to a walked link:
@@ -494,7 +495,7 @@ objective:
 ```
 
 ```math
-\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{has\_curve}_{g}
+\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{has\_curve}_{g}
 ```
 
 Only a generator where `has_curve` is true has a curve. For any other
@@ -517,7 +518,7 @@ relation of the link. In the
 `where: at(has_curve, by=converter_of[converter])`:
 
 ```math
-\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{f,b} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}
 ```
 
 The row exists at every flow of a converter with a curve. A flow of a
@@ -569,7 +570,7 @@ objective:
 ```
 
 ```math
-\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{g,b} \text{ is defined}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G}
+\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 <figure class="diagram">
@@ -684,7 +685,7 @@ objective:
 ```
 
 ```math
-\mathit{op\_cost}_{g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b})(p_{g}) \qquad \forall\, g \in \mathcal{G}
+\mathit{op\_cost}_{g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g}) \qquad \forall\, g \in \mathcal{G}
 ```
 
 The cost of each generator is bounded below by the curve, and no weight
@@ -756,7 +757,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \begin{cases} \mathit{running}_{g,t} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 <figure class="diagram">
@@ -814,7 +815,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit\_of}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit\_of}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit\_of}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit\_of}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 The weights of each curve sum to `at(running, by=unit_of[unit])`. Because

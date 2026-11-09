@@ -27,12 +27,12 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
 from mathspec._expression_parser import Sense
-from mathspec._sealed import Sealed
+from mathspec._frozen import Frozen
 from mathspec.errors import did_you_mean
 
 if TYPE_CHECKING:
     import datetime
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
 
 __all__ = [
@@ -455,7 +455,8 @@ Expression = (
     | ExpressionReference
 )
 """The union of every expression node, which a walk over an expression takes. The set is closed, so a walk can end in
-``assert_never``. Every node has ``dims``, the dimensions it is indexed over, sorted by name. An
+``assert_never``. Every node has ``dims``, the dimensions it is indexed over. Lowering sorts them by name, and a node
+built by hand has the dims it was given. An
 [`ExpressionReference`][] has the ``dims`` of its body. [`Program.roots`][], a bound and a named expression that is
 ``in_math`` are affine, except that at a [`QuadraticPosition`][] a [`Multiply`][] may have a variable on both sides.
 """
@@ -491,8 +492,8 @@ def children(expression: Expression) -> tuple[Expression, ...]:
 class Relation:
     """One declared relation: a table over its ``columns``, single-valued per ``key``.
 
-    ``columns`` maps each role to its dimension in the order the table
-    carries them, the key's roles first; ``key`` is the roles a row is
+    ``columns`` maps each role to its dimension, the key's roles first and
+    each side sorted by role; ``key`` is the roles a row is
     identified by, and [`values`][] the rest — every role is a key role for
     a bare relation, which is one with no value columns. Every value is
     checked when the data is attached to be a label of its column's dimension, and the table to
@@ -513,7 +514,8 @@ class Relation:
 
     @property
     def dims(self) -> tuple[str, ...]:
-        return tuple(dim for _, dim in self.columns)
+        """Every dimension a column is over, once, sorted by name."""
+        return tuple(sorted({dim for _, dim in self.columns}))
 
     @property
     def values(self) -> tuple[str, ...]:
@@ -528,6 +530,11 @@ class Relation:
     def dim(self, role: str) -> str:
         return self._dim_of[role]
 
+    def in_order(self, roles: Iterable[str]) -> tuple[str, ...]:
+        """*roles* as [`columns`][] orders them: the key's first, each side sorted by role."""
+        given = tuple(roles)
+        return (*sorted(r for r in given if r in self.key), *sorted(r for r in given if r not in self.key))
+
 
 @dataclass(frozen=True)
 class JoinColumns:
@@ -539,10 +546,12 @@ class JoinColumns:
     ``relation``. ``relation`` maps every role to its dimension and names the
     key. ``joined`` is
     every column the join matches the operand on: the columns that leave the
-    frame, then every key column the call does not name. ``grouped`` is every
-    column of the relation the result keeps: the columns that arrive, then the
-    same unnamed key columns. A column in neither is not read, so a relation
-    may gain a value column without changing what a call means.
+    frame, and every key column the call does not name. ``grouped`` is every
+    column of the relation the result keeps: the columns that arrive, and the
+    same unnamed key columns. Both are in the order of the relation's
+    ``columns``: the key's first, each side sorted by role. A column in neither
+    is not read, so a relation may gain a value column without changing what a
+    call means.
 
     A column both joined on and grouped by stays in the frame. One joined on
     and not grouped by is [`dropped`][], and one grouped by and not joined
@@ -652,7 +661,7 @@ class Dimension:
     value column against ``Parameter.dtype``. It is ``str`` when the file lists the labels under ``one_of``.
     """
     one_of: tuple[str, ...] | None = None
-    """The labels that the file lists under ``one_of:``, in file order, or ``None`` when it lists none. With data attached,
+    """The labels that the file lists under ``one_of:``, sorted by name, or ``None`` when it lists none. With data attached,
     a tool refuses any other label, in the table of the dimension and in every relation column over it.
     """
     ordered: bool = False
@@ -764,25 +773,25 @@ class GivenTargets:
     """What a program reads and does not build, by kind.
 
     Every group is empty in a program built from one whole spec. Every group
-    is sealed at construction, like every group of [`Program`][].
+    is frozen at construction, like every group of [`Program`][].
     """
 
-    parameters: Mapping[str, GivenParameter] = Sealed({})
+    parameters: Mapping[str, GivenParameter] = Frozen({})
     """The parameters another file declares, by name, with the dtype that a comparison in a condition tests."""
-    variables: Mapping[str, Given] = Sealed({})
+    variables: Mapping[str, Given] = Frozen({})
     """The variables the host model provides, by name."""
-    constraints: Mapping[str, Given] = Sealed({})
+    constraints: Mapping[str, Given] = Frozen({})
     """The constraints the host model builds, by name. A tool reads them back after the solver runs."""
-    expressions: Mapping[str, Given] = Sealed({})
+    expressions: Mapping[str, Given] = Frozen({})
     """The named expressions the host model defines, by name."""
-    conditions: Mapping[str, Given] = Sealed({})
+    conditions: Mapping[str, Given] = Frozen({})
     """The named conditions the host model defines, by name. In a condition, one is data: a [`ParameterDefined`][] of a
     boolean over its dimensions.
     """
 
     def __post_init__(self) -> None:
         for f in fields(self):
-            object.__setattr__(self, f.name, Sealed(getattr(self, f.name)))
+            object.__setattr__(self, f.name, Frozen(getattr(self, f.name)))
 
     def __bool__(self) -> bool:
         """Whether the program reads anything it does not build."""
@@ -1106,10 +1115,11 @@ class Separability:
 class Program:
     """A complete declarative description of a mathematical program, with no data in it.
 
-    Every group of entries is keyed by the name the file wrote, in the
-    order it wrote them, and is read-only: the mappings are wrapped at
+    Every group of entries is keyed by the name the file wrote, sorted by
+    name, and is read-only: the mappings are wrapped at
     construction, so a consumer cannot rewrite what another consumer reads.
-    A whole program is not hashable — the entries and expression nodes
+    Every ``dims`` and ``frame`` in it is sorted by name, whatever order the
+    file writes them in. A whole program is not hashable — the entries and expression nodes
     inside it are, which is what dedup and memoisation ask for.
     """
 
@@ -1119,24 +1129,24 @@ class Program:
     objective: Objective | None
     """The objective, or ``None`` when the file declares none. A solver then only tests whether the constraints can be met.
     """
-    dimensions: Mapping[str, Dimension] = Sealed({})
-    relations: Mapping[str, Relation] = Sealed({})
-    sos: Mapping[str, Sos] = Sealed({})
-    piecewise: Mapping[str, Piecewise] = Sealed({})
+    dimensions: Mapping[str, Dimension] = Frozen({})
+    relations: Mapping[str, Relation] = Frozen({})
+    sos: Mapping[str, Sos] = Frozen({})
+    piecewise: Mapping[str, Piecewise] = Frozen({})
     """Each ``piecewise:`` entry of the spec, as the curve it states. It is empty for the program of a spec whose curves
     are expanded.
     """
-    assumptions: Mapping[str, Assumption] = Sealed({})
+    assumptions: Mapping[str, Assumption] = Frozen({})
     """What the data must satisfy, by the name that a tool quotes when it refuses data: each ``assumptions:`` entry of the
     file, then what the method of each ``piecewise:`` entry assumes of its breakpoints. mathspec checks none of them at
     load. A tool checks each when it attaches data, and refuses with [`assumption_message`][].
     """
-    expressions: Mapping[str, NamedExpression] = Sealed({})
+    expressions: Mapping[str, NamedExpression] = Frozen({})
     """The ``expressions:`` that the file declares, each with whether the math uses it. None of them has a row of its own,
     and where the math uses one, it contains an [`ExpressionReference`][]. mathspec compiles every named expression, so
     it refuses at load a file whose named expression is outside the language, even one the math does not use.
     """
-    conditions: Mapping[str, NamedCondition] = Sealed({})
+    conditions: Mapping[str, NamedCondition] = Frozen({})
     """The ``conditions:`` that the file declares. Each use in the program is a [`ConditionReference`][], so a tool that
     builds rows needs nothing from this mapping.
     """
@@ -1146,11 +1156,11 @@ class Program:
     """The ``description:`` of the file as a whole."""
 
     def __post_init__(self) -> None:
-        """Seal every group, so a program handed out cannot be written to."""
+        """Freeze every group, so a program handed out cannot be written to."""
         for f in fields(self):
             group = getattr(self, f.name)
             if isinstance(group, Mapping):
-                object.__setattr__(self, f.name, Sealed(group))
+                object.__setattr__(self, f.name, Frozen(group))
 
     def _by_position(self) -> Iterator[tuple[QuadraticPosition, tuple[Expression, ...]]]:
         """The row-building expressions, grouped by the position they stand in."""
@@ -1159,7 +1169,7 @@ class Program:
 
     def relations_of(self, dimension: str) -> Mapping[str, Relation]:
         """The relations with a column over *dimension*, by name."""
-        return Sealed({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
+        return Frozen({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
 
     @property
     def roots(self) -> tuple[Expression, ...]:
@@ -1216,7 +1226,7 @@ class Program:
         """
         from mathspec._separability import separabilities
 
-        return Sealed(separabilities(self))
+        return Frozen(separabilities(self))
 
 
 # --------------------------------------------------------------------------
@@ -1750,14 +1760,14 @@ class Mask:
         return frozenset(name for atom in self.atoms for name in _atom_names(atom))
 
     @property
-    def dims(self) -> frozenset[str]:
-        """The dims the mask is read at — the union of what each leaf carries.
+    def dims(self) -> tuple[str, ...]:
+        """The dims the mask is read at, sorted by name — the union of what each leaf carries.
 
         Empty for a mask over nothing but literals. Read off the leaves, which
         resolution stamped with their entries' dims, so a condition built
         from resolved pieces answers exactly as an entry's own does.
         """
-        return frozenset(dim for atom in self.atoms for dim in _atom_dims(atom))
+        return tuple(sorted({dim for atom in self.atoms for dim in _atom_dims(atom)}))
 
     def __invert__(self) -> Mask:
         """The mask admitting exactly the rows this one refuses — construction folds a double negation or a literal flip."""

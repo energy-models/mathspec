@@ -49,7 +49,7 @@ symbol of data, is upright:
 ```
 
 ```math
-p_{e,g} - p_{e - 1,g} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, e \in \mathcal{E},\ g \in \mathcal{G} \,:\, \mathrm{stands}_{g,e} \wedge \mathrm{stands}_{g,e - 1}
+p_{g,e} - p_{g,e - 1} \le 0.5 \cdot \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{stands}_{g,e} \wedge \mathrm{stands}_{g,e - 1}
 ```
 
 <figure class="diagram">
@@ -170,7 +170,7 @@ The constraint `emission_cap` uses `emissions` by name, and the objective uses
 | Key           | Required         | Default | What it sets                                                                                             |
 | ------------- | ---------------- | ------- | -------------------------------------------------------------------------------------------------------- |
 | `expression`  | without `cases:` |         | the quantity, in the [expression grammar](expressions.md), which `cases:` replaces                       |
-| `dims`        | with `cases:`    | `null`  | the dimensions over which the quantity is indexed, in the order of its indices ([`dims`](#dims))         |
+| `dims`        | with `cases:`    | `null`  | the dimensions over which the quantity is indexed, sorted by name at load ([`dims`](#dims))              |
 | `description` | no               | `null`  | free text                                                                                                |
 | `cases`       | no               | `null`  | a map of named cases, each with a `when:` condition and an `expression:` ([`cases`](#cases))             |
 | `otherwise`   | with `cases:`    | `null`  | the value at every combination of labels (a [coordinate](../glossary.md#coordinate)) that no case claims |
@@ -179,8 +179,9 @@ The constraint `emission_cap` uses `emissions` by name, and the objective uses
 ### `dims`
 
 Without `dims:`, mathspec takes the dimensions of the entry from the
-expression, sorted by name. With `dims:`, you set the order of the indices,
-and mathspec holds the expression to the list in both directions:
+expression, sorted by name. With `dims:`, you name them in any order, and
+mathspec sorts them by name and holds the expression to the list in both
+directions:
 
 ```yaml
 dimensions:
@@ -198,7 +199,8 @@ expressions:
 objective: { sense: minimize, expression: sum(headroom) }
 ```
 
-`headroom` is indexed over `[generator, snapshot]`, in that order.
+`headroom` is indexed over `generator` and `snapshot`, in that order, whatever
+order its `dims:` lists them in.
 
 At load, mathspec refuses the file with `dims: [generator]` in place of
 `dims: [generator, snapshot]`:
@@ -255,11 +257,11 @@ constraints:
 objective: { sense: minimize, expression: sum(p) }
 ```
 
-The typesetter prints each case as one row of the definition, and
-`otherwise:` as the last row:
+mathspec sorts the cases by name at load. The typesetter prints each case as
+one row of the definition, in that order, and `otherwise:` as the last row:
 
 ```math
-\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{previous\_status}_{g,t} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{g,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 <figure class="diagram">
@@ -434,7 +436,7 @@ Each term stays a named expression of the merged spec, without its `adds_to:`.
 Where no file defines the sum, the terms are its body. `merge` holds a sum to
 these rules:
 
-- Every file that lists the sum under `given:` lists its `dims` in the same
+- Every file that lists the sum under `given:` lists the same `dims`, in any
   order.
 - Where no file defines the sum, the sum is indexed over each listed
   dimension that a term is indexed over. It takes the first description that
@@ -595,12 +597,12 @@ macro does not appear in the math.
 A template takes its arguments by the names under `args` and `kwargs` (its
 formals):
 
-| Key           | Required | Default | What it sets                           |
-| ------------- | -------- | ------- | -------------------------------------- |
-| `template`    | yes      |         | the expression, with the formals in it |
-| `args`        | no       | `[]`    | the positional formals, in call order  |
-| `kwargs`      | no       | `[]`    | the keyword formals                    |
-| `description` | no       | `null`  | free text                              |
+| Key           | Required | Default | What it sets                                |
+| ------------- | -------- | ------- | ------------------------------------------- |
+| `template`    | yes      |         | the expression, with the formals in it      |
+| `args`        | no       | `[]`    | the positional formals, in call order       |
+| `kwargs`      | no       | `[]`    | the keyword formals, sorted by name at load |
+| `description` | no       | `null`  | free text                                   |
 
 A template contains arithmetic, and no comparison and no `cases:` entry. An
 argument may itself use macros and named expressions.

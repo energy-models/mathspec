@@ -199,10 +199,12 @@ def test_expansion_is_idempotent():
         pytest.param(['generator', 'snapshot'], id='generator-first'),
     ],
 )
-def test_the_emitted_foreach_follows_the_dims_the_block_writes(dims):
-    """The weights are over ``dims:`` as written, then the breakpoint dim, whatever order the dimensions are declared in."""
+def test_the_emitted_frame_is_sorted_by_name_whatever_order_dims_writes(dims):
+    """The weights are over ``dims:`` sorted by name, then the breakpoint dim, whatever order the file writes."""
     spec = spec_of(TWO_DIM, **{'piecewise.cost_curve.dims': dims})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == [*dims, 'bp']
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ('bp', 'generator', 'snapshot'), (
+        'the frame and the breakpoint dimension, sorted by name'
+    )
 
 
 @pytest.mark.parametrize(
@@ -641,12 +643,12 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     program = expanded(LP_MASKED, 'piecewise').program
 
     assert list(program.assumptions) == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
+        'cost_curve_complete',
         'cost_curve_contiguous',
-    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it'
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it, sorted by name'
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )
@@ -918,20 +920,20 @@ POWER_ONLY = {
 def test_a_block_builds_one_curve_per_coordinate_of_its_dims():
     """The curve is per generator, though one of its links is per flow."""
     expanded = expand_piecewise(spec_of(WALKED))
-    assert expanded.variables['coupling_lam'].dims == ['generator', 'snapshot', 'bp']
-    assert expanded.constraints['coupling_convexity'].dims == ['generator', 'snapshot']
+    assert expanded.variables['coupling_lam'].dims == ('bp', 'generator', 'snapshot')
+    assert expanded.constraints['coupling_convexity'].dims == ('generator', 'snapshot')
 
 
 def test_a_walked_link_emits_one_row_per_fine_coordinate():
     """The link reads the curve's weights through the relation, so a generator's flows share one curve."""
     link = expand_piecewise(spec_of(WALKED)).constraints['coupling_power']
-    assert link.dims == ['flow', 'snapshot'], 'dims: with the dim the lookup reads replaced by the one it adds'
+    assert link.dims == ('flow', 'snapshot'), 'dims: with the dim the lookup reads replaced by the one it adds'
     assert link.expression == '(power) == sum(at(coupling_lam, by=generator_of[generator]) * bp_power, over=bp)'
 
 
 def test_a_link_that_walks_nothing_stays_on_the_blocks_dims():
     link = expand_piecewise(spec_of(WALKED)).constraints['coupling_fuel']
-    assert link.dims == ['generator', 'snapshot']
+    assert link.dims == ('generator', 'snapshot')
     assert link.expression == '(fuel) == sum(coupling_lam * bp_fuel, over=bp)'
 
 
@@ -1228,7 +1230,7 @@ def test_a_gate_over_fewer_dims_than_the_block_switches_each_curve_it_covers():
         )
     )
     assert expanded.constraints['cost_curve_convexity'].expression == 'sum(cost_curve_lam, over=bp) == (u)'
-    assert expanded.variables['cost_curve_lam'].dims == ['snapshot', 'generator', 'bp']
+    assert expanded.variables['cost_curve_lam'].dims == ('bp', 'generator', 'snapshot')
 
 
 #: The status binary as the curve of each converter reads it.
@@ -1363,7 +1365,7 @@ def test_a_gate_read_through_a_relation_is_ungated_only_where_its_read_may_be_ab
 
 def test_a_gate_read_through_a_relation_prints_as_the_read():
     printed = typeset_line(spec_of(COMMITTED), 'curve', 'latex')
-    assert r'\mathit{running}_{\mathrm{pw\_status\_of}(c),t}' in printed, 'the gate is read at each converter'
+    assert r'\mathit{running}_{t,\mathrm{pw\_status\_of}(c)}' in printed, 'the gate is read at each converter'
     assert r'\text{otherwise}' in printed, 'and a converter the relation does not map is ungated'
 
 
@@ -1631,7 +1633,7 @@ def test_a_walked_links_breakpoints_are_asked_only_at_the_rows_it_reads_the_curv
     assumptions = spec_of(model).expand('piecewise').program.assumptions
     walked = assumptions['coupling_power_complete']
     assert walked.holds.names_read == frozenset({'bp_power'}), 'the walked link asks for its own values alone'
-    assert walked.where is not None and walked.where.dims == frozenset({'flow'}), 'asked per flow the walk reaches'
+    assert walked.where is not None and walked.where.dims == ('flow',), 'asked per flow the walk reaches'
     assert walked.where.names_read == frozenset(read), 'the where reads the mask, if any, and the relation'
     assert assumptions['coupling_complete'].holds.names_read == frozenset({'bp_fuel'}), (
         'the link on dims: keeps the block condition to itself'
@@ -1667,8 +1669,8 @@ def test_one_walked_link_is_a_curve_because_the_relation_gives_it_its_arity():
     second link otherwise would.
     """
     expanded = expand_piecewise(spec_of(WALKED, **POWER_ONLY))
-    assert expanded.constraints['coupling_convexity'].dims == ['generator', 'snapshot'], 'one curve per generator'
-    assert expanded.constraints['coupling_power'].dims == ['flow', 'snapshot'], 'one row per flow, sharing it'
+    assert expanded.constraints['coupling_convexity'].dims == ('generator', 'snapshot'), 'one curve per generator'
+    assert expanded.constraints['coupling_power'].dims == ('flow', 'snapshot'), 'one row per flow, sharing it'
     assert 'coupling_fuel' not in expanded.constraints, 'no row for a link the block does not declare'
 
 
@@ -1749,8 +1751,8 @@ def test_a_period_the_curve_and_its_links_both_carry_loads():
             },
         )
     )
-    assert expanded.variables['coupling_lam'].dims == ['generator', 'snapshot', 'period', 'bp']
-    assert expanded.constraints['coupling_power'].dims == ['flow', 'snapshot', 'period']
+    assert expanded.variables['coupling_lam'].dims == ('bp', 'generator', 'period', 'snapshot')
+    assert expanded.constraints['coupling_power'].dims == ('flow', 'period', 'snapshot')
 
 
 #: Three quantities on one curve, two of them bounded rather than pinned.
@@ -1885,7 +1887,8 @@ def test_an_incremental_link_is_its_first_breakpoint_plus_each_filled_segment(ro
     through its relation.
     """
     rows = expand_piecewise(spec_of(INCREMENTAL)).constraints
-    assert (rows[row].dims[-1], rows[row].where, rows[row].expression) == ('bp', where, expression)
+    assert 'bp' in rows[row].dims, 'one row per breakpoint'
+    assert (rows[row].where, rows[row].expression) == (where, expression)
 
 
 @pytest.mark.parametrize(

@@ -93,44 +93,44 @@ The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not 
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
 | $`\mathcal{B}`$ | index $`b`$ — `bp` — breakpoints of the cost curve |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$ — breakpoint dispatch levels, one curve per generator |
+| $`\mathrm{y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$ — cost at each breakpoint, one curve per generator |
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — maximum dispatch |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
-| $`\mathrm{x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{B}`$ — breakpoint dispatch levels, one curve per generator |
-| $`\mathrm{y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{B}`$ — cost at each breakpoint, one curve per generator |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — dispatched power |
-| $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{T} \times \mathcal{G}`$ — operating cost, piecewise-linear in dispatch |
+| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{T}`$ — dispatched power |
+| $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ — operating cost, piecewise-linear in dispatch |
 
 #### Variable domains
 
 **`dispatch`**
 
 ```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`op_cost`**
 
 ```math
-\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Objective
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{op\_cost}_{t,g}
+\min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{op\_cost}_{g,t}
 ```
 
 #### Subject to
@@ -138,13 +138,13 @@ The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not 
 **`balance`**
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`cost_curve`**
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{g,t},\ \mathit{op\_cost}_{g,t} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b,g},\ \mathrm{y}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions
@@ -152,6 +152,6 @@ The same least-cost dispatch as `piecewise.yaml`, with a cost curve that is not 
 **`cost_curve_complete`**
 
 ```math
-\mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
+\mathrm{x}_{b,g} \text{ is defined} \wedge \mathrm{y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 <!-- gallery:end -->

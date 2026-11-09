@@ -75,7 +75,9 @@ def test_the_loader_yields_plain_types(tmp_path):
 
     spec = to_spec(raw)
     assert all(type(name) is str for name in spec.dimensions), 'an entry is keyed by a plain str'
-    assert type(spec.variables['p'].dims) is list
+    assert type(spec.variables['p'].dims) is tuple, (
+        'a list in the file is a tuple once loaded, so nothing appends to it'
+    )
     assert all(type(d) is str for d in spec.variables['p'].dims)
 
 

@@ -96,25 +96,25 @@ The same least-cost dispatch as `piecewise.yaml`, with each generator's cost cur
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
 | $`\mathcal{B}`$ | index $`b`$ — `bp` — breakpoints of the cost curve |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` — dispatchable units |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$ — breakpoint dispatch levels, one curve per generator |
+| $`\mathrm{y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$ — cost at each breakpoint, one curve per generator |
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — maximum dispatch |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
-| $`\mathrm{x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{B}`$ — breakpoint dispatch levels, one curve per generator |
-| $`\mathrm{y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{B}`$ — cost at each breakpoint, one curve per generator |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — dispatched power |
-| $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{T} \times \mathcal{G}`$ — operating cost, held above every segment of the generator's curve |
+| $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{G} \times \mathcal{T}`$ — dispatched power |
+| $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ — operating cost, held above every segment of the generator's curve |
 
 #### Notation
 
@@ -129,19 +129,19 @@ The same least-cost dispatch as `piecewise.yaml`, with each generator's cost cur
 **`dispatch`**
 
 ```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le \mathit{dispatch}_{g,t} \le \mathrm{capacity}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 **`op_cost`**
 
 ```math
-\mathit{op\_cost}_{t,g} \ge 0 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{g,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Objective
 
 ```math
-\min \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{op\_cost}_{t,g}
+\min \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{op\_cost}_{g,t}
 ```
 
 #### Subject to
@@ -149,13 +149,13 @@ The same least-cost dispatch as `piecewise.yaml`, with each generator's cost cur
 **`balance`**
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`cost_curve`**
 
 ```math
-\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{g,t} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b,g},\ \mathrm{y}_{b,g})(\mathit{dispatch}_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Assumptions
@@ -163,24 +163,24 @@ The same least-cost dispatch as `piecewise.yaml`, with each generator's cost cur
 **`cost_curve_complete`**
 
 ```math
-\mathrm{x}_{g,b} \text{ is defined} \wedge \mathrm{y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
+\mathrm{x}_{b,g} \text{ is defined} \wedge \mathrm{y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 **`cost_curve_increasing`**
 
 ```math
-\mathrm{x}_{g,b \boxminus_{0} 1} < \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
+\mathrm{x}_{b \boxminus_{0} 1,g} < \mathrm{x}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0
 ```
 
 **`cost_curve_curvature`**
 
 ```math
-\left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathrm{x}_{g,b \boxplus_{0} 1} - \mathrm{x}_{g,b} \right) \le \left( \mathrm{y}_{g,b \boxplus_{0} 1} - \mathrm{y}_{g,b} \right) \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1
+\left( \mathrm{y}_{b,g} - \mathrm{y}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{x}_{b \boxplus_{0} 1,g} - \mathrm{x}_{b,g} \right) \le \left( \mathrm{y}_{b \boxplus_{0} 1,g} - \mathrm{y}_{b,g} \right) \cdot \left( \mathrm{x}_{b,g} - \mathrm{x}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1
 ```
 
 **`cost_curve_breakpoints`**
 
 ```math
-\lvert \{ b \in \mathcal{B} \,:\, \mathrm{x}_{g,b} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
 ```
 <!-- gallery:end -->
