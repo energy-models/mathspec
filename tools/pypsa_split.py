@@ -20,7 +20,10 @@ reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
 `total_cost` also sets the objective. A named condition goes to the topic its
 name names, as any entry does, and a fragment that reads another topic's
-named condition reads it under `given: conditions:`.
+named condition reads it under `given: conditions:`. A `piecewise:` entry
+reads its gate and its breakpoints only where it declares them, so a gated
+curve, every curve over the same breakpoints, and the breakpoint parameters
+go to the topic of the gate variable.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -42,6 +45,7 @@ import yaml
 
 from mathspec import merge, to_spec
 from mathspec._canonical import canonical_yaml
+from mathspec._piecewise import gate_of
 from mathspec.errors import LanguageError
 
 if TYPE_CHECKING:
@@ -55,6 +59,7 @@ SECTIONS = (
     'variables',
     'expressions',
     'conditions',
+    'piecewise',
     'constraints',
     'assumptions',
 )
@@ -194,6 +199,11 @@ def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
     return set()
 
 
+def _breakpoints(curve: Mapping[str, Any]) -> list[str]:
+    """The values parameter of each link of a `piecewise:` entry, in either form a link is written in."""
+    return [link['values'] if isinstance(link, dict) else link[1] for link in curve['links'].values()]
+
+
 def _entry(entry: object) -> dict[str, Any]:
     """A named expression as a mapping, however the file wrote it."""
     return dict(entry) if isinstance(entry, dict) else {'expression': entry}
@@ -206,7 +216,9 @@ class Model:
         text = path.read_text()
         self.data: dict[str, Any] = yaml.safe_load(text)
         self.entries = _sliced(text)
-        self.kind = {n: s for s in SECTIONS if s not in ('constraints', 'assumptions') for n in self.data.get(s, {})}
+        self.kind = {
+            n: s for s in SECTIONS if s not in ('piecewise', 'constraints', 'assumptions') for n in self.data.get(s, {})
+        }
         #: hub -> the topic of each term -> the term, in the order the topics sort in.
         self.shares: dict[str, dict[str, str]] = {}
         for hub in HUBS:
@@ -216,6 +228,15 @@ class Model:
             self.shares[hub] = dict(sorted(by_topic.items()))
         #: term -> the hub it adds to.
         self.terms = {term: hub for hub, by_topic in self.shares.items() for term in by_topic.values()}
+        curves = {name: _breakpoints(entry) for name, entry in self.data.get('piecewise', {}).items()}
+        gated = {
+            values: topic(gate_of(entry['activity']) or name)
+            for name, entry in self.data.get('piecewise', {}).items()
+            if 'activity' in entry
+            for values in curves[name]
+        }
+        #: a curve or breakpoint parameter -> the topic of the gate of a curve over those breakpoints.
+        self.with_gate = gated | {name: gated[v] for name, values in curves.items() for v in values if v in gated}
         frames = self.frames()
         self.sums = {
             hub: {'dims': list(frames[hub]), 'description': _entry(self.data['expressions'][hub]).get('description')}
@@ -246,6 +267,10 @@ class Model:
             **{name: m.dims for name, m in program.conditions.items()},
         }
 
+    def topic_of(self, key: Key) -> str:
+        """The fragment the entry *key* goes to: a curve and its breakpoints go with the gate of any curve over them."""
+        return self.with_gate.get(key[1]) or topic(key[1])
+
     def home(self, name: str) -> str:
         """The fragment that reads the hub *name* without adding to it, and carries its description."""
         return SUM_HOME.get(name, 'settings')
@@ -262,7 +287,7 @@ def fragments(model: Model) -> dict[str, str]:
     owned: dict[str, set[Key]] = collections.defaultdict(set)
     for key in model.keys:
         if key[0] not in FRAME and not (key[0] == 'expressions' and (key[1] in HUBS or key[1] in model.terms)):
-            owned[topic(key[1])].add(key)
+            owned[model.topic_of(key)].add(key)
     for by_topic in model.shares.values():
         for name, term in by_topic.items():
             owned[name].add(('expressions', term))

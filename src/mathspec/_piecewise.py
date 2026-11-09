@@ -448,9 +448,9 @@ def leaves_ungated(gate: VariableSpec | Variable, relation: Relation | None = No
 def gate_of(text: str) -> str | None:
     """The variable an ``activity:`` names, or ``None`` where it is neither a bare name nor ``at(<name>, by=...)``.
 
-    The weights sum to the gate, so it is a binary as written, or read
-    through a relation as ``at`` reads it. What the ``by=`` names is
-    resolution's to refuse, with the refusals ``at`` gives.
+    The gate is a variable as written, or one read through a relation as
+    ``at`` reads it. What the ``by=`` names is resolution's to refuse, with
+    the refusals ``at`` gives.
     """
     try:
         node = parse_expression(text)
