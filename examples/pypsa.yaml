@@ -121,7 +121,7 @@ parameters:
       the running cost at each breakpoint of a generator's piecewise
       `marginal_cost` curve: zero at the first, then each segment's width in
       output times the `marginal_cost` at its upper breakpoint, summed, data
-      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:272-282`)
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
     dims: [generator, breakpoint]
     missing: absent
   Generator_marginal_cost_quadratic:
@@ -2829,7 +2829,7 @@ expressions:
       what a generator's output costs in a snapshot: the value read off its
       piecewise curve where it has one, and its linear `marginal_cost`
       otherwise. A curve replaces the linear cost, as PyPSA drops the unit
-      from that term (`optimize.py:305-334`)
+      from that term (`optimize.py:333-348`)
     dims: [scenario, snapshot, generator]
     cases:
       curve: { when: Generator_marginal_cost_curve, expression: Generator_marginal_cost_piecewise }
@@ -3059,7 +3059,8 @@ conditions:
   Generator_marginal_cost_curve:
     description: >-
       a generator that pays along a piecewise `marginal_cost` curve: one of
-      PyPSA's `active_assets` with curve data (`optimize.py:305`)
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
     condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
   Generator_marginal_cost_curve_bends_down:
     description: >-
@@ -3077,7 +3078,10 @@ conditions:
     description: >-
       linopy's choice of method for all generator cost curves at once
       (`method="auto"`): the segment lines where every curve is convex and no
-      generator with a curve is committable, the incremental rows otherwise
+      generator with a curve is committable, the incremental rows otherwise.
+      PyPSA gates the curves by `Generator-status` where one is committable,
+      and linopy states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
     condition: >-
       count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
       AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
@@ -4906,8 +4910,9 @@ assumptions:
     where: "Generator_marginal_cost_curve"
     description: >-
       a generator's cost curve is given per unit of a fixed, positive, finite
-      `p_nom`, which scales it to output. PyPSA refuses another
-      (`piecewise.py:250-271`)
+      `p_nom`, which scales it to output. PyPSA refuses an extendable unit and
+      a zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes
+      a negative one, which the file does not state
   Generator_big_m_where_committed_and_extendable:
     holds: "Generator_big_m"
     where: "Generator_com_ext"
