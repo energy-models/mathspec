@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A piecewise-linear cost curve stated as a special-ordered set, so the solver
-  is handed the adjacency restriction rather than binaries that encode it.
+  A piecewise-linear cost curve whose weights form a special ordered set, so
+  the solver handles the adjacency restriction itself, without binaries.
 
 dimensions:
   snapshot:
@@ -51,10 +51,11 @@ piecewise:
       cost read off the generator's curve, with at most two adjacent weights
       non-zero — the restriction the default method builds out of binaries,
       declared as a set instead
-    over: bp
+    along: bp
+    dims: [snapshot, generator]
     links:
-      - [dispatch, bp_x]
-      - [op_cost, bp_y]
+      dispatch: [dispatch, bp_x]
+      op_cost: [op_cost, bp_y]
     method: sos2
 
 constraints:

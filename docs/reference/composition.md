@@ -129,31 +129,29 @@ print(spec.to_yaml())
 ```text
 version: 0
 dimensions:
-  snapshot: {dtype: int}
   bus: {dtype: str}
   generator: {dtype: str}
   load: {dtype: str}
+  snapshot: {dtype: int}
 relations:
   Generator_bus: {key: generator, values: bus}
   Load_bus: {key: load, values: bus}
 parameters:
-  Generator_p_nom: {dims: [generator], dtype: float}
-  Generator_marginal_cost: {dims: [generator], dtype: float}
-  Load_p_set: {dims: [snapshot, load], dtype: float}
+  Generator_marginal_cost: {dims: [generator]}
+  Generator_p_nom: {dims: [generator]}
+  Load_p_set: {dims: [load, snapshot]}
 variables:
   Generator_p:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     bounds: {lower: 0.0, upper: Generator_p_nom}
-    domain: continuous
-    missing: absent
 expressions:
-  Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
-  Generator_cost: sum(Generator_p * Generator_marginal_cost)
-  Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
   Bus_injection:
-    dims: [snapshot, bus]
+    dims: [bus, snapshot]
     expression: Generator_injection + Load_injection
     description: what the components put into a bus
+  Generator_cost: sum(Generator_p * Generator_marginal_cost)
+  Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
+  Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
   total_cost:
     dims: []
     expression: Generator_cost
@@ -161,7 +159,7 @@ expressions:
 objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_balance:
-    dims: [snapshot, bus]
+    dims: [bus, snapshot]
     expression: Bus_injection == 0
 ```
 
@@ -383,30 +381,28 @@ print(spec.to_yaml())
 ```text
 version: 0
 dimensions:
-  snapshot: {dtype: int}
   generator: {dtype: str}
+  snapshot: {dtype: int}
 parameters:
-  capacity: {dims: [generator], dtype: float}
-  cost: {dims: [generator], dtype: float}
-  load: {dims: [snapshot], dtype: float}
-  emission_rate: {dims: [generator], dtype: float}
+  capacity: {dims: [generator]}
+  cost: {dims: [generator]}
+  emission_rate: {dims: [generator]}
+  load: {dims: [snapshot]}
 variables:
   dispatch:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     where: capacity > 0
     bounds: {lower: 0.0, upper: capacity}
-    domain: continuous
-    missing: absent
 objective:
   sense: minimize
   expression: sum(dispatch * cost)
 constraints:
-  power_balance:
-    dims: [snapshot]
-    expression: sum(dispatch, over=generator) == load
   emission_cap:
     dims: []
     expression: sum(dispatch * emission_rate) <= 1000
+  power_balance:
+    dims: [snapshot]
+    expression: sum(dispatch, over=generator) == load
 ```
 
 <figure class="diagram">
@@ -435,6 +431,7 @@ patched `dispatch` has no row at `old`.
 | a named expression as a [bare string](language/named.md#expressions) | replaces only its body, `expression:` or `cases:`, and keeps its `dims:`, description and `adds_to:`, so the new body may have no dimension outside those `dims:`              |
 | `null` on an entry, a field or a section                             | applies the rule in [`null` in a patch](#null-in-a-patch)                                                                                                                      |
 | a dimension or a relation                                            | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
+| `description:` on a dimension or a relation of the base              | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
 | `ordered:` on a restated dimension                                   | makes the dimension ordered for `true`, and refuses `false` over an ordered dimension                                                                                          |
 | `missing:` on a relation, alone or with other fields                 | changes whether every key combination needs a row, as on a parameter                                                                                                           |
 | an entry under one kind of `given:`                                  | edits, adds or removes it like any entry, and keeps the other kinds                                                                                                            |
@@ -486,7 +483,7 @@ constraints:
 `merge` refuses `emissions.yaml` because the two domains differ:
 
 ```text
-fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['snapshot', 'generator'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}, 'domain': 'continuous', 'missing': 'absent'}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
+fragment 'emissions.yaml' reads the given variable 'Generator_p' as {'dims': ['generator', 'snapshot'], 'domain': 'binary'}, where 'generator.yaml' introduces it as {'dims': ['generator', 'snapshot'], 'bounds': {'lower': 0.0, 'upper': 'Generator_p_nom'}}. Restate the dims as 'generator.yaml' declares them, or leave the field out.
 ```
 
 ### A fragment that does not load alone
@@ -514,12 +511,17 @@ patch 'project.yaml' edits the constraint 'power_balnce', which its base does no
 
 ### A dimension restated differently
 
+Over a dimension or a relation that its base declares, a patch may change
+only `description`, a dimension's `ordered` and a relation's `missing`. A patch
+that writes any other field restates the entry. Every other field must then be
+as the base declares it, and a field the patch leaves out equals its default.
+
 Here `relabelled.yaml` writes `snapshot: {dtype: str}` over a base that
 declares `snapshot: {dtype: int}`. `override` refuses the patch because the
 two `dtype` values differ:
 
 ```text
-patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch adjusts the math, not the coordinate space the math is already written over: each field but `ordered` has to read as the base reads it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
+patch 'relabelled.yaml' declares the dimension 'snapshot' as {'dtype': 'str'}, where its base declares {'dtype': 'int'}. A patch may change only `description` and `ordered` of a dimension its base declares, because the math in the base is already written over it. Every other field must be as the base declares it, and a field the patch leaves out reads as its default. Restate the dimension as its base declares it, leave it out, or give the patch a dimension of its own under a name of its own.
 ```
 
 ### `ordered: false` over an ordered dimension

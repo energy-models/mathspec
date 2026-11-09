@@ -7,13 +7,13 @@ given:
     scenario_weight: { dims: [scenario] }
     transmission_losses: { dims: [], dtype: bool }
   expressions:
-    transmission_volume_expansion: { dims: [scenario, global_constraint] }
-    transmission_expansion_cost: { dims: [scenario, global_constraint] }
+    transmission_volume_expansion: { dims: [global_constraint, scenario] }
+    transmission_expansion_cost: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
-    Cycle_angle_sum: { dims: [scenario, snapshot, cycle] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
+    Cycle_angle_sum: { dims: [cycle, scenario, snapshot] }
 
 dimensions:
   scenario:

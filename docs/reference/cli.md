@@ -233,17 +233,17 @@ Here the base prints without its legend:
 ```text
 \paragraph{Variable domains}
 \begin{align}
-\text{dispatch} && 0 \le \mathit{dispatch}_{t,g} & \le \mathrm{capacity}_{g} && \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\text{dispatch} && 0 \le \mathit{dispatch}_{g,t} & \le \mathrm{capacity}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 \end{align}
 
 \paragraph{Objective}
 \begin{align}
- && \min & \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} \mathit{dispatch}_{t,g} \cdot \mathrm{cost}_{g}
+ && \min & \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
 \end{align}
 
 \paragraph{Subject to}
 \begin{align}
-\text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} & = \mathrm{load}_{t} && \forall\, t \in \mathcal{T}
+\text{power\_balance} && \sum_{g \in \mathcal{G}} \mathit{dispatch}_{g,t} & = \mathrm{load}_{t} && \forall\, t \in \mathcal{T}
 \end{align}
 ```
 

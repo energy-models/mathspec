@@ -1,0 +1,55 @@
+dimensions:
+  bp: { dtype: int, ordered: true }
+
+parameters:
+  x_bp: { dims: [bp] }
+  y_bp: { dims: [bp] }
+
+variables:
+  x: { dims: [], bounds: { lower: 0 } }
+  y: { dims: [], bounds: { lower: 0 } }
+  running: { dims: [], domain: binary }
+  curve_delta:
+    dims: [bp]
+    where: position(bp) != -1
+    bounds: { lower: 0, upper: 1 }
+    description: the filled fraction of a segment
+  curve_order:
+    dims: [bp]
+    where: position(bp) != -1
+    domain: binary
+    description: 1 where a segment may be filled, which the one before it must be first
+
+constraints:
+  curve_delta_bound:
+    dims: [bp]
+    expression: curve_delta <= curve_order
+  curve_fill_order:
+    dims: [bp]
+    expression: curve_delta <= shift(curve_delta, along=bp, offset=1)
+  curve_binary_order:
+    dims: [bp]
+    expression: curve_order <= shift(curve_delta, along=bp, offset=1)
+  curve_active_bound:
+    dims: [bp]
+    expression: curve_delta <= running
+  curve_x:
+    dims: [bp]
+    where: position(bp) == 0
+    expression: >-
+      (x) == x_bp * (running) + sum(curve_delta * (shift(x_bp, along=bp,
+      offset=-1, edge=0) - x_bp), over=bp)
+  curve_y:
+    dims: [bp]
+    where: position(bp) == 0
+    expression: >-
+      (y) == y_bp * (running) + sum(curve_delta * (shift(y_bp, along=bp,
+      offset=-1, edge=0) - y_bp), over=bp)
+
+assumptions:
+  curve_complete:
+    holds: x_bp AND y_bp
+    description: >-
+      piecewise 'curve': every breakpoint the curve runs through needs a row in
+      'x_bp', 'y_bp'. A missing row does not shorten the curve. Attach the rows,
+      or declare a where: that sets how far the curve runs.

@@ -11,11 +11,13 @@ methods exist, and which gates an entry will accept.
 
 from __future__ import annotations
 
+import re
 from typing import get_args
 
 import pytest
 
-from mathspec._piecewise import expand_piecewise
+from mathspec import to_spec, typeset_line
+from mathspec._piecewise import Emitted, assumptions_of, expand_piecewise
 from mathspec.errors import LanguageError, SchemaError
 from mathspec.program import Assumption, VariableReference, assumption_message
 from mathspec.spec import Curvature
@@ -43,10 +45,11 @@ variables:
 
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: [snapshot]
     links:
-      - [p, bp_x]
-      - [op_cost, bp_y]
+      p: [p, bp_x]
+      op_cost: [op_cost, bp_y]
 
 constraints:
   balance:
@@ -66,19 +69,20 @@ LP = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'piecewise.cost_curve.method': 'lp',
-        'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']],
+        'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']},
         'variables.running': {'dims': ['snapshot'], 'domain': 'binary'},
     },
 )
-#: The values tables of a curve under ``points:``, which stop where the curve stops.
+#: The values tables of a curve under a ragged ``where:``, which stop where the curve stops.
 RAGGED = {'parameters.bp_x.missing': 0, 'parameters.bp_y.missing': 0}
 #: The ``lp`` curve masked by one of its own values-parameters, so every check an entry can carry is on it.
-LP_MASKED = varied(LP, **RAGGED, **{'piecewise.cost_curve.points': 'bp_x'})
+LP_MASKED = varied(LP, **RAGGED, **{'piecewise.cost_curve.where': 'bp_x'})
 #: Two dims in the frame, so the emitted ``dims`` has an order to get wrong.
 TWO_DIM = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'dimensions.generator': {'dtype': 'str'},
+        'piecewise.cost_curve.dims': ['snapshot', 'generator'],
         'parameters.bp_x.dims': ['generator', 'bp'],
         'parameters.bp_y.dims': ['generator', 'bp'],
         'variables.p.dims': ['snapshot', 'generator'],
@@ -139,7 +143,7 @@ def test_a_written_name_is_refused_once_the_rest_of_the_file_lowers():
         spec_of(NONCONVEX_YAML, **clash)
 
 
-@pytest.mark.parametrize('method', [pytest.param('incremental', id='unknown'), pytest.param(['sos2'], id='a list')])
+@pytest.mark.parametrize('method', [pytest.param('disjunctive', id='unknown'), pytest.param(['sos2'], id='a list')])
 def test_a_method_this_project_does_not_have_is_refused(method):
     """A list used to escape the membership test as a `TypeError`."""
     with pytest.raises(SchemaError, match='unknown piecewise method'):
@@ -189,19 +193,17 @@ def test_expansion_is_idempotent():
 
 
 @pytest.mark.parametrize(
-    'order',
+    'dims',
     [
-        pytest.param(['snapshot', 'generator', 'bp'], id='snapshot-first'),
-        pytest.param(['generator', 'snapshot', 'bp'], id='generator-first'),
+        pytest.param(['snapshot', 'generator'], id='snapshot-first'),
+        pytest.param(['generator', 'snapshot'], id='generator-first'),
     ],
 )
-def test_the_emitted_frame_is_sorted_by_name_whatever_order_the_file_declares(order):
-    """The frame is a set until something orders it, and a set iterates the
-    same way for the same names within one process — so a run that reads the
-    set rather than sorting it fails one of the two orderings."""
-    spec = spec_of(TWO_DIM, dimensions={d: TWO_DIM['dimensions'][d] for d in order})
-    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ['generator', 'snapshot', 'bp'], (
-        'the frame sorted by name, then the breakpoint dimension'
+def test_the_emitted_frame_is_sorted_by_name_whatever_order_dims_writes(dims):
+    """The weights are over ``dims:`` sorted by name, then the breakpoint dim, whatever order the file writes."""
+    spec = spec_of(TWO_DIM, **{'piecewise.cost_curve.dims': dims})
+    assert expand_piecewise(spec).variables['cost_curve_lam'].dims == ('bp', 'generator', 'snapshot'), (
+        'the frame and the breakpoint dimension, sorted by name'
     )
 
 
@@ -220,9 +222,9 @@ def test_any_affine_expression_is_a_legal_link(link):
         NONCONVEX_YAML,
         macros={'twice': {'args': ['x'], 'template': 'x * 2'}},
         expressions={'doubled': 'p * 2'},
-        **{'piecewise.cost_curve.links': [[link, 'bp_x'], ['op_cost', 'bp_y']]},
+        **{'piecewise.cost_curve.links': {'x': [link, 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}},
     )
-    assert expand_piecewise(spec).constraints['cost_curve_link0'].expression.startswith(f'({link}) ==')
+    assert expand_piecewise(spec).constraints['cost_curve_x'].expression.startswith(f'({link}) ==')
 
 
 @pytest.mark.parametrize(
@@ -230,25 +232,19 @@ def test_any_affine_expression_is_a_legal_link(link):
     [
         pytest.param(
             NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p', 'bp_x', '<='], ['op_cost', 'bp_y', '>=']]},
-            'only one link may carry',
-            id='at-most-one-link',
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x', '<='], 'op_cost': ['op_cost', 'bp_y', '>=']}},
+            'nothing pins the point the curve is read at',
+            id='every-link-bounded',
         ),
         pytest.param(
             NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p', 'bp_x']]},
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x']}},
             'at least two links',
             id='a-single-link',
         ),
         pytest.param(
             NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>='], ['p', 'bp_x']]},
-            "a '<=' or '>=' sign needs exactly two links",
-            id='a-bound-link-among-three',
-        ),
-        pytest.param(
-            NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=', 'extra']]},
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=', 'extra']}},
             r'each link is \[expression, values\] or \[expression, values, sign\]',
             id='a-link-of-four-elements',
         ),
@@ -256,7 +252,7 @@ def test_any_affine_expression_is_a_legal_link(link):
             NONCONVEX_YAML,
             {
                 'piecewise.cost_curve.method': 'convex',
-                'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y'], ['p', 'bp_x']],
+                'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y'], 'p2': ['p', 'bp_x']},
             },
             'exactly two links',
             id='convex-needs-exactly-two-links',
@@ -275,27 +271,21 @@ def test_any_affine_expression_is_a_legal_link(link):
         ),
         pytest.param(
             NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'nope']]},
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'nope']}},
             "undeclared parameter 'nope'",
             id='undeclared-parameter',
         ),
         pytest.param(
-            NONCONVEX_YAML,
-            {'parameters.reach': {'dims': ['bp']}, 'piecewise.cost_curve.points': 'reach'},
-            "points parameter 'reach' is float. Declare it dtype: bool.",
-            id='points-that-are-not-a-mask',
-        ),
-        pytest.param(
             LP,
-            {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}},
             "needs exactly one link with a '<=' or '>=' sign",
             id='lp-with-both-links-pinned',
         ),
         pytest.param(
             LP,
-            {'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y'], ['p', 'bp_x']]},
-            "needs exactly one link with a '<=' or '>=' sign",
-            id='lp-with-three-links-none-bounded',
+            {'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y'], 'p2': ['p', 'bp_x']}},
+            'takes exactly two links',
+            id='lp-with-three-links',
         ),
         pytest.param(
             LP,
@@ -306,49 +296,43 @@ def test_any_affine_expression_is_a_legal_link(link):
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.bp_x.dtype': 'bool'},
-            "link 0 values parameter 'bp_x' is declared dtype: bool, and a breakpoint is a number",
+            "link 'p': values parameter 'bp_x' is declared dtype: bool, and a breakpoint is a number",
             id='values-that-are-not-numbers',
         ),
         pytest.param(
             LP,
-            {'piecewise.cost_curve.links': [['load', 'bp_x'], ['op_cost', 'bp_y', '>=']]},
-            "link 0: method: lp bounds the domain with rows on 'load', which carries no variable",
+            {'piecewise.cost_curve.links': {'x': ['load', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}},
+            "link 'x': method: lp bounds the domain with rows on 'load', which carries no variable",
             id='lp-with-an-x-link-carrying-no-variable',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'parameters.bp_x.dims': []},
-            r"link 0 values parameter 'bp_x' has dims \[\], without 'bp'",
+            r"link 'p': values parameter 'bp_x' is over \[\], without 'bp'",
             id='a-breakpoint-parameter-without-the-breakpoint-dim',
         ),
         pytest.param(
             NONCONVEX_YAML,
-            {'piecewise.cost_curve.points': 'nope'},
-            "points references undeclared parameter 'nope'",
-            id='undeclared-points',
+            {'piecewise.cost_curve.where': 'nope'},
+            "piecewise 'cost_curve' where: 'nope' not found",
+            id='an-undeclared-name-in-the-where',
         ),
         pytest.param(
             NONCONVEX_YAML,
-            {'parameters.reach': {'dims': [], 'dtype': 'bool'}, 'piecewise.cost_curve.points': 'reach'},
-            r"points parameter 'reach' has dims \[\], without 'bp'",
-            id='points-without-the-breakpoint-dim',
-        ),
-        pytest.param(
-            NONCONVEX_YAML,
-            {'piecewise.cost_curve.links': [['p + bp_x', 'bp_x'], ['op_cost', 'bp_y']]},
-            "link 0 expression already carries the breakpoint dimension 'bp'",
-            id='a-link-carrying-the-breakpoint-dim',
+            {'piecewise.cost_curve.links': {'p': ['p + bp_x', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}},
+            "link 'p' expression is over the breakpoint dimension 'bp'",
+            id='a-link-over-the-breakpoint-dimension',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'variables.u': {'dims': ['snapshot', 'bp'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
-            "activity already carries the breakpoint dimension 'bp'",
-            id='a-gate-carrying-the-breakpoint-dim',
+            r"activity 'u' is over \['bp'\], which is not in dims: \['snapshot'\]",
+            id='a-gate-carrying-a-dim-the-block-does-not',
         ),
         pytest.param(
             NONCONVEX_YAML,
             {'dimensions.generator': {'dtype': 'str'}, 'parameters.bp_x.dims': ['generator', 'bp']},
-            r"values parameter 'bp_x' carries \['generator'\], which no link expression does",
+            r"link 'p' values parameter 'bp_x' is over \['generator'\], and its row",
             id='a-breakpoint-varying-along-a-dim-no-link-carries',
         ),
         pytest.param(
@@ -356,10 +340,16 @@ def test_any_affine_expression_is_a_legal_link(link):
             {
                 'dimensions.generator': {'dtype': 'str'},
                 'parameters.reach': {'dims': ['generator', 'bp'], 'dtype': 'bool'},
-                'piecewise.cost_curve.points': 'reach',
+                'piecewise.cost_curve.where': 'reach',
             },
-            r"points parameter 'reach' carries \['generator'\], which the links do not",
-            id='a-mask-adding-a-coordinate-the-curve-does-not-have',
+            r"where 'reach' tests \['generator'\], which is not in dims: \['snapshot'\]",
+            id='a-where-adding-a-coordinate-the-curve-does-not-have',
+        ),
+        pytest.param(
+            NONCONVEX_YAML,
+            {'piecewise.cost_curve.dims': ['snapshot', 'snapshot']},
+            r"dims repeats a dimension: \['snapshot', 'snapshot'\]",
+            id='dims-naming-a-dimension-twice',
         ),
     ],
 )
@@ -380,10 +370,13 @@ def test_a_malformed_entry_is_refused(model, patch, match):
     ],
 )
 def test_a_link_outside_the_language_is_named_where_the_user_wrote_it(link_expression, message):
-    """Lowering would catch these too, but naming ``cost_curve_link0`` — an entry the user never wrote."""
+    """Lowering would catch these too, but naming ``cost_curve_x`` — a declaration the user never wrote."""
     with pytest.raises(SchemaError, match=message) as exc:
-        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.links': [[link_expression, 'bp_x'], ['op_cost', 'bp_y']]})
-    assert "piecewise 'cost_curve' link 0" in str(exc.value)
+        spec_of(
+            NONCONVEX_YAML,
+            **{'piecewise.cost_curve.links': {'x': [link_expression, 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}},
+        )
+    assert "piecewise 'cost_curve' link 'x'" in str(exc.value)
 
 
 @pytest.mark.parametrize(
@@ -392,7 +385,7 @@ def test_a_link_outside_the_language_is_named_where_the_user_wrote_it(link_expre
         pytest.param(NONCONVEX_YAML, {'parameters.bp_x.dtype': 'str'}, id='a-label-as-a-breakpoint'),
         pytest.param(
             LP,
-            {'piecewise.cost_curve.links': [['load', 'bp_x'], ['op_cost', 'bp_y', '>=']]},
+            {'piecewise.cost_curve.links': {'x': ['load', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}},
             id='a-variable-free-x-link',
         ),
     ],
@@ -401,16 +394,24 @@ def test_an_entry_is_refused_on_the_link_the_file_wrote_and_not_on_a_row_it_woul
     """Both were refused only once written out, under `cost_curve_increasing` or `cost_curve_domain_lo` — rows the file never declared."""
     with pytest.raises(SchemaError) as exc:
         spec_of(model, **patch)
-    assert "piecewise 'cost_curve'" in str(exc.value) and 'link 0' in str(exc.value)
-    assert 'cost_curve_' not in str(exc.value), (
-        'the refusal names the piecewise entry, not an entry the expansion writes'
-    )
+    assert "piecewise 'cost_curve' link '" in str(exc.value)
+    assert 'cost_curve_' not in str(exc.value), 'the refusal names the block, not a declaration the expansion writes'
 
 
-def test_an_undeclared_breakpoint_dimension_is_refused_once():
-    """`over: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first."""
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'piecewise.cost_curve.along': 'nope'}, id='along'),
+        pytest.param({'piecewise.cost_curve.dims': ['snapshot', 'nope']}, id='dims'),
+    ],
+)
+def test_an_undeclared_dimension_is_refused_once(patch):
+    """`along: nope` also said, per link, that the values parameter must carry `nope` — lines that follow from the first.
+
+    Without its own check, `dims: [nope]` was refused as a link expression not over `['nope']`.
+    """
     with pytest.raises(SchemaError) as exc:
-        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.over': 'nope'})
+        spec_of(NONCONVEX_YAML, **patch)
     assert str(exc.value).splitlines() == [
         "piecewise 'cost_curve' references undeclared dimension 'nope'. Declare it under 'dimensions:'."
     ]
@@ -421,12 +422,15 @@ def test_a_link_reading_a_refused_entry_names_it_and_its_refusal_is_listed():
     with pytest.raises(SchemaError) as exc:
         spec_of(
             NONCONVEX_YAML,
-            **{'expressions': {'bad': 'nope'}, 'piecewise.cost_curve.links': [['bad', 'bp_x'], ['op_cost', 'bp_y']]},
+            **{
+                'expressions': {'bad': 'nope'},
+                'piecewise.cost_curve.links': {'p': ['bad', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+            },
         )
     message = str(exc.value)
     assert "Named expression 'bad': 'nope' not found" in message
     assert (
-        "piecewise 'cost_curve' link 0: named expression 'bad' does not load. Fix the error listed for 'bad' first."
+        "piecewise 'cost_curve' link 'p': named expression 'bad' does not load. Fix the error listed for 'bad' first."
         in message
     )
 
@@ -445,10 +449,10 @@ def test_a_link_reading_a_nonlinear_entry_is_refused():
             NONCONVEX_YAML,
             **{
                 'expressions': {'ratio': 'op_cost / sum(p, over=snapshot)'},
-                'piecewise.cost_curve.links': [['ratio', 'bp_x'], ['op_cost', 'bp_y']],
+                'piecewise.cost_curve.links': {'ratio': ['ratio', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
             },
         )
-    assert "piecewise 'cost_curve' link 0" in str(exc.value)
+    assert "piecewise 'cost_curve' link 'ratio'" in str(exc.value)
 
 
 def test_a_link_reading_a_degree_two_product_entry_is_refused():
@@ -464,17 +468,20 @@ def test_a_link_reading_a_degree_two_product_entry_is_refused():
             NONCONVEX_YAML,
             **{
                 'expressions': {'sq': 'p * op_cost'},
-                'piecewise.cost_curve.links': [['sq', 'bp_x'], ['op_cost', 'bp_y']],
+                'piecewise.cost_curve.links': {'sq': ['sq', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
             },
         )
-    assert "piecewise 'cost_curve' link 0" in str(exc.value)
+    assert "piecewise 'cost_curve' link 'sq'" in str(exc.value)
 
 
 def test_an_entry_a_link_reads_is_in_the_math():
     """A link's expression stands inside the constraints its expansion emits, so an entry it names is one the math reads."""
     spec = spec_of(
         NONCONVEX_YAML,
-        **{'expressions': {'twice': 'p * 2'}, 'piecewise.cost_curve.links': [['twice', 'bp_x'], ['op_cost', 'bp_y']]},
+        **{
+            'expressions': {'twice': 'p * 2'},
+            'piecewise.cost_curve.links': {'twice': ['twice', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+        },
     )
     assert spec.expand('piecewise').program.expressions['twice'].in_math is True
 
@@ -491,7 +498,7 @@ def test_a_link_reading_a_dual_entry_is_refused():
             NONCONVEX_YAML,
             **{
                 'expressions': {'price': 'dual(balance)'},
-                'piecewise.cost_curve.links': [['price', 'bp_x'], ['op_cost', 'bp_y']],
+                'piecewise.cost_curve.links': {'price': ['price', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
             },
         )
 
@@ -500,8 +507,10 @@ def test_a_link_reading_a_dual_entry_is_refused():
     ('activity', 'match'),
     [
         pytest.param('at(u_unit, by=unit_of[unit])', 'is not a declared variable', id='a-lookup-through-a-relation'),
-        pytest.param('shift(u, along=snapshot, offset=1)', 'is not a declared variable', id='a-shifted-gate'),
-        pytest.param('u * 2', 'is not a declared variable', id='an-arithmetic-gate'),
+        pytest.param(
+            'shift(u, along=snapshot, offset=1)', 'is neither a binary variable nor one read', id='a-shifted-gate'
+        ),
+        pytest.param('u * 2', 'is neither a binary variable nor one read', id='an-arithmetic-gate'),
     ],
 )
 def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
@@ -515,15 +524,19 @@ LP_CONCAVE = varied(
     raw_of(NONCONVEX_YAML),
     **{
         'piecewise.cost_curve.method': 'lp',
-        'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '<=']],
+        'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '<=']},
     },
 )
 #: Both links pinned, so nothing says which way the weights are pushed.
 CONVEX = varied(raw_of(NONCONVEX_YAML), **{'piecewise.cost_curve.method': 'convex'})
 #: The hull bounded below, which is the same relaxation ``lp`` states as its segment lines.
-CONVEX_BOUNDED = varied(CONVEX, **{'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']]})
+CONVEX_BOUNDED = varied(
+    CONVEX, **{'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}}
+)
 #: The hull bounded above, so the binding side is the upper one.
-CONVEX_BOUNDED_BELOW = varied(CONVEX, **{'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '<=']]})
+CONVEX_BOUNDED_BELOW = varied(
+    CONVEX, **{'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '<=']}}
+)
 
 
 #: Named so the completeness check below can read the answers back off them.
@@ -580,12 +593,12 @@ def test_a_masked_lp_curve_sits_its_rows_on_conditions_rather_than_on_parameters
 
 
 def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
-    """A ``points:`` naming a parameter the file declared is bound like any other, and the mask check names it."""
+    """A ``where:`` naming a parameter the file declared is bound like any other, and the mask check names it."""
     program = expanded(
         varied(
             LP,
             **RAGGED,
-            **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.points': 'reach'},
+            **{'parameters.reach': {'dims': ['bp'], 'dtype': 'bool'}, 'piecewise.cost_curve.where': 'reach'},
         ),
         'piecewise',
     ).program
@@ -608,16 +621,16 @@ def test_a_file_supplied_mask_is_what_the_contiguity_condition_reads():
 def test_a_gap_is_explained_by_the_rows_the_method_writes(method, reason):
     """Every method gave the ``lp`` reason, naming a chord row and domain rows that only ``lp`` writes."""
     links = (
-        [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']]
+        {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}
         if method in {'convex', 'lp'}
-        else [['p', 'bp_x'], ['op_cost', 'bp_y']]
+        else {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}
     )
     spec = spec_of(
         NONCONVEX_YAML,
         **RAGGED,
         **{
             'piecewise.cost_curve.method': method,
-            'piecewise.cost_curve.points': 'bp_x',
+            'piecewise.cost_curve.where': 'bp_x',
             'piecewise.cost_curve.links': links,
         },
     )
@@ -630,12 +643,12 @@ def test_an_entry_assumes_of_its_data_what_the_method_implies():
     program = expanded(LP_MASKED, 'piecewise').program
 
     assert list(program.assumptions) == [
-        'cost_curve_complete',
-        'cost_curve_increasing',
-        'cost_curve_curvature',
         'cost_curve_breakpoints',
+        'cost_curve_complete',
         'cost_curve_contiguous',
-    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it'
+        'cost_curve_curvature',
+        'cost_curve_increasing',
+    ], 'an lp curve with a mask assumes all five, each named after the entry that implies it, sorted by name'
     assert all(isinstance(a, Assumption) for a in program.assumptions.values()), (
         'a method states its conditions in the same language the file does, so a consumer has one kind to read'
     )
@@ -658,6 +671,28 @@ def test_a_curves_conditions_cannot_collide_with_a_written_assumption():
         expanded(varied(LP, assumptions={'cost_curve_increasing': 'bp_x > 0'}), 'piecewise')
 
 
+@pytest.mark.parametrize(
+    ('where', 'advice'),
+    [
+        pytest.param(None, 'declare a where: that sets how far the curve runs', id='no-where'),
+        pytest.param('curved', "test 'bp' in where: 'curved' too", id='a-where-over-dims'),
+        pytest.param('curved AND bp_power_on', "narrow where: 'curved AND bp_power_on'", id='a-ragged-where'),
+    ],
+)
+def test_a_missing_breakpoint_names_a_rewrite_the_block_can_take(where, advice):
+    """A block with a `where:` over `dims:` was told to declare `where:`, which it already had."""
+    model = varied(
+        WALKED,
+        **{
+            'parameters.curved': {'dims': ['generator'], 'dtype': 'bool'},
+            'parameters.bp_power_on': {'dims': ['generator', 'bp'], 'dtype': 'bool'},
+        },
+    )
+    assumptions = expand_piecewise(spec_of(model, **WALKED_RAGGED, **{'piecewise.coupling.where': where})).assumptions
+    for name in ('coupling_complete', 'coupling_power_complete'):
+        assert advice in assumptions[name].description, f'{name} names the rewrite for its own where'
+
+
 @pytest.mark.parametrize('suffix', ['increasing', 'curvature', 'breakpoints', 'contiguous'])
 def test_every_check_has_a_sentence(suffix):
     assumptions = expanded(LP_MASKED, 'piecewise').program.assumptions
@@ -668,3 +703,1361 @@ def test_every_check_has_a_sentence(suffix):
         'the refusal names the columns a consumer has to look at before it says why'
     )
     assert ": piecewise 'cost_curve':" in message, 'and trails the sentence the method implies'
+
+
+#: A curve only some members have: the frame is two dims, and the mask names one of them.
+MASKED = varied(
+    TWO_DIM,
+    **{
+        'parameters.has_curve': {'dims': ['generator'], 'dtype': 'bool'},
+        'piecewise.cost_curve.where': 'has_curve',
+    },
+)
+#: The same mask on the block that states its curve as segment lines, which emits no weights to inherit one.
+LP_WHERE = varied(
+    varied(LP, **{'parameters.has_curve': {'dims': ['bp'], 'dtype': 'bool'}}),
+    **{'parameters.has_curve.dims': ['snapshot'], 'piecewise.cost_curve.where': 'has_curve'},
+)
+
+
+@pytest.mark.parametrize(
+    'emitted',
+    [
+        pytest.param('cost_curve_p', id='link-p'),
+        pytest.param('cost_curve_op_cost', id='link-op_cost'),
+        pytest.param('cost_curve_convexity', id='convexity'),
+    ],
+)
+def test_a_where_reaches_every_row_the_block_emits(emitted):
+    """A link row left unmasked is the bug: the weighted sum is empty off the mask, so the row pins `p == 0`.
+
+    The convexity row is a reduction too, and absence does not spread out of
+    one — unmasked it would read `0 == 1` at a member with no curve.
+    """
+    expanded = expand_piecewise(spec_of(MASKED))
+    assert expanded.constraints[emitted].where == 'has_curve'
+
+
+def test_the_row_the_set_states_needs_no_mask_of_its_own():
+    """`adjacency` states its restriction as a set, and the set's row is an inequality.
+
+    Unmasked it reads `0 <= 1` at a member with no curve, which every row is
+    free to say. The rows that would read `0 == 1` there are the block's own,
+    and those carry the mask.
+    """
+    expanded = expand_piecewise(spec_of(MASKED))
+    assert expanded.constraints['cost_curve_pick'].expression == 'sum(cost_curve_seg, over=bp) <= 1'
+    assert expanded.constraints['cost_curve_pick'].where is None, 'the inequality holds off the mask on its own'
+
+
+@pytest.mark.parametrize(
+    'emitted', [pytest.param('cost_curve_lam', id='lam'), pytest.param('cost_curve_seg', id='seg')]
+)
+def test_a_where_reaches_the_weights(emitted):
+    assert expand_piecewise(spec_of(MASKED)).variables[emitted].where == 'has_curve'
+
+
+def test_the_adjacency_row_inherits_the_mask_rather_than_restating_it():
+    """Its every term is a weight, and absence spreads through arithmetic — which is how a ragged `where:` reaches it too."""
+    expanded = expand_piecewise(spec_of(MASKED))
+    assert expanded.constraints['cost_curve_adjacency'].where is None
+
+
+def test_a_ragged_where_reaches_the_weights_as_written_and_the_frame_rows_as_a_count():
+    """One mask says which coordinates have a curve and how far each runs; a row over the frame alone cannot read it."""
+    expanded = expand_piecewise(spec_of(MASKED, **RAGGED, **{'piecewise.cost_curve.where': 'has_curve AND bp_x'}))
+
+    assert expanded.variables['cost_curve_lam'].where == 'has_curve AND bp_x'
+    assert expanded.constraints['cost_curve_convexity'].where == 'count(has_curve AND bp_x, over=bp) > 0'
+    assert expanded.constraints['cost_curve_p'].where == 'count(has_curve AND bp_x, over=bp) > 0'
+
+
+def test_a_where_joins_both_gate_rows():
+    """`activity:` splits the convexity row across the gate's own mask, and the block's where holds over both halves."""
+    spec = spec_of(
+        MASKED,
+        **{
+            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', 'where': 'committable'},
+            'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+            'piecewise.cost_curve.activity': 'u',
+        },
+    )
+    expanded = expand_piecewise(spec)
+    assert expanded.constraints['cost_curve_convexity'].where == '(has_curve) AND (u)'
+    assert expanded.constraints['cost_curve_convexity_ungated'].where == '(has_curve) AND (NOT u)'
+
+
+def test_a_ragged_where_is_grouped_where_an_edge_row_shifts_it():
+    """Unparenthesised, `a OR b AND shift(…)` binds the AND to `b` alone and the edge is read off half the mask."""
+    spec = spec_of(
+        MASKED,
+        **RAGGED,
+        **{
+            'parameters.also_curved': {'dims': ['generator'], 'dtype': 'bool'},
+            'piecewise.cost_curve.where': 'has_curve OR also_curved AND bp_x',
+            'piecewise.cost_curve.method': 'lp',
+            'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']},
+        },
+    )
+    expanded = expand_piecewise(spec)
+
+    assert expanded.constraints['cost_curve_domain_lo'].where == (
+        '(has_curve OR also_curved AND bp_x) AND NOT shift(has_curve OR also_curved AND bp_x, along=bp, offset=1)'
+    )
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param(
+            {
+                'dimensions.region': {'dtype': 'str'},
+                'parameters.onshore': {'dims': ['region'], 'dtype': 'bool'},
+                'piecewise.cost_curve.where': 'onshore',
+            },
+            'cannot add coordinates',
+            id='outside-the-frame',
+        ),
+        pytest.param({'piecewise.cost_curve.where': 'nowhere'}, 'nowhere', id='naming-nothing'),
+    ],
+)
+def test_a_where_the_block_cannot_read_is_refused(patch, match):
+    with pytest.raises(LanguageError, match=match):
+        spec_of(MASKED, **patch)
+
+
+def test_a_where_over_a_dim_a_link_walks_into_is_not_sent_to_dims():
+    """The refusal said to add `flow` to `dims:`, and the walk into `flow` was then refused for that very edit."""
+    with pytest.raises(LanguageError, match=r"which link 'power' adds through its relation") as refused:
+        spec_of(
+            WALKED,
+            **{'parameters.on_flow': {'dims': ['flow'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'on_flow'},
+        )
+    assert 'to dims:' not in str(refused.value), 'no advice the walk refuses'
+
+
+def test_segment_lines_carry_the_mask_that_no_weight_can_hand_them():
+    """`method: lp` emits no weights, so its three rows take the block's where themselves or stand everywhere."""
+    expanded = expand_piecewise(spec_of(LP_WHERE))
+    assert expanded.constraints['cost_curve_chord'].where == '(has_curve) AND (position(bp) > 0)'
+    assert expanded.constraints['cost_curve_domain_lo'].where == '(has_curve) AND (position(bp) == 0)'
+    assert expanded.constraints['cost_curve_domain_hi'].where == '(has_curve) AND (position(bp) == -1)'
+
+
+@pytest.mark.parametrize(
+    ('where', 'method'),
+    [
+        pytest.param('has_curve', 'lp', id='a-mask-over-the-frame'),
+        pytest.param('has_curve AND bp_x', 'lp', id='a-ragged-mask'),
+        pytest.param('has_curve', 'convex', id='a-single-bend-over-the-frame'),
+    ],
+)
+def test_a_model_written_out_and_read_back_asks_its_conditions_only_where_a_curve_runs(where, method):
+    """The mask lived only on the program's declaration, so the file `to_yaml()` wrote asked every generator.
+
+    Read back, that file held a generator with no curve to breakpoints it has
+    no rows for. A ragged mask had the same gap on the conditions over the
+    frame alone: a generator the mask admits no breakpoint of failed
+    `count(...) == 1`, though it has no curve.
+    """
+    links = {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=' if method == 'lp' else '==']}
+    model = varied(MASKED, **RAGGED, **{'piecewise.cost_curve.where': where, 'piecewise.cost_curve.method': method})
+    written = spec_of(model, **{'piecewise.cost_curve.links': links}).expand('piecewise')
+    read_back = to_spec(raw_of(written.to_yaml())).program
+
+    unmasked = {
+        name
+        for name, assumption in read_back.assumptions.items()
+        if assumption.where is None or 'has_curve' not in assumption.where.names_read
+    }
+    assert not unmasked, f'{sorted(unmasked)} would be asked at a generator with no curve'
+
+
+#: fluxopt's converter: one curve per generator, tying however many flows the
+#: relation gives it. The link that carries `flow` walks the relation from the
+#: curve's `generator` to its own `flow`.
+WALKED = {
+    'dimensions': {
+        'snapshot': {'dtype': 'int'},
+        'generator': {'dtype': 'str'},
+        'flow': {'dtype': 'str'},
+        'bp': {'dtype': 'int', 'ordered': True},
+    },
+    'relations': {'generator_of': {'key': 'flow', 'values': 'generator'}},
+    'parameters': {
+        'load': {'dims': ['snapshot']},
+        'bp_power': {'dims': ['flow', 'bp']},
+        'bp_fuel': {'dims': ['generator', 'bp']},
+    },
+    'variables': {
+        'power': {'dims': ['flow', 'snapshot'], 'bounds': {'lower': 0}},
+        'fuel': {'dims': ['generator', 'snapshot'], 'bounds': {'lower': 0}},
+    },
+    'piecewise': {
+        'coupling': {
+            'along': 'bp',
+            'dims': ['generator', 'snapshot'],
+            'links': {
+                'power': {'expression': 'power', 'values': 'bp_power', 'by': 'generator_of[generator]'},
+                'fuel': ['fuel', 'bp_fuel'],
+            },
+        }
+    },
+    'constraints': {'balance': {'dims': ['snapshot'], 'expression': 'sum(power, over=flow) == load'}},
+    'objective': {'sense': 'minimize', 'expression': 'sum(fuel)'},
+}
+#: The values tables of the walked curve under a ragged ``where:``, which stop where the curve stops.
+WALKED_RAGGED = {'parameters.bp_power.missing': 0, 'parameters.bp_fuel.missing': 0}
+#: The walked link alone, which the relation gives its arity.
+POWER_ONLY = {
+    'piecewise.coupling.links': {
+        'power': {'expression': 'power', 'values': 'bp_power', 'by': 'generator_of[generator]'}
+    },
+    'objective.expression': 'sum(power)',
+}
+
+
+def test_a_block_builds_one_curve_per_coordinate_of_its_dims():
+    """The curve is per generator, though one of its links is per flow."""
+    expanded = expand_piecewise(spec_of(WALKED))
+    assert expanded.variables['coupling_lam'].dims == ('bp', 'generator', 'snapshot')
+    assert expanded.constraints['coupling_convexity'].dims == ('generator', 'snapshot')
+
+
+def test_a_walked_link_emits_one_row_per_fine_coordinate():
+    """The link reads the curve's weights through the relation, so a generator's flows share one curve."""
+    link = expand_piecewise(spec_of(WALKED)).constraints['coupling_power']
+    assert link.dims == ('flow', 'snapshot'), 'dims: with the dim the lookup reads replaced by the one it adds'
+    assert link.expression == '(power) == sum(at(coupling_lam, by=generator_of[generator]) * bp_power, over=bp)'
+
+
+def test_a_link_that_walks_nothing_stays_on_the_blocks_dims():
+    link = expand_piecewise(spec_of(WALKED)).constraints['coupling_fuel']
+    assert link.dims == ('generator', 'snapshot')
+    assert link.expression == '(fuel) == sum(coupling_lam * bp_fuel, over=bp)'
+
+
+def test_a_link_row_is_named_after_the_link_and_not_after_its_place():
+    """Rows named by position renamed every constraint after the one a reordering moved."""
+    swapped = varied(
+        WALKED, **{'piecewise.coupling.links': dict(reversed(WALKED['piecewise']['coupling']['links'].items()))}
+    )
+    for model in (WALKED, swapped):
+        rows = expand_piecewise(spec_of(model)).constraints
+        assert rows['coupling_fuel'].expression == '(fuel) == sum(coupling_lam * bp_fuel, over=bp)'
+
+
+def test_the_checks_still_name_the_values_parameters_a_walked_block_ties():
+    curve = spec_of(WALKED).program.piecewise['coupling']
+    assert [link.values for link in curve.links] == ['bp_power', 'bp_fuel'], 'the values parameters, in link order'
+
+
+def test_a_walked_block_round_trips_through_yaml():
+    """A link the file wrote as a mapping cannot serialise back as a two-item list."""
+    spec = spec_of(WALKED)
+    assert to_spec(raw_of(spec.to_yaml())).piecewise['coupling'] == spec.piecewise['coupling']
+
+
+def _walk(**written: object) -> dict[str, object]:
+    """The `power` link with *written* in place of its walk keys, and `None` dropping one."""
+    link = {'expression': 'power', 'values': 'bp_power', 'by': 'generator_of[generator]'}
+    link |= written
+    return {'piecewise.coupling.links.power': {k: v for k, v in link.items() if v is not None}}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param({'piecewise.coupling.dims': None}, 'with one curve per coordinate', id='a-block-without-dims'),
+        pytest.param(_walk(by='generator_of'), 'is not a relation with its columns', id='a-walk-naming-no-column'),
+        pytest.param(_walk(by='generator_of[]'), 'is not a relation with its columns', id='an-empty-column-list'),
+        pytest.param(
+            _walk(by='generator_of[generator]) * (2'),
+            'is not a relation with its columns',
+            id='a-walk-closing-the-call-early',
+        ),
+        pytest.param(
+            _walk(by='generator_of[generator]) + (power'),
+            'is not a relation with its columns',
+            id='a-walk-adding-a-term',
+        ),
+        pytest.param(
+            _walk(by='generator_of[snapshot]'),
+            r"at\(by=generator_of\[snapshot\]\) names \['snapshot'\], which is no column of 'generator_of'",
+            id='a-walk-naming-a-column-the-relation-lacks',
+        ),
+        pytest.param(
+            {'piecewise.coupling.dims': ['generator', 'snapshot', 'bp']},
+            'breakpoint dim',
+            id='dims-carrying-the-breakpoint-dim',
+        ),
+        pytest.param(
+            {'piecewise.coupling.dims': ['generator']},
+            r"link 'power' expression is over \['snapshot'\], and its row \['flow'\] is not",
+            id='dims-a-link-expression-leaves',
+        ),
+        pytest.param(_walk(by='nowhere_of[generator]'), 'nowhere_of', id='a-walk-through-an-undeclared-relation'),
+        pytest.param(
+            {'piecewise.coupling.dims': ['snapshot']},
+            r"link 'power': by: generator_of looks the curve up at \['generator'\], which is not in dims: \['snapshot'\]",
+            id='a-walk-consuming-a-dim-the-block-lacks',
+        ),
+        pytest.param(
+            {'piecewise.coupling.dims': ['generator', 'flow', 'snapshot']},
+            r"link 'power': by: generator_of adds no dimension",
+            id='a-walk-into-a-dim-the-block-has',
+        ),
+        pytest.param(
+            {'relations.slot_of': {'key': 'bp', 'values': 'generator'}} | _walk(by='slot_of[generator]'),
+            r"link 'power': by: slot_of adds no dimension",
+            id='a-walk-into-the-breakpoint-dim',
+        ),
+        pytest.param(
+            {'piecewise.coupling.links.fuel': ['fuel', 'bp_fuel', '>=']} | _walk(sign='<='),
+            'nothing pins the point the curve is read at',
+            id='every-row-bounded',
+        ),
+        pytest.param(
+            {
+                'piecewise.coupling.dims': ['flow', 'snapshot'],
+                'piecewise.coupling.links': {
+                    'power': ['power', 'bp_power'],
+                    'fuel': {'expression': 'fuel', 'values': 'bp_fuel', 'by': 'generator_of[flow]'},
+                },
+            },
+            r"link 'fuel': at\(by=generator_of\[flow\]\) names \['flow'\], a key column of 'generator_of'",
+            id='a-walk-landing-off-the-key',
+        ),
+        pytest.param(
+            {
+                'dimensions.period': {'dtype': 'int'},
+                'relations.generator_of': {'key': ['flow', 'period'], 'values': 'generator'},
+            },
+            r"link 'power' expression is not over \['period'\]",
+            id='a-walk-joining-on-a-dim-the-block-lacks',
+        ),
+        pytest.param(
+            {'relations.generator_of': {'key': {'flow': 'flow', 'site': 'generator'}, 'values': 'generator'}},
+            r"link 'power': by: generator_of adds \['generator'\], which the curve is already over",
+            id='a-walk-joining-on-the-dim-it-consumes',
+        ),
+    ],
+)
+def test_a_walked_block_the_language_cannot_read_is_refused(patch, match):
+    """Each refusal names the link the file wrote, not a constraint its expansion would write."""
+    with pytest.raises(LanguageError, match=match):
+        spec_of(WALKED, **patch)
+
+
+#: A relation with a column over the breakpoint dim that a walk can name.
+SLOT_OF = {'relations.slot_of': {'key': 'flow', 'values': {'generator': 'generator', 'slot': 'bp'}}}
+
+
+@pytest.mark.parametrize(
+    ('model', 'refused', 'match', 'rewrite'),
+    [
+        pytest.param(
+            WALKED,
+            SLOT_OF | _walk(by='slot_of[slot]'),
+            r"by: slot_of looks the curve up at 'bp', the breakpoint dimension",
+            _walk(by='slot_of[generator]'),
+            id='a-walk-naming-a-column-over-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {'relations.generator_of': {'key': ['flow', 'bp'], 'values': 'generator'}},
+            r"by: generator_of is keyed on 'bp', the breakpoint dimension",
+            {'relations.generator_of.key': 'flow'},
+            id='a-walk-keyed-on-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {'parameters.bp_power.dims': ['generator', 'bp']},
+            r"by: generator_of\[generator\] sets that row, so declare 'bp_power' over dimensions of \['flow', ",
+            {'parameters.bp_power.dims': ['flow', 'bp']},
+            id='walked-values-over-the-curves-dims',
+        ),
+        pytest.param(
+            WALKED,
+            {'variables.u': {'dims': ['flow', 'snapshot'], 'domain': 'binary'}, 'piecewise.coupling.activity': 'u'},
+            r"activity 'u' is over \['flow'\], which is not in dims: \['generator', 'snapshot'\]",
+            {'variables.u.dims': ['generator', 'snapshot']},
+            id='a-gate-over-a-dim-a-walk-adds',
+        ),
+        pytest.param(
+            raw_of(NONCONVEX_YAML),
+            {'variables.u': {'dims': ['snapshot', 'bp'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
+            r"activity 'u' is over \['bp'\], which is not in dims: \['snapshot'\]",
+            {'variables.u.dims': ['snapshot']},
+            id='a-gate-over-the-breakpoint-dim',
+        ),
+        pytest.param(
+            WALKED,
+            {
+                'dimensions.period': {'dtype': 'int'},
+                'relations.generator_of': {'key': ['flow', 'period'], 'values': 'generator'},
+            },
+            r"link 'power' expression is not over \['period'\], which by: generator_of\[generator\] adds",
+            {'relations.generator_of.key': 'flow'},
+            id='a-walk-adding-a-dim-the-expression-lacks',
+        ),
+    ],
+)
+def test_a_refusal_suggests_a_rewrite_that_loads(model, refused, match, rewrite):
+    """Each refusal advised adding a dim to `dims:` that `dims:` refuses, or already lists, or dropping one it lacks.
+
+    The breakpoint dim cannot be listed, a dim a walk adds is then refused as
+    one the curve is already over, and a walked link's values are over its
+    own row, which `dims:` does not set.
+    """
+    with pytest.raises(LanguageError, match=match) as refused_at_load:
+        spec_of(model, **refused)
+    assert not re.search(r'(to|from) dims:', str(refused_at_load.value)), 'no advice that the language refuses'
+    spec_of(varied(model, **refused), **rewrite)
+
+
+def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
+    """A row finer than the curve is reached through a relation, which says which curve each fine row reads."""
+    model = varied(
+        WALKED,
+        **{
+            'dimensions.carrier': {'dtype': 'str'},
+            'parameters.bp_rate': {'dims': ['generator', 'carrier', 'bp']},
+            'variables.rate': {'dims': ['generator', 'carrier', 'snapshot']},
+            'piecewise.coupling.links.rate': ['rate', 'bp_rate'],
+        },
+    )
+    with pytest.raises(LanguageError, match=r'look the curve up through a relation with by: <relation>\[<column>\]'):
+        spec_of(model)
+
+
+@pytest.mark.parametrize(
+    ('link', 'match'),
+    [
+        pytest.param('convexity', "link 'convexity' has the row 'coupling_convexity'", id='the-convexity-row'),
+        pytest.param('lam', "link 'lam' has the row 'coupling_lam'", id='the-weights'),
+        pytest.param('adjacency_below', "link 'adjacency_below'", id='a-row-the-set-writes'),
+        pytest.param('delta', "link 'delta' has the row 'coupling_delta'", id='a-variable-incremental-writes'),
+        pytest.param('fill_order', "link 'fill_order'", id='a-row-incremental-writes'),
+    ],
+)
+def test_a_link_named_after_a_row_the_block_writes_is_refused(link, match):
+    with pytest.raises(LanguageError, match=match):
+        spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
+
+
+@pytest.mark.parametrize('link', ['complete', 'increasing', 'curvature', 'breakpoints', 'contiguous', 'power_complete'])
+def test_a_link_named_after_a_condition_the_block_writes_is_refused(link):
+    """A link `complete` wrote the row `coupling_complete` beside the assumption of that name, and the file loaded."""
+    with pytest.raises(LanguageError, match=f"link '{link}' has the row 'coupling_{link}'"):
+        spec_of(WALKED, **{f'piecewise.coupling.links.{link}': ['fuel', 'bp_fuel']})
+
+
+#: A second curve whose name extends the first's, so a link of the first can spell one of its rows.
+BESIDE = varied(
+    WALKED,
+    **{
+        'piecewise.coupling_b': {
+            'along': 'bp',
+            'dims': ['generator', 'snapshot'],
+            'links': {'fuel': ['fuel', 'bp_fuel'], 'power': WALKED['piecewise']['coupling']['links']['power']},
+        }
+    },
+)
+
+
+@pytest.mark.parametrize(
+    ('key', 'link', 'match'),
+    [
+        pytest.param(
+            'b_fuel',
+            ['fuel', 'bp_fuel'],
+            "writes constraint 'coupling_b_fuel', which piecewise 'coupling' also writes",
+            id='a-link-row',
+        ),
+        pytest.param(
+            'b_convexity',
+            ['fuel', 'bp_fuel'],
+            "writes constraint 'coupling_b_convexity', which piecewise 'coupling' also writes",
+            id='a-row-the-other-block-writes-for-itself',
+        ),
+        pytest.param(
+            'b',
+            WALKED['piecewise']['coupling']['links']['power'],
+            "writes assumption 'coupling_b_complete', which piecewise 'coupling' also writes",
+            id='a-walked-links-own-condition',
+        ),
+    ],
+)
+def test_a_name_two_blocks_would_both_write_is_refused(key, link, match):
+    """Links take any name, so `coupling`'s link `b_fuel` spelled `coupling_b`'s row `coupling_b_fuel`.
+
+    Both blocks loaded, and the expansion wrote one row over the other, so
+    one block's link was never stated.
+    """
+    with pytest.raises(LanguageError, match=match):
+        spec_of(BESIDE, **{f'piecewise.coupling.links.{key}': link})
+
+
+def test_a_link_name_no_row_could_take_is_refused():
+    with pytest.raises(LanguageError, match=r"links: \['2nd'\] is not a name"):
+        spec_of(WALKED, **{'piecewise.coupling.links.2nd': ['fuel', 'bp_fuel']})
+
+
+def test_a_gate_over_more_than_the_blocks_dims_is_refused():
+    """The gate widened a declared `dims:` silently, and built the weights over a dimension the file never gave the curve."""
+    with pytest.raises(
+        LanguageError, match=r"activity 'u' is over \['generator'\], which is not in dims: \['snapshot'\]"
+    ):
+        spec_of(
+            TWO_DIM,
+            **{
+                'piecewise.cost_curve.dims': ['snapshot'],
+                'piecewise.cost_curve.links': {'p': ['load', 'bp_z'], 'op_cost': ['load * 2', 'bp_z']},
+                'parameters.bp_z': {'dims': ['bp']},
+                'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary'},
+                'piecewise.cost_curve.activity': 'u',
+            },
+        )
+
+
+def test_a_gate_over_fewer_dims_than_the_block_switches_each_curve_it_covers():
+    """A unit commitment per generator gates that generator's curve in every snapshot."""
+    expanded = expand_piecewise(
+        spec_of(
+            TWO_DIM,
+            **{'variables.u': {'dims': ['generator'], 'domain': 'binary'}, 'piecewise.cost_curve.activity': 'u'},
+        )
+    )
+    assert expanded.constraints['cost_curve_convexity'].expression == 'sum(cost_curve_lam, over=bp) == (u)'
+    assert expanded.variables['cost_curve_lam'].dims == ('bp', 'generator', 'snapshot')
+
+
+#: The status binary as the curve of each converter reads it.
+RUNNING = 'at(running, by=pw_status_of[status_entity])'
+#: fluxopt's unit commitment: the on/off binary is over the entities that carry a status, and the curve over converters.
+COMMITTED = {
+    'dimensions': {
+        'converter': {'dtype': 'str'},
+        'status_entity': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int'},
+        'bp': {'dtype': 'int', 'ordered': True},
+    },
+    'relations': {'pw_status_of': {'key': 'converter', 'values': 'status_entity', 'missing': 'absent'}},
+    'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
+    'variables': {
+        'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
+        'p': {'dims': ['converter', 'snapshot']},
+        'fuel': {'dims': ['converter', 'snapshot']},
+    },
+    'piecewise': {
+        'curve': {
+            'along': 'bp',
+            'dims': ['converter', 'snapshot'],
+            'links': {'p': ['p', 'bp_p'], 'fuel': ['fuel', 'bp_fuel']},
+            'method': 'sos2',
+            'activity': RUNNING,
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(fuel)'},
+}
+#: The status only committable entities have.
+STATUS_MASKED = {
+    'parameters.committable': {'dims': ['status_entity'], 'dtype': 'bool'},
+    'variables.running.where': 'committable',
+}
+#: The status only committable entities have, read as 0 elsewhere.
+COMMITTABLE = STATUS_MASKED | {'variables.running.missing': 0}
+#: A relation with a row for every converter.
+REFUSED = {'relations.pw_status_of.missing': 'refused'}
+
+
+def test_a_gate_read_through_a_relation_switches_the_curves_it_maps_to():
+    """The gate was a variable over `dims:` alone, so fluxopt declared a copy of `running` per converter.
+
+    The copy was a binary per gated curve and step, and a constraint whose
+    only job was to re-index it.
+    """
+    rows = expand_piecewise(spec_of(COMMITTED)).constraints
+    assert (rows['curve_convexity'].where, rows['curve_convexity'].expression) == (
+        RUNNING,
+        f'sum(curve_lam, over=bp) == ({RUNNING})',
+    ), 'a converter with a status sums its weights to that status'
+    assert (rows['curve_convexity_ungated'].where, rows['curve_convexity_ungated'].expression) == (
+        f'NOT ({RUNNING})',
+        'sum(curve_lam, over=bp) == 1',
+    ), 'a converter with no row in the relation is ungated'
+
+
+def test_a_gate_read_through_a_relation_is_written_as_the_at_call_it_reads():
+    """The walked gate was a mapping of `variable` and `by`, a second spelling of the `at()` call it is read as."""
+    spec = to_spec(f"""
+dimensions:
+  converter: {{dtype: str}}
+  status_entity: {{dtype: str}}
+  snapshot: {{dtype: int}}
+  bp: {{dtype: int, ordered: true}}
+relations:
+  pw_status_of: {{key: converter, values: status_entity}}
+parameters:
+  bp_p: {{dims: [converter, bp]}}
+  bp_fuel: {{dims: [converter, bp]}}
+variables:
+  running: {{dims: [status_entity, snapshot], domain: binary}}
+  p: {{dims: [converter, snapshot]}}
+  fuel: {{dims: [converter, snapshot]}}
+piecewise:
+  curve:
+    along: bp
+    dims: [converter, snapshot]
+    links:
+      p: [p, bp_p]
+      fuel: [fuel, bp_fuel]
+    activity: {RUNNING}
+objective:
+  sense: minimize
+  expression: sum(fuel)
+""")
+    assert spec.piecewise['curve'].activity == RUNNING, 'block YAML reads the call unquoted, as a string'
+    assert to_spec(spec.to_yaml()) == spec, 'the string round-trips'
+    written_out = spec.expand()
+    assert to_spec(written_out.to_yaml()).program == written_out.program, 'the rows it writes load again'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'convexity'),
+    [
+        pytest.param(REFUSED, {'curve_convexity': None}, id='every-row-without-a-where'),
+        pytest.param(
+            REFUSED | STATUS_MASKED,
+            {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'},
+            id='every-row-with-a-where',
+        ),
+        pytest.param(REFUSED | COMMITTABLE, {'curve_convexity': None}, id='every-row-with-a-where-under-missing-0'),
+        pytest.param(
+            {}, {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'}, id='a-row-may-be-absent'
+        ),
+        pytest.param(
+            STATUS_MASKED,
+            {'curve_convexity': RUNNING, 'curve_convexity_ungated': f'NOT ({RUNNING})'},
+            id='a-row-may-be-absent-with-a-where',
+        ),
+        pytest.param(
+            COMMITTABLE,
+            {'curve_convexity': 'pw_status_of', 'curve_convexity_ungated': 'NOT pw_status_of'},
+            id='a-row-may-be-absent-with-a-where-under-missing-0',
+        ),
+    ],
+)
+def test_a_gate_read_through_a_relation_is_ungated_only_where_its_read_may_be_absent(patch, convexity):
+    """A walked gate always wrote the `_ungated` row, and the typesetter printed its `1 otherwise` branch.
+
+    Under the relation's default `missing: refused` every curve has a row,
+    so a gate with no `where:`, or one read as 0 off it, is read at every
+    curve, and the second row stood for no coordinate.
+    """
+    spec = spec_of(COMMITTED, **patch)
+    rows = expand_piecewise(spec).constraints
+    assert {name: rows[name].where for name in rows if name.startswith('curve_convexity')} == convexity
+    printed = typeset_line(spec, 'curve', 'latex')
+    assert (r'\text{otherwise}' in printed) == (len(convexity) == 2), 'the 1 branch prints with the ungated row'
+
+
+def test_a_gate_read_through_a_relation_prints_as_the_read():
+    printed = typeset_line(spec_of(COMMITTED), 'curve', 'latex')
+    assert r'\mathit{running}_{t,\mathrm{pw\_status\_of}(c)}' in printed, 'the gate is read at each converter'
+    assert r'\text{otherwise}' in printed, 'and a converter the relation does not map is ungated'
+
+
+#: What every malformed gate is refused with: the two shapes it may take.
+SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<relation>\[<column>\]\)\.'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param(
+            {'dimensions.period': {'dtype': 'int'}, 'variables.running.dims': ['status_entity', 'snapshot', 'period']},
+            r"activity 'running' is over \['period'\] after the lookup, which is not in dims: \['converter', 'snapshot'\]",
+            id='a-gate-landing-outside-dims',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=pw_status_of)'},
+            r"piecewise 'curve' activity: at\(by=pw_status_of\) names the relation and none of its columns",
+            id='a-walk-naming-no-column',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=bp_p[converter])'},
+            r"piecewise 'curve' activity: at\(by=bp_p\[\.\.\.\]\) does not name a relation",
+            id='a-walk-through-something-no-relation',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running, by=pw_status_of[snapshot])'},
+            r"at\(by=pw_status_of\[snapshot\]\) names \['snapshot'\], which is no column of 'pw_status_of'",
+            id='a-walk-naming-a-column-the-relation-lacks',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': {'variable': 'running', 'by': 'pw_status_of[status_entity]'}},
+            'Input should be a valid string',
+            id='a-mapping',
+        ),
+        pytest.param(
+            {'piecewise.curve.activity': f'{RUNNING} * 2'},
+            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a binary variable nor one read through a relation\. "
+            + SHAPES,
+            id='a-product',
+        ),
+        pytest.param({'piecewise.curve.activity': '1 - running'}, SHAPES, id='a-complement'),
+        pytest.param(
+            {'piecewise.curve.activity': 'at(running + running, by=pw_status_of[status_entity])'},
+            SHAPES,
+            id='a-lookup-of-a-sum',
+        ),
+        pytest.param({'piecewise.curve.activity': 'at(running)'}, SHAPES, id='a-lookup-without-by'),
+        pytest.param({'piecewise.curve.activity': 'shift(running, along=snapshot, offset=1)'}, SHAPES, id='a-shift'),
+        pytest.param({'piecewise.curve.activity': 'at(running, by=pw_status_of[status_entity]'}, SHAPES, id='unparsed'),
+    ],
+)
+def test_a_gate_read_through_a_relation_is_held_to_the_rules_of_at(patch, match):
+    with pytest.raises(LanguageError, match=match):
+        spec_of(COMMITTED, **patch)
+
+
+@pytest.mark.parametrize(
+    ('activity', 'match'),
+    [
+        pytest.param(
+            'at(running, by=pw_status_of)',
+            r"piecewise 'curve' activity: at\(by=pw_status_of\) names the relation and none of its columns",
+            id='a-walk-naming-no-column',
+        ),
+        pytest.param(f'{RUNNING} * (2)', SHAPES, id='a-walk-closing-the-call-early'),
+    ],
+)
+def test_a_malformed_gate_under_missing_0_is_refused_as_written(activity, match):
+    """Under `missing: 0` the gate's where was read off its `by:` text before the read itself was resolved.
+
+    A `by:` naming no column, or one closing the call early, failed an
+    assertion inside mathspec instead of being refused.
+    """
+    with pytest.raises(LanguageError, match=match):
+        spec_of(COMMITTED, **COMMITTABLE, **{'piecewise.curve.activity': activity})
+
+
+#: fluxopt's system: only some generators run on a curve, and the rest have none at all.
+CURVED = varied(
+    WALKED,
+    **{
+        'parameters.curved': {'dims': ['generator'], 'dtype': 'bool'},
+        'piecewise.coupling.where': 'curved',
+    },
+)
+
+
+def test_a_block_mask_reaches_a_walked_link_through_its_relation():
+    """The row is over flows and the mask over generators, so the row reads the mask at each flow's generator.
+
+    The block refused a mask beside a walk, so a model with one curved
+    generator built a curve, a convexity row and its binaries for every
+    generator it declared.
+    """
+    expanded = expand_piecewise(spec_of(CURVED))
+    assert expanded.variables['coupling_lam'].where == 'curved', 'no weights where a generator has no curve'
+    assert expanded.constraints['coupling_convexity'].where == 'curved'
+    assert expanded.constraints['coupling_fuel'].where == 'curved', 'a link on dims: reads the mask as written'
+    assert expanded.constraints['coupling_power'].where == 'at(curved, by=generator_of[generator])', (
+        'a walked link reads it at the generator each flow maps to'
+    )
+
+
+#: The relation of the walk with a flow that belongs to no generator.
+PARTIAL = {'relations.generator_of': {'key': 'flow', 'values': 'generator', 'missing': 'absent'}}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'where'),
+    [
+        pytest.param({}, None, id='every-flow-has-a-generator'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'adjacency'}, 'generator_of', id='adjacency'),
+        pytest.param(PARTIAL | {'piecewise.coupling.method': 'sos2'}, 'generator_of', id='sos2'),
+        pytest.param(
+            PARTIAL | {'piecewise.coupling.method': 'incremental'},
+            '(generator_of) AND (position(bp) == 0)',
+            id='incremental',
+        ),
+        pytest.param(
+            PARTIAL | {'parameters.curved': CURVED['parameters']['curved'], 'piecewise.coupling.where': 'curved'},
+            'at(curved, by=generator_of[generator])',
+            id='a-mask-read-through-the-relation',
+        ),
+    ],
+)
+def test_a_walked_row_exists_only_where_its_relation_has_a_row(patch, where):
+    """A flow with no generator read no weights, and its row pinned `power` to an empty sum, or to the first breakpoint.
+
+    Under the default `missing: refused` every flow has a row, and the row
+    is written as before.
+    """
+    expanded = spec_of(WALKED, **patch).expand()
+    assert expanded.constraints['coupling_power'].where == where
+
+
+#: fluxopt's investment cost curve (fluxopt/fluxopt#26): each effect of a sized flow is read off its curve.
+INVESTED = {
+    'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}
+    | {'bp': {'dtype': 'int', 'ordered': True}},
+    'relations': {'cost_of': {'key': ['flow', 'effect'], 'values': 'cost_curve'}},
+    'parameters': {
+        'has_cost_curve': {'dims': ['cost_curve'], 'dtype': 'bool'},
+        'size_bp': {'dims': ['cost_curve', 'bp']},
+        'cost_bp': {'dims': ['flow', 'effect', 'bp']},
+    },
+    'variables': {'size': {'dims': ['cost_curve']}, 'invest': {'dims': ['flow', 'effect']}},
+    'piecewise': {
+        'invest_curve': {
+            'along': 'bp',
+            'dims': ['cost_curve'],
+            'where': 'has_cost_curve',
+            'links': {
+                'size': ['size', 'size_bp'],
+                'cost': {'expression': 'invest', 'values': 'cost_bp', 'by': 'cost_of[cost_curve]'},
+            },
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(invest)'},
+}
+
+
+def test_a_block_mask_reaches_a_walk_into_several_columns():
+    """The mask is read through the walk into two key columns, which a where string could not parse (#781).
+
+    The block loaded without its `where:`, and with it the load failed on
+    the assertion that what a method assumes is stated in the language.
+    """
+    expanded = spec_of(INVESTED).expand()
+    read = 'at(has_cost_curve, by=cost_of[cost_curve])'
+    assert expanded.constraints['invest_curve_cost'].where == read, (
+        'the cost row reads the mask at each flow and effect'
+    )
+    assert expanded.assumptions['invest_curve_cost_complete'].where == read, 'and so does its breakpoint check'
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
+
+
+def test_a_ragged_mask_reaches_a_walked_link_as_the_count_of_its_curves_breakpoints():
+    """A walked row is over the curve's dims less the walk, so it takes what a row over dims: alone takes, read through."""
+    expanded = expand_piecewise(
+        spec_of(
+            WALKED,
+            **WALKED_RAGGED,
+            **{
+                'parameters.reach': {'dims': ['generator', 'bp'], 'dtype': 'bool'},
+                'piecewise.coupling.where': 'reach',
+            },
+        )
+    )
+    assert expanded.variables['coupling_lam'].where == 'reach'
+    assert expanded.constraints['coupling_power'].where == ('at(count(reach, over=bp) > 0, by=generator_of[generator])')
+
+
+def test_a_mask_over_dims_the_walk_keeps_reaches_the_walked_row_as_written():
+    """A mask over `snapshot` alone says nothing about generators, and the walked row keeps `snapshot`."""
+    expanded = expand_piecewise(
+        spec_of(
+            WALKED,
+            **{
+                'parameters.season': {'dims': ['snapshot'], 'dtype': 'bool'},
+                'piecewise.coupling.where': 'season',
+            },
+        )
+    )
+    assert expanded.constraints['coupling_power'].where == 'season'
+
+
+def test_a_mask_over_a_dim_the_walk_joins_on_reaches_the_walked_row_as_written():
+    """The relation is keyed by flow and snapshot, and `season` tests only `snapshot`, which the walked row keeps.
+
+    The join column was counted with the ones the walk consumes, so this mask
+    was refused as carrying part of what the walk reads through, and no
+    rewrite kept it.
+    """
+    expanded = expand_piecewise(
+        spec_of(
+            WALKED,
+            **{
+                'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
+                'parameters.season': {'dims': ['snapshot'], 'dtype': 'bool'},
+                'piecewise.coupling.where': 'season',
+            },
+        )
+    )
+    assert expanded.constraints['coupling_power'].where == 'season'
+
+
+@pytest.mark.parametrize(
+    ('method', 'where'),
+    [
+        pytest.param('sos2', 'at(curved, by=generator_of[generator])', id='sos2'),
+        pytest.param(
+            'incremental', 'at((curved) AND (position(bp) == 0), by=generator_of[generator])', id='incremental'
+        ),
+    ],
+)
+def test_a_mask_over_part_of_what_a_walk_joins_on_reaches_the_walked_row_through_its_relation(method, where):
+    """The relation is keyed by flow and snapshot, and `curved` tests only `generator`.
+
+    The mask was refused for not testing `snapshot` too, though reading it
+    through the relation at each flow and snapshot is the row a hand-written
+    constraint with that where loads to.
+    """
+    expanded = spec_of(
+        CURVED,
+        **{
+            'relations.generator_of': {'key': ['flow', 'snapshot'], 'values': 'generator'},
+            'piecewise.coupling.method': method,
+        },
+    ).expand()
+    assert expanded.constraints['coupling_power'].where == where
+    assert expanded.assumptions['coupling_power_complete'].where == 'at(curved, by=generator_of[generator])'
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
+
+
+@pytest.mark.parametrize(
+    ('model', 'read'),
+    [
+        pytest.param(WALKED, {'generator_of'}, id='no-mask-asks-only-where-the-relation-reaches'),
+        pytest.param(CURVED, {'curved', 'generator_of'}, id='a-mask-read-through'),
+    ],
+)
+def test_a_walked_links_breakpoints_are_asked_only_at_the_rows_it_reads_the_curve_at(model, read):
+    """Asked with the other links, `bp_power` was demanded at every flow, including those of a generator with no curve."""
+    assumptions = spec_of(model).expand('piecewise').program.assumptions
+    walked = assumptions['coupling_power_complete']
+    assert walked.holds.names_read == frozenset({'bp_power'}), 'the walked link asks for its own values alone'
+    assert walked.where is not None and walked.where.dims == ('flow',), 'asked per flow the walk reaches'
+    assert walked.where.names_read == frozenset(read), 'the where reads the mask, if any, and the relation'
+    assert assumptions['coupling_complete'].holds.names_read == frozenset({'bp_fuel'}), (
+        'the link on dims: keeps the block condition to itself'
+    )
+
+
+def test_a_walked_links_own_condition_is_a_name_the_block_reserves():
+    with pytest.raises(
+        LanguageError, match="writes assumption 'coupling_power_complete', which this file already declares"
+    ):
+        spec_of(WALKED, assumptions={'coupling_power_complete': 'bp_power >= 0'})
+
+
+def test_a_mask_on_the_links_own_variable_leaves_the_walked_row_unbuilt():
+    """Absence spreads through arithmetic, so a flow with no variable has no row, with or without a block mask."""
+    expanded = expand_piecewise(
+        spec_of(
+            WALKED,
+            **{
+                'parameters.on_a_curve': {'dims': ['flow'], 'dtype': 'bool'},
+                'variables.power.where': 'on_a_curve',
+            },
+        )
+    )
+    assert expanded.variables['power'].where == 'on_a_curve'
+
+
+def test_one_walked_link_is_a_curve_because_the_relation_gives_it_its_arity():
+    """A converter whose coupled quantities are all flows of one variable is one link, and it ties them all.
+
+    Two links is what a curve needs when a link is one row. A walked link is
+    one row per fine coordinate, so the relation supplies the arity that the
+    second link otherwise would.
+    """
+    expanded = expand_piecewise(spec_of(WALKED, **POWER_ONLY))
+    assert expanded.constraints['coupling_convexity'].dims == ('generator', 'snapshot'), 'one curve per generator'
+    assert expanded.constraints['coupling_power'].dims == ('flow', 'snapshot'), 'one row per flow, sharing it'
+    assert 'coupling_fuel' not in expanded.constraints, 'no row for a link the block does not declare'
+
+
+def test_one_link_that_walks_nothing_is_still_a_bound_rather_than_a_curve():
+    with pytest.raises(LanguageError, match='a bound, not a curve'):
+        spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.links': {'p': ['p', 'bp_x']}})
+
+
+@pytest.mark.parametrize(
+    ('method', 'match'),
+    [
+        pytest.param('convex', 'a walk puts them over different dimensions', id='convex'),
+        pytest.param('lp', 'one quantity at many coordinates', id='lp'),
+    ],
+)
+def test_the_two_restricted_methods_refuse_a_walked_link_for_their_own_reasons(method, match):
+    """`lp` loses the abscissa its line is written against; `convex` loses the pair it reads a shape from.
+
+    The two reasons are not one, so neither message may stand in for the other.
+    """
+    with pytest.raises(LanguageError, match=match):
+        spec_of(WALKED, **{'piecewise.coupling.method': method})
+
+
+def test_links_that_disagree_on_their_dims_are_refused_rather_than_read_as_one_curve_each():
+    """A link finer than `dims:` would multiply the rows it builds, each pinning the same `fuel` to a curve of its own."""
+    with pytest.raises(LanguageError, match=r"link 'power' expression is over \['flow'\]"):
+        spec_of(WALKED, **{'piecewise.coupling.links': {'power': ['power', 'bp_power'], 'fuel': ['fuel', 'bp_fuel']}})
+
+
+@pytest.mark.parametrize(
+    ('patch', 'match'),
+    [
+        pytest.param(
+            {'variables.power.dims': ['flow', 'snapshot', 'period']},
+            r'is over \[.period.\]',
+            id='finer-than-its-row',
+        ),
+        pytest.param(
+            {
+                'piecewise.coupling.dims': ['generator', 'snapshot', 'period'],
+                'variables.fuel.dims': ['generator', 'snapshot', 'period'],
+            },
+            r'is not over \[.period.\]',
+            id='coarser-than-its-row',
+        ),
+    ],
+)
+def test_a_link_spanning_a_dimension_its_row_does_not_is_refused_both_ways(patch, match):
+    """A curve and the quantity on it vary together or the file says which — neither direction is guessed."""
+    model = varied(
+        WALKED,
+        **{
+            'dimensions.period': {'dtype': 'int'},
+            'parameters.load': {'dims': ['snapshot', 'period']},
+            'constraints.balance': {'dims': ['snapshot', 'period'], 'expression': 'sum(power, over=flow) == load'},
+        },
+    )
+    with pytest.raises(LanguageError, match=match):
+        spec_of(model, **patch)
+
+
+def test_a_period_the_curve_and_its_links_both_carry_loads():
+    """The rewrite both refusals name: put the dimension in dims:, and the curve varies along it."""
+    expanded = expand_piecewise(
+        spec_of(
+            WALKED,
+            **{
+                'dimensions.period': {'dtype': 'int'},
+                'parameters.load': {'dims': ['snapshot', 'period']},
+                'constraints.balance': {
+                    'dims': ['snapshot', 'period'],
+                    'expression': 'sum(power, over=flow) == load',
+                },
+                'variables.power.dims': ['flow', 'snapshot', 'period'],
+                'variables.fuel.dims': ['generator', 'snapshot', 'period'],
+                'piecewise.coupling.dims': ['generator', 'snapshot', 'period'],
+            },
+        )
+    )
+    assert expanded.variables['coupling_lam'].dims == ('bp', 'generator', 'period', 'snapshot')
+    assert expanded.constraints['coupling_power'].dims == ('flow', 'period', 'snapshot')
+
+
+#: Three quantities on one curve, two of them bounded rather than pinned.
+THREE_WAY = varied(
+    raw_of(NONCONVEX_YAML),
+    **{
+        'parameters.bp_z': {'dims': ['bp']},
+        'variables.heat': {'dims': ['snapshot'], 'bounds': {'lower': 0}},
+    },
+)
+
+
+@pytest.mark.parametrize(
+    'links',
+    [
+        pytest.param(
+            {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>='], 'heat': ['heat', 'bp_z']},
+            id='three-links-one-bounded',
+        ),
+        pytest.param(
+            {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>='], 'heat': ['heat', 'bp_z', '<=']},
+            id='two-bounded-signs-at-once',
+        ),
+        pytest.param(
+            {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}, id='the-two-link-case-that-always-worked'
+        ),
+    ],
+)
+def test_a_curve_bounds_as_many_links_as_it_likes_while_one_pins_it(links):
+    """Under adjacency each link is its own row against the shared weights, so a sign is per link.
+
+    The old rule capped a block at one non-`==` sign and only with exactly two
+    links. Nothing in the emission needed that: `_weights` writes
+    `(expr) sign sum(lam * values, along=bp)` per link and reaches for no other.
+    """
+    expanded = expand_piecewise(spec_of(THREE_WAY, **{'piecewise.cost_curve.links': links}))
+    for key, link in links.items():
+        sign = link[2] if len(link) == 3 else '=='
+        expression = expanded.constraints[f'cost_curve_{key}'].expression
+        assert f') {sign} sum(' in expression, f'link on {key} carries its own {sign}'
+
+
+@pytest.mark.parametrize(
+    ('method', 'match'),
+    [
+        pytest.param('convex', 'no single direction to check', id='convex'),
+        pytest.param('lp', 'a line is one quantity against another', id='lp'),
+    ],
+)
+def test_the_two_restricted_methods_take_exactly_two_links_for_their_own_reasons(method, match):
+    """`lp` had no such rule and leaned on the sign cap for it, so three links raised `ValueError`.
+
+    `convex` builds the same rows for any number of links; what it cannot do
+    past two is certify that relaxing onto the hull is exact, because the sign
+    on the bounded link is what names the direction to check.
+    """
+    with pytest.raises(LanguageError, match=match):
+        spec_of(
+            THREE_WAY,
+            **{
+                'piecewise.cost_curve.method': method,
+                'piecewise.cost_curve.links': {
+                    'p': ['p', 'bp_x'],
+                    'op_cost': ['op_cost', 'bp_y', '>='],
+                    'heat': ['heat', 'bp_z'],
+                },
+            },
+        )
+
+
+@pytest.mark.parametrize('method', ['adjacency', 'sos2', 'convex', 'lp'])
+def test_every_assumption_a_block_may_derive_is_a_name_it_reserves(method):
+    """The collision check reserves the assumption names at load, before the mask that decides which are written is typed."""
+    links = (
+        {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}
+        if method in {'convex', 'lp'}
+        else {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']}
+    )
+    spec = spec_of(NONCONVEX_YAML, **{'piecewise.cost_curve.method': method, 'piecewise.cost_curve.links': links})
+    curve = spec.program.piecewise['cost_curve']
+
+    derived = set(assumptions_of('cost_curve', curve, spec.piecewise['cost_curve'].where))
+    assert derived <= set(Emitted.of('cost_curve', curve).assumptions), (
+        'a condition the block derives under no reserved name'
+    )
+
+
+#: The walked curve stated incrementally, switched by a status only committable generators have.
+INCREMENTAL = varied(
+    WALKED,
+    **{
+        'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+        'variables.status': {'dims': ['generator', 'snapshot'], 'domain': 'binary', 'where': 'committable'},
+        'piecewise.coupling.method': 'incremental',
+        'piecewise.coupling.activity': 'status',
+    },
+)
+#: What every incremental link adds to its value at the first breakpoint: each segment's filled rise.
+FILLED = 'sum({delta} * (shift({v}, along=bp, offset=-1, edge=0) - {v}), over=bp)'
+
+
+@pytest.mark.parametrize(
+    ('row', 'where', 'expression'),
+    [
+        pytest.param(
+            'coupling_fuel',
+            '(position(bp) == 0) AND (status)',
+            '(fuel) == bp_fuel * (status) + ' + FILLED.format(delta='coupling_delta', v='bp_fuel'),
+            id='gated',
+        ),
+        pytest.param(
+            'coupling_fuel_ungated',
+            '(position(bp) == 0) AND (NOT status)',
+            '(fuel) == bp_fuel + ' + FILLED.format(delta='coupling_delta', v='bp_fuel'),
+            id='ungated-where-the-status-does-not-exist',
+        ),
+        pytest.param(
+            'coupling_power',
+            '(position(bp) == 0) AND (at(status, by=generator_of[generator]))',
+            '(power) == bp_power * (at(status, by=generator_of[generator])) + '
+            + FILLED.format(delta='at(coupling_delta, by=generator_of[generator])', v='bp_power'),
+            id='walked',
+        ),
+    ],
+)
+def test_an_incremental_link_is_its_first_breakpoint_plus_each_filled_segment(row, where, expression):
+    """linopy's incremental link, which PyPSA's gated cost and efficiency curves are built as.
+
+    A status that only committable generators have leaves the others
+    ungated, so each link row is written once where the status exists and
+    once where it does not, and a walked link reads the fill and the status
+    through its relation.
+    """
+    rows = expand_piecewise(spec_of(INCREMENTAL)).constraints
+    assert 'bp' in rows[row].dims, 'one row per breakpoint'
+    assert (rows[row].where, rows[row].expression) == (where, expression)
+
+
+@pytest.mark.parametrize(
+    ('row', 'expression'),
+    [
+        pytest.param('coupling_delta_bound', 'coupling_delta <= coupling_order', id='a-segment-fills-once-ordered'),
+        pytest.param(
+            'coupling_fill_order',
+            'coupling_delta <= shift(coupling_delta, along=bp, offset=1)',
+            id='a-segment-fills-no-further-than-the-one-before',
+        ),
+        pytest.param(
+            'coupling_binary_order',
+            'coupling_order <= shift(coupling_delta, along=bp, offset=1)',
+            id='a-segment-is-ordered-only-once-the-one-before-is-full',
+        ),
+        pytest.param('coupling_active_bound', 'coupling_delta <= status', id='the-gate-bounds-every-fill'),
+    ],
+)
+def test_an_incremental_curve_orders_its_segments_as_linopy_does(row, expression):
+    assert expand_piecewise(spec_of(INCREMENTAL)).constraints[row].expression == expression
+
+
+#: PyPSA's committable link: one efficiency curve per output port, switched by the status of the link it belongs to.
+#: The link's status as the curve of each of its output ports reads it.
+STATUS = 'at(Link_status, by=Link_output_link[link])'
+PORTED = {
+    'dimensions': {
+        'link': {'dtype': 'str'},
+        'link_output': {'dtype': 'str'},
+        'snapshot': {'dtype': 'int'},
+        'bp': {'dtype': 'int', 'ordered': True},
+    },
+    'relations': {'Link_output_link': {'key': 'link_output', 'values': 'link'}},
+    'parameters': {
+        'bp_in': {'dims': ['link_output', 'bp']},
+        'bp_out': {'dims': ['link_output', 'bp']},
+        'Link_committed': {'dims': ['link', 'snapshot'], 'dtype': 'bool'},
+    },
+    'variables': {
+        'Link_status': {'dims': ['link', 'snapshot'], 'domain': 'binary', 'where': 'Link_committed'},
+        'Link_p': {'dims': ['link', 'snapshot']},
+        'Link_p_out': {'dims': ['link_output', 'snapshot']},
+    },
+    'piecewise': {
+        'efficiency': {
+            'along': 'bp',
+            'dims': ['link_output', 'snapshot'],
+            'method': 'incremental',
+            'links': {'input': ['at(Link_p, by=Link_output_link[link])', 'bp_in'], 'output': ['Link_p_out', 'bp_out']},
+            'activity': STATUS,
+        }
+    },
+    'objective': {'sense': 'minimize', 'expression': 'sum(Link_p)'},
+}
+#: Where an incremental link row stands: its first breakpoint.
+FIRST = 'position(bp) == 0'
+#: A status per unit, which each generator reads through the unit it belongs to.
+UNITS = {
+    'dimensions.unit': {'dtype': 'str'},
+    'relations.unit_of': {'key': 'generator', 'values': 'unit'},
+    'variables.status': {'dims': ['unit', 'snapshot'], 'domain': 'binary'},
+    'piecewise.coupling.activity': 'at(status, by=unit_of[unit])',
+}
+#: The unit's status as a flow's row reads it, through its generator.
+UNIT_STATUS = 'at(at(status, by=unit_of[unit]), by=generator_of[generator])'
+
+
+@pytest.mark.parametrize(
+    ('raw', 'patch', 'row', 'where', 'start'),
+    [
+        pytest.param(PORTED, {}, 'efficiency_output', f'({FIRST}) AND ({STATUS})', f'bp_out * ({STATUS})', id='pypsa'),
+        pytest.param(
+            PORTED, {}, 'efficiency_output_ungated', f'({FIRST}) AND (NOT ({STATUS}))', 'bp_out', id='pypsa-ungated'
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS,
+            'coupling_power',
+            FIRST,
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-reads-the-read-through-its-own-relation',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.unit_of': {'key': 'generator', 'values': 'unit', 'missing': 'absent'}},
+            'coupling_power',
+            f'({FIRST}) AND ({UNIT_STATUS})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-reads-the-read-through-its-own-relation-where-it-may-be-absent',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            UNITS | {'relations.generator_of.missing': 'absent'},
+            'coupling_power',
+            f'(generator_of) AND ({FIRST})',
+            f'bp_power * ({UNIT_STATUS})',
+            id='a-walked-link-with-no-row-of-its-own-is-absent-whole',
+        ),
+        pytest.param(
+            INCREMENTAL,
+            {'variables.status': {'dims': ['snapshot'], 'domain': 'binary'}},
+            'coupling_power',
+            FIRST,
+            'bp_power * (status)',
+            id='a-walked-link-reads-a-gate-without-the-dim-it-drops-as-written',
+        ),
+        pytest.param(
+            COMMITTED,
+            {
+                **COMMITTABLE,
+                'piecewise.curve.method': 'incremental',
+                'dimensions.hour': {'dtype': 'int'},
+                'relations.hour_of': {'key': 'hour', 'values': 'snapshot'},
+                'variables.heat': {'dims': ['converter', 'hour']},
+                'parameters.bp_heat': {'dims': ['converter', 'bp']},
+                'piecewise.curve.links.heat': {'expression': 'heat', 'values': 'bp_heat', 'by': 'hour_of[snapshot]'},
+            },
+            'curve_heat',
+            f'({FIRST}) AND (pw_status_of)',
+            f'bp_heat * (at({RUNNING}, by=hour_of[snapshot]))',
+            id='a-walked-link-reads-the-relation-where-as-written',
+        ),
+    ],
+)
+def test_an_incremental_link_reads_a_gate_read_through_a_relation(raw, patch, row, where, start):
+    """A gate read through a relation replaces the bare name in each link row, and a walked link reads it once more.
+
+    The walked link reads the gate through its own relation only where the gate
+    carries a dim the walk drops: a status over `snapshot` alone was read at
+    `generator`, which it does not carry, and the expansion was refused. A
+    gate whose relation has a row for every generator also wrote an ungated
+    row, which stood for no coordinate.
+    """
+    spec = spec_of(raw, **patch)
+    built = expand_piecewise(spec).constraints[row]
+    assert built.where == where
+    assert f'== {start} + sum(' in built.expression, 'the first breakpoint is read times the gate'
+    written_out = spec.expand()
+    assert to_spec(written_out.to_yaml()).program == written_out.program, 'the rows it writes load again'
+
+
+def test_an_incremental_curve_bounds_every_fill_by_a_gate_read_through_a_relation():
+    rows = expand_piecewise(spec_of(PORTED)).constraints
+    assert rows['efficiency_active_bound'].expression == f'efficiency_delta <= {STATUS}'
+
+
+def test_an_incremental_segment_stands_where_the_curve_reaches_its_next_breakpoint():
+    """A segment sits at its lower breakpoint, so a ragged curve's last breakpoint has none."""
+    expanded = expand_piecewise(
+        spec_of(
+            INCREMENTAL,
+            **WALKED_RAGGED,
+            **{'parameters.reach': {'dims': ['generator', 'bp'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'reach'},
+        )
+    )
+    assert expanded.variables['coupling_delta'].where == 'reach AND shift(reach, along=bp, offset=-1)'
+    assert (
+        expanded.constraints['coupling_fuel'].where == '(reach AND NOT shift(reach, along=bp, offset=1)) AND (status)'
+    )
+
+
+def test_an_incremental_curve_written_out_loads_back_to_the_same_program():
+    expanded = spec_of(INCREMENTAL).expand()
+    assert to_spec(expanded.to_yaml()).program == expanded.program, 'the rows it writes load again'
+
+
+def test_an_incremental_gate_over_dims_a_walk_keeps_is_read_as_written():
+    """The gate was read through the link's relation whatever it carried, so a status over `snapshot` alone
+    loaded and then failed to expand: the lookup had no `generator` to join on."""
+    spec = spec_of(INCREMENTAL, **{'variables.status': {'dims': ['snapshot'], 'domain': 'binary'}})
+    assert spec.expand().constraints['coupling_power'].expression.startswith('(power) == bp_power * (status) + ')

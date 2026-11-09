@@ -173,33 +173,35 @@ rewrite.
 ## What a curve assumes
 
 A [`piecewise:`](piecewise.md) entry named `curve` adds assumptions of its
-own. [`to_spec`](../api.md#mathspec.to_spec) derives them from the `method:` of the entry, its `points:` and
-the sign on its links. The typesetter prints them under the same _Assumptions_
-heading as the assumptions you write, and
+own. [`to_spec`](../api.md#mathspec.to_spec) derives them from the `method:` of the entry, its `where:` and
+the signs on its links. Each one has the `where:` of the entry, so a tool
+checks it only where a curve runs. The typesetter prints them under the same
+_Assumptions_ heading as the assumptions you write, and
 [`spec.expand()`](../spec.md#mathspec.spec.Spec.expand) writes them out as
 `assumptions:` entries with these names:
 
-| Entry               | Added for               | What it requires                                                                                                 |
-| ------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `curve_complete`    | every entry             | every values parameter has a row at every breakpoint the curve runs through                                      |
-| `curve_increasing`  | `convex`, `lp`          | the breakpoints of the pinned link, or of the first link where both are pinned, strictly increase along `over`   |
-| `curve_curvature`   | `convex`, `lp`          | with a `>=` link the curve is convex, with a `<=` link concave, and with both links pinned it bends one way only |
-| `curve_breakpoints` | `lp`                    | each curve has at least two breakpoints                                                                          |
-| `curve_contiguous`  | an entry with `points:` | the marked breakpoints form one consecutive run of at least one                                                  |
+| Entry                   | Added for                                                                 | What it requires                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `curve_complete`        | an entry with a link that does not walk a relation                        | every values parameter of such a link has a row at every breakpoint the curve runs through                       |
+| `curve_<link>_complete` | a [link that walks a relation](piecewise.md#a-link-that-walks-a-relation) | the values parameter of the link has a row at every breakpoint, at every row of the link                         |
+| `curve_increasing`      | `convex`, `lp`                                                            | the breakpoints of the pinned link, or of the first link where both are pinned, strictly increase along `along`  |
+| `curve_curvature`       | `convex`, `lp`                                                            | with a `>=` link the curve is convex, with a `<=` link concave, and with both links pinned it bends one way only |
+| `curve_breakpoints`     | `lp`                                                                      | each curve has at least two breakpoints                                                                          |
+| `curve_contiguous`      | a [`where:` over `along`](piecewise.md#curves-of-unequal-length)          | the marked breakpoints form one consecutive run of at least one                                                  |
 
 For an [`lp`](piecewise.md#method) entry named `cost_curve`, with its second link signed `>=`, the
 typesetter prints the first three added assumptions as:
 
 ```math
-\mathrm{bp\_x}_{g,b} \text{ is defined} \wedge \mathrm{bp\_y}_{g,b} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B}
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 ```math
-\mathrm{bp\_x}_{g,b \boxminus_{0} 1} < \mathrm{bp\_x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
+\mathrm{bp\_x}_{b \boxminus_{0} 1,g} < \mathrm{bp\_x}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0
 ```
 
 ```math
-\left( \mathrm{bp\_y}_{g,b} - \mathrm{bp\_y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathrm{bp\_x}_{g,b \boxplus_{0} 1} - \mathrm{bp\_x}_{g,b} \right) \le \left( \mathrm{bp\_y}_{g,b \boxplus_{0} 1} - \mathrm{bp\_y}_{g,b} \right) \cdot \left( \mathrm{bp\_x}_{g,b} - \mathrm{bp\_x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1
+\left( \mathrm{bp\_y}_{b,g} - \mathrm{bp\_y}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) \le \left( \mathrm{bp\_y}_{b \boxplus_{0} 1,g} - \mathrm{bp\_y}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1
 ```
 
 The first requires a row in both tables at every breakpoint. The second

@@ -397,7 +397,7 @@ objective:
 ```
 
 ```math
-p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \} \rvert \ge 2
+p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{b,g} \} \rvert \ge 2
 ```
 
 <figure class="diagram">
@@ -460,7 +460,7 @@ where: "count(points AND NOT shift(points, along=bp, offset=1), over=bp) == 1"
 ```
 
 ```math
-p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \wedge \neg \mathrm{points}_{g,b - 1} \} \rvert = 1
+p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{b,g} \wedge \neg \mathrm{points}_{b - 1,g} \} \rvert = 1
 ```
 
 <figure class="diagram">

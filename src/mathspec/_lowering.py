@@ -17,10 +17,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand, parse_template
-from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
+from mathspec._piecewise import (
+    assumptions_of,
+    declaration_of,
+    lp_domain_refusal,
+    refused_under_where,
+    resolve_gate,
+    resolve_links,
+    resolve_walks,
+)
 from mathspec._resolution import (
     Namespace,
     mask_of,
@@ -44,7 +52,6 @@ from mathspec.program import (
     Given,
     GivenParameter,
     GivenTargets,
-    Link,
     Mask,
     NamedCondition,
     NamedExpression,
@@ -53,7 +60,6 @@ from mathspec.program import (
     Or,
     Parameter,
     ParameterReference,
-    Piecewise,
     Program,
     RelationDefined,
     Sos,
@@ -66,7 +72,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Condition, Expression
+    from mathspec.program import Condition, Expression, Gate, JoinColumns
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -91,9 +97,9 @@ def lower(spec: Spec) -> Program:
       curve as lowered;
     - every dim rule (``dimensions.check_spec``), once names resolve.
 
-    A ``piecewise:`` entry's links are resolved and its frame checked here, on
-    the link the file wrote, so the expansion writes rows the language has
-    already held to every rule; what its method assumes of the breakpoints
+    A ``piecewise:`` entry's links and ``where:`` are resolved here, and each
+    link's row and its fit decided, on the link the file wrote, so the
+    expansion writes rows the language has already held to every rule; what its method assumes of the breakpoints
     stands under the program's assumptions with the file's own, so a spec
     states what it assumes whether or not its curves are written out.
 
@@ -142,7 +148,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+            conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     parameter_masks = _parameter_masks(spec, ns, errors)
 
@@ -156,7 +162,7 @@ def lower(spec: Spec) -> Program:
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
-            tuple(vdef.dims),
+            vdef.dims,
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -171,9 +177,7 @@ def lower(spec: Spec) -> Program:
         where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
-            constraints[cname] = Constraint(
-                tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
-            )
+            constraints[cname] = Constraint(cdef.dims, lhs, sense, rhs, mask_of(where), description=cdef.description)
 
     objective = None
     if spec.objective is not None:
@@ -186,39 +190,38 @@ def lower(spec: Spec) -> Program:
         if (assumption := _assumption(aname, adef, ns, errors)) is not None:
             assumptions[aname] = assumption
 
-    curves: dict[str, tuple[Expression, ...]] = {}
+    curves: dict[str, tuple[tuple[Expression, ...], dict[str, JoinColumns], Mask | None, Gate | None]] = {}
     for pname, pdef in spec.piecewise.items():
         links = resolve_links(pname, pdef, ns, errors)
-        if links is None:
+        walks = resolve_walks(pname, pdef, ns, errors)
+        where = mask_of(resolve_condition_text(pdef.where, ns, f"piecewise '{pname}' where", errors))
+        gate = None
+        if pdef.activity is not None:
+            gate = resolve_gate(pname, pdef, variables, ns, errors)
+            if gate is None:
+                continue
+        if links is None or walks is None:
             continue
         if pdef.method == 'lp' and (refusal := lp_domain_refusal(pname, pdef, links)) is not None:
             errors.append(refusal)
-        curves[pname] = links
+        curves[pname] = (links, walks, where, gate)
 
-    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, curves))
+    linked = {pname: links for pname, (links, *_) in curves.items()}
+    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, linked))
     if errors:
         raise ns.error(errors)
 
     roots = [side for c in constraints.values() for side in (c.lhs, c.rhs)]
     if objective is not None:
         roots.append(objective.expression)
-    roots.extend(link for links in curves.values() for link in links)
+    roots.extend(link for links in linked.values() for link in links)
     roots.extend(terms)
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, ExpressionReference))
 
     piecewise = {}
-    for pname, links in curves.items():
-        pdef = spec.piecewise[pname]
-        piecewise[pname] = Piecewise(
-            over=pdef.over,
-            links=tuple(Link(node, link.values, link.sign) for node, link in zip(links, pdef.links, strict=True)),
-            method=pdef.method,
-            frame=curve_frame(spec, pname, pdef, links),
-            activity=pdef.activity,
-            points=pdef.points,
-            description=pdef.description,
-        )
-        for aname, assumed in assumptions_of(pname, piecewise[pname]).items():
+    for pname, (links, walks, where, gate) in curves.items():
+        piecewise[pname] = declaration_of(pname, spec.piecewise[pname], links, walks, where, gate, spec)
+        for aname, assumed in assumptions_of(pname, piecewise[pname], spec.piecewise[pname].where).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
@@ -226,7 +229,7 @@ def lower(spec: Spec) -> Program:
     program = Program(
         parameters={
             name: Parameter(
-                tuple(pdef.dims),
+                pdef.dims,
                 pdef.dtype,
                 pdef.missing,
                 pdef.description,
@@ -252,7 +255,7 @@ def lower(spec: Spec) -> Program:
         expressions={
             name: NamedExpression(
                 entry.body,
-                _frame_of(name, entry, spec),
+                entry.dims,
                 in_math=name in in_math,
                 description=spec.expressions[name].description,
                 adds_to=spec.expressions[name].adds_to,
@@ -262,16 +265,16 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: GivenParameter(tuple(g.dims), g.dtype, g.description) for name, g in spec.given.parameters.items()
+                name: GivenParameter(g.dims, g.dtype, g.description) for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
-            constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
-            expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(g.dims, g.description) for name, g in spec.given.variables.items()},
+            constraints={name: Given(g.dims, g.description) for name, g in spec.given.constraints.items()},
+            expressions={name: Given(g.dims, g.description) for name, g in spec.given.expressions.items()},
+            conditions={name: Given(g.dims, g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
-    if errors := [*emitted_name_errors(spec, program), *refused_under_points(spec)]:
+    if errors := [*emitted_name_errors(spec, program), *refused_under_where(program, spec)]:
         raise SchemaError('\n'.join(errors))
     check_spec(spec, program)
     return program
@@ -384,17 +387,11 @@ def _zero_divisor_refusals(
     return list(dict.fromkeys(found))
 
 
-def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
-    declared = spec.expressions[name].dims
-    return entry.dims if declared is None else tuple(declared)
-
-
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
 
 

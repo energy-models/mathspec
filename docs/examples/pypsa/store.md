@@ -20,13 +20,13 @@ given:
     GlobalConstraint_counts_snapshot: { dims: [scenario, global_constraint, snapshot], dtype: bool }
   expressions:
     energy_limit_weight: { dims: [snapshot] }
-    primary_energy: { dims: [scenario, global_constraint] }
-    operational_limit: { dims: [scenario, global_constraint] }
+    primary_energy: { dims: [global_constraint, scenario] }
+    operational_limit: { dims: [global_constraint, scenario] }
     tech_capacity_expansion: { dims: [global_constraint] }
     scenario_opex: { dims: [scenario] }
     total_cost: { dims: [] }
-    Carrier_additions: { dims: [period, carrier] }
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Carrier_additions: { dims: [carrier, period] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:
@@ -606,33 +606,33 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
-| $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
+| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{yr}}`$ | `period_weight_years` over $`\mathcal{Y}`$, data another file declares |
+| $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
+| $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{sto}}`$ | `snapshot_weightings_stores` over $`\mathcal{T}`$, data another file declares |
-| $`\mathrm{in}`$ | `GlobalConstraint_counts_snapshot` over $`\Xi \times \mathcal{G} \times \mathcal{T}`$, data another file declares |
+| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$, an expression this file adds `Store_injection` to |
+| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{I} \times \mathcal{Y}`$, an expression this file adds `Store_additions` to |
 | $`\mathit{w}^{E}`$ | `energy_limit_weight` over $`\mathcal{T}`$, an expression another file defines |
-| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_primary_energy` to |
-| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\Xi \times \mathcal{G}`$, an expression this file adds `Store_operational_limit` to |
-| $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Store_tech_capacity_expansion` to |
+| $`\mathit{operational\_limit}`$ | `operational_limit` over $`\mathcal{G} \times \Xi`$, an expression this file adds `Store_operational_limit` to |
+| $`\mathit{primary\_energy}`$ | `primary_energy` over $`\mathcal{G} \times \Xi`$, an expression this file adds `Store_primary_energy` to |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Store_opex` to |
+| $`\mathit{tech\_capacity\_expansion}`$ | `tech_capacity_expansion` over $`\mathcal{G}`$, an expression this file adds `Store_tech_capacity_expansion` to |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Store_capex` to |
-| $`\mathit{Carrier\_additions}`$ | `Carrier_additions` over $`\mathcal{Y} \times \mathcal{I}`$, an expression this file adds `Store_additions` to |
-| $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Store_injection` to |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{V}`$ | index $`v`$ — `store` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I},\ \mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N}`$ — pure energy stores, each on one bus |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{V}`$ | index $`v`$ — `store` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — pure energy stores, each on one bus |
 
 #### Parameters
 
@@ -640,45 +640,45 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{e}`$ | `Store_active` over $`\mathcal{T} \times \mathcal{V}`$ — whether a store is active in a snapshot's period. It is PyPSA's `active`, data prep |
 | $`\mathrm{act}^{e}`$ | `Store_active_asset` over $`\mathcal{V}`$ — whether a store is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
-| $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
-| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
-| $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
-| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
 | $`\mathrm{c}^{\mathrm{cap},e}`$ | `Store_capital_cost` over $`\Xi \times \mathcal{V}`$ — cost of one unit of nominal capacity for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
-| $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\mathcal{V}`$, `absent` where the data has no row — a given nominal capacity for an extendable store. One without a value has no row here |
-| $`\mathrm{e}^{\mathrm{nom}}`$ | `Store_e_nom` over $`\Xi \times \mathcal{V}`$ — nominal energy capacity |
-| $`\mathrm{ext}^{e}`$ | `Store_e_nom_extendable` over $`\mathcal{V}`$ — whether the nominal energy capacity is a decision |
-| $`\mathrm{e}^{\mathrm{mod}}`$ | `Store_e_nom_mod` over $`\mathcal{V}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
-| $`\underline{\mathrm{e}}`$ | `Store_e_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — least energy held, per unit of nominal capacity: negative for a store that may go short |
-| $`\overline{\mathrm{e}}`$ | `Store_e_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most energy held, per unit of nominal capacity |
-| $`\mathrm{sgn}^{q}`$ | `Store_sign` over $`\mathcal{V}`$ — the sign the power a store delivers enters its bus's balance with. It is PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:46`) |
-| $`\rho^{e}`$ | `Store_retention` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of energy kept over a snapshot. It is PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep |
-| $`\mathrm{e}^{0}`$ | `Store_e_initial` over $`\Xi \times \mathcal{V}`$ — energy held before the first snapshot |
+| $`\mathrm{W}^{e}`$ | `Store_capital_weight` over $`\mathcal{V}`$ — the sum of period weights a store is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
+| $`\mathrm{cyc}^{\max}`$ | `Store_cycles_max` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — most equivalent full cycles over the horizon: discharge divided by `e_nom`. No value means PyPSA's default of infinity, and no limit |
 | $`\mathrm{cyc}^{e}`$ | `Store_e_cyclic` over $`\Xi \times \mathcal{V}`$ — whether the horizon closes on itself instead of opening on the initial energy |
 | $`\mathrm{cyc}^{e,y}`$ | `Store_e_cyclic_per_period` over $`\Xi \times \mathcal{V}`$ — whether each investment period closes on itself instead of carrying its energy on to the next. It overrides `e_cyclic` and `e_initial_per_period`. PyPSA reads it only under `multi_investment_periods`. Otherwise you feed false in data prep |
+| $`\mathrm{e}^{0}`$ | `Store_e_initial` over $`\Xi \times \mathcal{V}`$ — energy held before the first snapshot |
 | $`\mathrm{reset}^{e}`$ | `Store_e_initial_per_period` over $`\Xi \times \mathcal{V}`$ — whether each investment period opens on the initial energy instead of carrying the previous period's. PyPSA reads it only under `multi_investment_periods`. Otherwise you feed false in data prep |
-| $`\mathrm{open}^{e}`$ | `Store_opens_late` over $`\mathcal{T} \times \mathcal{V}`$ — whether a snapshot is the first a store is active in, where that is not the first of the horizon, data prep. It is PyPSA's `active.cumsum() == 1` over the snapshots it is active in, past the first snapshot. It is false in a run where every store is active throughout |
+| $`\overline{\mathrm{e}}`$ | `Store_e_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most energy held, per unit of nominal capacity |
+| $`\underline{\mathrm{e}}`$ | `Store_e_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — least energy held, per unit of nominal capacity: negative for a store that may go short |
+| $`\mathrm{e}^{\mathrm{nom}}`$ | `Store_e_nom` over $`\Xi \times \mathcal{V}`$ — nominal energy capacity |
+| $`\mathrm{ext}^{e}`$ | `Store_e_nom_extendable` over $`\mathcal{V}`$ — whether the nominal energy capacity is a decision |
+| $`\overline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_max` over $`\Xi \times \mathcal{V}`$ — most nominal capacity an extendable store may be built at |
+| $`\underline{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_min` over $`\Xi \times \mathcal{V}`$ — least nominal capacity an extendable store may be built at |
+| $`\mathrm{e}^{\mathrm{mod}}`$ | `Store_e_nom_mod` over $`\mathcal{V}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\mathrm{e}^{\mathrm{nom,set}}`$ | `Store_e_nom_set` over $`\mathcal{V}`$, `absent` where the data has no row — a given nominal capacity for an extendable store. One without a value has no row here |
+| $`\mathrm{e}^{\mathrm{set}}`$ | `Store_e_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `absent` where the data has no row — a given energy schedule. A store without one has no row here |
+| $`\overline{\mathrm{E}}^{q}`$ | `Store_e_sum_max` over $`\Xi \times \mathcal{V}`$ — most energy of its net dispatch over the horizon. It is infinity where no cap is meant |
+| $`\underline{\mathrm{E}}^{q}`$ | `Store_e_sum_min` over $`\Xi \times \mathcal{V}`$ — least energy of its net dispatch over the horizon. It is minus infinity where no floor is meant |
+| $`\eta^{e,+}`$ | `Store_efficiency_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of the energy drawn down that reaches the bus |
+| $`\eta^{e,-}`$ | `Store_efficiency_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of the power drawn from the bus that becomes energy held |
+| $`\mathrm{new}^{e}`$ | `Store_first_active` over $`\mathcal{Y} \times \mathcal{V}`$ — one in the first period a store is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`) |
 | $`\mathrm{idle}^{e}`$ | `Store_inactive_snapshots` over $`\mathcal{V}`$ — how many snapshots a store is not active in. It is PyPSA's `(~active).sum()`, data prep. A cyclic store reaches back this many snapshots further, so it closes on the last snapshot it is active in |
+| $`\mathrm{inflow}^{e}`$ | `Store_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{c}^{q}`$ | `Store_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of power delivered |
+| $`\mathrm{c}^{q,+}`$ | `Store_marginal_cost_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of discharge, `p + p_store` |
 | $`\mathrm{c}^{q,(2)}`$ | `Store_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of the square of the net power delivered, so charging costs as much as delivering |
 | $`\mathrm{c}^{e}`$ | `Store_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of energy held over one snapshot |
-| $`\mathrm{e}^{\mathrm{set}}`$ | `Store_e_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `absent` where the data has no row — a given energy schedule. A store without one has no row here |
-| $`\mathrm{q}^{\mathrm{set}}`$ | `Store_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `absent` where the data has no row — a given schedule of power delivered. A store without one has no row here |
-| $`\mathrm{T}^{e}`$ | `Store_max_hours` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — energy capacity, as hours of discharge at the power rating. The rating is `e_nom / max_hours`. No value means PyPSA's default of infinity, and the store's power is then unbounded |
-| $`\underline{\mathrm{q}}`$ | `Store_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most charging, per unit of the power rating, negated. It is PyPSA's `p_min_pu`, `-1` unless given, read only where `max_hours` has a value |
-| $`\overline{\mathrm{q}}`$ | `Store_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most discharge, per unit of the power rating. It is PyPSA's `p_max_pu`, `1` unless given, read only where `max_hours` has a value |
-| $`\eta^{e,-}`$ | `Store_efficiency_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of the power drawn from the bus that becomes energy held |
-| $`\eta^{e,+}`$ | `Store_efficiency_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of the energy drawn down that reaches the bus |
-| $`\mathrm{inflow}^{e}`$ | `Store_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — energy arriving per hour, a river into a reservoir |
-| $`\mathrm{c}^{\mathrm{spill},e}`$ | `Store_spill_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of inflow passed on unused |
-| $`\mathrm{c}^{q,+}`$ | `Store_marginal_cost_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of discharge, `p + p_store` |
 | $`\mathrm{c}^{q,-}`$ | `Store_marginal_cost_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of charging, `p_store` |
+| $`\mathrm{T}^{e}`$ | `Store_max_hours` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — energy capacity, as hours of discharge at the power rating. The rating is `e_nom / max_hours`. No value means PyPSA's default of infinity, and the store's power is then unbounded |
+| $`\mathrm{open}^{e}`$ | `Store_opens_late` over $`\mathcal{T} \times \mathcal{V}`$ — whether a snapshot is the first a store is active in, where that is not the first of the horizon, data prep. It is PyPSA's `active.cumsum() == 1` over the snapshots it is active in, past the first snapshot. It is false in a run where every store is active throughout |
+| $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\mathcal{G} \times \Xi \times \mathcal{V}`$, `absent` where the data has no row — one where the store is in the row's set, data prep. One outside it has no row |
+| $`\overline{\mathrm{q}}`$ | `Store_p_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most discharge, per unit of the power rating. It is PyPSA's `p_max_pu`, `1` unless given, read only where `max_hours` has a value |
+| $`\underline{\mathrm{q}}`$ | `Store_p_min_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — most charging, per unit of the power rating, negated. It is PyPSA's `p_min_pu`, `-1` unless given, read only where `max_hours` has a value |
+| $`\mathrm{q}^{\mathrm{set}}`$ | `Store_p_set` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, `absent` where the data has no row — a given schedule of power delivered. A store without one has no row here |
+| $`\mathrm{a}^{e}`$ | `Store_primary_energy_weight` over $`\mathcal{G} \times \Xi \times \mathcal{V}`$, `absent` where the data has no row — the constrained attribute per unit of energy depleted, data prep. An unweighted store has no row |
+| $`\rho^{e}`$ | `Store_retention` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — share of energy kept over a snapshot. It is PyPSA's `(1 - standing_loss) ** elapsed hours`, data prep |
+| $`\mathrm{sgn}^{q}`$ | `Store_sign` over $`\mathcal{V}`$ — the sign the power a store delivers enters its bus's balance with. It is PyPSA's `sign`, `1` unless given. PyPSA refuses one that differs by scenario (`constants.py:46`) |
+| $`\mathrm{c}^{\mathrm{spill},e}`$ | `Store_spill_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of inflow passed on unused |
 | $`\mathrm{split}^{e}`$ | `Store_split_dispatch` over $`\Xi \times \mathcal{V}`$ — whether a store charges through `p_store` apart from its net dispatch `p`. It is PyPSA's `split_dispatch()`: true where an efficiency differs from one, a cost applies to one direction only, or `cycles_max` is finite, in any snapshot (`stores.py:88-116`), data prep. Where it is false, `p_store` is held at zero and the charging bound applies to `p` |
-| $`\underline{\mathrm{E}}^{q}`$ | `Store_e_sum_min` over $`\Xi \times \mathcal{V}`$ — least energy of its net dispatch over the horizon. It is minus infinity where no floor is meant |
-| $`\overline{\mathrm{E}}^{q}`$ | `Store_e_sum_max` over $`\Xi \times \mathcal{V}`$ — most energy of its net dispatch over the horizon. It is infinity where no cap is meant |
-| $`\mathrm{cyc}^{\max}`$ | `Store_cycles_max` over $`\Xi \times \mathcal{V}`$, `absent` where the data has no row — most equivalent full cycles over the horizon: discharge divided by `e_nom`. No value means PyPSA's default of infinity, and no limit |
-| $`\mathrm{a}^{e}`$ | `Store_primary_energy_weight` over $`\Xi \times \mathcal{G} \times \mathcal{V}`$, `absent` where the data has no row — the constrained attribute per unit of energy depleted, data prep. An unweighted store has no row |
-| $`\mathrm{b}^{e}`$ | `Store_operational_limit_weight` over $`\Xi \times \mathcal{G} \times \mathcal{V}`$, `absent` where the data has no row — one where the store is in the row's set, data prep. One outside it has no row |
 | $`\mathrm{m}^{e}`$ | `Store_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{V}`$, `absent` where the data has no row — one where the store is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Variables
@@ -686,29 +686,29 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`e`$ | `Store_e` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-e` — energy held at the end of a snapshot |
+| $`E`$ | `Store_e_nom_ext` over $`\mathcal{V}`$ — `Store-e_nom` — nominal capacity where it is a decision, for a store that is active. A fixed build is the parameter of the same PyPSA name |
+| $`N^{e}`$ | `Store_n_mod` over $`\mathcal{V}`$ — `Store-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`q`$ | `Store_p` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p` — net power delivered to the bus. Charging is negative |
 | $`q^{-}`$ | `Store_p_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p_store` — power drawn from the bus to charge, so that `p + p_store` is the discharge. It is held at zero by its rows where the store does not split its dispatch |
 | $`\mathit{spill}^{e}`$ | `Store_spill` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$, $`0`$ where the mask leaves it out — `Store-spill` — inflow passed on unused. It is zero where there is no inflow, so the balance keeps its row there. The bounds are PyPSA's, on the variable rather than as rows |
-| $`E`$ | `Store_e_nom_ext` over $`\mathcal{V}`$ — `Store-e_nom` — nominal capacity where it is a decision, for a store that is active. A fixed build is the parameter of the same PyPSA name |
-| $`N^{e}`$ | `Store_n_mod` over $`\mathcal{V}`$ — `Store-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{e}`$ | `Store_energy_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the energy a store opens a snapshot with. At the first snapshot it is active in, it is its last such snapshot's less standing loss where it is cyclic. Where it is not, it is the given initial energy, which no standing loss has touched yet. Otherwise it is the previous snapshot's less standing loss. A store built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
-| $`\widetilde{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_effective` over $`\Xi \times \mathcal{V}`$ — the build a store's limits are taken against: the chosen one where it is extendable, the given one otherwise |
-| $`\underline{\mathrm{q}}^{+}`$ | `Store_discharge_floor_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the least discharge, per unit of `e_nom`. It is zero for a store that splits its dispatch, so `p_store` carries the charge. Otherwise it is the most charging as a negative discharge, `p_min_pu / max_hours` (`stores.py:79-86`) |
-| $`\overline{\mathrm{q}}^{-}`$ | `Store_charge_cap_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the most charging through `p_store`, per unit of `e_nom`. It is `-p_min_pu / max_hours` for a store that splits its dispatch, and zero otherwise (`stores.py:79-86`) |
-| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store is active, and zero elsewhere. A store that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:509-512`) |
-| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\Xi \times \mathcal{G} \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level. Where the store reopens per period, it is the years of the period at the last snapshot of each counted period. Where it does not, it is one at the last counted snapshot it is active in. It is nothing elsewhere |
-| $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
-| $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
-| $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
-| $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
-| $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
+| $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
+| $`\overline{\mathrm{q}}^{-}`$ | `Store_charge_cap_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the most charging through `p_store`, per unit of `e_nom`. It is `-p_min_pu / max_hours` for a store that splits its dispatch, and zero otherwise (`stores.py:79-86`) |
+| $`\mathit{w}^{e}`$ | `Store_closing_weight` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — what the energy a store holds at a snapshot counts for in a row as its closing level. Where the store reopens per period, it is the years of the period at the last snapshot of each counted period. Where it does not, it is one at the last counted snapshot it is active in. It is nothing elsewhere |
+| $`\underline{\mathrm{q}}^{+}`$ | `Store_discharge_floor_pu` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the least discharge, per unit of `e_nom`. It is zero for a store that splits its dispatch, so `p_store` carries the charge. Otherwise it is the most charging as a negative discharge, `p_min_pu / max_hours` (`stores.py:79-86`) |
+| $`\widetilde{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_effective` over $`\Xi \times \mathcal{V}`$ — the build a store's limits are taken against: the chosen one where it is extendable, the given one otherwise |
+| $`\overleftarrow{e}`$ | `Store_energy_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the energy a store opens a snapshot with. At the first snapshot it is active in, it is its last such snapshot's less standing loss where it is cyclic. Where it is not, it is the given initial energy, which no standing loss has touched yet. Otherwise it is the previous snapshot's less standing loss. A store built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
 | $`\mathit{Store\_injection}`$ | `Store_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store is active, and zero elsewhere. A store that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:509-512`) |
+| $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
+| $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
+| $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{G}`$ |
 
 #### Notation
 
@@ -726,6 +726,18 @@ assumptions:
 
 ```math
 e_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v}
+```
+
+**`Store_e_nom_ext`**
+
+```math
+E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+```
+
+**`Store_n_mod`**
+
+```math
+N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
 ```
 
 **`Store_p`**
@@ -746,78 +758,12 @@ q^{-}_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 0 \le \mathit{spill}^{e}_{\xi,t,v} \le \mathrm{inflow}^{e}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{inflow}^{e}_{\xi,t,v} > 0 \wedge \mathrm{on}^{e}_{t,v}
 ```
 
-**`Store_e_nom_ext`**
-
-```math
-E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
-```
-
-**`Store_n_mod`**
-
-```math
-N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
-```
-
 #### Definitions
 
-**`Store_energy_carried_in`**
+**`Store_additions`**
 
 ```math
-\overleftarrow{e}_{\xi,t,v} = \begin{cases} \rho^{e}_{\xi,t,v} \cdot e_{\xi,\left( t \ominus \mathrm{idle}^{e} \right) \ominus 1,v} & \text{if } \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \neg \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} 1,v} & \text{if } \mathrm{cyc}^{e,y}_{\xi,v} \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = 0 \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t - 1,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
-```
-
-**`Store_e_nom_effective`**
-
-```math
-\widetilde{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} = \begin{cases} E_{v} & \text{if } \mathrm{ext}^{e}_{v} \\ \mathrm{e}^{\mathrm{nom}}_{\xi,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V}
-```
-
-**`Store_discharge_floor_pu`**
-
-```math
-\underline{\mathrm{q}}^{+}_{\xi,t,v} = \begin{cases} 0 & \text{if } \mathrm{split}^{e}_{\xi,v} \\ \frac{\underline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
-```
-
-**`Store_charge_cap_pu`**
-
-```math
-\overline{\mathrm{q}}^{-}_{\xi,t,v} = \begin{cases} \frac{-\underline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} & \text{if } \mathrm{split}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
-```
-
-**`Store_last_counted_active`**
-
-```math
-\mathit{last}^{e}_{\xi,g,t,v} = \begin{cases} 1 & \text{if } \mathrm{in}_{\xi,g,t} \wedge \mathrm{on}^{e}_{t,v} \wedge \neg \left( \mathrm{in}_{\xi,g,t + 1} \wedge \mathrm{on}^{e}_{t + 1,v} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ v \in \mathcal{V}
-```
-
-**`Store_closing_weight`**
-
-```math
-\mathit{w}^{e}_{\xi,g,t,v} = \begin{cases} \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,g,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ \mathit{last}^{e}_{\xi,g,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ g \in \mathcal{G},\ t \in \mathcal{T},\ v \in \mathcal{V}
-```
-
-**`Store_primary_energy`**
-
-```math
-\mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{a}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
-```
-
-**`Store_operational_limit`**
-
-```math
-\mathit{Store\_operational\_limit}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{\xi,g,t,v} \cdot \mathrm{b}^{e}_{\xi,g,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
-```
-
-**`Store_tech_capacity_expansion`**
-
-```math
-\mathit{Store\_tech\_capacity\_expansion}_{g} = \sum_{v \in \mathcal{V}} E_{v} \cdot \mathrm{m}^{e}_{g,v} \qquad \forall\, g \in \mathcal{G}
-```
-
-**`Store_opex`**
-
-```math
-\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Store\_additions}_{i,y} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Store_capex`**
@@ -826,10 +772,34 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 \mathit{Store\_capex} = \sum_{\xi \in \Xi,\ v \in \mathcal{V}} \pi_{\xi} \cdot E_{v} \cdot \mathrm{c}^{\mathrm{cap},e}_{\xi,v} \cdot \mathrm{W}^{e}_{v}
 ```
 
-**`Store_additions`**
+**`Store_charge_cap_pu`**
 
 ```math
-\mathit{Store\_additions}_{i,y} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\overline{\mathrm{q}}^{-}_{\xi,t,v} = \begin{cases} \frac{-\underline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} & \text{if } \mathrm{split}^{e}_{\xi,v} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_closing_weight`**
+
+```math
+\mathit{w}^{e}_{g,\xi,t,v} = \begin{cases} \mathit{last}^{e}_{g,\xi,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{g,\xi,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_discharge_floor_pu`**
+
+```math
+\underline{\mathrm{q}}^{+}_{\xi,t,v} = \begin{cases} 0 & \text{if } \mathrm{split}^{e}_{\xi,v} \\ \frac{\underline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_e_nom_effective`**
+
+```math
+\widetilde{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} = \begin{cases} E_{v} & \text{if } \mathrm{ext}^{e}_{v} \\ \mathrm{e}^{\mathrm{nom}}_{\xi,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V}
+```
+
+**`Store_energy_carried_in`**
+
+```math
+\overleftarrow{e}_{\xi,t,v} = \begin{cases} \rho^{e}_{\xi,t,v} \cdot e_{\xi,\left( t \ominus \mathrm{idle}^{e} \right) \ominus 1,v} & \text{if } \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \neg \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} 1,v} & \text{if } \mathrm{cyc}^{e,y}_{\xi,v} \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = 0 \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t - 1,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 **`Store_injection`**
@@ -838,12 +808,60 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 \mathit{Store\_injection}_{n,\xi,t} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
-#### Subject to
-
-**`Store_e_sum_min`**
+**`Store_last_counted_active`**
 
 ```math
-\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \underline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined}
+\mathit{last}^{e}_{g,\xi,t,v} = \begin{cases} 1 & \text{if } \mathrm{in}_{g,\xi,t} \wedge \mathrm{on}^{e}_{t,v} \wedge \neg \left( \mathrm{in}_{g,\xi,t + 1} \wedge \mathrm{on}^{e}_{t + 1,v} \right) \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+**`Store_operational_limit`**
+
+```math
+\mathit{Store\_operational\_limit}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{g,\xi,t,v} \cdot \mathrm{b}^{e}_{g,\xi,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`Store_opex`**
+
+```math
+\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+```
+
+**`Store_primary_energy`**
+
+```math
+\mathit{Store\_primary\_energy}_{g,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{g,\xi,t,v} \cdot \mathrm{a}^{e}_{g,\xi,v} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`Store_tech_capacity_expansion`**
+
+```math
+\mathit{Store\_tech\_capacity\_expansion}_{g} = \sum_{v \in \mathcal{V}} E_{v} \cdot \mathrm{m}^{e}_{g,v} \qquad \forall\, g \in \mathcal{G}
+```
+
+#### Subject to
+
+**`Store_cycles_max`**
+
+```math
+\sum_{t \in \mathcal{T}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \le \mathrm{cyc}^{\max}_{\xi,v} \cdot \widetilde{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{cyc}^{\max}_{\xi,v} \text{ is defined} \wedge \mathrm{act}^{e}_{v}
+```
+
+**`Store_e_nom_modularity`**
+
+```math
+E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
+```
+
+**`Store_e_nom_set`**
+
+```math
+E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom,set}}_{v} \text{ is defined}
+```
+
+**`Store_e_set`**
+
+```math
+e_{\xi,t,v} = \mathrm{e}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{e}^{\mathrm{set}}_{\xi,t,v} \text{ is defined} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_e_sum_max`**
@@ -852,28 +870,22 @@ N^{e}_{v} \ge 0, N^{e}_{v} \in \mathbb{Z} \qquad \forall\, v \in \mathcal{V} \,:
 \sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \overline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined}
 ```
 
-**`Store_fix_e_lower`**
+**`Store_e_sum_min`**
 
 ```math
-e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \underline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined}
 ```
 
-**`Store_fix_e_upper`**
+**`Store_energy_balance`**
 
 ```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} = \overleftarrow{e}_{\xi,t,v} - \frac{q_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{e,+}_{\xi,t,v}} + \left( \eta^{e,-}_{\xi,t,v} - \frac{1}{\eta^{e,+}_{\xi,t,v}} \right) \cdot q^{-}_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t} + \left( \mathrm{inflow}^{e}_{\xi,t,v} - \mathit{spill}^{e}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_ext_e_lower`**
 
 ```math
 e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
-```
-
-**`Store_ext_e_upper`**
-
-```math
-e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_ext_e_nom_lower`**
@@ -888,52 +900,16 @@ E_{v} \ge \underline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in
 E_{v} \le \overline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v} \wedge \overline{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \text{ is defined}
 ```
 
-**`Store_e_nom_set`**
+**`Store_ext_e_upper`**
 
 ```math
-E_{v} = \mathrm{e}^{\mathrm{nom,set}}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom,set}}_{v} \text{ is defined}
-```
-
-**`Store_e_nom_modularity`**
-
-```math
-E_{v} = \mathrm{e}^{\mathrm{mod}}_{v} \cdot N^{e}_{v} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{mod}}_{v} > 0 \wedge \mathrm{act}^{e}_{v}
-```
-
-**`Store_fix_p_lower`**
-
-```math
-q_{\xi,t,v} + q^{-}_{\xi,t,v} \ge \underline{\mathrm{q}}^{+}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
-```
-
-**`Store_fix_p_upper`**
-
-```math
-q_{\xi,t,v} + q^{-}_{\xi,t,v} \le \frac{\overline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{T}^{e}_{\xi,v} \text{ is defined}
-```
-
-**`Store_fix_p_store_lower`**
-
-```math
-q^{-}_{\xi,t,v} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
-```
-
-**`Store_fix_p_store_upper`**
-
-```math
-q^{-}_{\xi,t,v} \le \overline{\mathrm{q}}^{-}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \neg \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_ext_p_lower`**
 
 ```math
 q_{\xi,t,v} + q^{-}_{\xi,t,v} \ge \underline{\mathrm{q}}^{+}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
-```
-
-**`Store_ext_p_upper`**
-
-```math
-q_{\xi,t,v} + q^{-}_{\xi,t,v} \le \frac{\overline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{T}^{e}_{\xi,v} \text{ is defined}
 ```
 
 **`Store_ext_p_store_lower`**
@@ -948,22 +924,46 @@ q^{-}_{\xi,t,v} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \
 q^{-}_{\xi,t,v} \le \overline{\mathrm{q}}^{-}_{\xi,t,v} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \neg \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
 ```
 
-**`Store_energy_balance`**
+**`Store_ext_p_upper`**
 
 ```math
-e_{\xi,t,v} = \overleftarrow{e}_{\xi,t,v} - \frac{q_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{e,+}_{\xi,t,v}} + \left( \eta^{e,-}_{\xi,t,v} - \frac{1}{\eta^{e,+}_{\xi,t,v}} \right) \cdot q^{-}_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t} + \left( \mathrm{inflow}^{e}_{\xi,t,v} - \mathit{spill}^{e}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v}
+q_{\xi,t,v} + q^{-}_{\xi,t,v} \le \frac{\overline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} \cdot E_{v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{T}^{e}_{\xi,v} \text{ is defined}
 ```
 
-**`Store_cycles_max`**
+**`Store_fix_e_lower`**
 
 ```math
-\sum_{t \in \mathcal{T}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \le \mathrm{cyc}^{\max}_{\xi,v} \cdot \widetilde{\mathrm{e}}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{cyc}^{\max}_{\xi,v} \text{ is defined} \wedge \mathrm{act}^{e}_{v}
+e_{\xi,t,v} \ge \underline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
-**`Store_e_set`**
+**`Store_fix_e_upper`**
 
 ```math
-e_{\xi,t,v} = \mathrm{e}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{e}^{\mathrm{set}}_{\xi,t,v} \text{ is defined} \wedge \mathrm{on}^{e}_{t,v}
+e_{\xi,t,v} \le \overline{\mathrm{e}}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+```
+
+**`Store_fix_p_lower`**
+
+```math
+q_{\xi,t,v} + q^{-}_{\xi,t,v} \ge \underline{\mathrm{q}}^{+}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
+```
+
+**`Store_fix_p_store_lower`**
+
+```math
+q^{-}_{\xi,t,v} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v}
+```
+
+**`Store_fix_p_store_upper`**
+
+```math
+q^{-}_{\xi,t,v} \le \overline{\mathrm{q}}^{-}_{\xi,t,v} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \left( \neg \mathrm{split}^{e}_{\xi,v} \vee \mathrm{T}^{e}_{\xi,v} \text{ is defined} \right)
+```
+
+**`Store_fix_p_upper`**
+
+```math
+q_{\xi,t,v} + q^{-}_{\xi,t,v} \le \frac{\overline{\mathrm{q}}_{\xi,t,v}}{\mathrm{T}^{e}_{\xi,v}} \cdot \mathrm{e}^{\mathrm{nom}}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \neg \mathrm{ext}^{e}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{T}^{e}_{\xi,v} \text{ is defined}
 ```
 
 **`Store_p_set`**
@@ -974,10 +974,10 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 
 #### Assumptions
 
-**`Store_stands_in_one_run`**
+**`Store_marginal_cost_quadratic_without_risk_preference`**
 
 ```math
-\lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \wedge \neg \mathrm{on}^{e}_{t - 1,v} \} \rvert \le 1 \qquad \forall\, v \in \mathcal{V}
+\mathrm{c}^{q,(2)}_{\xi,t,v} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \omega \text{ is defined}
 ```
 
 **`Store_opens_late_only_where_it_opens`**
@@ -992,28 +992,28 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 \mathrm{open}^{e}_{t,v} \qquad \forall\, t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v} \wedge \neg \mathrm{on}^{e}_{t - 1,v} \wedge \mathrm{pos}(t) > 0
 ```
 
-**`Store_primary_energy_per_period_without_scenarios`**
+**`Store_operational_limit_carried_over_has_unit_years`**
 
 ```math
-\neg \mathrm{reset}^{e}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V},\ g \in \mathcal{G} \,:\, \mathrm{a}^{e}_{\xi,g,v} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
+\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
 **`Store_primary_energy_carried_over_has_unit_years`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V},\ g \in \mathcal{G},\ y \in \mathcal{Y} \,:\, \mathrm{a}^{e}_{\xi,g,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v}
+\mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, g \in \mathcal{G},\ y \in \mathcal{Y},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v}
 ```
 
-**`Store_operational_limit_carried_over_has_unit_years`**
+**`Store_primary_energy_per_period_without_scenarios`**
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V},\ g \in \mathcal{G} \,:\, \mathrm{b}^{e}_{\xi,g,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{\xi,g,t}
+\neg \mathrm{reset}^{e}_{\xi,v} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
 ```
 
-**`Store_marginal_cost_quadratic_without_risk_preference`**
+**`Store_stands_in_one_run`**
 
 ```math
-\mathrm{c}^{q,(2)}_{\xi,t,v} = 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \omega \text{ is defined}
+\lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \wedge \neg \mathrm{on}^{e}_{t - 1,v} \} \rvert \le 1 \qquad \forall\, v \in \mathcal{V}
 ```
 <!-- gallery:end -->
 
