@@ -62,7 +62,7 @@ parameters:
       sub-network the period's active branches form. A row exists only where
       the line and the outage are active in the period and share a
       sub-network. It is -1 at the outaged line itself. PyPSA takes the factors
-      of the first scenario (`abstract.py:645`), and refuses impedances that
+      of the first scenario (`abstract.py:652`), and refuses impedances that
       differ by scenario (`constants.py:33-35`). So the factors are the same in
       every scenario
     dims: [period, line, outage]

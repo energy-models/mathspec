@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(pypsa): the PyPSA reference pins master at 72a12418 ([#PRNUM](https://github.com/energy-models/mathspec/pull/PRNUM))
 - feat(spec)!: a loaded spec is sorted and read-only ([#924](https://github.com/energy-models/mathspec/pull/924))
   - Sorted by name at load: entries, `dims:` lists, relation columns, `cases:`, a macro's `kwargs:` and a dimension's `one_of:`.
   - Breaks the spec API: a section is a read-only `Frozen` mapping, not a `dict`, a list is a tuple, and no field can be set. Change a spec with `override(spec, [patch])`.

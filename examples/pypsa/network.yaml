@@ -32,7 +32,7 @@ constraints:
       its own rate, and each passive branch carries its flow. PyPSA dissipates
       a branch's loss half at either end. Each generator, storage unit, store
       and load term enters with its component's `sign`
-      (`constraints.py:1411-1412`, `:1522`), and an inactive load not at all.
+      (`constraints.py:1480-1481`, `:1592`), and an inactive load not at all.
       A bus nothing is attached to has no row. PyPSA refuses one that carries
       load. The file states no assumption for it.
     dims: [scenario, snapshot, bus]

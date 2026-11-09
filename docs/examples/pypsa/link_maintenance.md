@@ -14,6 +14,7 @@ given:
     Link_p_nom_extendable: { dims: [link], dtype: bool }
     Link_committable: { dims: [link], dtype: bool }
     Link_p_nom_mod: { dims: [link] }
+    Link_modules_installed: { dims: [scenario, link] }
     Link_active: { dims: [snapshot, link], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
     Link_p_nom_min: { dims: [scenario, link] }
@@ -114,6 +115,17 @@ variables:
     bounds:
       lower: 0
 
+expressions:
+  Link_maintenance_modules:
+    description: >-
+      how many modules of a modular committable link can be on in
+      maintenance: its build cap in modules where the build is extendable,
+      and the modules installed where it is fixed (`constraints.py:588-594`)
+    dims: [scenario, link]
+    cases:
+      extendable: { when: Link_p_nom_extendable, expression: Link_p_nom_max / Link_p_nom_mod }
+    otherwise: Link_modules_installed
+
 conditions:
   Link_maint_ext:
     description: >-
@@ -190,15 +202,15 @@ constraints:
   Link_maint_modstatus_le_maint:
     description: >-
       `Link-maint-modstatus-le-maint` — out of maintenance, no module is on in
-      maintenance. In it, at most the modules the build cap holds
+      maintenance. In it, at most its modules in maintenance
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
-    expression: Link_maintenance_status <= Link_p_nom_max / Link_p_nom_mod * Link_maintenance
+    expression: Link_maintenance_status <= Link_maintenance_modules * Link_maintenance
   Link_maint_modstatus_lb:
     description: "`Link-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, link]
     where: Link_maintainable AND Link_committed AND Link_p_nom_mod > 0
-    expression: Link_maintenance_status >= Link_status - Link_p_nom_max / Link_p_nom_mod * (1 - Link_maintenance)
+    expression: Link_maintenance_status >= Link_status - Link_maintenance_modules * (1 - Link_maintenance)
 
 assumptions:
   Link_maintenance_events_positive:
@@ -233,14 +245,6 @@ assumptions:
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
       refuses it (`consistency.py:1576`)
-  Link_maintenance_module_count_is_finite:
-    holds: "Link_p_nom_max < inf"
-    where: "Link_maintainable AND Link_committable AND NOT Link_p_nom_extendable AND Link_p_nom_mod > 0"
-    description: >-
-      the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
-      PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:557-560`)
 ```
 
 #### Given
@@ -249,6 +253,7 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{f}`$ | `Link_active` over $`\mathcal{L} \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
+| $`\mathrm{N}^{f,\mathrm{fix}}`$ | `Link_modules_installed` over $`\mathcal{L} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{f}`$ | `Link_p_nom_extendable` over $`\mathcal{L}`$, data another file declares |
 | $`\overline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_max` over $`\mathcal{L} \times \Xi`$, data another file declares |
 | $`\underline{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_min` over $`\mathcal{L} \times \Xi`$, data another file declares |
@@ -291,6 +296,12 @@ assumptions:
 | $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
+#### Definitions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{Link\_maintenance\_modules}`$ | `Link_maintenance_modules` over $`\mathcal{L} \times \Xi`$ — how many modules of a modular committable link can be on in maintenance: its build cap in modules where the build is extendable, and the modules installed where it is fixed (`constraints.py:588-594`) |
+
 #### Conditions
 
 **`Link_maint_ext`**
@@ -325,6 +336,14 @@ assumptions:
 \mu^{f,u}_{l,\xi,t} \ge 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right)
 ```
 
+#### Definitions
+
+**`Link_maintenance_modules`**
+
+```math
+\mathrm{Link\_maintenance\_modules}_{l,\xi} = \begin{cases} \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} & \text{if } \mathrm{ext}^{f}_{l} \\ \mathrm{N}^{f,\mathrm{fix}}_{l,\xi} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
+```
+
 #### Subject to
 
 **`Link_maint_event_count`**
@@ -336,13 +355,13 @@ assumptions:
 **`Link_maint_modstatus_lb`**
 
 ```math
-\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} - \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,u}_{l,\xi,t} \ge u^{f}_{l,\xi,t} - \mathrm{Link\_maintenance\_modules}_{l,\xi} \cdot \left( 1 - \mu^{f}_{l,\xi,t} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_maint_modstatus_le_maint`**
 
 ```math
-\mu^{f,u}_{l,\xi,t} \le \frac{\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi}}{\mathrm{f}^{\mathrm{mod}}_{l}} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
+\mu^{f,u}_{l,\xi,t} \le \mathrm{Link\_maintenance\_modules}_{l,\xi} \cdot \mu^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 
 **`Link_maint_modstatus_le_status`**
@@ -435,12 +454,6 @@ assumptions:
 
 ```math
 \mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
-```
-
-**`Link_maintenance_module_count_is_finite`**
-
-```math
-\overline{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} < \infty \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \wedge \neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0
 ```
 <!-- gallery:end -->
 

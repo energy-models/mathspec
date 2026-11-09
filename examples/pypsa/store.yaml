@@ -74,7 +74,7 @@ parameters:
   Store_first_active:
     description: >-
       one in the first period a store is active in, zero elsewhere, data prep.
-      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:265`)
+      PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:278`)
     dims: [period, store]
   Store_e_nom_min:
     description: least nominal capacity an extendable store may be built at
@@ -88,7 +88,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1128-1149`, `costs.py:102-203`)
+      (`components.py:1176-1197`, `costs.py:102-203`)
     dims: [scenario, store]
   Store_e_nom_set:
     description: a given nominal capacity for an extendable store. One without a value has no row here
@@ -348,7 +348,7 @@ expressions:
       one at the last snapshot a row counts where a store is active, and zero
       elsewhere. A store that retires before the last counted snapshot closes
       on its last active level. PyPSA forward-fills the level over the counted
-      snapshots (`global_constraints.py:509-512`)
+      snapshots (`global_constraints.py:528-531`)
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       last:
@@ -512,7 +512,7 @@ constraints:
       `Store-energy_balance` — the energy carried in, less the discharge drawn
       down before its efficiency, plus the charge after its own, plus inflow
       not spilled. The net dispatch `p` is the discharge less `p_store`, so
-      `p_store` enters with both efficiencies (`constraints.py:2348-2352`)
+      `p_store` enters with both efficiencies (`constraints.py:2472-2476`)
     dims: [scenario, snapshot, store]
     where: Store_active
     expression: >-
@@ -526,7 +526,7 @@ constraints:
       `Store-cycles_max` — the discharge over the horizon, `p + p_store`
       weighted by the stores weighting, is at most `cycles_max` times the
       build. A store without `cycles_max` has no row
-      (`constraints.py:2476-2495`)
+      (`constraints.py:2607-2633`)
     dims: [scenario, store]
     where: Store_cycles_max AND Store_active_asset
     expression: sum((Store_p + Store_p_store) * snapshot_weightings_stores, over=snapshot) <= Store_cycles_max * Store_e_nom_effective
@@ -568,9 +568,16 @@ assumptions:
     description: >-
       PyPSA reads the closing energy of a store that reopens per period by
       snapshot alone, and fails on a network with scenarios
-      (`global_constraints.py:523`). It fails with or without an
-      `investment_period`. A tool refuses the store only where there is more
-      than one scenario, since the spec cannot tell one scenario from none
+      (`global_constraints.py:542`, PyPSA/PyPSA#2113). It fails with or without
+      an `investment_period`. A tool refuses the store only where there is
+      more than one scenario, since the spec cannot tell one scenario from
+      none
+  Store_operational_limit_per_period_without_scenarios:
+    holds: "NOT Store_e_initial_per_period"
+    where: "Store_operational_limit_weight AND count(scenario_weight, over=scenario) > 1"
+    description: >-
+      the same for an `operational_limit` row, which fails the same way
+      (`global_constraints.py:741`, PyPSA/PyPSA#2113)
   Store_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "Store_primary_energy_weight AND NOT Store_e_initial_per_period"
@@ -578,18 +585,18 @@ assumptions:
       a store that carries its energy from one period to the next closes once,
       at the last counted snapshot. No period's years weighs that level. PyPSA
       refuses it where any period's years is not one
-      (`global_constraints.py:497`)
+      (`global_constraints.py:516`)
   Store_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:698`)
+      PyPSA refuses it (`global_constraints.py:718`)
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
     description: >-
       a quadratic cost puts a square into every `CVaR-excess` row. PyPSA
       refuses quadratic costs under any risk preference, `omega = 0` included
-      (`optimize.py:501-508`). In data prep you write a `CVaR_omega` row only
+      (`optimize.py:506-513`). In data prep you write a `CVaR_omega` row only
       where a risk preference is set

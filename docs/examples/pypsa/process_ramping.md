@@ -82,7 +82,7 @@ expressions:
     description: >-
       the output a process carries into a snapshot. It is nothing at the first
       snapshot it is active in past the first of the horizon: PyPSA fills an
-      output it did not build with zero (`constraints.py:679`). It is the
+      output it did not build with zero (`constraints.py:716`). It is the
       output carried over otherwise
     dims: [scenario, snapshot, process]
     cases:
@@ -136,7 +136,8 @@ expressions:
       the status a committed process's ramp rows carry into a snapshot. At the
       first snapshot, a fixed modular process that came in running has every
       module on, since the state it brought in is on or off
-      (`constraints.py:1092-1097`). It is the state carried in otherwise
+      (`constraints.py:1152-1157`). The transition and down-time rows count it as one module
+      (PyPSA/PyPSA#2114). It is the state carried in otherwise
     dims: [scenario, snapshot, process]
     cases:
       opening_modules:
@@ -318,10 +319,10 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\overleftarrow{z}^{\circ}`$ | `Process_p_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
-| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:679`). It is the output carried over otherwise |
+| $`\overleftarrow{z}`$ | `Process_previous_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:716`). It is the output carried over otherwise |
 | $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may lower internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit in a process's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
-| $`\overleftarrow{\bar u}^{z}`$ | `Process_ramp_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the status a committed process's ramp rows carry into a snapshot. At the first snapshot, a fixed modular process that came in running has every module on, since the state it brought in is on or off (`constraints.py:1092-1097`). It is the state carried in otherwise |
+| $`\overleftarrow{\bar u}^{z}`$ | `Process_ramp_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the status a committed process's ramp rows carry into a snapshot. At the first snapshot, a fixed modular process that came in running has every module on, since the state it brought in is on or off (`constraints.py:1152-1157`). The transition and down-time rows count it as one module (PyPSA/PyPSA\#2114). It is the state carried in otherwise |
 | $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may raise internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit in a process's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
 | $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\mathcal{J} \times \Xi`$ — the shut-down ramp in a process's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
