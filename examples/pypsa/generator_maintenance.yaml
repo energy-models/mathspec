@@ -7,6 +7,7 @@ given:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
     Generator_p_nom_min: { dims: [scenario, generator] }
@@ -110,6 +111,17 @@ variables:
     bounds:
       lower: 0
 
+expressions:
+  Generator_maintenance_modules:
+    description: >-
+      how many modules of a modular committable generator can be on in
+      maintenance: its build cap in modules where the build is extendable,
+      and the modules installed where it is fixed (`constraints.py:588-594`)
+    dims: [scenario, generator]
+    cases:
+      extendable: { when: Generator_p_nom_extendable, expression: Generator_p_nom_max / Generator_p_nom_mod }
+    otherwise: Generator_modules_installed
+
 conditions:
   Generator_maint_ext:
     description: >-
@@ -186,15 +198,15 @@ constraints:
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is
-      on in maintenance. In it, at most the modules the build cap holds
+      on in maintenance. In it, at most its modules in maintenance
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
+    expression: Generator_maintenance_status <= Generator_maintenance_modules * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
+    expression: Generator_maintenance_status >= Generator_status - Generator_maintenance_modules * (1 - Generator_maintenance)
 
 assumptions:
   Generator_maintenance_events_positive:
@@ -229,11 +241,3 @@ assumptions:
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
       refuses it (`consistency.py:1576`)
-  Generator_maintenance_module_count_is_finite:
-    holds: "Generator_p_nom_max < inf"
-    where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
-    description: >-
-      the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
-      PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:557-560`)
