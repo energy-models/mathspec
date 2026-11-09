@@ -995,6 +995,44 @@ Generator_marginal_cost_incremental:
 C^{\mathrm{curve}}_{g,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}}(\mathrm{p}^{\mathrm{curve}}_{b,g},\ \mathrm{C}^{\mathrm{curve}}_{b,g})(p_{g,\xi,t}) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
+### `Link_marginal_cost_incremental`
+
+`Link_marginal_cost_incremental`
+
+```yaml
+Link_marginal_cost_incremental:
+  description: >-
+    `Link-marginal_cost_piecewise` — the running cost of a link with a
+    curve is at least the curve at its flow, stated by segments filled
+    in order, where linopy chooses the incremental rows. No status
+    gates it, because no link with a curve is committable under the
+    keyword
+  activity: null
+```
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}}(\mathrm{f}^{\mathrm{curve}}_{b,l},\ \mathrm{C}^{f,\mathrm{curve}}_{b,l})(f_{l,\xi,t}) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Process_marginal_cost_incremental`
+
+`Process_marginal_cost_incremental`
+
+```yaml
+Process_marginal_cost_incremental:
+  description: >-
+    `Process-marginal_cost_piecewise` — the running cost of a process
+    with a curve is at least the curve at its internal power, stated by
+    segments filled in order, where linopy chooses the incremental
+    rows. No status gates it, because no process with a curve is
+    committable under the keyword
+  activity: null
+```
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}}(\mathrm{z}^{\mathrm{curve}}_{b,j},\ \mathrm{C}^{z,\mathrm{curve}}_{b,j})(z_{j,\xi,t}) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
 ### `Generator_marginal_cost_curve_is_not_committable`
 
 `Generator_marginal_cost_curve_is_not_committable`
@@ -1011,6 +1049,42 @@ Generator_marginal_cost_curve_is_not_committable:
 
 ```math
 \neg \mathrm{com}_{g} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{curve}_{g}
+```
+
+### `Link_marginal_cost_curve_is_not_committable`
+
+`Link_marginal_cost_curve_is_not_committable`
+
+```yaml
+Link_marginal_cost_curve_is_not_committable:
+  holds: "NOT Link_committable"
+  where: "Link_marginal_cost_curve"
+  description: >-
+    a link with a piecewise `marginal_cost` curve is not committable.
+    PyPSA gates such a curve by the status share (`optimize.py:314-318`,
+    `piecewise.py:193-203`), and a curve gate is binary or integer
+```
+
+```math
+\neg \mathrm{com}^{f}_{l} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{curve}^{f}_{l}
+```
+
+### `Process_marginal_cost_curve_is_not_committable`
+
+`Process_marginal_cost_curve_is_not_committable`
+
+```yaml
+Process_marginal_cost_curve_is_not_committable:
+  holds: "NOT Process_committable"
+  where: "Process_marginal_cost_curve"
+  description: >-
+    a process with a piecewise `marginal_cost` curve is not committable.
+    PyPSA gates such a curve by the status share (`optimize.py:314-318`,
+    `piecewise.py:193-203`), and a curve gate is binary or integer
+```
+
+```math
+\neg \mathrm{com}^{z}_{j} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{curve}^{z}_{j}
 ```
 
 ### `Generator_committable_is_not_modular`

@@ -6382,6 +6382,199 @@ def build():
 </details>
 <!-- reference:rung_82_piecewise_marginal_cost_committable:end -->
 
+### Rung 83 — piecewise marginal cost curves on links, processes and storage
+
+This rung gives a `marginal_cost` curve to a link, a process, a storage unit
+and a store. PyPSA states each curve as it states a generator's in rung 81,
+with one call to linopy per component (`optimize.py:301-332`). The curve runs
+over `Link-p`, `Process-p`, `StorageUnit-p_dispatch` or `Store-p`. Its
+breakpoints are `p_pu` times `p_nom`, and `p_dispatch_pu` times `p_nom` for a
+storage unit. A store's breakpoints are `p_pu` times `e_nom`, not times the
+power rating `e_nom / max_hours` that bounds `Store-p` (`piecewise.py:276-298`,
+PyPSA/PyPSA#2118).
+
+The file states each component's curve as two `piecewise:` entries, as it
+does a generator's. `Link_marginal_cost_lp` states the segment lines where
+`Link_marginal_cost_as_lp` is true, and the `Process`, `StorageUnit` and
+`Store` entries follow the same pattern. Each `_as_lp` condition covers the
+curves of one component, because linopy chooses a method once per call.
+
+A curve's cost is zero at its first breakpoint, not at zero output. PyPSA
+requires the first breakpoint at or below zero and the last at or above one
+(`io.py:2316-2336`). The link `curve83` starts at full reverse flow, so it
+costs 60 while it is idle in the first snapshot: 1 per MWh over 60 MW of
+reverse flow. The store `tank83` starts at full charging and costs 20 while
+it is idle. Where a unit is not committable, this cost is the same in every
+snapshot, so it changes the objective and not the dispatch. A committable unit
+pays it only while it is on, so the cost can change the commitment
+(PyPSA/PyPSA#2119). A curve that starts at zero bounds its
+variable from below, so a store with such a curve cannot charge.
+
+In the last three snapshots, `curve83` carries 60 MW at a cost of 450 and
+`process83` runs at 50 MW or close to it. `battery83` charges 30 MW in the
+second snapshot and dispatches 15 MW in each of the last two, on the first
+segment of its curve. `tank83` charges 13.5 MW in the second snapshot, which
+brings its cost down to 13.25. PyPSA solves to `17492.041666666664`.
+
+| PyPSA                                                                   | status | note                                                                                                             |
+| ----------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `Link-marginal_cost_piecewise_chord`, `_domain_lo`, `_domain_hi`        | split  | [`Link_marginal_cost_lp`](#link_marginal_cost_lp), where `Link_marginal_cost_as_lp` is true                      |
+| `Process-marginal_cost_piecewise_chord`, `_domain_lo`, `_domain_hi`     | split  | [`Process_marginal_cost_lp`](#process_marginal_cost_lp), where `Process_marginal_cost_as_lp` is true             |
+| `StorageUnit-marginal_cost_piecewise_chord`, `_domain_lo`, `_domain_hi` | split  | [`StorageUnit_marginal_cost_lp`](#storageunit_marginal_cost_lp), where `StorageUnit_marginal_cost_as_lp` is true |
+| `Store-marginal_cost_piecewise_chord`, `_domain_lo`, `_domain_hi`       | split  | [`Store_marginal_cost_lp`](#store_marginal_cost_lp), where `Store_marginal_cost_as_lp` is true                   |
+
+<!-- reference:rung_83_piecewise_marginal_cost_other_components:begin -->
+> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `17492.041666666664`, 176 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_83_piecewise_marginal_cost_other_components.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 83: a piecewise `marginal_cost` curve on a link, a process, a storage unit and a store — each curve is convex and no unit with one is committable, so PyPSA states each as the line of each segment."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus a cheap north generator, a curve on each of the four other components that take one, and a south load that walks them up their segments.
+
+    The link's curve starts at full reverse flow and the store's at full charging, so each costs something at zero.
+    """
+    n = spine.build()
+    n.add('Generator', 'north83', bus='north', p_nom=200, marginal_cost=5)
+    n.add(
+        'Link',
+        'curve83',
+        bus0='north',
+        bus1='south',
+        p_nom=60,
+        p_min_pu=-1,
+        efficiency=0.95,
+        marginal_cost={-1.0: 0.0, 0.0: 1.0, 0.5: 4.0, 1.0: 9.0},
+    )
+    n.add(
+        'Process',
+        'process83',
+        bus0='north',
+        bus1='south',
+        rate0=-1,
+        rate1=0.9,
+        p_nom=50,
+        marginal_cost={0.0: 0.0, 0.4: 6.0, 1.0: 14.0},
+    )
+    n.add('StorageUnit', 'battery83', bus='south', p_nom=30, max_hours=2, marginal_cost={0.0: 0.0, 0.5: 2.0, 1.0: 6.0})
+    n.add(
+        'Store', 'tank83', bus='south', e_nom=40, e_initial=20, marginal_cost={-1.0: 0.0, 0.0: 0.5, 0.5: 3.0, 1.0: 7.0}
+    )
+    n.add('Load', 'south_peak83', bus='south', p_set=[10, 60, 110, 160])
+    return n
+```
+
+</details>
+<!-- reference:rung_83_piecewise_marginal_cost_other_components:end -->
+
+### Rung 84 — piecewise marginal cost curves stated by increments
+
+This rung gives curves to a committable link and a committable process, and
+curves that are not convex to a storage unit and a store. PyPSA gates the
+curves of a committable link or process by its status, as it gates a
+generator's in rung 82 (`optimize.py:314-318`). A storage unit and a store
+have no status, so their curves are never gated. linopy states all four
+components' curves by increments, each for its own reason: a gate, or a curve
+that is not convex.
+
+The file states these curves as `Link_marginal_cost_incremental`,
+`Process_marginal_cost_incremental`, `StorageUnit_marginal_cost_incremental`
+and `Store_marginal_cost_incremental`. The `Link` and `Process` entries have
+`activity:` set to the status, and the `StorageUnit` and `Store` entries have
+no `activity:`. Under `linearized_unit_commitment`,
+[the patch](pypsa_linearized_uc.md) assumes that no link or process with a
+curve is committable, as it does for a generator.
+
+The link `curve84` is not committable and its curve is convex. It still gets
+increments with a gate of 1, because `block84` gates the link call. The
+generator `curve84g` has a convex curve and gets segment lines, because no
+generator in its call is committable. `block84` and `process84` are off in
+the first snapshot and on in the other three. `block84` runs at 60 MW, past
+its dear first 15 MW. The curve of `tank84` bends down at zero power: charging
+saves 5 per MWh and discharging costs 1. The store discharges 40 MW in the
+first snapshot and charges 20 MW in the second. PyPSA solves to
+`16346.111111111111`.
+
+| PyPSA                                                                                                                                 | status | note                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `Link-marginal_cost_piecewise_delta`, `_order_binary`, `_delta_bound`, `_fill_order`, `_binary_order`, `_link`, `_output_link`        | split  | [`Link_marginal_cost_incremental`](#link_marginal_cost_incremental), where `Link_marginal_cost_as_lp` is false   |
+| `Link-marginal_cost_piecewise_active_bound`                                                                                           | split  | where `Link_status` exists, and no row at gate 1                                                                 |
+| `Process-marginal_cost_piecewise_delta`, `_order_binary`, `_delta_bound`, `_fill_order`, `_binary_order`, `_link`, `_output_link`     | split  | [`Process_marginal_cost_incremental`](#process_marginal_cost_incremental), where `Process_marginal_cost_as_lp` is false |
+| `Process-marginal_cost_piecewise_active_bound`                                                                                        | split  | where `Process_status` exists, and no row at gate 1                                                              |
+| `StorageUnit-marginal_cost_piecewise_delta`, `_order_binary`, `_delta_bound`, `_fill_order`, `_binary_order`, `_link`, `_output_link` | split  | [`StorageUnit_marginal_cost_incremental`](#storageunit_marginal_cost_incremental), where `StorageUnit_marginal_cost_as_lp` is false |
+| `Store-marginal_cost_piecewise_delta`, `_order_binary`, `_delta_bound`, `_fill_order`, `_binary_order`, `_link`, `_output_link`       | split  | [`Store_marginal_cost_incremental`](#store_marginal_cost_incremental), where `Store_marginal_cost_as_lp` is false |
+
+<!-- reference:rung_84_piecewise_marginal_cost_incremental:begin -->
+> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `16346.111111111111`, 320 rows.
+
+<details markdown="1">
+<summary>The network, as PyPSA code</summary>
+
+`rung_84_piecewise_marginal_cost_incremental.py`
+
+```python
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+"""Rung 84: piecewise `marginal_cost` curves stated by increments — a committable link and a committable process gate theirs by their status, and a storage unit and a store whose curves bend down have none."""
+
+from __future__ import annotations
+
+import spine
+
+
+def build():
+    """The spine plus committable links and processes with curves, storage with curves that are not convex, and a convex generator curve that stays as segment lines."""
+    n = spine.build()
+    n.add('Generator', 'north84', bus='north', p_nom=200, marginal_cost=5)
+    n.add(
+        'Link',
+        'block84',
+        bus0='north',
+        bus1='south',
+        p_nom=60,
+        committable=True,
+        stand_by_cost=20,
+        marginal_cost={0.0: 0.0, 0.25: 8.0, 1.0: 2.0},
+    )
+    n.add('Link', 'curve84', bus0='north', bus1='south', p_nom=30, marginal_cost={0.0: 0.0, 0.5: 3.0, 1.0: 12.0})
+    n.add(
+        'Process',
+        'process84',
+        bus0='north',
+        bus1='south',
+        rate0=-1,
+        rate1=0.9,
+        p_nom=50,
+        committable=True,
+        stand_by_cost=10,
+        marginal_cost={0.0: 0.0, 0.4: 9.0, 1.0: 4.0},
+    )
+    n.add('StorageUnit', 'battery84', bus='south', p_nom=30, max_hours=2, marginal_cost={0.0: 0.0, 0.5: 8.0, 1.0: 1.0})
+    n.add('Store', 'tank84', bus='south', e_nom=40, e_initial=20, marginal_cost={-1.0: 0.0, 0.0: 5.0, 1.0: 1.0})
+    n.add('Generator', 'curve84g', bus='south', p_nom=80, marginal_cost={0.0: 0.0, 0.5: 25.0, 1.0: 35.0})
+    n.add('Load', 'south_peak84', bus='south', p_set=[10, 60, 110, 200])
+    return n
+```
+
+</details>
+<!-- reference:rung_84_piecewise_marginal_cost_incremental:end -->
+
 ## Refusals
 
 PyPSA raises on the data in the table below, warns on it, or handles it outside
@@ -6405,7 +6598,7 @@ attaches the data.
 | `ConsistencyError`, `consistency.py:1250` | a bus port, `*_nom_set`, `delay`, `cyclic_delay`, `v_nom`, `x_pu_eff` or `r_pu_eff` that differs by scenario (`constants.py:26-58`) | The file states no such difference, because the ports, `Generator_p_nom_set` and the others, and `Link_output_delay` and the others span no `scenario`. `Line_cycle_weight`, `Line_BODF` and the `Transformer` ones span no `scenario` either. |
 | `NotImplementedError`, `global_constraints.py:68-70`                                                 | a `tech_capacity_expansion_limit` row on a network with scenarios                                                                                                                         | Where there is more than one scenario, the file states an assumption: [`GlobalConstraint_tech_capacity_expansion_limit_without_scenarios`](#globalconstraint_tech_capacity_expansion_limit_without_scenarios). One scenario and none look alike in the file, and PyPSA refuses one scenario too.                                                                                                                                                                                                      |
 | `ConsistencyError`, `consistency.py:1531-1585`                                                       | a maintainable component whose `maintenance_duration` or `maintenance_events` is not positive, whose events do not fit the weighted horizon, or that is extendable with `p_nom_max = inf` | The file states an assumption: [`Generator_maintenance_events_positive`](#generator_maintenance_events_positive), [`-duration_positive`](#generator_maintenance_duration_positive), [`-duration_fits_the_horizon`](#generator_maintenance_duration_fits_the_horizon), [`-events_fit_the_horizon`](#generator_maintenance_events_fit_the_horizon), [`-build_cap_is_finite`](#generator_maintenance_build_cap_is_finite), and the `Link` and `Process` ones.                                            |
-| `ValueError`, `piecewise.py:277-297` | a piecewise `marginal_cost` curve on an extendable generator, or on one whose `p_nom` is zero, missing or infinite | The file states an assumption: [`Generator_marginal_cost_curve_on_a_fixed_build`](#generator_marginal_cost_curve_on_a_fixed_build). |
+| `ValueError`, `piecewise.py:277-297` | a piecewise `marginal_cost` curve on an extendable Generator, Link, Process, StorageUnit or Store, or on one whose `p_nom`, or a store's `e_nom`, is zero, missing or infinite | The file states an assumption: [`Generator_marginal_cost_curve_on_a_fixed_build`](#generator_marginal_cost_curve_on_a_fixed_build), and the `Link`, `Process`, `StorageUnit` and `Store` ones. |
 | `KeyError`, `constraints.py:1916`                                                                    | a `*_nom_set` on a unit that is not extendable, or that has `active = False`                                                                                                              | The file states no row: [`Generator-p_nom_set`](#generator-p_nom_set) and the others exist only where the build is extendable, and an inactive unit is fixed ([Data prep](#data-prep)).                                                                                                                                                                                                                                                                                                               |
 | `KeyError`, `constraints.py:2943` | `e_sum_min` or `e_sum_max` on a Generator, Link, Process or Store with `active = False` | The file states the row with no variable: [`Generator-e_sum_min`](#generator-e_sum_min) and its siblings are `0 >= e_sum_min`, which fails where the floor is positive. |
 | `ValueError`, `constraints.py:1606-1611`                                                             | a loaded bus where every unit and branch has retired in some snapshot                                                                                                                     | The file states the row with no variable: [`Bus-nodal_balance`](#bus-nodal_balance) requires the load alone to be zero, and no solution meets it.                                                                                                                                                                                                                                                                                                                                                     |
@@ -6614,6 +6807,8 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{blk}^{f}`$ | `Link_maintenance_start_blocked` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — true where no maintenance event may start, data prep. The snapshots it would cover there run past the end of the horizon or into one the link is not active in. It is PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one unit of flow |
+| $`\mathrm{C}^{f,\mathrm{curve}}`$ | `Link_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{L}`$, `absent` where the data has no row — the running cost at each breakpoint of a link's piecewise `marginal_cost` curve: zero at the first, then each segment's width in flow times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`). A curve that starts below zero flow, where `p_min_pu` is negative, costs more than nothing at zero flow |
+| $`\mathrm{f}^{\mathrm{curve}}`$ | `Link_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{L}`$, `absent` where the data has no row — the flow at each breakpoint of a link's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A link with no curve has no rows |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of the square of one unit of flow |
 | $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays off once stopped |
 | $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays on once started |
@@ -6661,6 +6856,8 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$ — the share of the build a maintenance event takes off |
 | $`\mathrm{blk}^{z}`$ | `Process_maintenance_start_blocked` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — true where no maintenance event may start, data prep. The snapshots it would cover there run past the end of the horizon or into one the process is not active in. It is PyPSA's `active & ~valid`, from `maintenance_duration` and the generator weightings |
 | $`\mathrm{c}^{z}`$ | `Process_marginal_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of one unit of internal power |
+| $`\mathrm{C}^{z,\mathrm{curve}}`$ | `Process_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{J}`$, `absent` where the data has no row — the running cost at each breakpoint of a process's piecewise `marginal_cost` curve: zero at the first, then each segment's width in internal power times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{z}^{\mathrm{curve}}`$ | `Process_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{J}`$, `absent` where the data has no row — the internal power at each breakpoint of a process's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A process with no curve has no rows |
 | $`\mathrm{c}^{z,(2)}`$ | `Process_marginal_cost_quadratic` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — cost of the square of one unit of internal power |
 | $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays off once stopped |
 | $`\mathrm{UT}^{z}`$ | `Process_min_up_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays on once started |
@@ -6701,6 +6898,8 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathrm{idle}`$ | `StorageUnit_inactive_snapshots` over $`\mathcal{S}`$ — how many snapshots a storage unit is not active in. It is PyPSA's `(~active).sum()`, data prep. A cyclic unit reaches back this many snapshots further, so it closes on the last snapshot it is active in |
 | $`\mathrm{inflow}`$ | `StorageUnit_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{c}^{h}`$ | `StorageUnit_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of one unit of dispatch |
+| $`\mathrm{C}^{h,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{S}`$, `absent` where the data has no row — the running cost at each breakpoint of a storage unit's piecewise `marginal_cost` curve: zero at the first, then each segment's width in dispatch times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{h}^{+,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{S}`$, `absent` where the data has no row — the dispatch at each breakpoint of a storage unit's piecewise `marginal_cost` curve: PyPSA's `p_dispatch_pu` breakpoints times `p_nom`, data prep. A storage unit with no curve has no rows |
 | $`\mathrm{c}^{h,(2)}`$ | `StorageUnit_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of the square of one unit of dispatch. Storing is not charged |
 | $`\mathrm{c}^{\mathrm{soc}}`$ | `StorageUnit_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of one unit of charge held over one snapshot |
 | $`\mathrm{T}^{h}`$ | `StorageUnit_max_hours` over $`\Xi \times \mathcal{S}`$ — energy capacity, as hours of dispatch at nominal power |
@@ -6751,6 +6950,8 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathrm{idle}^{e}`$ | `Store_inactive_snapshots` over $`\mathcal{V}`$ — how many snapshots a store is not active in. It is PyPSA's `(~active).sum()`, data prep. A cyclic store reaches back this many snapshots further, so it closes on the last snapshot it is active in |
 | $`\mathrm{inflow}^{e}`$ | `Store_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{c}^{q}`$ | `Store_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of power delivered |
+| $`\mathrm{C}^{q,\mathrm{curve}}`$ | `Store_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{V}`$, `absent` where the data has no row — the running cost at each breakpoint of a store's piecewise `marginal_cost` curve: zero at the first, then each segment's width in power times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`). A curve that starts below zero, in charging, costs more than nothing at zero power |
+| $`\mathrm{q}^{\mathrm{curve}}`$ | `Store_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{V}`$, `absent` where the data has no row — the power at each breakpoint of a store's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `e_nom`, not the power rating `e_nom / max_hours` that bounds `p`, data prep. A store with no curve has no rows |
 | $`\mathrm{c}^{q,+}`$ | `Store_marginal_cost_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of discharge, `p + p_store` |
 | $`\mathrm{c}^{q,(2)}`$ | `Store_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of the square of the net power delivered, so charging costs as much as delivering |
 | $`\mathrm{c}^{e}`$ | `Store_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — cost of one unit of energy held over one snapshot |
@@ -6815,13 +7016,25 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathrm{on}^{f,\mathrm{com,ext}}`$ | `Link_com_ext` over $`\mathcal{L} \times \mathcal{T}`$ — a committable link with an extendable, non-modular build that is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$ — a committable link that is active in the snapshot's period: every unit-commitment row's set |
 | $`\mathrm{on}^{f,\mathrm{mnt,ext}}`$ | `Link_maint_ext` over $`\mathcal{L} \times \mathcal{T}`$ — a maintainable link with an extendable build that is active in the snapshot's period, unless it is committable and modular. These are the maintenance rows against the chosen build |
+| $`\mathrm{lp}^{f}`$ | `Link_marginal_cost_as_lp` (scalar) — linopy's choice of method for all link cost curves at once (`method="auto"`): the segment lines where every curve is convex and no link with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Link-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{f}`$ | `Link_marginal_cost_curve` over $`\mathcal{L}`$ — a link that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{f}`$ | `Link_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{L}`$ — a breakpoint where a link's cost curve gets less steep: the segment after it rises less per unit of flow than the one before |
 | $`\mathrm{prev}^{f}`$ | `Link_ramps_from_previous` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — a snapshot whose ramp uses a previous output. It is any snapshot but its period's first, and the horizon's first where the link comes in off or carries an initial output |
 | $`\mathrm{on}^{z,\mathrm{com,ext}}`$ | `Process_com_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process with an extendable, non-modular build that is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
 | $`\mathrm{on}^{z,\mathrm{com}}`$ | `Process_committed` over $`\mathcal{J} \times \mathcal{T}`$ — a committable process that is active in the snapshot's period: every unit-commitment row's set |
 | $`\mathrm{on}^{z,\mathrm{mnt,ext}}`$ | `Process_maint_ext` over $`\mathcal{J} \times \mathcal{T}`$ — a maintainable process with an extendable build that is active in the snapshot's period, unless it is committable and modular. These are the maintenance rows against the chosen build |
+| $`\mathrm{lp}^{z}`$ | `Process_marginal_cost_as_lp` (scalar) — linopy's choice of method for all process cost curves at once (`method="auto"`): the segment lines where every curve is convex and no process with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Process-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{z}`$ | `Process_marginal_cost_curve` over $`\mathcal{J}`$ — a process that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{z}`$ | `Process_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{J}`$ — a breakpoint where a process's cost curve gets less steep: the segment after it rises less per unit of internal power than the one before |
 | $`\mathrm{prev}^{z}`$ | `Process_ramps_from_previous` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — a snapshot whose ramp uses a previous output. It is any snapshot but its period's first, and the horizon's first where the process comes in off or carries an initial output |
 | $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that is active in the snapshot's period. It is PyPSA's `ext` rows |
 | $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that is active in the snapshot's period. It is PyPSA's `fix` rows |
+| $`\mathrm{lp}^{h}`$ | `StorageUnit_marginal_cost_as_lp` (scalar) — linopy's choice of method for all storage unit cost curves at once (`method="auto"`): the segment lines where every curve is convex, the incremental rows otherwise. PyPSA calls linopy once per component, so this choice is apart from every other component's. A storage unit has no status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{h}`$ | `StorageUnit_marginal_cost_curve` over $`\mathcal{S}`$ — a storage unit that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{h}`$ | `StorageUnit_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{S}`$ — a breakpoint where a storage unit's cost curve gets less steep: the segment after it rises less per unit of dispatch than the one before |
+| $`\mathrm{lp}^{q}`$ | `Store_marginal_cost_as_lp` (scalar) — linopy's choice of method for all store cost curves at once (`method="auto"`): the segment lines where every curve is convex, the incremental rows otherwise. PyPSA calls linopy once per component, so this choice is apart from every other component's. A store has no status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{q}`$ | `Store_marginal_cost_curve` over $`\mathcal{V}`$ — a store that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{q}`$ | `Store_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{V}`$ — a breakpoint where a store's cost curve gets less steep: the segment after it rises less per unit of power than the one before |
 | $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that is active in the snapshot's period, where the run models transmission losses |
 
 #### Variables
@@ -6851,6 +7064,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
 | $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
+| $`C^{f,\mathrm{curve}}`$ | `Link_marginal_cost_piecewise` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-marginal_cost_piecewise` — the running cost of a link that pays along a curve, held above the curve |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ — `Link-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-p` — PyPSA's `p0`, the flow measured at the `Link_bus0` end. A positive value withdraws there and injects at every bus the link's output ports deliver to |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ — `Link-p_nom` — nominal power where it is a decision, for a link that is active. A fixed build is the parameter of the same PyPSA name |
@@ -6861,12 +7075,14 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mu^{z,\mathrm{nom}}`$ | `Process_maintenance_capacity` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Process-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
 | $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
+| $`C^{z,\mathrm{curve}}`$ | `Process_marginal_cost_piecewise` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-marginal_cost_piecewise` — the running cost of a process that pays along a curve, held above the curve |
 | $`N^{z}`$ | `Process_n_mod` over $`\mathcal{J}`$ — `Process-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`z`$ | `Process_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-p` — PyPSA's internal power `p`. A positive value drives every port at its own rate, withdrawing where the rate is negative and injecting where it is positive |
 | $`Z`$ | `Process_p_nom_ext` over $`\mathcal{J}`$ — `Process-p_nom` — nominal internal power where it is a decision, for a process that is active. A fixed build is the parameter of the same PyPSA name |
 | $`\mathit{dn}^{z}`$ | `Process_shut_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-shut_down` — how much of a committable process turns off this snapshot, capped as the status is |
 | $`\mathit{up}^{z}`$ | `Process_start_up` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-start_up` — how much of a committable process turns on this snapshot, capped as the status is |
 | $`u^{z}`$ | `Process_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — `Process-status` — how much of a committable process is on. It is an integer the rows below cap at one, or at the module count where the build is modular |
+| $`C^{h,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_piecewise` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-marginal_cost_piecewise` — the running cost of a storage unit that pays along a curve, held above the curve |
 | $`N^{h}`$ | `StorageUnit_n_mod` over $`\mathcal{S}`$ — `StorageUnit-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`h^{+}`$ | `StorageUnit_p_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-p_dispatch` — power delivered to the bus |
 | $`H`$ | `StorageUnit_p_nom_ext` over $`\mathcal{S}`$ — `StorageUnit-p_nom` — nominal power where it is a decision, for a storage unit that is active. A fixed build is the parameter of the same PyPSA name |
@@ -6875,6 +7091,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathit{soc}`$ | `StorageUnit_state_of_charge` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-state_of_charge` — energy held at the end of a snapshot |
 | $`e`$ | `Store_e` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-e` — energy held at the end of a snapshot |
 | $`E`$ | `Store_e_nom_ext` over $`\mathcal{V}`$ — `Store-e_nom` — nominal capacity where it is a decision, for a store that is active. A fixed build is the parameter of the same PyPSA name |
+| $`C^{q,\mathrm{curve}}`$ | `Store_marginal_cost_piecewise` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-marginal_cost_piecewise` — the running cost of a store that pays along a curve, held above the curve |
 | $`N^{e}`$ | `Store_n_mod` over $`\mathcal{V}`$ — `Store-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`q`$ | `Store_p` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p` — net power delivered to the bus. Charging is negative |
 | $`q^{-}`$ | `Store_p_store` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — `Store-p_store` — power drawn from the bus to charge, so that `p + p_store` is the discharge. It is held at zero by its rows where the store does not split its dispatch |
@@ -6945,6 +7162,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\overleftarrow{\bar u}^{f}`$ | `Link_ramp_previous_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the status a committed link's ramp rows carry into a snapshot. At the first snapshot, a fixed modular link that came in running has every module on, since the state it brought in is on or off (`constraints.py:1152-1157`). The transition and down-time rows count it as one module (PyPSA/PyPSA\#2114). It is the state carried in otherwise |
 | $`\Delta^{f,+}`$ | `Link_ramp_up_allowance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — how far a link may raise flow between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\widetilde{\mathrm{ru}}^{f}`$ | `Link_ramp_up_rate` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the ramp limit in a link's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
+| $`C^{f,\mathrm{run}}`$ | `Link_running_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — what a link's flow costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\widetilde{\mathrm{rd}}^{f,\mathrm{dn}}`$ | `Link_shut_down_rate` over $`\mathcal{L} \times \Xi`$ — the shut-down ramp in a link's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
 | $`\widetilde{\mathrm{ru}}^{f,\mathrm{up}}`$ | `Link_start_up_rate` over $`\mathcal{L} \times \Xi`$ — the start-up ramp in a link's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\overleftarrow{u}^{\circ f}`$ | `Link_status_carried_over` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the state a link carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
@@ -6972,6 +7190,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\overleftarrow{\bar u}^{z}`$ | `Process_ramp_previous_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the status a committed process's ramp rows carry into a snapshot. At the first snapshot, a fixed modular process that came in running has every module on, since the state it brought in is on or off (`constraints.py:1152-1157`). The transition and down-time rows count it as one module (PyPSA/PyPSA\#2114). It is the state carried in otherwise |
 | $`\Delta^{z,+}`$ | `Process_ramp_up_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may raise internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its start-up ramp in the snapshot it turns on |
 | $`\widetilde{\mathrm{ru}}^{z}`$ | `Process_ramp_up_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit in a process's up row, PyPSA's `ramp_limit_up`. It is the full build where PyPSA has none, since a start-up ramp alone builds the row |
+| $`C^{z,\mathrm{run}}`$ | `Process_running_cost` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — what a process's internal power costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\widetilde{\mathrm{rd}}^{z,\mathrm{dn}}`$ | `Process_shut_down_rate` over $`\mathcal{J} \times \Xi`$ — the shut-down ramp in a process's down row (PyPSA's `ramp_limit_shut_down`), or the full build where it has none |
 | $`\widetilde{\mathrm{ru}}^{z,\mathrm{up}}`$ | `Process_start_up_rate` over $`\mathcal{J} \times \Xi`$ — the start-up ramp in a process's up row (PyPSA's `ramp_limit_start_up`), or the full build where it has none |
 | $`\overleftarrow{u}^{\circ z}`$ | `Process_status_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the state a process carries over into a snapshot: the state it brought into the horizon at the first, the previous snapshot's after that |
@@ -6985,6 +7204,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathit{StorageUnit\_operational\_limit}`$ | `StorageUnit_operational_limit` over $`\mathcal{O} \times \Xi`$ |
 | $`\mathit{StorageUnit\_opex}`$ | `StorageUnit_opex` over $`\Xi`$ |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\mathcal{O} \times \Xi`$ |
+| $`C^{h,\mathrm{run}}`$ | `StorageUnit_running_cost` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — what a storage unit's dispatch costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{StorageUnit\_tech\_capacity\_expansion}`$ | `StorageUnit_tech_capacity_expansion` over $`\mathcal{O}`$ |
 | $`\mathit{Store\_additions}`$ | `Store_additions` over $`\mathcal{I} \times \mathcal{Y}`$ |
 | $`\mathit{Store\_capex}`$ | `Store_capex` (scalar) |
@@ -6998,6 +7218,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{O} \times \Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
 | $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{O} \times \Xi`$ |
+| $`C^{q,\mathrm{run}}`$ | `Store_running_cost` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — what a store's power costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{Store\_tech\_capacity\_expansion}`$ | `Store_tech_capacity_expansion` over $`\mathcal{O}`$ |
 | $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$ |
 | $`\mathit{Transformer\_capex}`$ | `Transformer_capex` (scalar) |
@@ -7215,6 +7436,62 @@ Link_maint_ext:
 \mathrm{on}^{f,\mathrm{mnt,ext}}_{l,t} \iff \mathrm{mnt}^{f}_{l} \wedge \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{com}^{f}_{l} \wedge \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \wedge \mathrm{on}^{f}_{l,t} \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T}
 ```
 
+### `Link_marginal_cost_as_lp`
+
+```yaml
+Link_marginal_cost_as_lp:
+  description: >-
+    linopy's choice of method for all link cost curves at once
+    (`method="auto"`): the segment lines where every curve is convex and no
+    link with a curve is committable, the incremental rows otherwise. PyPSA
+    gates the curves by `Link-status` where one is committable, and linopy
+    states no segment lines under a gate (`optimize.py:314-318`,
+    `piecewise.py:193-217`)
+  condition: >-
+    count(Link_marginal_cost_curve AND count(Link_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=link) == 0
+    AND count(Link_marginal_cost_curve AND Link_committable, over=link) == 0
+```
+
+```math
+\mathrm{lp}^{f} \iff \lvert \{ l \in \mathcal{L} \,:\, \mathrm{curve}^{f}_{l} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{f}_{b,l} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ l \in \mathcal{L} \,:\, \mathrm{curve}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \} \rvert = 0
+```
+
+### `Link_marginal_cost_curve`
+
+```yaml
+Link_marginal_cost_curve:
+  description: >-
+    a link that pays along a piecewise `marginal_cost` curve: one of PyPSA's
+    `active_assets` with curve data (`optimize.py:307`,
+    `piecewise.py:223-250`)
+  condition: count(Link_marginal_cost_curve_p, over=breakpoint) > 0 AND Link_active_asset
+```
+
+```math
+\mathrm{curve}^{f}_{l} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{f}_{l} \qquad \forall\, l \in \mathcal{L}
+```
+
+### `Link_marginal_cost_curve_bends_down`
+
+```yaml
+Link_marginal_cost_curve_bends_down:
+  description: >-
+    a breakpoint where a link's cost curve gets less steep: the segment
+    after it rises less per unit of flow than the one before
+  condition: >-
+    Link_marginal_cost_curve_p
+    AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1)
+    AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1)
+    AND (Link_marginal_cost_curve_cost - shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+    * (shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_p)
+    > (shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_cost)
+    * (Link_marginal_cost_curve_p - shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+```
+
+```math
+\mathrm{bend}^{f}_{b,l} \iff \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined} \wedge \mathrm{f}^{\mathrm{curve}}_{b + 1,l} \text{ is defined} \wedge \left( \mathrm{C}^{f,\mathrm{curve}}_{b,l} - \mathrm{C}^{f,\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{f}^{\mathrm{curve}}_{b,l} \right) > \left( \mathrm{C}^{f,\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{C}^{f,\mathrm{curve}}_{b,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b,l} - \mathrm{f}^{\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L}
+```
+
 ### `Link_ramps_from_previous`
 
 ```yaml
@@ -7284,6 +7561,62 @@ Process_maint_ext:
 \mathrm{on}^{z,\mathrm{mnt,ext}}_{j,t} \iff \mathrm{mnt}^{z}_{j} \wedge \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{com}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \wedge \mathrm{on}^{z}_{j,t} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 ```
 
+### `Process_marginal_cost_as_lp`
+
+```yaml
+Process_marginal_cost_as_lp:
+  description: >-
+    linopy's choice of method for all process cost curves at once
+    (`method="auto"`): the segment lines where every curve is convex and no
+    process with a curve is committable, the incremental rows otherwise.
+    PyPSA gates the curves by `Process-status` where one is committable, and
+    linopy states no segment lines under a gate (`optimize.py:314-318`,
+    `piecewise.py:193-217`)
+  condition: >-
+    count(Process_marginal_cost_curve AND count(Process_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=process) == 0
+    AND count(Process_marginal_cost_curve AND Process_committable, over=process) == 0
+```
+
+```math
+\mathrm{lp}^{z} \iff \lvert \{ j \in \mathcal{J} \,:\, \mathrm{curve}^{z}_{j} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{z}_{b,j} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ j \in \mathcal{J} \,:\, \mathrm{curve}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \} \rvert = 0
+```
+
+### `Process_marginal_cost_curve`
+
+```yaml
+Process_marginal_cost_curve:
+  description: >-
+    a process that pays along a piecewise `marginal_cost` curve: one of
+    PyPSA's `active_assets` with curve data (`optimize.py:307`,
+    `piecewise.py:223-250`)
+  condition: count(Process_marginal_cost_curve_p, over=breakpoint) > 0 AND Process_active_asset
+```
+
+```math
+\mathrm{curve}^{z}_{j} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{z}_{j} \qquad \forall\, j \in \mathcal{J}
+```
+
+### `Process_marginal_cost_curve_bends_down`
+
+```yaml
+Process_marginal_cost_curve_bends_down:
+  description: >-
+    a breakpoint where a process's cost curve gets less steep: the segment
+    after it rises less per unit of internal power than the one before
+  condition: >-
+    Process_marginal_cost_curve_p
+    AND shift(Process_marginal_cost_curve_p, along=breakpoint, offset=1)
+    AND shift(Process_marginal_cost_curve_p, along=breakpoint, offset=-1)
+    AND (Process_marginal_cost_curve_cost - shift(Process_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+    * (shift(Process_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Process_marginal_cost_curve_p)
+    > (shift(Process_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Process_marginal_cost_curve_cost)
+    * (Process_marginal_cost_curve_p - shift(Process_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+```
+
+```math
+\mathrm{bend}^{z}_{b,j} \iff \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \wedge \mathrm{z}^{\mathrm{curve}}_{b - 1,j} \text{ is defined} \wedge \mathrm{z}^{\mathrm{curve}}_{b + 1,j} \text{ is defined} \wedge \left( \mathrm{C}^{z,\mathrm{curve}}_{b,j} - \mathrm{C}^{z,\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{z}^{\mathrm{curve}}_{b,j} \right) > \left( \mathrm{C}^{z,\mathrm{curve}}_{b \boxplus_{0} 1,j} - \mathrm{C}^{z,\mathrm{curve}}_{b,j} \right) \cdot \left( \mathrm{z}^{\mathrm{curve}}_{b,j} - \mathrm{z}^{\mathrm{curve}}_{b \boxminus_{0} 1,j} \right) \qquad \forall\, b \in \mathcal{B},\ j \in \mathcal{J}
+```
+
 ### `Process_ramps_from_previous`
 
 ```yaml
@@ -7327,6 +7660,114 @@ StorageUnit_fix:
 
 ```math
 \mathrm{on}^{h,\mathrm{fix}}_{t,s} \iff \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `StorageUnit_marginal_cost_as_lp`
+
+```yaml
+StorageUnit_marginal_cost_as_lp:
+  description: >-
+    linopy's choice of method for all storage unit cost curves at once
+    (`method="auto"`): the segment lines where every curve is convex, the
+    incremental rows otherwise. PyPSA calls linopy once per component, so
+    this choice is apart from every other component's. A storage unit has no
+    status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+  condition: >-
+    count(StorageUnit_marginal_cost_curve AND count(StorageUnit_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=storage_unit) == 0
+```
+
+```math
+\mathrm{lp}^{h} \iff \lvert \{ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{h}_{b,s} \} \rvert > 0 \} \rvert = 0
+```
+
+### `StorageUnit_marginal_cost_curve`
+
+```yaml
+StorageUnit_marginal_cost_curve:
+  description: >-
+    a storage unit that pays along a piecewise `marginal_cost` curve: one of
+    PyPSA's `active_assets` with curve data (`optimize.py:307`,
+    `piecewise.py:223-250`)
+  condition: count(StorageUnit_marginal_cost_curve_p, over=breakpoint) > 0 AND StorageUnit_active_asset
+```
+
+```math
+\mathrm{curve}^{h}_{s} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{h}_{s} \qquad \forall\, s \in \mathcal{S}
+```
+
+### `StorageUnit_marginal_cost_curve_bends_down`
+
+```yaml
+StorageUnit_marginal_cost_curve_bends_down:
+  description: >-
+    a breakpoint where a storage unit's cost curve gets less steep: the
+    segment after it rises less per unit of dispatch than the one before
+  condition: >-
+    StorageUnit_marginal_cost_curve_p
+    AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1)
+    AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1)
+    AND (StorageUnit_marginal_cost_curve_cost - shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+    * (shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_p)
+    > (shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_cost)
+    * (StorageUnit_marginal_cost_curve_p - shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+```
+
+```math
+\mathrm{bend}^{h}_{b,s} \iff \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b + 1,s} \text{ is defined} \wedge \left( \mathrm{C}^{h,\mathrm{curve}}_{b,s} - \mathrm{C}^{h,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{h}^{+,\mathrm{curve}}_{b,s} \right) > \left( \mathrm{C}^{h,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{C}^{h,\mathrm{curve}}_{b,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b,s} - \mathrm{h}^{+,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \qquad \forall\, b \in \mathcal{B},\ s \in \mathcal{S}
+```
+
+### `Store_marginal_cost_as_lp`
+
+```yaml
+Store_marginal_cost_as_lp:
+  description: >-
+    linopy's choice of method for all store cost curves at once
+    (`method="auto"`): the segment lines where every curve is convex, the
+    incremental rows otherwise. PyPSA calls linopy once per component, so
+    this choice is apart from every other component's. A store has no
+    status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+  condition: >-
+    count(Store_marginal_cost_curve AND count(Store_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=store) == 0
+```
+
+```math
+\mathrm{lp}^{q} \iff \lvert \{ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{q}_{b,v} \} \rvert > 0 \} \rvert = 0
+```
+
+### `Store_marginal_cost_curve`
+
+```yaml
+Store_marginal_cost_curve:
+  description: >-
+    a store that pays along a piecewise `marginal_cost` curve: one of
+    PyPSA's `active_assets` with curve data (`optimize.py:307`,
+    `piecewise.py:223-250`)
+  condition: count(Store_marginal_cost_curve_p, over=breakpoint) > 0 AND Store_active_asset
+```
+
+```math
+\mathrm{curve}^{q}_{v} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{e}_{v} \qquad \forall\, v \in \mathcal{V}
+```
+
+### `Store_marginal_cost_curve_bends_down`
+
+```yaml
+Store_marginal_cost_curve_bends_down:
+  description: >-
+    a breakpoint where a store's cost curve gets less steep: the segment
+    after it rises less per unit of power than the one before
+  condition: >-
+    Store_marginal_cost_curve_p
+    AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1)
+    AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1)
+    AND (Store_marginal_cost_curve_cost - shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+    * (shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_p)
+    > (shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_cost)
+    * (Store_marginal_cost_curve_p - shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+```
+
+```math
+\mathrm{bend}^{q}_{b,v} \iff \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined} \wedge \mathrm{q}^{\mathrm{curve}}_{b - 1,v} \text{ is defined} \wedge \mathrm{q}^{\mathrm{curve}}_{b + 1,v} \text{ is defined} \wedge \left( \mathrm{C}^{q,\mathrm{curve}}_{b,v} - \mathrm{C}^{q,\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{q}^{\mathrm{curve}}_{b,v} \right) > \left( \mathrm{C}^{q,\mathrm{curve}}_{b \boxplus_{0} 1,v} - \mathrm{C}^{q,\mathrm{curve}}_{b,v} \right) \cdot \left( \mathrm{q}^{\mathrm{curve}}_{b,v} - \mathrm{q}^{\mathrm{curve}}_{b \boxminus_{0} 1,v} \right) \qquad \forall\, b \in \mathcal{B},\ v \in \mathcal{V}
 ```
 
 ### `Transformer_lossy`
@@ -7483,6 +7924,12 @@ S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{
 \mu^{f,u}_{l,\xi,t} \ge 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{f}_{l} \wedge \mathrm{on}^{f,\mathrm{com}}_{l,t} \wedge \neg \left( \mathrm{ext}^{f}_{l} \wedge \neg \left( \mathrm{f}^{\mathrm{mod}}_{l} > 0 \right) \right)
 ```
 
+**`Link_marginal_cost_piecewise`**
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
+```
+
 **`Link_n_mod`**
 
 ```math
@@ -7543,6 +7990,12 @@ u^{f}_{l,\xi,t} \ge 0, u^{f}_{l,\xi,t} \in \mathbb{Z} \qquad \forall\, l \in \ma
 \mu^{z,u}_{j,\xi,t} \ge 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right)
 ```
 
+**`Process_marginal_cost_piecewise`**
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t}
+```
+
 **`Process_n_mod`**
 
 ```math
@@ -7577,6 +8030,12 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 
 ```math
 u^{z}_{j,\xi,t} \ge 0, u^{z}_{j,\xi,t} \in \mathbb{Z} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com}}_{j,t}
+```
+
+**`StorageUnit_marginal_cost_piecewise`**
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
 ```
 
 **`StorageUnit_n_mod`**
@@ -7625,6 +8084,12 @@ e_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v 
 
 ```math
 E_{v} \in \mathbb{R} \qquad \forall\, v \in \mathcal{V} \,:\, \mathrm{ext}^{e}_{v} \wedge \mathrm{act}^{e}_{v}
+```
+
+**`Store_marginal_cost_piecewise`**
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_n_mod`**
@@ -8380,12 +8845,12 @@ Link_modules:
 ```yaml
 Link_opex:
   expression: >-
-    sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+    sum(sum((Link_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
 ```
 
 ```math
-\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} C^{f,\mathrm{run}}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Link_output_arrival`
@@ -8603,6 +9068,25 @@ Link_ramp_up_rate:
 
 ```math
 \widetilde{\mathrm{ru}}^{f}_{l,\xi,t} = \begin{cases} \mathrm{ru}^{f}_{l,\xi,t} & \text{if } \mathrm{ru}^{f}_{l,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Link_running_cost`
+
+```yaml
+Link_running_cost:
+  description: >-
+    what a link's flow costs in a snapshot: the value read off its piecewise
+    curve where it has one, and its linear `marginal_cost` otherwise. A
+    curve replaces the linear cost, as PyPSA drops the unit from that term
+    (`optimize.py:333-348`)
+  dims: [scenario, snapshot, link]
+  cases:
+    curve: { when: Link_marginal_cost_curve, expression: Link_marginal_cost_piecewise }
+  otherwise: Link_p * Link_marginal_cost
+```
+
+```math
+C^{f,\mathrm{run}}_{l,\xi,t} = \begin{cases} C^{f,\mathrm{curve}}_{l,\xi,t} & \text{if } \mathrm{curve}^{f}_{l} \\ f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Link_shut_down_rate`
@@ -8824,12 +9308,12 @@ Process_modules:
 ```yaml
 Process_opex:
   expression: >-
-    sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+    sum(sum((Process_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
     + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
 ```
 
 ```math
-\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} C^{z,\mathrm{run}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Process_output_arrival`
@@ -9049,6 +9533,25 @@ Process_ramp_up_rate:
 \widetilde{\mathrm{ru}}^{z}_{j,\xi,t} = \begin{cases} \mathrm{ru}^{z}_{j,\xi,t} & \text{if } \mathrm{ru}^{z}_{j,\xi,t} \text{ is defined} \\ 1 & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
+### `Process_running_cost`
+
+```yaml
+Process_running_cost:
+  description: >-
+    what a process's internal power costs in a snapshot: the value read off
+    its piecewise curve where it has one, and its linear `marginal_cost`
+    otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+    from that term (`optimize.py:333-348`)
+  dims: [scenario, snapshot, process]
+  cases:
+    curve: { when: Process_marginal_cost_curve, expression: Process_marginal_cost_piecewise }
+  otherwise: Process_p * Process_marginal_cost
+```
+
+```math
+C^{z,\mathrm{run}}_{j,\xi,t} = \begin{cases} C^{z,\mathrm{curve}}_{j,\xi,t} & \text{if } \mathrm{curve}^{z}_{j} \\ z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
 ### `Process_shut_down_rate`
 
 ```yaml
@@ -9256,14 +9759,14 @@ StorageUnit_operational_limit:
 ```yaml
 StorageUnit_opex:
   expression: >-
-    sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+    sum(sum((StorageUnit_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
     + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
     + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
     + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
 ```
 
 ```math
-\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} C^{h,\mathrm{run}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `StorageUnit_primary_energy`
@@ -9276,6 +9779,25 @@ StorageUnit_primary_energy:
 
 ```math
 \mathit{StorageUnit\_primary\_energy}_{o,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{o,\xi,t,s} \cdot \mathrm{a}^{h}_{o,\xi,s} \right) \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi
+```
+
+### `StorageUnit_running_cost`
+
+```yaml
+StorageUnit_running_cost:
+  description: >-
+    what a storage unit's dispatch costs in a snapshot: the value read off
+    its piecewise curve where it has one, and its linear `marginal_cost`
+    otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+    from that term (`optimize.py:333-348`)
+  dims: [scenario, snapshot, storage_unit]
+  cases:
+    curve: { when: StorageUnit_marginal_cost_curve, expression: StorageUnit_marginal_cost_piecewise }
+  otherwise: StorageUnit_p_dispatch * StorageUnit_marginal_cost
+```
+
+```math
+C^{h,\mathrm{run}}_{\xi,t,s} = \begin{cases} C^{h,\mathrm{curve}}_{\xi,t,s} & \text{if } \mathrm{curve}^{h}_{s} \\ h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 ### `StorageUnit_tech_capacity_expansion`
@@ -9478,7 +10000,7 @@ Store_operational_limit:
 ```yaml
 Store_opex:
   expression: >-
-    sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+    sum(sum((Store_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
     + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
     + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
     + sum(sum((((Store_p + Store_p_store) * Store_marginal_cost_dispatch) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
@@ -9487,7 +10009,7 @@ Store_opex:
 ```
 
 ```math
-\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} C^{q,\mathrm{run}}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Store_primary_energy`
@@ -9500,6 +10022,25 @@ Store_primary_energy:
 
 ```math
 \mathit{Store\_primary\_energy}_{o,\xi} = -\left( \sum_{v \in \mathcal{V}} \sum_{t \in \mathcal{T}} e_{\xi,t,v} \cdot \mathit{w}^{e}_{o,\xi,t,v} \cdot \mathrm{a}^{e}_{o,\xi,v} \right) \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi
+```
+
+### `Store_running_cost`
+
+```yaml
+Store_running_cost:
+  description: >-
+    what a store's power costs in a snapshot: the value read off its
+    piecewise curve where it has one, and its linear `marginal_cost`
+    otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+    from that term (`optimize.py:333-348`)
+  dims: [scenario, snapshot, store]
+  cases:
+    curve: { when: Store_marginal_cost_curve, expression: Store_marginal_cost_piecewise }
+  otherwise: Store_p * Store_marginal_cost
+```
+
+```math
+C^{q,\mathrm{run}}_{\xi,t,v} = \begin{cases} C^{q,\mathrm{curve}}_{\xi,t,v} & \text{if } \mathrm{curve}^{q}_{v} \\ q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 ### `Store_tech_capacity_expansion`
@@ -14174,6 +14715,178 @@ Generator_marginal_cost_lp:
 C^{\mathrm{curve}}_{g,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}}(\mathrm{p}^{\mathrm{curve}}_{b,g},\ \mathrm{C}^{\mathrm{curve}}_{b,g})(p_{g,\xi,t}) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
+### `Link_marginal_cost_incremental`
+
+```yaml
+Link_marginal_cost_incremental:
+  description: >-
+    `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+    is at least the curve at its flow, stated by segments filled in order
+    and switched by the status of a committable link, where linopy chooses
+    the incremental rows
+  along: breakpoint
+  dims: [scenario, snapshot, link]
+  where: NOT Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+  method: incremental
+  activity: Link_status
+  links:
+    p: [Link_p, Link_marginal_cost_curve_p]
+    cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \ge \left( \begin{cases} u^{f}_{l,\xi,t} & \text{if } \mathrm{on}^{f,\mathrm{com}}_{l,t} \\ 1 & \text{otherwise} \end{cases} \cdot \left( \mathrm{f}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l},\ \mathrm{C}^{f,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l} \right) + \min(\begin{cases} u^{f}_{l,\xi,t} & \text{if } \mathrm{on}^{f,\mathrm{com}}_{l,t} \\ 1 & \text{otherwise} \end{cases},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}}(\mathrm{f}^{\mathrm{curve}}_{b,l},\ \mathrm{C}^{f,\mathrm{curve}}_{b,l}) - \left( \mathrm{f}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l},\ \mathrm{C}^{f,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \},l} \right) \right) \right)(f_{l,\xi,t}) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Link_marginal_cost_lp`
+
+```yaml
+Link_marginal_cost_lp:
+  description: >-
+    `Link-marginal_cost_piecewise` — the running cost of a link with a curve
+    is at least the curve at its flow, stated as the line of each segment,
+    where linopy chooses the segment lines
+  along: breakpoint
+  dims: [scenario, snapshot, link]
+  where: Link_marginal_cost_as_lp AND Link_marginal_cost_curve AND Link_active AND Link_marginal_cost_curve_p
+  method: lp
+  links:
+    p: [Link_p, Link_marginal_cost_curve_p]
+    cost: [Link_marginal_cost_piecewise, Link_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{f} \wedge \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \wedge \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined}}(\mathrm{f}^{\mathrm{curve}}_{b,l},\ \mathrm{C}^{f,\mathrm{curve}}_{b,l})(f_{l,\xi,t}) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Process_marginal_cost_incremental`
+
+```yaml
+Process_marginal_cost_incremental:
+  description: >-
+    `Process-marginal_cost_piecewise` — the running cost of a process with a
+    curve is at least the curve at its internal power, stated by segments
+    filled in order and switched by the status of a committable process,
+    where linopy chooses the incremental rows
+  along: breakpoint
+  dims: [scenario, snapshot, process]
+  where: NOT Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+  method: incremental
+  activity: Process_status
+  links:
+    p: [Process_p, Process_marginal_cost_curve_p]
+    cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \ge \left( \begin{cases} u^{z}_{j,\xi,t} & \text{if } \mathrm{on}^{z,\mathrm{com}}_{j,t} \\ 1 & \text{otherwise} \end{cases} \cdot \left( \mathrm{z}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j},\ \mathrm{C}^{z,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j} \right) + \min(\begin{cases} u^{z}_{j,\xi,t} & \text{if } \mathrm{on}^{z,\mathrm{com}}_{j,t} \\ 1 & \text{otherwise} \end{cases},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}}(\mathrm{z}^{\mathrm{curve}}_{b,j},\ \mathrm{C}^{z,\mathrm{curve}}_{b,j}) - \left( \mathrm{z}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j},\ \mathrm{C}^{z,\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined} \},j} \right) \right) \right)(z_{j,\xi,t}) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `Process_marginal_cost_lp`
+
+```yaml
+Process_marginal_cost_lp:
+  description: >-
+    `Process-marginal_cost_piecewise` — the running cost of a process with a
+    curve is at least the curve at its internal power, stated as the line of
+    each segment, where linopy chooses the segment lines
+  along: breakpoint
+  dims: [scenario, snapshot, process]
+  where: Process_marginal_cost_as_lp AND Process_marginal_cost_curve AND Process_active AND Process_marginal_cost_curve_p
+  method: lp
+  links:
+    p: [Process_p, Process_marginal_cost_curve_p]
+    cost: [Process_marginal_cost_piecewise, Process_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{z,\mathrm{curve}}_{j,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{z} \wedge \mathrm{curve}^{z}_{j} \wedge \mathrm{on}^{z}_{j,t} \wedge \mathrm{z}^{\mathrm{curve}}_{b,j} \text{ is defined}}(\mathrm{z}^{\mathrm{curve}}_{b,j},\ \mathrm{C}^{z,\mathrm{curve}}_{b,j})(z_{j,\xi,t}) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+### `StorageUnit_marginal_cost_incremental`
+
+```yaml
+StorageUnit_marginal_cost_incremental:
+  description: >-
+    `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+    unit with a curve is at least the curve at its dispatch, stated by
+    segments filled in order, where linopy chooses the incremental rows
+  along: breakpoint
+  dims: [scenario, snapshot, storage_unit]
+  where: NOT StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+  method: incremental
+  links:
+    p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+    cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}}(\mathrm{h}^{+,\mathrm{curve}}_{b,s},\ \mathrm{C}^{h,\mathrm{curve}}_{b,s})(h^{+}_{\xi,t,s}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `StorageUnit_marginal_cost_lp`
+
+```yaml
+StorageUnit_marginal_cost_lp:
+  description: >-
+    `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+    unit with a curve is at least the curve at its dispatch, stated as the
+    line of each segment, where linopy chooses the segment lines
+  along: breakpoint
+  dims: [scenario, snapshot, storage_unit]
+  where: StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+  method: lp
+  links:
+    p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+    cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}}(\mathrm{h}^{+,\mathrm{curve}}_{b,s},\ \mathrm{C}^{h,\mathrm{curve}}_{b,s})(h^{+}_{\xi,t,s}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+### `Store_marginal_cost_incremental`
+
+```yaml
+Store_marginal_cost_incremental:
+  description: >-
+    `Store-marginal_cost_piecewise` — the running cost of a store with a
+    curve is at least the curve at its power, stated by segments filled in
+    order, where linopy chooses the incremental rows
+  along: breakpoint
+  dims: [scenario, snapshot, store]
+  where: NOT Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+  method: incremental
+  links:
+    p: [Store_p, Store_marginal_cost_curve_p]
+    cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}}(\mathrm{q}^{\mathrm{curve}}_{b,v},\ \mathrm{C}^{q,\mathrm{curve}}_{b,v})(q_{\xi,t,v}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
+### `Store_marginal_cost_lp`
+
+```yaml
+Store_marginal_cost_lp:
+  description: >-
+    `Store-marginal_cost_piecewise` — the running cost of a store with a
+    curve is at least the curve at its power, stated as the line of each
+    segment, where linopy chooses the segment lines
+  along: breakpoint
+  dims: [scenario, snapshot, store]
+  where: Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+  method: lp
+  links:
+    p: [Store_p, Store_marginal_cost_curve_p]
+    cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
+```
+
+```math
+C^{q,\mathrm{curve}}_{\xi,t,v} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{q} \wedge \mathrm{curve}^{q}_{v} \wedge \mathrm{on}^{e}_{t,v} \wedge \mathrm{q}^{\mathrm{curve}}_{b,v} \text{ is defined}}(\mathrm{q}^{\mathrm{curve}}_{b,v},\ \mathrm{C}^{q,\mathrm{curve}}_{b,v})(q_{\xi,t,v}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+```
+
 ### `Generator_big_m_where_committed_and_extendable`
 
 ```yaml
@@ -14426,6 +15139,23 @@ Link_maintenance_events_positive:
 \mathrm{n}^{f,\mathrm{mnt}}_{l,\xi} > 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{mnt}^{f}_{l}
 ```
 
+### `Link_marginal_cost_curve_on_a_fixed_build`
+
+```yaml
+Link_marginal_cost_curve_on_a_fixed_build:
+  holds: "NOT Link_p_nom_extendable AND Link_p_nom > 0 AND Link_p_nom < inf"
+  where: "Link_marginal_cost_curve"
+  description: >-
+    a link's cost curve is given per unit of a fixed, positive, finite
+    `p_nom`, which scales it to flow. PyPSA refuses an extendable unit and a
+    zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes a
+    negative one, which the file does not state
+```
+
+```math
+\neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{nom}}_{l,\xi} > 0 \wedge \mathrm{f}^{\mathrm{nom}}_{l,\xi} < \infty \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{curve}^{f}_{l}
+```
+
 ### `Link_marginal_cost_quadratic_without_risk_preference`
 
 ```yaml
@@ -14555,6 +15285,23 @@ Process_maintenance_events_positive:
 \mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
 ```
 
+### `Process_marginal_cost_curve_on_a_fixed_build`
+
+```yaml
+Process_marginal_cost_curve_on_a_fixed_build:
+  holds: "NOT Process_p_nom_extendable AND Process_p_nom > 0 AND Process_p_nom < inf"
+  where: "Process_marginal_cost_curve"
+  description: >-
+    a process's cost curve is given per unit of a fixed, positive, finite
+    `p_nom`, which scales it to internal power. PyPSA refuses an extendable
+    unit and a zero, missing or infinite `p_nom` (`piecewise.py:277-297`),
+    and takes a negative one, which the file does not state
+```
+
+```math
+\neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{nom}}_{j,\xi} > 0 \wedge \mathrm{z}^{\mathrm{nom}}_{j,\xi} < \infty \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{curve}^{z}_{j}
+```
+
 ### `Process_marginal_cost_quadratic_without_risk_preference`
 
 ```yaml
@@ -14584,6 +15331,23 @@ Process_output_delay_under_uniform_weighting:
 
 ```math
 \mathrm{w}^{\mathrm{gen}}_{t} = \mathrm{w}^{\mathrm{gen}}_{t \ominus 1} \qquad \forall\, r \in \mathcal{R},\ t \in \mathcal{T} \,:\, \mathrm{d}^{z}_{r} > 0
+```
+
+### `StorageUnit_marginal_cost_curve_on_a_fixed_build`
+
+```yaml
+StorageUnit_marginal_cost_curve_on_a_fixed_build:
+  holds: "NOT StorageUnit_p_nom_extendable AND StorageUnit_p_nom > 0 AND StorageUnit_p_nom < inf"
+  where: "StorageUnit_marginal_cost_curve"
+  description: >-
+    a storage unit's cost curve is given per unit of a fixed, positive,
+    finite `p_nom`, which scales it to dispatch. PyPSA refuses an extendable
+    unit and a zero, missing or infinite `p_nom` (`piecewise.py:277-297`),
+    and takes a negative one, which the file does not state
+```
+
+```math
+\neg \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{nom}}_{\xi,s} > 0 \wedge \mathrm{h}^{\mathrm{nom}}_{\xi,s} < \infty \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s}
 ```
 
 ### `StorageUnit_marginal_cost_quadratic_without_risk_preference`
@@ -14714,6 +15478,23 @@ StorageUnit_stands_in_one_run:
 
 ```math
 \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{h}_{t,s} \wedge \neg \mathrm{on}^{h}_{t - 1,s} \} \rvert \le 1 \qquad \forall\, s \in \mathcal{S}
+```
+
+### `Store_marginal_cost_curve_on_a_fixed_build`
+
+```yaml
+Store_marginal_cost_curve_on_a_fixed_build:
+  holds: "NOT Store_e_nom_extendable AND Store_e_nom > 0 AND Store_e_nom < inf"
+  where: "Store_marginal_cost_curve"
+  description: >-
+    a store's cost curve is given per unit of a fixed, positive, finite
+    `e_nom`, which scales it to power. PyPSA refuses an extendable unit and
+    a zero, missing or infinite `e_nom` (`piecewise.py:277-297`), and takes
+    a negative one, which the file does not state
+```
+
+```math
+\neg \mathrm{ext}^{e}_{v} \wedge \mathrm{e}^{\mathrm{nom}}_{\xi,v} > 0 \wedge \mathrm{e}^{\mathrm{nom}}_{\xi,v} < \infty \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{curve}^{q}_{v}
 ```
 
 ### `Store_marginal_cost_quadratic_without_risk_preference`

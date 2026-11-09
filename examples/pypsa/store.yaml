@@ -40,6 +40,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -163,6 +169,24 @@ parameters:
   Store_marginal_cost_quadratic:
     description: cost of the square of the net power delivered, so charging costs as much as delivering
     dims: [scenario, snapshot, store]
+  Store_marginal_cost_curve_p:
+    description: >-
+      the power at each breakpoint of a store's piecewise `marginal_cost`
+      curve: PyPSA's `p_pu` breakpoints times `e_nom`, not the power rating
+      `e_nom / max_hours` that bounds `p`, data prep. A store with no curve
+      has no rows
+    dims: [store, breakpoint]
+    missing: absent
+  Store_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a store's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      power times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`). A curve that starts below zero, in charging,
+      costs more than nothing at zero power
+    dims: [store, breakpoint]
+    missing: absent
   Store_marginal_cost_storage:
     description: cost of one unit of energy held over one snapshot
     dims: [scenario, snapshot, store]
@@ -255,6 +279,12 @@ variables:
     description: "`Store-p` — net power delivered to the bus. Charging is negative"
     dims: [scenario, snapshot, store]
     where: Store_active
+  Store_marginal_cost_piecewise:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store that pays
+      along a curve, held above the curve
+    dims: [scenario, snapshot, store]
+    where: Store_marginal_cost_curve AND Store_active
   Store_p_store:
     description: >-
       `Store-p_store` — power drawn from the bus to charge, so that `p +
@@ -384,9 +414,19 @@ expressions:
   Store_tech_capacity_expansion:
     expression: sum(Store_e_nom_ext * Store_tech_capacity_weight, over=store)
     adds_to: tech_capacity_expansion
+  Store_running_cost:
+    description: >-
+      what a store's power costs in a snapshot: the value read off its
+      piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, store]
+    cases:
+      curve: { when: Store_marginal_cost_curve, expression: Store_marginal_cost_piecewise }
+    otherwise: Store_p * Store_marginal_cost
   Store_opex:
     expression: >-
-      sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+      sum(sum((Store_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
       + sum(sum((((Store_p + Store_p_store) * Store_marginal_cost_dispatch) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
@@ -403,6 +443,61 @@ expressions:
   Store_injection:
     expression: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
     adds_to: Bus_injection
+
+conditions:
+  Store_marginal_cost_curve:
+    description: >-
+      a store that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Store_marginal_cost_curve_p, over=breakpoint) > 0 AND Store_active_asset
+  Store_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a store's cost curve gets less steep: the segment
+      after it rises less per unit of power than the one before
+    condition: >-
+      Store_marginal_cost_curve_p
+      AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Store_marginal_cost_curve_cost - shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Store_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_p)
+      > (shift(Store_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Store_marginal_cost_curve_cost)
+      * (Store_marginal_cost_curve_p - shift(Store_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Store_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all store cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex, the
+      incremental rows otherwise. PyPSA calls linopy once per component, so
+      this choice is apart from every other component's. A store has no
+      status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+    condition: >-
+      count(Store_marginal_cost_curve AND count(Store_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=store) == 0
+
+piecewise:
+  Store_marginal_cost_lp:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store with a
+      curve is at least the curve at its power, stated as the line of each
+      segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, store]
+    where: Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Store_p, Store_marginal_cost_curve_p]
+      cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
+  Store_marginal_cost_incremental:
+    description: >-
+      `Store-marginal_cost_piecewise` — the running cost of a store with a
+      curve is at least the curve at its power, stated by segments filled in
+      order, where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, store]
+    where: NOT Store_marginal_cost_as_lp AND Store_marginal_cost_curve AND Store_active AND Store_marginal_cost_curve_p
+    method: incremental
+    links:
+      p: [Store_p, Store_marginal_cost_curve_p]
+      cost: [Store_marginal_cost_piecewise, Store_marginal_cost_curve_cost, ">="]
 
 constraints:
   Store_e_sum_min:
@@ -542,6 +637,14 @@ constraints:
     expression: Store_p == Store_p_set
 
 assumptions:
+  Store_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Store_e_nom_extendable AND Store_e_nom > 0 AND Store_e_nom < inf"
+    where: "Store_marginal_cost_curve"
+    description: >-
+      a store's cost curve is given per unit of a fixed, positive, finite
+      `e_nom`, which scales it to power. PyPSA refuses an extendable unit and
+      a zero, missing or infinite `e_nom` (`piecewise.py:277-297`), and takes
+      a negative one, which the file does not state
   Store_stands_in_one_run:
     holds: "count(Store_active AND NOT shift(Store_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-

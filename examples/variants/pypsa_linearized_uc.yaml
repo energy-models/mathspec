@@ -79,6 +79,22 @@ piecewise:
       gates it, because no generator with a curve is committable under the
       keyword
     activity: null
+  Link_marginal_cost_incremental:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link with a
+      curve is at least the curve at its flow, stated by segments filled
+      in order, where linopy chooses the incremental rows. No status
+      gates it, because no link with a curve is committable under the
+      keyword
+    activity: null
+  Process_marginal_cost_incremental:
+    description: >-
+      `Process-marginal_cost_piecewise` — the running cost of a process
+      with a curve is at least the curve at its internal power, stated by
+      segments filled in order, where linopy chooses the incremental
+      rows. No status gates it, because no process with a curve is
+      committable under the keyword
+    activity: null
 
 constraints:
   Generator_com_p_before:
@@ -235,6 +251,20 @@ assumptions:
     where: "Generator_marginal_cost_curve"
     description: >-
       a generator with a piecewise `marginal_cost` curve is not committable.
+      PyPSA gates such a curve by the status share (`optimize.py:314-318`,
+      `piecewise.py:193-203`), and a curve gate is binary or integer
+  Link_marginal_cost_curve_is_not_committable:
+    holds: "NOT Link_committable"
+    where: "Link_marginal_cost_curve"
+    description: >-
+      a link with a piecewise `marginal_cost` curve is not committable.
+      PyPSA gates such a curve by the status share (`optimize.py:314-318`,
+      `piecewise.py:193-203`), and a curve gate is binary or integer
+  Process_marginal_cost_curve_is_not_committable:
+    holds: "NOT Process_committable"
+    where: "Process_marginal_cost_curve"
+    description: >-
+      a process with a piecewise `marginal_cost` curve is not committable.
       PyPSA gates such a curve by the status share (`optimize.py:314-318`,
       `piecewise.py:193-203`), and a curve gate is binary or integer
   Generator_committable_is_not_modular:

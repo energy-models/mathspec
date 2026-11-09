@@ -12,6 +12,8 @@ This file states PyPSA's `Link`. It is one of the 25 whole specs of one topic ea
 given:
   parameters:
     snapshot_weightings_objective: { dims: [snapshot] }
+    Link_marginal_cost_curve_p: { dims: [link, breakpoint] }
+    Link_marginal_cost_curve_cost: { dims: [link, breakpoint] }
     Link_committable: { dims: [link], dtype: bool }
     Link_maintenance_pu: { dims: [scenario, link] }
     scenario_weight: { dims: [scenario] }
@@ -55,6 +57,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -226,6 +234,12 @@ variables:
       output ports deliver to
     dims: [scenario, snapshot, link]
     where: Link_active
+  Link_marginal_cost_piecewise:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link that pays
+      along a curve, held above the curve
+    dims: [scenario, snapshot, link]
+    where: Link_marginal_cost_curve AND Link_active
   Link_n_mod:
     description: "`Link-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [link]
@@ -289,9 +303,19 @@ expressions:
   Link_tech_capacity_expansion:
     expression: sum(Link_p_nom_ext * Link_tech_capacity_weight, over=link)
     adds_to: tech_capacity_expansion
+  Link_running_cost:
+    description: >-
+      what a link's flow costs in a snapshot: the value read off its piecewise
+      curve where it has one, and its linear `marginal_cost` otherwise. A
+      curve replaces the linear cost, as PyPSA drops the unit from that term
+      (`optimize.py:333-348`)
+    dims: [scenario, snapshot, link]
+    cases:
+      curve: { when: Link_marginal_cost_curve, expression: Link_marginal_cost_piecewise }
+    otherwise: Link_p * Link_marginal_cost
   Link_opex:
     expression: >-
-      sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+      sum(sum((Link_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
       + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     adds_to: scenario_opex
   Link_capex:
@@ -308,6 +332,35 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  Link_marginal_cost_curve:
+    description: >-
+      a link that pays along a piecewise `marginal_cost` curve: one of PyPSA's
+      `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Link_marginal_cost_curve_p, over=breakpoint) > 0 AND Link_active_asset
+  Link_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a link's cost curve gets less steep: the segment
+      after it rises less per unit of flow than the one before
+    condition: >-
+      Link_marginal_cost_curve_p
+      AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Link_marginal_cost_curve_cost - shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_p)
+      > (shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_cost)
+      * (Link_marginal_cost_curve_p - shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Link_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all link cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      link with a curve is committable, the incremental rows otherwise. PyPSA
+      gates the curves by `Link-status` where one is committable, and linopy
+      states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
+    condition: >-
+      count(Link_marginal_cost_curve AND count(Link_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=link) == 0
+      AND count(Link_marginal_cost_curve AND Link_committable, over=link) == 0
   Link_committed:
     description: >-
       a committable link that is active in the snapshot's period: every
@@ -372,6 +425,14 @@ constraints:
     expression: Link_p == Link_p_set
 
 assumptions:
+  Link_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Link_p_nom_extendable AND Link_p_nom > 0 AND Link_p_nom < inf"
+    where: "Link_marginal_cost_curve"
+    description: >-
+      a link's cost curve is given per unit of a fixed, positive, finite
+      `p_nom`, which scales it to flow. PyPSA refuses an extendable unit and a
+      zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes a
+      negative one, which the file does not state
   Link_output_delay_under_uniform_weighting:
     holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
     where: "Link_output_delay > 0"
@@ -399,6 +460,8 @@ assumptions:
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$, data another file declares |
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$, data another file declares |
+| $`\mathrm{C}^{f,\mathrm{curve}}`$ | `Link_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{L}`$, data another file declares |
+| $`\mathrm{f}^{\mathrm{curve}}`$ | `Link_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{L}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\mathrm{w}^{\mathrm{gen}}`$ | `snapshot_weightings_generators` over $`\mathcal{T}`$, data another file declares |
@@ -418,6 +481,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
@@ -463,11 +527,15 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{f,\mathrm{com}}`$ | `Link_committed` over $`\mathcal{L} \times \mathcal{T}`$ — a committable link that is active in the snapshot's period: every unit-commitment row's set |
+| $`\mathrm{lp}^{f}`$ | `Link_marginal_cost_as_lp` (scalar) — linopy's choice of method for all link cost curves at once (`method="auto"`): the segment lines where every curve is convex and no link with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Link-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{f}`$ | `Link_marginal_cost_curve` over $`\mathcal{L}`$ — a link that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{f}`$ | `Link_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{L}`$ — a breakpoint where a link's cost curve gets less steep: the segment after it rises less per unit of flow than the one before |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
+| $`C^{f,\mathrm{curve}}`$ | `Link_marginal_cost_piecewise` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-marginal_cost_piecewise` — the running cost of a link that pays along a curve, held above the curve |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ — `Link-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-p` — PyPSA's `p0`, the flow measured at the `Link_bus0` end. A positive value withdraws there and injects at every bus the link's output ports deliver to |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ — `Link-p_nom` — nominal power where it is a decision, for a link that is active. A fixed build is the parameter of the same PyPSA name |
@@ -484,6 +552,7 @@ assumptions:
 | $`\overrightarrow{f}`$ | `Link_output_arrival` over $`\mathcal{O} \times \Xi \times \mathcal{T}`$ — what a link delivers to an output port at a snapshot. It is its flow delayed by the port's `delay` within its investment period. It is multiplied by the port's efficiency at the snapshot the flow arrives. Where the port is `cyclic_delay`, the delayed flow wraps from the period's end. Where it is not, the flow still in transit at the period's first snapshots is lost. A port that does not delay (`delay` zero) delivers its flow unshifted, cyclic or not |
 | $`\widehat{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_committed` over $`\mathcal{L} \times \Xi`$ — the build a committed link's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1131-1134`) |
 | $`\widetilde{\mathrm{f}}^{\mathrm{nom}}`$ | `Link_p_nom_effective` over $`\mathcal{L} \times \Xi`$ — the build a link's limits are taken against: the chosen one where it is extendable, the given one otherwise |
+| $`C^{f,\mathrm{run}}`$ | `Link_running_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — what a link's flow costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{Link\_tech\_capacity\_expansion}`$ | `Link_tech_capacity_expansion` over $`\mathcal{G}`$ |
 | $`\mathit{Link\_transmission\_expansion\_cost}`$ | `Link_transmission_expansion_cost` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Link\_transmission\_volume\_expansion}`$ | `Link_transmission_volume_expansion` over $`\mathcal{G} \times \Xi`$ |
@@ -504,7 +573,31 @@ assumptions:
 \mathrm{on}^{f,\mathrm{com}}_{l,t} \iff \mathrm{com}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t} \qquad \forall\, l \in \mathcal{L},\ t \in \mathcal{T}
 ```
 
+**`Link_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp}^{f} \iff \lvert \{ l \in \mathcal{L} \,:\, \mathrm{curve}^{f}_{l} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{f}_{b,l} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ l \in \mathcal{L} \,:\, \mathrm{curve}^{f}_{l} \wedge \mathrm{com}^{f}_{l} \} \rvert = 0
+```
+
+**`Link_marginal_cost_curve`**
+
+```math
+\mathrm{curve}^{f}_{l} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{f}_{l} \qquad \forall\, l \in \mathcal{L}
+```
+
+**`Link_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}^{f}_{b,l} \iff \mathrm{f}^{\mathrm{curve}}_{b,l} \text{ is defined} \wedge \mathrm{f}^{\mathrm{curve}}_{b - 1,l} \text{ is defined} \wedge \mathrm{f}^{\mathrm{curve}}_{b + 1,l} \text{ is defined} \wedge \left( \mathrm{C}^{f,\mathrm{curve}}_{b,l} - \mathrm{C}^{f,\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{f}^{\mathrm{curve}}_{b,l} \right) > \left( \mathrm{C}^{f,\mathrm{curve}}_{b \boxplus_{0} 1,l} - \mathrm{C}^{f,\mathrm{curve}}_{b,l} \right) \cdot \left( \mathrm{f}^{\mathrm{curve}}_{b,l} - \mathrm{f}^{\mathrm{curve}}_{b \boxminus_{0} 1,l} \right) \qquad \forall\, b \in \mathcal{B},\ l \in \mathcal{L}
+```
+
 #### Variable domains
+
+**`Link_marginal_cost_piecewise`**
+
+```math
+C^{f,\mathrm{curve}}_{l,\xi,t} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{curve}^{f}_{l} \wedge \mathrm{on}^{f}_{l,t}
+```
 
 **`Link_n_mod`**
 
@@ -553,7 +646,7 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_opex`**
 
 ```math
-\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} C^{f,\mathrm{run}}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Link_output_arrival`**
@@ -572,6 +665,12 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 
 ```math
 \widetilde{\mathrm{f}}^{\mathrm{nom}}_{l,\xi} = \begin{cases} F_{l} & \text{if } \mathrm{ext}^{f}_{l} \\ \mathrm{f}^{\mathrm{nom}}_{l,\xi} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
+```
+
+**`Link_running_cost`**
+
+```math
+C^{f,\mathrm{run}}_{l,\xi,t} = \begin{cases} C^{f,\mathrm{curve}}_{l,\xi,t} & \text{if } \mathrm{curve}^{f}_{l} \\ f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_tech_capacity_expansion`**
@@ -661,6 +760,12 @@ f_{l,\xi,t} = \mathrm{f}^{\mathrm{set}}_{l,\xi,t} \qquad \forall\, l \in \mathca
 ```
 
 #### Assumptions
+
+**`Link_marginal_cost_curve_on_a_fixed_build`**
+
+```math
+\neg \mathrm{ext}^{f}_{l} \wedge \mathrm{f}^{\mathrm{nom}}_{l,\xi} > 0 \wedge \mathrm{f}^{\mathrm{nom}}_{l,\xi} < \infty \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \mathrm{curve}^{f}_{l}
+```
 
 **`Link_marginal_cost_quadratic_without_risk_preference`**
 

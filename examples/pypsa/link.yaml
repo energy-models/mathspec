@@ -5,6 +5,8 @@
 given:
   parameters:
     snapshot_weightings_objective: { dims: [snapshot] }
+    Link_marginal_cost_curve_p: { dims: [link, breakpoint] }
+    Link_marginal_cost_curve_cost: { dims: [link, breakpoint] }
     Link_committable: { dims: [link], dtype: bool }
     Link_maintenance_pu: { dims: [scenario, link] }
     scenario_weight: { dims: [scenario] }
@@ -48,6 +50,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -219,6 +227,12 @@ variables:
       output ports deliver to
     dims: [scenario, snapshot, link]
     where: Link_active
+  Link_marginal_cost_piecewise:
+    description: >-
+      `Link-marginal_cost_piecewise` — the running cost of a link that pays
+      along a curve, held above the curve
+    dims: [scenario, snapshot, link]
+    where: Link_marginal_cost_curve AND Link_active
   Link_n_mod:
     description: "`Link-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [link]
@@ -282,9 +296,19 @@ expressions:
   Link_tech_capacity_expansion:
     expression: sum(Link_p_nom_ext * Link_tech_capacity_weight, over=link)
     adds_to: tech_capacity_expansion
+  Link_running_cost:
+    description: >-
+      what a link's flow costs in a snapshot: the value read off its piecewise
+      curve where it has one, and its linear `marginal_cost` otherwise. A
+      curve replaces the linear cost, as PyPSA drops the unit from that term
+      (`optimize.py:333-348`)
+    dims: [scenario, snapshot, link]
+    cases:
+      curve: { when: Link_marginal_cost_curve, expression: Link_marginal_cost_piecewise }
+    otherwise: Link_p * Link_marginal_cost
   Link_opex:
     expression: >-
-      sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+      sum(sum((Link_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
       + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
     adds_to: scenario_opex
   Link_capex:
@@ -301,6 +325,35 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  Link_marginal_cost_curve:
+    description: >-
+      a link that pays along a piecewise `marginal_cost` curve: one of PyPSA's
+      `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Link_marginal_cost_curve_p, over=breakpoint) > 0 AND Link_active_asset
+  Link_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a link's cost curve gets less steep: the segment
+      after it rises less per unit of flow than the one before
+    condition: >-
+      Link_marginal_cost_curve_p
+      AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Link_marginal_cost_curve_cost - shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Link_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_p)
+      > (shift(Link_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Link_marginal_cost_curve_cost)
+      * (Link_marginal_cost_curve_p - shift(Link_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Link_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all link cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      link with a curve is committable, the incremental rows otherwise. PyPSA
+      gates the curves by `Link-status` where one is committable, and linopy
+      states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
+    condition: >-
+      count(Link_marginal_cost_curve AND count(Link_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=link) == 0
+      AND count(Link_marginal_cost_curve AND Link_committable, over=link) == 0
   Link_committed:
     description: >-
       a committable link that is active in the snapshot's period: every
@@ -365,6 +418,14 @@ constraints:
     expression: Link_p == Link_p_set
 
 assumptions:
+  Link_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Link_p_nom_extendable AND Link_p_nom > 0 AND Link_p_nom < inf"
+    where: "Link_marginal_cost_curve"
+    description: >-
+      a link's cost curve is given per unit of a fixed, positive, finite
+      `p_nom`, which scales it to flow. PyPSA refuses an extendable unit and a
+      zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes a
+      negative one, which the file does not state
   Link_output_delay_under_uniform_weighting:
     holds: "snapshot_weightings_generators == shift(snapshot_weightings_generators, along=snapshot, offset=1, edge='wrap')"
     where: "Link_output_delay > 0"

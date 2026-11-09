@@ -46,6 +46,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -181,6 +187,22 @@ parameters:
   StorageUnit_marginal_cost_quadratic:
     description: cost of the square of one unit of dispatch. Storing is not charged
     dims: [scenario, snapshot, storage_unit]
+  StorageUnit_marginal_cost_curve_p:
+    description: >-
+      the dispatch at each breakpoint of a storage unit's piecewise
+      `marginal_cost` curve: PyPSA's `p_dispatch_pu` breakpoints times
+      `p_nom`, data prep. A storage unit with no curve has no rows
+    dims: [storage_unit, breakpoint]
+    missing: absent
+  StorageUnit_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a storage unit's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      dispatch times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`)
+    dims: [storage_unit, breakpoint]
+    missing: absent
   StorageUnit_marginal_cost_storage:
     description: cost of one unit of charge held over one snapshot
     dims: [scenario, snapshot, storage_unit]
@@ -224,6 +246,12 @@ variables:
     description: "`StorageUnit-p_dispatch` — power delivered to the bus"
     dims: [scenario, snapshot, storage_unit]
     where: StorageUnit_active
+  StorageUnit_marginal_cost_piecewise:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit that pays along a curve, held above the curve
+    dims: [scenario, snapshot, storage_unit]
+    where: StorageUnit_marginal_cost_curve AND StorageUnit_active
   StorageUnit_p_store:
     description: "`StorageUnit-p_store` — power drawn from the bus into charge"
     dims: [scenario, snapshot, storage_unit]
@@ -336,9 +364,19 @@ expressions:
   StorageUnit_tech_capacity_expansion:
     expression: sum(StorageUnit_p_nom_ext * StorageUnit_tech_capacity_weight, over=storage_unit)
     adds_to: tech_capacity_expansion
+  StorageUnit_running_cost:
+    description: >-
+      what a storage unit's dispatch costs in a snapshot: the value read off
+      its piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, storage_unit]
+    cases:
+      curve: { when: StorageUnit_marginal_cost_curve, expression: StorageUnit_marginal_cost_piecewise }
+    otherwise: StorageUnit_p_dispatch * StorageUnit_marginal_cost
   StorageUnit_opex:
     expression: >-
-      sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+      sum(sum((StorageUnit_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
       + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
@@ -356,6 +394,33 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  StorageUnit_marginal_cost_curve:
+    description: >-
+      a storage unit that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(StorageUnit_marginal_cost_curve_p, over=breakpoint) > 0 AND StorageUnit_active_asset
+  StorageUnit_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a storage unit's cost curve gets less steep: the
+      segment after it rises less per unit of dispatch than the one before
+    condition: >-
+      StorageUnit_marginal_cost_curve_p
+      AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (StorageUnit_marginal_cost_curve_cost - shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_p)
+      > (shift(StorageUnit_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - StorageUnit_marginal_cost_curve_cost)
+      * (StorageUnit_marginal_cost_curve_p - shift(StorageUnit_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  StorageUnit_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all storage unit cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex, the
+      incremental rows otherwise. PyPSA calls linopy once per component, so
+      this choice is apart from every other component's. A storage unit has no
+      status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`)
+    condition: >-
+      count(StorageUnit_marginal_cost_curve AND count(StorageUnit_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=storage_unit) == 0
   StorageUnit_fix:
     description: >-
       a storage unit with a fixed build that is active in the snapshot's period.
@@ -366,6 +431,32 @@ conditions:
       a storage unit with an extendable build that is active in the snapshot's
       period. It is PyPSA's `ext` rows
     condition: StorageUnit_p_nom_extendable AND StorageUnit_active
+
+piecewise:
+  StorageUnit_marginal_cost_lp:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit with a curve is at least the curve at its dispatch, stated as the
+      line of each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, storage_unit]
+    where: StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+      cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
+  StorageUnit_marginal_cost_incremental:
+    description: >-
+      `StorageUnit-marginal_cost_piecewise` — the running cost of a storage
+      unit with a curve is at least the curve at its dispatch, stated by
+      segments filled in order, where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, storage_unit]
+    where: NOT StorageUnit_marginal_cost_as_lp AND StorageUnit_marginal_cost_curve AND StorageUnit_active AND StorageUnit_marginal_cost_curve_p
+    method: incremental
+    links:
+      p: [StorageUnit_p_dispatch, StorageUnit_marginal_cost_curve_p]
+      cost: [StorageUnit_marginal_cost_piecewise, StorageUnit_marginal_cost_curve_cost, ">="]
 
 constraints:
   StorageUnit_fix_p_dispatch_lower:
@@ -487,6 +578,14 @@ constraints:
     expression: StorageUnit_state_of_charge == StorageUnit_state_of_charge_set
 
 assumptions:
+  StorageUnit_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT StorageUnit_p_nom_extendable AND StorageUnit_p_nom > 0 AND StorageUnit_p_nom < inf"
+    where: "StorageUnit_marginal_cost_curve"
+    description: >-
+      a storage unit's cost curve is given per unit of a fixed, positive,
+      finite `p_nom`, which scales it to dispatch. PyPSA refuses an extendable
+      unit and a zero, missing or infinite `p_nom` (`piecewise.py:277-297`),
+      and takes a negative one, which the file does not state
   StorageUnit_stands_in_one_run:
     holds: "count(StorageUnit_active AND NOT shift(StorageUnit_active, along=snapshot, offset=1), over=snapshot) <= 1"
     description: >-
@@ -570,6 +669,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
@@ -594,6 +694,8 @@ assumptions:
 | $`\mathrm{idle}`$ | `StorageUnit_inactive_snapshots` over $`\mathcal{S}`$ — how many snapshots a storage unit is not active in. It is PyPSA's `(~active).sum()`, data prep. A cyclic unit reaches back this many snapshots further, so it closes on the last snapshot it is active in |
 | $`\mathrm{inflow}`$ | `StorageUnit_inflow` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — energy arriving per hour, a river into a reservoir |
 | $`\mathrm{c}^{h}`$ | `StorageUnit_marginal_cost` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of one unit of dispatch |
+| $`\mathrm{C}^{h,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{S}`$, `absent` where the data has no row — the running cost at each breakpoint of a storage unit's piecewise `marginal_cost` curve: zero at the first, then each segment's width in dispatch times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{h}^{+,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{S}`$, `absent` where the data has no row — the dispatch at each breakpoint of a storage unit's piecewise `marginal_cost` curve: PyPSA's `p_dispatch_pu` breakpoints times `p_nom`, data prep. A storage unit with no curve has no rows |
 | $`\mathrm{c}^{h,(2)}`$ | `StorageUnit_marginal_cost_quadratic` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of the square of one unit of dispatch. Storing is not charged |
 | $`\mathrm{c}^{\mathrm{soc}}`$ | `StorageUnit_marginal_cost_storage` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — cost of one unit of charge held over one snapshot |
 | $`\mathrm{T}^{h}`$ | `StorageUnit_max_hours` over $`\Xi \times \mathcal{S}`$ — energy capacity, as hours of dispatch at nominal power |
@@ -625,11 +727,15 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{h,\mathrm{ext}}`$ | `StorageUnit_ext` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with an extendable build that is active in the snapshot's period. It is PyPSA's `ext` rows |
 | $`\mathrm{on}^{h,\mathrm{fix}}`$ | `StorageUnit_fix` over $`\mathcal{T} \times \mathcal{S}`$ — a storage unit with a fixed build that is active in the snapshot's period. It is PyPSA's `fix` rows |
+| $`\mathrm{lp}^{h}`$ | `StorageUnit_marginal_cost_as_lp` (scalar) — linopy's choice of method for all storage unit cost curves at once (`method="auto"`): the segment lines where every curve is convex, the incremental rows otherwise. PyPSA calls linopy once per component, so this choice is apart from every other component's. A storage unit has no status, so no gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}^{h}`$ | `StorageUnit_marginal_cost_curve` over $`\mathcal{S}`$ — a storage unit that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}^{h}`$ | `StorageUnit_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{S}`$ — a breakpoint where a storage unit's cost curve gets less steep: the segment after it rises less per unit of dispatch than the one before |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
+| $`C^{h,\mathrm{curve}}`$ | `StorageUnit_marginal_cost_piecewise` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-marginal_cost_piecewise` — the running cost of a storage unit that pays along a curve, held above the curve |
 | $`N^{h}`$ | `StorageUnit_n_mod` over $`\mathcal{S}`$ — `StorageUnit-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`h^{+}`$ | `StorageUnit_p_dispatch` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — `StorageUnit-p_dispatch` — power delivered to the bus |
 | $`H`$ | `StorageUnit_p_nom_ext` over $`\mathcal{S}`$ — `StorageUnit-p_nom` — nominal power where it is a decision, for a storage unit that is active. A fixed build is the parameter of the same PyPSA name |
@@ -650,6 +756,7 @@ assumptions:
 | $`\mathit{StorageUnit\_operational\_limit}`$ | `StorageUnit_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{StorageUnit\_opex}`$ | `StorageUnit_opex` over $`\Xi`$ |
 | $`\mathit{StorageUnit\_primary\_energy}`$ | `StorageUnit_primary_energy` over $`\mathcal{G} \times \Xi`$ |
+| $`C^{h,\mathrm{run}}`$ | `StorageUnit_running_cost` over $`\Xi \times \mathcal{T} \times \mathcal{S}`$ — what a storage unit's dispatch costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{StorageUnit\_tech\_capacity\_expansion}`$ | `StorageUnit_tech_capacity_expansion` over $`\mathcal{G}`$ |
 
 #### Notation
@@ -657,6 +764,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`t \ominus k`$ | `edge='wrap'` — $`t-k`$, cyclic |
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 | $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
@@ -676,7 +784,31 @@ assumptions:
 \mathrm{on}^{h,\mathrm{fix}}_{t,s} \iff \neg \mathrm{ext}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
+**`StorageUnit_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp}^{h} \iff \lvert \{ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}^{h}_{b,s} \} \rvert > 0 \} \rvert = 0
+```
+
+**`StorageUnit_marginal_cost_curve`**
+
+```math
+\mathrm{curve}^{h}_{s} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}^{h}_{s} \qquad \forall\, s \in \mathcal{S}
+```
+
+**`StorageUnit_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}^{h}_{b,s} \iff \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b + 1,s} \text{ is defined} \wedge \left( \mathrm{C}^{h,\mathrm{curve}}_{b,s} - \mathrm{C}^{h,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{h}^{+,\mathrm{curve}}_{b,s} \right) > \left( \mathrm{C}^{h,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{C}^{h,\mathrm{curve}}_{b,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b,s} - \mathrm{h}^{+,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \qquad \forall\, b \in \mathcal{B},\ s \in \mathcal{S}
+```
+
 #### Variable domains
+
+**`StorageUnit_marginal_cost_piecewise`**
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s}
+```
 
 **`StorageUnit_n_mod`**
 
@@ -761,13 +893,19 @@ h^{-}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 **`StorageUnit_opex`**
 
 ```math
-\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} C^{h,\mathrm{run}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`StorageUnit_primary_energy`**
 
 ```math
 \mathit{StorageUnit\_primary\_energy}_{g,\xi} = -\left( \sum_{s \in \mathcal{S}} \sum_{t \in \mathcal{T}} \mathit{soc}_{\xi,t,s} \cdot \mathit{w}^{h}_{g,\xi,t,s} \cdot \mathrm{a}^{h}_{g,\xi,s} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
+**`StorageUnit_running_cost`**
+
+```math
+C^{h,\mathrm{run}}_{\xi,t,s} = \begin{cases} C^{h,\mathrm{curve}}_{\xi,t,s} & \text{if } \mathrm{curve}^{h}_{s} \\ h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 **`StorageUnit_tech_capacity_expansion`**
@@ -904,7 +1042,25 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 \mathit{soc}_{\xi,t,s} = \mathrm{soc}^{\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{soc}^{\mathrm{set}}_{\xi,t,s} \text{ is defined} \wedge \mathrm{on}^{h}_{t,s}
 ```
 
+**`StorageUnit_marginal_cost_incremental`**
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}}(\mathrm{h}^{+,\mathrm{curve}}_{b,s},\ \mathrm{C}^{h,\mathrm{curve}}_{b,s})(h^{+}_{\xi,t,s}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
+**`StorageUnit_marginal_cost_lp`**
+
+```math
+C^{h,\mathrm{curve}}_{\xi,t,s} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}}(\mathrm{h}^{+,\mathrm{curve}}_{b,s},\ \mathrm{C}^{h,\mathrm{curve}}_{b,s})(h^{+}_{\xi,t,s}) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+```
+
 #### Assumptions
+
+**`StorageUnit_marginal_cost_curve_on_a_fixed_build`**
+
+```math
+\neg \mathrm{ext}^{h}_{s} \wedge \mathrm{h}^{\mathrm{nom}}_{\xi,s} > 0 \wedge \mathrm{h}^{\mathrm{nom}}_{\xi,s} < \infty \qquad \forall\, \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{curve}^{h}_{s}
+```
 
 **`StorageUnit_marginal_cost_quadratic_without_risk_preference`**
 
@@ -952,6 +1108,48 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 
 ```math
 \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{h}_{t,s} \wedge \neg \mathrm{on}^{h}_{t - 1,s} \} \rvert \le 1 \qquad \forall\, s \in \mathcal{S}
+```
+
+**`StorageUnit_marginal_cost_incremental_complete`**
+
+```math
+\mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{C}^{h,\mathrm{curve}}_{b,s} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}
+```
+
+**`StorageUnit_marginal_cost_incremental_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \neg \left( \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert > 0
+```
+
+**`StorageUnit_marginal_cost_lp_complete`**
+
+```math
+\mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{C}^{h,\mathrm{curve}}_{b,s} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined}
+```
+
+**`StorageUnit_marginal_cost_lp_increasing`**
+
+```math
+\mathrm{h}^{+,\mathrm{curve}}_{b \boxminus_{0} 1,s} < \mathrm{h}^{+,\mathrm{curve}}_{b,s} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined}
+```
+
+**`StorageUnit_marginal_cost_lp_curvature`**
+
+```math
+\left( \mathrm{C}^{h,\mathrm{curve}}_{b,s} - \mathrm{C}^{h,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{h}^{+,\mathrm{curve}}_{b,s} \right) \le \left( \mathrm{C}^{h,\mathrm{curve}}_{b \boxplus_{0} 1,s} - \mathrm{C}^{h,\mathrm{curve}}_{b,s} \right) \cdot \left( \mathrm{h}^{+,\mathrm{curve}}_{b,s} - \mathrm{h}^{+,\mathrm{curve}}_{b \boxminus_{0} 1,s} \right) \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined} \wedge \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b + 1,s} \text{ is defined}
+```
+
+**`StorageUnit_marginal_cost_lp_breakpoints`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert > 0
+```
+
+**`StorageUnit_marginal_cost_lp_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \wedge \neg \left( \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b - 1,s} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp}^{h} \wedge \mathrm{curve}^{h}_{s} \wedge \mathrm{on}^{h}_{t,s} \wedge \mathrm{h}^{+,\mathrm{curve}}_{b,s} \text{ is defined} \} \rvert > 0
 ```
 <!-- gallery:end -->
 
