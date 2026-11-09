@@ -14,6 +14,7 @@ given:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_p_nom_mod: { dims: [generator] }
+    Generator_modules_installed: { dims: [scenario, generator] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
     Generator_p_nom_min: { dims: [scenario, generator] }
@@ -117,6 +118,17 @@ variables:
     bounds:
       lower: 0
 
+expressions:
+  Generator_maintenance_modules:
+    description: >-
+      how many modules of a modular committable generator can be on in
+      maintenance: its build cap in modules where the build is extendable,
+      and the modules installed where it is fixed (`constraints.py:588-594`)
+    dims: [scenario, generator]
+    cases:
+      extendable: { when: Generator_p_nom_extendable, expression: Generator_p_nom_max / Generator_p_nom_mod }
+    otherwise: Generator_modules_installed
+
 conditions:
   Generator_maint_ext:
     description: >-
@@ -193,15 +205,15 @@ constraints:
   Generator_maint_modstatus_le_maint:
     description: >-
       `Generator-maint-modstatus-le-maint` — out of maintenance, no module is
-      on in maintenance. In it, at most the modules the build cap holds
+      on in maintenance. In it, at most its modules in maintenance
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status <= Generator_p_nom_max / Generator_p_nom_mod * Generator_maintenance
+    expression: Generator_maintenance_status <= Generator_maintenance_modules * Generator_maintenance
   Generator_maint_modstatus_lb:
     description: "`Generator-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, generator]
     where: Generator_maintainable AND Generator_committed AND Generator_p_nom_mod > 0
-    expression: Generator_maintenance_status >= Generator_status - Generator_p_nom_max / Generator_p_nom_mod * (1 - Generator_maintenance)
+    expression: Generator_maintenance_status >= Generator_status - Generator_maintenance_modules * (1 - Generator_maintenance)
 
 assumptions:
   Generator_maintenance_events_positive:
@@ -236,14 +248,6 @@ assumptions:
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
       refuses it (`consistency.py:1576`)
-  Generator_maintenance_module_count_is_finite:
-    holds: "Generator_p_nom_max < inf"
-    where: "Generator_maintainable AND Generator_committable AND NOT Generator_p_nom_extendable AND Generator_p_nom_mod > 0"
-    description: >-
-      the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
-      PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:557-560`)
 ```
 
 #### Given
@@ -252,6 +256,7 @@ assumptions:
 |---|---|
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
+| $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}`$ | `Generator_p_nom_extendable` over $`\mathcal{G}`$, data another file declares |
 | $`\overline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_max` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\underline{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_min` over $`\mathcal{G} \times \Xi`$, data another file declares |
@@ -294,6 +299,12 @@ assumptions:
 | $`\mu^{\mathrm{up}}`$ | `Generator_maintenance_start` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Generator-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Generator-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
+#### Definitions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{Generator\_maintenance\_modules}`$ | `Generator_maintenance_modules` over $`\mathcal{G} \times \Xi`$ — how many modules of a modular committable generator can be on in maintenance: its build cap in modules where the build is extendable, and the modules installed where it is fixed (`constraints.py:588-594`) |
+
 #### Conditions
 
 **`Generator_maint_ext`**
@@ -328,6 +339,14 @@ assumptions:
 \mu^{u}_{g,\xi,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \neg \left( \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \right)
 ```
 
+#### Definitions
+
+**`Generator_maintenance_modules`**
+
+```math
+\mathrm{Generator\_maintenance\_modules}_{g,\xi} = \begin{cases} \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi}}{\mathrm{p}^{\mathrm{mod}}_{g}} & \text{if } \mathrm{ext}_{g} \\ \mathrm{N}^{\mathrm{fix}}_{g,\xi} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi
+```
+
 #### Subject to
 
 **`Generator_maint_event_count`**
@@ -339,13 +358,13 @@ assumptions:
 **`Generator_maint_modstatus_lb`**
 
 ```math
-\mu^{u}_{g,\xi,t} \ge u_{g,\xi,t} - \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \left( 1 - \mu_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mu^{u}_{g,\xi,t} \ge u_{g,\xi,t} - \mathrm{Generator\_maintenance\_modules}_{g,\xi} \cdot \left( 1 - \mu_{g,\xi,t} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_maint_modstatus_le_maint`**
 
 ```math
-\mu^{u}_{g,\xi,t} \le \frac{\overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi}}{\mathrm{p}^{\mathrm{mod}}_{g}} \cdot \mu_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
+\mu^{u}_{g,\xi,t} \le \mathrm{Generator\_maintenance\_modules}_{g,\xi} \cdot \mu_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}_{g} \wedge \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
 **`Generator_maint_modstatus_le_status`**
@@ -438,12 +457,6 @@ assumptions:
 
 ```math
 \mathrm{n}^{\mathrm{mnt}}_{g,\xi} > 0 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{mnt}_{g}
-```
-
-**`Generator_maintenance_module_count_is_finite`**
-
-```math
-\overline{\mathrm{p}}^{\mathrm{nom}}_{g,\xi} < \infty \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{mnt}_{g} \wedge \mathrm{com}_{g} \wedge \neg \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 <!-- gallery:end -->
 

@@ -76,20 +76,20 @@ compares them with it, so the two always agree.
 | [flow_based](flow_based.md) | 4 | 1 | 2 | 5 | `Bus_injection` |
 | [generator](generator.md) | 24 | 3 | 11 | 17 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
 | [generator_commitment](generator_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
-| [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
+| [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
 | [line](line.md) | 22 | 4 | 14 | 9 | `Carrier_additions`, `Cycle_angle_sum`, `total_cost`, `Bus_injection`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
 | [link](link.md) | 26 | 3 | 11 | 17 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
 | [link_commitment](link_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
-| [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
+| [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [network](network.md) | 0 | 0 | 1 | 1 |  |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
 | [process](process.md) | 24 | 3 | 11 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
-| [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
+| [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |

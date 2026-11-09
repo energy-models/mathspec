@@ -89,7 +89,7 @@ variables:
 
 expressions:
   FlowBased_injection:
-    description: what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1508`)
+    description: what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1578`)
     dims: [scenario, snapshot, bus]
     expression: -FlowBased_net_position
     adds_to: Bus_injection
@@ -163,7 +163,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{NP}^{\mathrm{inj}}`$ | `FlowBased_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ — what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1508`) |
+| $`\mathit{NP}^{\mathrm{inj}}`$ | `FlowBased_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ — what a zone bus exports to its flow-based domain leaves the bus (`constraints.py:1578`) |
 
 #### Variable domains
 
