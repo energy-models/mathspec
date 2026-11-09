@@ -2360,7 +2360,7 @@ class TestAnEntryIsNamed:
     """An entry's key must be a name the expression grammar could write.
 
     Nothing checked it, so `parameters: {'': {...}}` loaded, and a piecewise
-    entry naming it under `points:` had its mask silently dropped —
+    entry naming it as its mask had the mask silently dropped —
     `if mask:` in the expansion read a declared parameter as "this entry
     masks nothing", and the weights came out unmasked. Every unwritable name
     has the same shape: an entry no expression can reach, in a language
@@ -2401,7 +2401,7 @@ class TestAnEntryIsNamed:
             'expressions': {'expression': 'c'},
             'macros': {'args': ['x'], 'template': 'x * 2'},
             'constraints': {'dims': ['g'], 'expression': 'p <= c'},
-            'piecewise': {'over': 'g', 'links': [['p', 'c'], ['q', 'c']], 'method': 'convex'},
+            'piecewise': {'along': 'g', 'dims': [], 'links': {'p': ['p', 'c'], 'q': ['q', 'c']}, 'method': 'convex'},
             'sos': {'variable': 'p', 'along': 'g', 'type': 1},
         }
         model = copy.deepcopy(SMALL_MODEL)
@@ -2525,7 +2525,11 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
                 'parameters.bp_x': {'dims': ['generator', 'bp']},
                 'parameters.bp_y': {'dims': ['generator', 'bp']},
                 'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
-                'piecewise.curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
+                'piecewise.curve': {
+                    'along': 'bp',
+                    'dims': ['snapshot', 'generator'],
+                    'links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+                },
             },
         )
     )
@@ -2540,13 +2544,14 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
         ('resolve_condition_text', "Named expression 'headroom', case 'opening'"),
         ('resolve_condition_text', "Variable 'op_cost'"),
         ('resolve_condition_text', "Variable 'p'"),
+        ('resolve_condition_text', "piecewise 'curve' where"),
         ('resolve_constraint_text', "Constraint 'balance'"),
         ('resolve_constraint_text', "Constraint 'spare'"),
         ('resolve_expression', "Named expression 'headroom', case 'opening'"),
         ('resolve_expression', "Named expression 'headroom', otherwise"),
         ('resolve_expression', 'The objective'),
-        ('resolve_expression', "piecewise 'curve' link 0"),
-        ('resolve_expression', "piecewise 'curve' link 1"),
+        ('resolve_expression', "piecewise 'curve' link 'op_cost'"),
+        ('resolve_expression', "piecewise 'curve' link 'p'"),
     ], 'every expression and condition position once, under the context validation reads it in, and nothing after'
 
 
@@ -2654,8 +2659,8 @@ def test_a_parameter_missing_that_reads_nothing_is_refused(dtype, written, fragm
     assert fragment in message
 
 
-#: A curve under `points: x_bp`, both values tables declared `missing: 0`.
-CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'before.yaml'
+#: A curve under the ragged `where: x_bp`, both values tables declared `missing: 0`.
+CURVE_UNDER_WHERE = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'before.yaml'
 
 
 @pytest.mark.parametrize('parameter', ['x_bp', 'y_bp'])
@@ -2666,14 +2671,14 @@ CURVE_UNDER_POINTS = Path(__file__).parent / 'expand' / 'curve-lp-points' / 'bef
         pytest.param({'dims': ['bp'], 'missing': 'refused'}, id='refused-written'),
     ],
 )
-def test_a_values_table_under_points_is_not_refused(parameter, declared):
-    """`points: x_bp` with `x_bp` declared `refused` loaded, and named a mask every breakpoint is in.
+def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared):
+    """`where: x_bp` with `x_bp` declared `refused` loaded, and named a mask every breakpoint is in.
 
     `refused` says the table has a row at every breakpoint, so the curve never ran short of the dimension, and the
     refusal of a curve parameter read outside the curve suggested that reading.
     """
-    message = _refusal(read_yaml(CURVE_UNDER_POINTS), **{f'parameters.{parameter}': declared})
-    assert f"parameter '{parameter}' is refused where a row is missing, and piecewise 'curve'" in message
+    message = _refusal(read_yaml(CURVE_UNDER_WHERE), **{f'parameters.{parameter}': declared})
+    assert f"'{parameter}' is refused where a row is missing, and it is a values parameter of" in message
     assert 'Declare missing: absent, or a value of its dtype' in message, 'the refusal names the rewrite'
 
 
@@ -3155,7 +3160,7 @@ _READS_ORDER = [
         id='a-shifted-mask',
     ),
     pytest.param(
-        {'piecewise.curve': {'over': 'bp', 'links': [['x', 'bp_x'], ['y', 'bp_y']]}},
+        {'piecewise.curve': {'along': 'bp', 'dims': ['t'], 'links': {'x': ['x', 'bp_x'], 'y': ['y', 'bp_y']}}},
         'bp',
         id='a-piecewise-curve',
     ),
@@ -3232,7 +3237,13 @@ _ROW = {'dims': ['snapshot'], 'expression': 'sum(dispatch, over=generator) >= lo
             id='a-set-named-after-its-variable',
         ),
         pytest.param(
-            {'piecewise.load': {'over': 'bp', 'links': [['dispatch', 'bp_x'], ['op_cost', 'bp_y']]}},
+            {
+                'piecewise.load': {
+                    'along': 'bp',
+                    'dims': ['snapshot', 'generator'],
+                    'links': {'dispatch': ['dispatch', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+                }
+            },
             id='a-curve-named-after-a-parameter',
         ),
         pytest.param(

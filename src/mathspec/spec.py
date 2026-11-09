@@ -875,11 +875,17 @@ class AssumptionSpec(_StrictSpec):
 
 
 class PiecewiseLinkSpec(_StrictSpec):
-    """One link of a piecewise entry: an expression pinned to a values curve.
+    """One link of a piecewise entry: an expression tied to the curve through a values parameter.
 
     Written in YAML as ``[expression, values]`` or ``[expression, values,
-    sign]`` and serialised back to exactly that form, so a round trip through
+    sign]``, and serialised back to exactly that form, so a round trip through
     [`Spec.to_yaml`][] reproduces the file.
+
+    A link that names ``by: relation[column]`` reads the curve's weights
+    through the relation, as ``at`` reads an array, and is written as a
+    mapping. Its row is the entry's ``dims:`` with the dims the lookup reads
+    replaced by the key columns it arrives at, so one link emits a row per fine
+    coordinate and each reads the curve of the coarse coordinate it maps to.
     """
 
     _label: ClassVar[str] = 'a piecewise link'
@@ -887,6 +893,13 @@ class PiecewiseLinkSpec(_StrictSpec):
     expression: str
     values: str
     sign: Sense = '=='
+    by: str | None = None
+    """The relation and column that the link reads the weights of the curve at, as ``at(..., by=)`` names them."""
+
+    @property
+    def walks(self) -> bool:
+        """Whether the link reads the curve's weights through a relation, rather than on the entry's own dims."""
+        return self.by is not None
 
     @model_validator(mode='before')
     @classmethod
@@ -906,56 +919,78 @@ class PiecewiseLinkSpec(_StrictSpec):
         return _also_written_as(core_schema, handler, list_form)
 
     @model_serializer
-    def _as_list(self) -> list[str]:
-        return [self.expression, self.values] if self.sign == '==' else [self.expression, self.values, self.sign]
+    def _as_written(self) -> list[str] | dict[str, str]:
+        """The list form, or the mapping form a walk cannot be written in a list."""
+        if self.by is None:
+            return [self.expression, self.values] if self.sign == '==' else [self.expression, self.values, self.sign]
+        written = {'expression': self.expression, 'values': self.values, 'by': self.by}
+        return written if self.sign == '==' else {**written, 'sign': self.sign}
 
 
 PIECEWISE_METHODS = {
     'adjacency': 'a binary per segment, and a row making the two nonzero weights neighbours',
     'sos2': 'the same weights, restricted by a set the solver branches on (the sos rules)',
+    'incremental': 'a filled fraction per segment, each filled only once the one before it is full, ordered by a binary',
     'convex': 'nothing, so the weights range over the hull, which is a pure LP',
     'lp': 'no weights, but one row per segment line, plus the two rows holding the domain',
 }
-"""The methods a ``piecewise:`` entry may declare under ``method:``, each with what it adds. ``sos2`` and ``lp`` mean what
-they mean in ``linopy.Spec.add_piecewise_formulation`` (#695).
+"""The methods a ``piecewise:`` entry may declare under ``method:``, each with what it adds. ``sos2``, ``incremental`` and
+``lp`` mean what they mean in ``linopy.Spec.add_piecewise_formulation`` (#695).
 """
 
 
-class PiecewiseSpec(_StrictSpec):
-    """N expressions jointly pinned to a breakpoint-indexed piecewise curve.
+_TWO_LINKS = {
+    'lp': 'It states the curve as its segment lines, and a line is one quantity against another.',
+    'convex': (
+        'It relaxes the weights onto the hull, which is exact only in the direction of the sign on the '
+        'bounded link, and with more than two links there is no single direction to check.'
+    ),
+}
 
-    Mirrors ``linopy.Spec.add_piecewise_formulation``. Each link is
-    ``[expression, values_parameter]`` or ``[expression, values_parameter,
-    sign]``: *expression* is any affine expression string, *values_parameter*
-    names a parameter carrying the ``over`` dim, and *sign* bounds the link by
-    the curve instead of pinning it (at most one non-``"=="``, and only with
-    exactly two links).
+_NO_WALK = {
+    'lp': 'A segment line has one x quantity, and a walked link is one quantity at many coordinates.',
+    'convex': 'It checks one values parameter against another, and a walk puts them over different dimensions.',
+}
+
+
+class PiecewiseSpec(_StrictSpec):
+    """Expressions tied to one breakpoint-indexed piecewise curve per coordinate of ``dims:``.
+
+    Mirrors ``linopy.Spec.add_piecewise_formulation``. ``links:`` maps a name
+    to ``[expression, values_parameter]`` or ``[expression, values_parameter,
+    sign]``: *expression* is any affine expression string over ``dims:``,
+    *values_parameter* names a parameter carrying ``along`` and no dim the
+    link's row lacks, and *sign* bounds the link by the curve instead of
+    pinning it. The name is the link's row in the expansion, ``<entry>_<link>``.
+
+    ``dims:`` alone decides how many curves the entry builds: one set of
+    weights per coordinate of it. ``where:`` says which of those coordinates
+    have a curve, and how far each runs along ``along`` where it reads that
+    dim too; ``activity:`` whether a curve that exists is switched on. A link
+    that walks a relation builds a row per fine coordinate, each reading the
+    one curve its coarse coordinate has, so how many expressions a curve ties
+    is data.
     """
 
     _label: ClassVar[str] = 'a piecewise entry'
 
-    over: str
-    """The dimension of the breakpoints."""
-    links: list[PiecewiseLinkSpec]
+    along: str
+    """The dimension each curve runs along: its breakpoints, in the declared order of that dimension."""
+    dims: list[str]
+    """The frame of the curves: one curve per coordinate of it."""
+    links: dict[str, PiecewiseLinkSpec]
+    """Each link by the name its row takes, ``<entry>_<link>``."""
+    where: str | None = None
+    """Which coordinates have a curve, or every coordinate when the key is left out. Over ``dims:`` alone it states which
+    curves exist; over ``along`` too, it states which breakpoints each curve runs through, for curves of unequal length.
+    """
     method: PiecewiseMethod = 'adjacency'
     """Which of [`PIECEWISE_METHODS`][] restricts the weights."""
     activity: str | None = None
     """What the weights sum to: 1 when the key is left out, or a binary variable that sets the formulation to 0 when the
     variable is 0.
     """
-    points: str | None = None
-    """A ``bool`` parameter that states how far each curve runs, for curves of unequal length."""
     description: str | None = None
-
-    @property
-    def consumes(self) -> frozenset[str]:
-        """The parameters the entry reads: each link's values, and the ``points:`` mask."""
-        return frozenset({link.values for link in self.links} | ({self.points} if self.points else set()))
-
-    @property
-    def nominated(self) -> str | None:
-        """The entry's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
-        return self.points if self.points in {link.values for link in self.links} else None
 
     @property
     def curve(self) -> tuple[PiecewiseLinkSpec, PiecewiseLinkSpec]:
@@ -963,8 +998,20 @@ class PiecewiseSpec(_StrictSpec):
 
         Two-link entries only.
         """
-        x, y = self.links
+        x, y = self.links.values()
         return (y, x) if x.sign != '==' else (x, y)
+
+    @model_validator(mode='before')
+    @classmethod
+    def _check_dims(cls, data: object) -> object:
+        if isinstance(data, dict) and data.get('dims') is None:
+            msg = (
+                'a piecewise entry declares dims:, the dimensions with one curve per coordinate, as a variable '
+                'declares its own. Write the dimensions its links are over, without any that a link adds through '
+                'a relation: dims: [generator, snapshot] for a link on p over [generator, snapshot].'
+            )
+            raise ValueError(msg)
+        return data
 
     @field_validator('method', mode='wrap')
     @classmethod
@@ -978,10 +1025,20 @@ class PiecewiseSpec(_StrictSpec):
 
     @model_validator(mode='after')
     def _check_method_shape(self) -> PiecewiseSpec:
-        if self.method == 'convex' and len(self.links) != 2:
-            msg = 'method: convex takes exactly two links. Write two links, or choose another method.'
+        walked = [key for key, link in self.links.items() if link.walks]
+        if walked and self.method in ('convex', 'lp'):
+            msg = (
+                f"method: {self.method} does not take a link that walks a relation (link '{walked[0]}'). "
+                f'{_NO_WALK[self.method]} Use method: adjacency, sos2 or incremental.'
+            )
             raise ValueError(msg)
-        if self.method == 'lp' and sum(link.sign != '==' for link in self.links) != 1:
+        if self.method in ('convex', 'lp') and len(self.links) != 2:
+            msg = (
+                f'method: {self.method} takes exactly two links. {_TWO_LINKS[self.method]} Write two links, or use '
+                f'method: adjacency, sos2 or incremental.'
+            )
+            raise ValueError(msg)
+        if self.method == 'lp' and sum(link.sign != '==' for link in self.links.values()) != 1:
             msg = "method: lp needs exactly one link with a '<=' or '>=' sign. Add the sign to one link."
             raise ValueError(msg)
         if self.activity is not None and self.method in ('convex', 'lp'):
@@ -991,16 +1048,25 @@ class PiecewiseSpec(_StrictSpec):
 
     @field_validator('links')
     @classmethod
-    def _check_links(cls, v: list[PiecewiseLinkSpec]) -> list[PiecewiseLinkSpec]:
-        if len(v) < 2:
-            msg = 'piecewise needs at least two links ([expression, values, sign?]).'
+    def _check_links(cls, v: dict[str, PiecewiseLinkSpec]) -> dict[str, PiecewiseLinkSpec]:
+        if unnamed := [key for key in v if not re.fullmatch(NAME, key)]:
+            msg = (
+                f'links: {unnamed} {"is" if len(unnamed) == 1 else "are"} not a name. The name of a link is part of '
+                f'the name of its row, <entry>_<link>, so it starts with a letter or an underscore, followed by '
+                f'letters, digits or underscores.'
+            )
             raise ValueError(msg)
-        non_eq = [link.sign for link in v if link.sign != '==']
-        if len(non_eq) > 1:
-            msg = "only one link may carry '<=' or '>='. Write '==' on the others."
+        if len(v) < 2 and not any(link.walks for link in v.values()):
+            msg = (
+                'piecewise needs at least two links ([expression, values, sign?]), or one link that walks a '
+                'relation. One quantity on a curve is a bound, not a curve.'
+            )
             raise ValueError(msg)
-        if non_eq and len(v) != 2:
-            msg = "a '<=' or '>=' sign needs exactly two links. Write two links, or use '==' on every link."
+        if all(link.sign != '==' for link in v.values()):
+            msg = (
+                "every link has a '<=' or '>=' sign, so nothing pins the point the curve is read at. Write '==' "
+                'on at least one link.'
+            )
             raise ValueError(msg)
         return v
 
@@ -1026,6 +1092,7 @@ class SosSpec(_StrictSpec):
     _label: ClassVar[str] = 'a sos entry'
 
     variable: str
+    #: The dimension the set runs along — one set per coordinate of the rest.
     along: str
     type: SosType
     description: str | None = None

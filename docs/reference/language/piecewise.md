@@ -20,7 +20,7 @@ an `adjacency` curve adds. The expansion has three properties:
 
 - Every name it writes starts with the name of the entry. The curve `chp` has
   one number per corner point (a [breakpoint](../glossary.md#breakpoint)) in
-  `chp_lam`, and its rows include `chp_convexity` and `chp_link0`.
+  `chp_lam`, and its rows include `chp_convexity` and `chp_power`.
 - No formulation writes a parameter. The same data attaches to a spec and to
   its expansion, and has the same meaning in both.
 - The [assumptions of a curve](assumptions.md#what-a-curve-assumes) become
@@ -87,8 +87,9 @@ dimension must be declared [ordered](dimensions.md#ordered), because
 
 ### What a set is written out as
 
-`spec.expand('sos')` states the set as binary variables: one per member for
-`type: 1`, and one per segment between two members for `type: 2`. A member
+`spec.expand('sos')` states the set as one binary variable per member. Under
+`type: 1`, the binary of a member admits that member. Under `type: 2`, it
+admits that member and the next, so it picks the segment between them. A member
 that the binaries do not admit is held at zero, from above and from below. For
 a set `s` over the variable `x` along `d`, let `admitted` be `s_seg` for
 `type: 1`, and `s_seg + shift(s_seg, along=d, offset=1, edge=0)` for `type: 2`:
@@ -155,10 +156,10 @@ writes.
 
 ## `piecewise`
 
-A `piecewise` entry states a curve through breakpoints, which are the corner
-values that the expressions take together. In the spec below, each generator
-has a table of power, fuel and heat at each breakpoint `bp`, and straight lines
-join the breakpoints:
+A `piecewise` entry states one curve through breakpoints for each coordinate
+of its `dims:`. The breakpoints are the corner values that the expressions
+take together. In the spec below, each generator has a table of power, fuel
+and heat at each breakpoint `bp`, and straight lines join the breakpoints:
 
 ```yaml
 dimensions:
@@ -174,11 +175,12 @@ variables:
   heat: { dims: [generator], bounds: { lower: 0 } }
 piecewise:
   chp:
-    over: bp
+    along: bp
+    dims: [generator]
     links:
-      - [power, power_bp]
-      - [fuel, fuel_bp]
-      - [heat, heat_bp]
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp]
+      heat: [heat, heat_bp]
 objective:
   sense: minimize
   expression: sum(fuel, over=generator)
@@ -188,59 +190,151 @@ objective:
 \left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b},\ \mathrm{heat}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G}
 ```
 
-The [typesetter](../typeset.md) prints the entry as one membership. For each generator, the
-triple of power, fuel and heat lies on the curve that the three breakpoint
-tables draw over `bp`.
+The [typesetter](../typeset.md) prints the entry as one membership: for each
+generator, power, fuel and heat lie together on the curve through the three
+breakpoint tables.
 
-Except under `method: lp`, an entry states a weight in [0, 1] per breakpoint.
-It adds a row that makes the weights sum to one. It also adds a row per link
-that ties the expression of the link to the weighted breakpoints.
+Under the default `method`, the expansion writes a weight in [0, 1] per
+breakpoint and a row that makes the weights sum to one. It also writes one row
+per link, which ties the expression of the link to the weighted breakpoints.
+The weights get an [`sos:`](#sos) entry, written out as one binary per
+breakpoint in `chp_seg` and the rows `chp_pick` and `chp_adjacency`. Those rows
+require that only the weights of one segment are non-zero. Each other method
+writes other rows ([`method`](#method)).
 
-Each item under `links:` is a **link**, which is a list of two or three parts:
+Each item under `links:` is a **link**: a name and a list of two or three
+parts. The name of a link sets the name of its row, `<entry>_<link>`, so the
+expansion writes the link `power` of `chp` as the row `chp_power`.
 
 | Part of a link | What it is                                                                                                                                              |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | _expression_   | Any linear expression plus a constant ([affine](expressions.md#where-a-product-of-two-variables-is-allowed)). The simplest one is a bare variable name. |
-| _values_       | A parameter over the `over` dimension, plus any dimensions over which the link expressions are indexed.                                                 |
-| _sign_         | `<=`, `>=` or `==`. Without a sign, the link is `==`.                                                                                                   |
+| _values_       | A parameter over the `along` dimension. Its other dimensions are dimensions of the row of the link.                                                     |
+| _sign_         | `<=`, `>=` or `==`. Without a sign, the link is `==` ([signs](#signs)).                                                                                 |
 
-| Key        | Required | Default     | What it does                                                                                      |
-| ---------- | -------- | ----------- | ------------------------------------------------------------------------------------------------- |
-| `over`     | yes      |             | Sets the breakpoint dimension.                                                                    |
-| `links`    | yes      |             | Lists two or more links.                                                                          |
-| `method`   | no       | `adjacency` | Sets how the weights are restricted: `adjacency`, `sos2`, `convex` or `lp` ([`method`](#method)). |
-| `activity` | no       | `null`      | Sets a binary variable that switches the curve on and off ([`activity`](#activity)).              |
-| `points`   | no       | `null`      | Where the curves differ in length, sets how far each curve runs ([`points`](#points)).            |
+A link that [walks a relation](#a-link-that-walks-a-relation) is a mapping
+instead, with the keys `expression`, `values`, `by` and, where it has one,
+`sign`.
 
-mathspec refuses a values parameter over a dimension over which no link
-expression is indexed. Only an entry with exactly two links may sign a link with
-`<=` or `>=`, and only one of its links. At load, mathspec refuses a sign other
-than `<=`, `>=` and `==`.
+| Key        | Required | Default     | What it does                                                                                    |
+| ---------- | -------- | ----------- | ----------------------------------------------------------------------------------------------- |
+| `along`    | yes      |             | Sets the breakpoint dimension.                                                                  |
+| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)). |
+| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                        |
+| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                         |
+| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                   |
+| `activity` | no       | `null`      | Sets a binary variable that switches the curve on and off ([`activity`](#activity)).            |
 
-The breakpoints follow the order of the
-`over` dimension, so that dimension must be declared
-[ordered](dimensions.md#ordered). Without `ordered: true`, mathspec refuses the
-file at load:
+The breakpoints follow the order of the `along` dimension, so that dimension
+must be declared [ordered](dimensions.md#ordered). Without `ordered: true`,
+mathspec refuses the file at load:
 
 ```text
-piecewise 'chp': over: bp reads the order of 'bp', which is not declared ordered, so the order would come from the row order of the data. Declare 'bp: {ordered: true}' under dimensions:.
+piecewise 'chp': along: bp reads the order of 'bp', which is not declared ordered, so the order would come from the row order of the data. Declare 'bp: {ordered: true}' under dimensions:.
 ```
 
-`bp` is not ordered, so the row order of the data would set the order of the
-breakpoints.
+mathspec suggests the rewrite: `ordered: true` on `bp`.
 
-A link with `<=` or `>=` bounds its expression by the curve, and a link with
-`==` pins it to the curve.
-In the spec above, with the entry `fuel_cap` below in place of `chp`, the fuel use may lie
+A link must not take the name of a row, variable or assumption that the
+expansion adds for the entry, such as `convexity`, `lam` or `complete`. For a
+link named `lam`, mathspec prints:
+
+```text
+piecewise 'chp': link 'lam' has the row 'chp_lam', which the expansion of the entry already writes. Rename the link.
+```
+
+mathspec suggests the rewrite: another name for the link.
+
+When the expansions of two entries write a row of the same name, mathspec
+refuses the file and names both entries.
+
+!!! info "See also"
+
+    - [what a curve assumes](assumptions.md#what-a-curve-assumes), for the
+      checks that an entry adds on its breakpoint data.
+
+### `dims`
+
+`dims:` sets the dimensions of the curves, in the order written. The entry
+states one curve, with its own weights, at each coordinate of `dims:`. Every
+curve runs along `along`, so `dims:` must not include that dimension.
+
+The row of a link is over `dims:`, or over the dimensions of its
+[walk](#a-link-that-walks-a-relation). The expression of a link must be over
+exactly the dimensions of its row. With `power` and `fuel` over
+`[snapshot, generator]` and an entry with `dims: [generator]`, mathspec
+prints:
+
+```text
+piecewise 'fuel_use': link 'power' expression is over ['snapshot'], and its row ['generator'] is not, so every coordinate of ['snapshot'] would share one curve. Add ['snapshot'] to dims:, sum it out, or look the curve up through a relation with by: <relation>[<column>].
+```
+
+mathspec suggests three rewrites: `snapshot` in `dims:`, a sum over
+`snapshot`, or a walk through a relation. mathspec also refuses an expression
+that is not over a dimension of its row. One value of the expression would
+then lie on several curves at once.
+
+A quantity can vary along a dimension that the breakpoints do not, such as
+the power of a generator at each snapshot. That dimension goes in `dims:`:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  fuel: { dims: [snapshot, generator], bounds: { lower: 0 } }
+piecewise:
+  fuel_use:
+    along: bp
+    dims: [snapshot, generator]
+    links:
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp]
+objective:
+  sense: minimize
+  expression: sum(fuel)
+```
+
+```math
+\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+The entry states one curve per snapshot and generator. The breakpoint tables
+are over `[generator, bp]`, so each generator has one curve shape, and each
+snapshot has its own point on it.
+
+### Signs
+
+A link with no sign, or with `==`, is pinned to the curve: its expression
+equals the weighted breakpoints. A link with `<=` or `>=` is bounded by the
+curve instead. In the spec below, the fuel use of each generator may lie
 anywhere below the curve:
 
 ```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [generator], bounds: { lower: 0 } }
+  fuel: { dims: [generator], bounds: { lower: 0 } }
 piecewise:
   fuel_cap:
-    over: bp
+    along: bp
+    dims: [generator]
     links:
-      - [power, power_bp]
-      - [fuel, fuel_bp, "<="]
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp, "<="]
+objective:
+  sense: minimize
+  expression: sum(fuel, over=generator)
 ```
 
 ```math
@@ -250,28 +344,317 @@ piecewise:
 The typesetter now prints the curve as a function of `power`, with `fuel`
 bounded above by it.
 
-!!! info "See also"
+Any number of links may have a sign, but at least one link must be pinned.
+The pinned link sets the point on the curve at which the other links are
+read. With a sign on every link, mathspec refuses the file at load:
 
-    - [what a curve assumes](assumptions.md#what-a-curve-assumes), for the
-      checks that an entry adds on its breakpoint data.
+```text
+piecewise.chp.links: every link has a '<=' or '>=' sign, so nothing pins the point the curve is read at. Write '==' on at least one link.
+```
+
+The first spec on this page also loads with a sign on two of its three links:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+  heat_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [generator], bounds: { lower: 0 } }
+  fuel: { dims: [generator], bounds: { lower: 0 } }
+  heat: { dims: [generator], bounds: { lower: 0 } }
+piecewise:
+  chp:
+    along: bp
+    dims: [generator]
+    links:
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp, ">="]
+      heat: [heat, heat_bp, "<="]
+objective:
+  sense: minimize
+  expression: sum(fuel, over=generator)
+```
+
+```math
+\left( \mathit{power}_{g},\ \mathit{fuel}_{g},\ \mathit{heat}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b},\ \mathrm{heat}^{\mathrm{bp}}_{g,b}) + \{0\} \times \mathbb{R}_{\ge 0} \times \mathbb{R}_{\le 0} \qquad \forall\, g \in \mathcal{G}
+```
+
+The typesetter prints the point on the curve plus a cone. The `{0}` keeps the
+pinned `power` on the curve, `fuel` may lie any amount above the curve, and
+`heat` any amount below it.
+
+`convex` and `lp` take exactly two links ([`method`](#method)). At load,
+mathspec refuses a sign other than `<=`, `>=` and `==`.
+
+### A link that walks a relation
+
+On a link with `by: relation[column]`, mathspec looks the weights of the
+curve up through a [relation](relations.md#lookups), as
+[`at(x, by=relation[column])`](operators.md#at) looks up the value of `x`. The
+row of the link is over `dims:`, with the dimension of `column` replaced by
+the key columns of the relation. Each row lies on the curve of the coordinate
+it maps to, so the number of rows is known only when the data is attached:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int, ordered: true }
+  converter: { dtype: str }
+  flow: { dtype: str }
+  bp: { dtype: int, ordered: true }
+relations:
+  converter_of: { key: flow, values: converter }
+parameters:
+  bp_rate: { dims: [flow, bp] }
+  price: { dims: [flow] }
+variables:
+  rate: { dims: [flow, snapshot], bounds: { lower: 0 } }
+piecewise:
+  operating_point:
+    along: bp
+    dims: [converter, snapshot]
+    links:
+      rate: { expression: rate, values: bp_rate, by: "converter_of[converter]" }
+objective:
+  sense: minimize
+  expression: sum(price * rate)
+```
+
+```math
+\left( \mathit{rate}_{f,t} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_rate}_{f,b} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c}) \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
+```
+
+For each converter and snapshot, the rates of all flows of the converter lie
+on one curve. A converter with two flows and a converter with five share the
+entry, and a sixth flow is a row in `converter_of`.
+
+The expansion writes the row `operating_point_rate` over `[flow, snapshot]`.
+Each flow uses the weights of its converter:
+
+```math
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{f,b} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
+```
+
+These rules apply to a walked link:
+
+- One walked link is enough for an entry. The expansion writes a row for each
+  flow of a converter, and those rows share the weights.
+- The values parameter is over the row of the link, so `bp_rate` is per flow,
+  not per converter.
+- `column` is over a dimension of `dims:`. The walk adds the key columns of the
+  relation that are over dimensions outside `dims:`, and joins on those over
+  dimensions of `dims:`. mathspec refuses a key column over `along`, because a
+  row could then take each breakpoint from a different curve.
+- mathspec holds a walk to every rule of [`at`](relations.md#lookups), and quotes
+  the link in the refusal.
+- If the relation declares [`missing: absent`](relations.md#missing), the
+  expansion adds `converter_of` to the `where:` of the row, so a flow with no
+  converter has no row.
+- `method: convex` and `method: lp` take no walked link, and the other methods
+  do.
+- In YAML flow style, `{…}`, the `by:` value needs quotes, as in
+  `by: "converter_of[converter]"`. Inside braces, a YAML parser takes `[` as the
+  start of a list. In block style the value needs no quotes.
+
+### `where`
+
+`where:` is a [condition](expressions.md#conditions) that sets which curves
+exist and, over `along`, how far each one runs. Over `dims:` alone, it sets
+which coordinates have a curve:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  bp_x: { dims: [generator, bp] }
+  bp_y: { dims: [generator, bp] }
+  has_curve: { dims: [generator], dtype: bool }
+variables:
+  p: { dims: [generator], bounds: { lower: 0 } }
+  op_cost: { dims: [generator] }
+constraints:
+  enough:
+    dims: []
+    expression: sum(p, over=generator) >= 1
+piecewise:
+  cost_curve:
+    along: bp
+    dims: [generator]
+    where: has_curve
+    links:
+      p: [p, bp_x]
+      op_cost: [op_cost, bp_y]
+objective:
+  sense: minimize
+  expression: sum(op_cost, over=generator)
+```
+
+```math
+\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{has\_curve}_{g}
+```
+
+Only a generator where `has_curve` is true has a curve. For any other
+generator, the expansion writes no weights and no row that ties `p` or
+`op_cost` to a curve. There `p` and `op_cost` are free, and `bp_x` and `bp_y`
+need no rows. Under `adjacency`, and under `sos2` once its set is written out,
+the row `cost_curve_pick` still exists there. At that generator it states that
+a sum of no binaries is at most 1.
+
+A coordinate outside the `where:` has no curve. A coordinate with an
+[`activity:`](#activity) gate has a curve that the solver may switch off.
+mathspec refuses a `where:` over a dimension that is neither in `dims:` nor
+`along`, because a condition cannot add coordinates.
+
+On the row of a walked link, the expansion looks the `where:` up through the
+relation of the link. In the
+[walk example](#a-link-that-walks-a-relation), with a boolean parameter
+`has_curve` over `[converter]` and `where: has_curve`, the expansion writes the row
+`operating_point_rate` with
+`where: at(has_curve, by=converter_of[converter])`:
+
+```math
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{f,b} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}
+```
+
+The row exists at every flow of a converter with a curve. A flow of a
+converter with no curve needs no row in `bp_rate`.
+
+mathspec refuses a `where:` over a dimension that a walk adds, because a curve
+exists per coordinate of `dims:`. With a boolean parameter `active` over
+`[flow]` as the `where:`, mathspec prints:
+
+```text
+piecewise 'operating_point': where 'active' tests ['flow'], which link 'rate' adds through its relation. A where: sets which curves exist, one per coordinate of dims: ['converter', 'snapshot'], and only the rows of the link are over ['flow']. Test ['converter', 'snapshot'] in the where:, or declare a where: over ['flow'] on the variable of the link, so that its rows are absent.
+```
+
+mathspec suggests two rewrites: a condition over `dims:`, or a `where:` on
+`rate`.
+
+#### Curves of unequal length
+
+A `where:` over `along` sets how far each curve runs. Without one, every curve
+runs over every breakpoint, and a missing row does not shorten a curve. With a
+values parameter of the entry as the `where:`, each curve runs as far as that
+parameter has rows:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  bp_x: { dims: [generator, bp], missing: 0 }
+  bp_y: { dims: [generator, bp], missing: 0 }
+variables:
+  p: { dims: [generator], bounds: { lower: 0 } }
+  op_cost: { dims: [generator] }
+constraints:
+  enough:
+    dims: []
+    expression: sum(p, over=generator) >= 1
+piecewise:
+  cost_curve:
+    along: bp
+    dims: [generator]
+    where: bp_x
+    links:
+      p: [p, bp_x]
+      op_cost: [op_cost, bp_y]
+objective:
+  sense: minimize
+  expression: sum(op_cost, over=generator)
+```
+
+```math
+\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{g,b} \text{ is defined}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G}
+```
+
+<figure class="diagram">
+--8<-- "docs/static/piecewise-where.svg"
+</figure>
+
+The curve of each generator now runs over the breakpoints where `bp_x` is
+defined, and no further. The file declares
+[`missing: 0`](#missing-breakpoints) on each values parameter, because its
+table stops where the curve stops.
+
+A row over `dims:` alone, such as the row that makes the weights sum to one,
+has no `along` dimension. The expansion writes that row with
+`where: count(bp_x, over=bp) > 0`, so a curve exists where the `where:` admits
+at least one breakpoint.
+
+With data attached, the software that checks the `cost_curve_complete`
+[assumption](assumptions.md#what-a-curve-assumes) (a
+[tool](../glossary.md#tool)) still refuses a row missing from `bp_y` where
+`bp_x` has one.
+
+Where the length of each curve is its own data, the `where:` may instead be a
+boolean parameter over `dims:` and `along`. The breakpoints that it marks must
+form one consecutive run, which may start anywhere along the dimension. A
+tool checks this against the `<entry>_contiguous` assumption.
+
+A condition over `dims:` and one over `along` combine:
+`where: has_curve AND bp_x` sets which generators have a curve and how far
+each one runs.
+
+### Missing breakpoints
+
+A parameter that an entry uses takes a
+[`missing:`](parameters-variables-constraints.md#missing) value like any other
+parameter, and has the same value inside and outside the curve.
+
+A values parameter defaults to `refused`. Under a `where:` over `along`,
+a values parameter must declare a `missing:` other than `refused`. The curve
+stops where the rows of `bp_x` stop, so the table has no rows past that point,
+and `refused` requires every row. With `missing: refused` on `bp_y`, mathspec
+refuses the file at load:
+
+```text
+parameter 'bp_y' is refused where a row is missing, and it is a values parameter of piecewise 'cost_curve' under where: 'bp_x', which sets where each curve ends. Declare missing: absent, or a value of its dtype.
+```
+
+mathspec lists the `missing:` values that it accepts: `absent`, or a value of
+the dtype.
+
+Under `absent` and under a value, the curve is the same, because the
+expansion uses a table only where the curve runs. With data attached, a tool
+that checks `<entry>_complete` still refuses a missing row there. The two
+differ where an expression outside the curve uses the table:
+
+<figure class="diagram">
+--8<-- "docs/static/piecewise-missing.svg"
+</figure>
+
+Under `missing: 0`, the missing row of `bp_y` is `0`. Under `absent`, `bp_y`
+has no row there, so a term that uses it is absent.
 
 ### `method`
 
-`method` sets how the weights are restricted once they exist.
+`method` sets the rows that the expansion writes for each curve.
 
 | `method`                | What it adds                                                                | What it states                                                       |
 | ----------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `adjacency` _(default)_ | an [`sos:`](#sos) entry over the weights, written out as binaries           | the curve exactly, through binaries                                  |
 | `sos2`                  | an [`sos:`](#sos) entry over the weights, left as a set                     | the curve, for a solver that branches on the set itself              |
+| `incremental`           | no weights: a filled fraction and a binary per segment, filled in order     | the curve exactly, through binaries                                  |
 | `convex`                | nothing                                                                     | the curve's smallest convex region (its convex hull), with no binary |
 | `lp`                    | no weights at all: one row per segment, plus two rows that bound the domain | the curve as its own segment lines                                   |
 
-`convex` takes exactly two links and no `activity:`. Its hull equals the curve
-only when the curve has the right shape, and an
-[assumption](assumptions.md#what-a-curve-assumes) states that shape.
+`convex` takes exactly two links, no walked link and no `activity:`. The hull
+contains points off the curve, so `convex` states the curve exactly from one
+side only. With `>=` on the second link, the lower edge of the hull bounds that link
+from below. With `<=`, the upper edge bounds it from above. With both
+links pinned, the point lies on an edge only where the objective minimises or
+maximises the second link. The lower edge is the curve where the curve is
+convex, and the upper edge is the curve where it is concave. The
+`<entry>_curvature` [assumption](assumptions.md#what-a-curve-assumes) states
+the shape that makes the edge the curve.
 
-`lp` needs **exactly two links**, **exactly one** of them with a `<=` or `>=` sign, and no
-`activity:`:
+`lp` needs **exactly two links**, **exactly one** of them with a `<=` or `>=`
+sign, no walked link and no `activity:`:
 
 ```yaml
 dimensions:
@@ -289,11 +672,12 @@ constraints:
     expression: sum(p, over=generator) >= 1
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: [generator]
     method: lp
     links:
-      - [p, bp_x]
-      - [op_cost, bp_y, ">="]
+      p: [p, bp_x]
+      op_cost: [op_cost, bp_y, ">="]
 objective:
   sense: minimize
   expression: sum(op_cost, over=generator)
@@ -314,11 +698,33 @@ piecewise.cost_curve: method: lp needs exactly one link with a '<=' or '>=' sign
 
 mathspec suggests the rewrite: a sign on one of the two links.
 
+Under `incremental`, the expansion writes the rows that the modelling library
+[linopy](https://linopy.readthedocs.io) writes for a curve that a gate switches
+or that is not convex. Each segment has the label of its lower breakpoint. For
+an entry `e` along `bp`:
+
+| Written out        | What it states                                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `e_delta`          | a variable in [0, 1] per segment: the fraction of the segment that is filled                                |
+| `e_order`          | a binary variable per segment                                                                               |
+| `e_delta_bound`    | `e_delta <= e_order`: only a segment whose binary is 1 fills                                                |
+| `e_fill_order`     | `e_delta <= shift(e_delta, along=bp, offset=1)`: a segment fills no further than the one before it          |
+| `e_binary_order`   | `e_order <= shift(e_delta, along=bp, offset=1)`: a binary is 1 only when the segment before it is full      |
+| `e_active_bound`   | `e_delta <=` the gate, written only with `activity:`                                                        |
+| `e_<link>`         | the expression of the link against its value at the first breakpoint, times the gate, plus each filled rise |
+| `e_<link>_ungated` | the same row without the gate, written only where the gate is absent                                        |
+
+`incremental` takes two or more links, a walked link and `activity:`. The
+[incremental example](../../examples/piecewise_incremental.md) is a spec with
+curves of unequal length and a gate that only some generators have.
+
 ### `activity`
 
-`activity:` sets the binary on-off switch of the curve (the gate). The weights then sum to the gate instead of to one. Where the gate is
-`0`, every weight is zero and the curve is switched off. The gate is an
-ordinary variable entry, and it may have a [`where:`](absence.md#where):
+`activity:` sets the binary on-off switch of the curve (the gate). The
+weights then sum to the gate instead of to one, and under `incremental` the
+gate bounds each filled fraction. Where the gate is `0`, the curve is switched
+off. The gate is an ordinary variable entry, and it may have a
+[`where:`](absence.md#where):
 
 ```yaml
 dimensions:
@@ -338,10 +744,11 @@ variables:
     where: committable
 piecewise:
   fuel_use:
-    over: bp
+    along: bp
+    dims: [snapshot, generator]
     links:
-      - [power, power_bp]
-      - [fuel, fuel_bp]
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp]
     activity: running
 objective:
   sense: minimize
@@ -349,7 +756,7 @@ objective:
 ```
 
 ```math
-\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\left( \mathit{power}_{t,g},\ \mathit{fuel}_{t,g} \right) \in \begin{cases} \mathit{running}_{t,g} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{g,b},\ \mathrm{fuel}^{\mathrm{bp}}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 <figure class="diagram">
@@ -362,103 +769,15 @@ elsewhere. With data for gas and wind, at each snapshot gas has the scale
 
 Where the gate is [absent](absence.md), the curve is ungated, as under
 `missing: 1`. With `missing: 0` on the gate, the gate is `0` outside its
-`where:`, so the curve is switched off there.
+`where:`, so the curve is switched off there. The typesetter then prints the
+curve scaled by `running` alone.
 
-With `missing: 0` on the gate, the typesetter prints the curve scaled by
-`running` alone.
-
-### `points`
-
-With `points:` set to one of the values parameters of the entry, a curve has
-fewer breakpoints than the dimension has. The curve then runs as far as that
-parameter has rows:
-
-```yaml
-dimensions:
-  generator: { dtype: str }
-  bp: { dtype: int, ordered: true }
-parameters:
-  bp_x: { dims: [generator, bp], missing: 0 }
-  bp_y: { dims: [generator, bp], missing: 0 }
-variables:
-  p: { dims: [generator], bounds: { lower: 0 } }
-  op_cost: { dims: [generator] }
-constraints:
-  enough:
-    dims: []
-    expression: sum(p, over=generator) >= 1
-piecewise:
-  cost_curve:
-    over: bp
-    points: bp_x
-    links:
-      - [p, bp_x]
-      - [op_cost, bp_y]
-objective:
-  sense: minimize
-  expression: sum(op_cost, over=generator)
-```
-
-```math
-\left( p_{g},\ \mathit{op\_cost}_{g} \right) \in \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{g,b} \text{ is defined}}(\mathrm{bp\_x}_{g,b},\ \mathrm{bp\_y}_{g,b}) \qquad \forall\, g \in \mathcal{G}
-```
-
-<figure class="diagram">
---8<-- "docs/static/piecewise-points.svg"
-</figure>
-
-The curve of each generator now runs over the breakpoints where `bp_x` is
-defined, and no further. The file declares [`missing: 0`](#missing-breakpoints) on each values
-parameter, because its table stops where the curve stops.
-
-With data attached, the software that runs the `cost_curve_complete`
-[assumption](assumptions.md#what-a-curve-assumes) ([a tool](../glossary.md#tool))
-still refuses a row missing from `bp_y` where `bp_x` has one. Without
-`points:`, the tool refuses every missing row under that assumption, so a
-missing row makes no shorter curve.
-
-Where the length of each curve is its own data, `points:` may instead be a
-boolean parameter over the same dimensions. The curve then runs over the
-breakpoints that the parameter marks. The marked breakpoints must form one
-consecutive run, which may start anywhere along the dimension. The tool that
-runs the `<entry>_contiguous` assumption checks that run.
-
-### Missing breakpoints
-
-A parameter that an entry uses takes a
-[`missing:`](parameters-variables-constraints.md#missing) value like any other
-parameter, and has the same value inside and outside the curve.
-
-A values parameter of a curve with no `points:`, and a boolean `points:`
-parameter, default to `refused`. A values parameter of a curve with
-`points:` must declare a `missing:` other than `refused`. The curve stops where the rows of `bp_x`
-stop, so the table has no rows past that point, and
-`refused` requires every row. With `missing: refused` on `bp_y`, mathspec
-refuses the file at load:
-
-```text
-parameter 'bp_y' is refused where a row is missing, and piecewise 'cost_curve' reads it under points: 'bp_x', which stops the curve where its rows stop. Declare missing: absent, or a value of its dtype.
-```
-
-mathspec lists the `missing:` values that it accepts: `absent`, or a value of
-the dtype.
-
-Under `absent` and under a value, the curve is the same, because the curve
-uses a table only inside the run of its breakpoints. With data attached, the
-tool that runs `<entry>_complete` still refuses a missing row there. The two differ where an expression
-outside the curve uses the table:
-
-<figure class="diagram">
---8<-- "docs/static/piecewise-missing.svg"
-</figure>
-
-Under `missing: 0`, the missing row of `bp_y` is `0`. Under `absent`, `bp_y`
-has no row there, so a term that uses it is absent.
+The gate must have no dimension that `dims:` does not include. A gate over fewer
+dimensions switches every curve that it covers, so a gate over `[generator]`
+switches the curve of a generator at every snapshot.
 
 !!! info "See also"
 
-    - [Write a piecewise curve out by hand](../../howto/curve-by-hand.md) for a
-      curve whose number of links is data.
     - [See what a piecewise curve or an SOS expands to](../../howto/see-an-expansion.md)
       for a spec printed before and after its expansion.
     - [Formulations written out](../reading.md#formulations-written-out) for the

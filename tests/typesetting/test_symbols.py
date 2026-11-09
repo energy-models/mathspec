@@ -164,7 +164,11 @@ CURVED = varied(
         'parameters.bp_x': {'dims': ['generator', 'bp']},
         'parameters.bp_y': {'dims': ['generator', 'bp']},
         'variables.op_cost': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}},
-        'piecewise.curve': {'over': 'bp', 'links': [['p', 'bp_x'], ['op_cost', 'bp_y']]},
+        'piecewise.curve': {
+            'along': 'bp',
+            'dims': ['snapshot', 'generator'],
+            'links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y']},
+        },
     },
 )
 
@@ -176,7 +180,7 @@ def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}
 
     assert r'\lambda' not in to_latex(spec, symbols=table, legend=False), 'no weight stands where the curve prints'
-    assert r'\lambda_{g,t,b}' in to_latex(spec.expand(), symbols=table, legend=False)
+    assert r'\lambda_{t,g,b}' in to_latex(spec.expand(), symbols=table, legend=False)
 
 
 def test_a_misspelled_name_is_still_a_typo_where_a_formulation_could_have_emitted_it():
@@ -195,7 +199,10 @@ def _names(spec: Spec) -> set[str]:
         pytest.param({'piecewise.curve.method': 'sos2'}, id='sos2'),
         pytest.param({'piecewise.curve.method': 'convex'}, id='convex'),
         pytest.param(
-            {'piecewise.curve.method': 'lp', 'piecewise.curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']]},
+            {
+                'piecewise.curve.method': 'lp',
+                'piecewise.curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']},
+            },
             id='lp',
         ),
         pytest.param(
@@ -216,7 +223,7 @@ def test_a_table_spells_the_names_the_expansion_declares_and_no_other(patch):
     reserved = {
         'curve',
         *(f'curve_{s}' for s in ('lam', 'convexity', 'convexity_ungated', 'chord', 'domain_lo', 'domain_hi')),
-        *(f'curve_{s}' for s in ('seg', 'pick', 'adjacency', 'adjacency_below', 'link0', 'link1')),
+        *(f'curve_{s}' for s in ('seg', 'pick', 'adjacency', 'adjacency_below', 'p', 'op_cost')),
         *(f'curve_{s}' for s in ('complete', 'increasing')),
     }
     assert written <= reserved, 'the reserved names cover every name the expansion writes'

@@ -35,8 +35,8 @@ MASKED = varied(
         'parameters.bp_x.missing': 0,
         'parameters.bp_y.missing': 0,
         'piecewise.cost_curve.method': 'lp',
-        'piecewise.cost_curve.points': 'bp_x',
-        'piecewise.cost_curve.links': [['p', 'bp_x'], ['op_cost', 'bp_y', '>=']],
+        'piecewise.cost_curve.where': 'bp_x',
+        'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']},
     },
 )
 
@@ -190,28 +190,33 @@ SMALL_CURVE = {
     'parameters.bx': {'dims': ['h']},
     'parameters.by': {'dims': ['h']},
     'variables.s': {'dims': ['g']},
-    'piecewise.curve': {'over': 'h', 'links': [['p', 'bx'], ['s', 'by']], 'method': 'convex'},
+    'piecewise.curve': {
+        'along': 'h',
+        'dims': ['g'],
+        'links': {'p': ['p', 'bx'], 's': ['s', 'by']},
+        'method': 'convex',
+    },
 }
 
 
-#: A curve under `points:` names what a missing row of each values table means.
-UNDER_POINTS = {'piecewise.curve.points': 'bx', 'parameters.bx.missing': 0, 'parameters.by.missing': 0}
+#: A curve under a ragged `where:` names what a missing row of each values table means.
+UNDER_WHERE = {'piecewise.curve.where': 'bx', 'parameters.bx.missing': 0, 'parameters.by.missing': 0}
 
 
 @pytest.mark.parametrize(
-    'points',
+    'ragged',
     [
-        pytest.param(UNDER_POINTS, id='a-curve-that-says-how-far-it-runs'),
+        pytest.param(UNDER_WHERE, id='a-curve-that-says-how-far-it-runs'),
         pytest.param(
-            {**UNDER_POINTS, 'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.points': 'run'},
+            {**UNDER_WHERE, 'parameters.run': {'dims': ['h'], 'dtype': 'bool'}, 'piecewise.curve.where': 'run'},
             id='a-boolean-mask',
         ),
         pytest.param({}, id='a-curve-over-every-breakpoint'),
     ],
 )
-def test_a_spec_and_its_expansion_read_a_missing_row_alike(points):
+def test_a_spec_and_its_expansion_read_a_missing_row_alike(ragged):
     """Lowering reported `None` for every parameter an entry consumes, and the expansion declared it `0`."""
-    spec = spec_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **points))
+    spec = spec_of(varied(SMALL_MODEL, **copy.deepcopy(SMALL_CURVE), **ragged))
     declared = {name: p.missing for name, p in spec.program.parameters.items()}
     expanded = {name: p.missing for name, p in spec.expand('piecewise').program.parameters.items()}
     assert declared == expanded, 'a spec and its expansion read a missing row of every parameter alike'
@@ -225,7 +230,7 @@ def test_a_curve_parameter_takes_the_missing_it_declares(missing):
             SMALL_MODEL,
             **copy.deepcopy(SMALL_CURVE),
             **{
-                **UNDER_POINTS,
+                **UNDER_WHERE,
                 'constraints.cap': {'dims': ['h'], 'expression': 'r <= by'},
                 'parameters.by.missing': missing,
             },

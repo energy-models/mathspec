@@ -30,9 +30,8 @@ if TYPE_CHECKING:
 PAGE = ROOT / 'docs' / 'reference' / 'notation.md'
 MODEL = ROOT / 'tests' / 'typesetting' / 'golden' / 'model.yaml'
 
-#: One spec per ``method:``, because the four restrict the weights four
-#: different ways and a section showing one of them would be showing a quarter
-#: of the construct. ``tests/test_docs.py`` holds these keys to
+#: One spec per ``method:``, because each states the curve its own way, and a
+#: section showing one of them would be showing part of the construct. ``tests/test_docs.py`` holds these keys to
 #: :data:`mathspec.spec.PIECEWISE_METHODS`, so a method added to the
 #: language arrives here or the page stops claiming to be all of them.
 #:
@@ -42,6 +41,7 @@ MODEL = ROOT / 'tests' / 'typesetting' / 'golden' / 'model.yaml'
 PIECEWISE = {
     'adjacency': ('Adjacency method', ROOT / 'examples' / 'ports' / 'transport_pwl.yaml'),
     'sos2': ('SOS2 method', ROOT / 'examples' / 'sos.yaml'),
+    'incremental': ('Incremental method', ROOT / 'examples' / 'piecewise_incremental.yaml'),
     'convex': ('Convex method', ROOT / 'examples' / 'piecewise.yaml'),
     'lp': ('LP method', ROOT / 'examples' / 'piecewise_lp.yaml'),
 }
