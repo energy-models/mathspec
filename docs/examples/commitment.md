@@ -5,21 +5,25 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Unit commitment
 
-This spec adds a commitment decision and a start-up ramp to least-cost
-dispatch. Read `previous_status` first, then `ramp_up`: the state a unit
-carries into a snapshot has three regimes, stated once as a
-[`cases:`](../reference/language/named.md#cases) block, and `ramp_up` reads it
-the way it reads a parameter. The block prints once below, under
-**Definitions**.
+Unit commitment is [least-cost dispatch](dispatch.md) with an on/off decision
+for each unit in each dispatch period (a snapshot).
+
+The file states the cases of `previous_status` once, under
+[`cases:`](../reference/language/named.md#cases). `always_on` and `boundary`
+each have a `when:` [condition](../reference/glossary.md#condition), and
+`otherwise:` sets the value at every combination of labels
+([a coordinate](../reference/glossary.md#coordinate)) that no case covers. So `otherwise:` applies only to a committable
+unit after the first snapshot, where the
+[`shift`](../reference/language/operators.md#shift) in `otherwise:` always has
+a previous status to take. The `shift` of `dispatch` in `ramp_up` has
+`edge=0`, so that constraint has a row at the first snapshot.
 
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  Unit commitment with a start-up ramp, the formulation `cases:` exists for.
-  The state a unit carries into a snapshot has three regimes — a unit that is
-  never off, the first snapshot, and every later one — and writing them at the
-  constraint would fork `ramp_up` three ways. With the regimes named once, the
-  inequality is written once.
+  Unit commitment with a start-up ramp, in which one named expression sets the
+  commitment state of a unit at the start of a snapshot. That state has three cases:
+  a unit that is never off, the first snapshot, and every later one.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods, ordered: true }
@@ -31,7 +35,7 @@ parameters:
   capacity: { dims: [generator], description: installed capacity }
   min_output: { dims: [generator], description: output floor while running }
   ramp_limit: { dims: [generator], description: how far output may move between snapshots while running }
-  start_up_limit: { dims: [generator], description: how far it may move in the snapshot it starts in }
+  start_up_limit: { dims: [generator], description: how far output may move in the snapshot a unit starts in }
   load: { dims: [snapshot], description: demand to be met }
   cost: { dims: [generator], description: marginal cost }
 
@@ -47,7 +51,7 @@ variables:
 
 expressions:
   previous_status:
-    description: the commitment state a unit carries into a snapshot
+    description: the commitment state of a unit at the start of a snapshot
     dims: [snapshot, generator]
     cases:
       always_on:
@@ -67,13 +71,13 @@ constraints:
     dims: [snapshot, generator]
     expression: dispatch <= status * capacity
   lower:
-    description: and one that is running produces at least its floor
+    description: a running unit produces at least its floor
     dims: [snapshot, generator]
     expression: dispatch >= status * min_output
   ramp_up:
     description: >-
-      one inequality for both regimes — a unit already running is held to
-      `ramp_limit`, a unit starting up to `start_up_limit`.
+      one inequality for a unit already running and a unit starting up: the
+      first is held to `ramp_limit`, and the second to `start_up_limit`.
     dims: [snapshot, generator]
     expression: >-
       dispatch - shift(dispatch, along=snapshot, offset=1, edge=0)
@@ -84,17 +88,16 @@ assumptions:
     holds: "min_output <= capacity"
     where: "committable"
     description: >-
-      `lower` and `upper` hold one dispatch between them, so a floor above the
-      cap makes a running unit infeasible rather than expensive. A unit that
-      cannot be switched off is held to its floor in every snapshot, so the
-      check is the committable ones'.
+      `lower` and `upper` bound one dispatch from both sides, so a floor above
+      the cap makes a running unit infeasible rather than expensive. A tool
+      checks the assumption only for committable units.
 
 objective:
   sense: minimize
   expression: sum(dispatch * cost)
 ```
 
-Unit commitment with a start-up ramp, the formulation `cases:` exists for. The state a unit carries into a snapshot has three regimes — a unit that is never off, the first snapshot, and every later one — and writing them at the constraint would fork `ramp_up` three ways. With the regimes named once, the inequality is written once.
+Unit commitment with a start-up ramp, in which one named expression sets the commitment state of a unit at the start of a snapshot. That state has three cases: a unit that is never off, the first snapshot, and every later one.
 
 #### Sets
 
@@ -112,7 +115,7 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{G}`$ — installed capacity |
 | $`\mathrm{min\_output}`$ | `min_output` over $`\mathcal{G}`$ — output floor while running |
 | $`\mathrm{ramp\_limit}`$ | `ramp_limit` over $`\mathcal{G}`$ — how far output may move between snapshots while running |
-| $`\mathrm{start\_up\_limit}`$ | `start_up_limit` over $`\mathcal{G}`$ — how far it may move in the snapshot it starts in |
+| $`\mathrm{start\_up\_limit}`$ | `start_up_limit` over $`\mathcal{G}`$ — how far output may move in the snapshot a unit starts in |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T}`$ — demand to be met |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$ — marginal cost |
 
@@ -127,13 +130,36 @@ Unit commitment with a start-up ramp, the formulation `cases:` exists for. The s
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{previous\_status}`$ | `previous_status` over $`\mathcal{T} \times \mathcal{G}`$ — the commitment state a unit carries into a snapshot |
+| $`\mathit{previous\_status}`$ | `previous_status` over $`\mathcal{T} \times \mathcal{G}`$ — the commitment state of a unit at the start of a snapshot |
 
-Upright is what the data supplies — a parameter such as $`\mathrm{committable}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+#### Notation
 
-$`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
+| Symbol | Meaning |
+|---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
+| $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
-$`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+**`status`**
+
+```math
+\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+#### Definitions
+
+**`previous_status`**
+
+```math
+\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
 
 #### Objective
 
@@ -167,28 +193,6 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 \mathit{dispatch}_{t,g} - \mathit{dispatch}_{t \boxminus_{0} 1,g} \le \mathrm{ramp\_limit}_{g} \cdot \mathit{previous\_status}_{t,g} + \mathrm{start\_up\_limit}_{g} \cdot \left( 1 - \mathit{previous\_status}_{t,g} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
-#### Definitions
-
-**`previous_status`**
-
-```math
-\mathit{previous\_status}_{t,g} = \begin{cases} 1 & \text{if } \neg \mathrm{committable}_{g} \\ \mathrm{status}^{\mathrm{initial}}_{g} & \text{if } \mathrm{committable}_{g} \wedge \mathrm{pos}(t) = 0 \\ \mathit{status}_{t - 1,g} & \text{otherwise} \end{cases} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-**`status`**
-
-```math
-\mathit{status}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
 #### Assumptions
 
 **`output_floor_fits_under_the_cap`**
@@ -198,4 +202,11 @@ $`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own ord
 ```
 <!-- gallery:end -->
 
-Regenerate with `pixi run python -m tools.gallery`.
+!!! info "See also"
+
+    - [`cases`](../reference/language/named.md#cases), for how mathspec checks
+      that no two cases overlap, and what it refuses in them
+    - [`shift`](../reference/language/operators.md#shift), for `edge=` and the
+      vacated position
+    - [The composed spec](library/composed.md), for commitment written as a patch
+      over a component library

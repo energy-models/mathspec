@@ -5,21 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Every construct, as math
 
-This page shows every construct of the language beside the math that
-[the typesetter](typeset.md) prints for it. Use it to find how a construct
-prints, or which construct printed a symbol.
+This page lists each construct of the language beside the math that
+[the typesetter](typeset.md) prints for it. Each section has the math of one
+kind of construct, and the legend lists the symbol of each dimension, relation and parameter.
 
-Each section shows the YAML of one construct, then its equation. Most fragments
-come from one test spec,
+Each construct is printed as its YAML and then its equation. Most of the YAML
+comes from one test spec,
 [`tests/typesetting/golden/model.yaml`](https://github.com/energy-models/mathspec/blob/main/tests/typesetting/golden/model.yaml),
-which holds every construct and is not a sensible spec. The curves come from
-the example specs that their section names. What each operator does is on
-[Operators](language/operators.md).
+which contains every construct and is not a meaningful optimisation problem.
+The curves come from the example specs named in each section.
 
-The symbols are **derived** from the names in the file, so you see
-$\mathrm{load}_{t}$ rather than $\ell_t$. A
-[symbol table](typeset.md#symbol-tables) replaces the symbols and changes
-nothing else.
+The typesetter derives each symbol from the name in the file, so the
+symbol is $\mathrm{load}_{t}$ rather than $\ell_t$. A
+[symbol table](typeset.md#symbol-tables) sets other symbols, and the
+typesetter changes nothing else.
 
 <!-- notation:begin -->
 ### Legend
@@ -31,7 +30,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
-  zone: { dtype: str }
+  zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
@@ -43,26 +42,27 @@ relations:
   season_of: { key: snapshot, values: season }
   gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call sums one away and joins on the other
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
-  connection: { key: [generator, bus] } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
+  connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
-  cost: { dims: [generator], missing: neutral } # a reading: the legend names it
+  cost: { dims: [generator], missing: 0 } # a reading: the legend names it
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
+  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
   budget: { dims: [] } # scalar: the legend says so rather than printing an empty product
   growth: { dims: [] } # the base of a power; the exponent is `lead`, a column
-  bp_x: { dims: [generator, bp], missing: neutral } # the x-axis of every curve below, and what a derived mask is read from
-  bp_y: { dims: [generator, bp], missing: neutral }
+  bp_x: { dims: [generator, bp], missing: 0 } # the x-axis of every curve below, and what a derived mask is read from
+  bp_y: { dims: [generator, bp], missing: 0 }
   bp_heat: { dims: [generator, bp] }
-  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a block has a mask to print
+  bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 ```
 
 #### Sets
@@ -70,9 +70,9 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T}`$ |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `connection` is `absent` where the data has no row |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{gen\_bus}: \mathcal{G} \to \mathcal{B},\ \mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{G} \times \mathcal{B},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{zone\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{area\_of}: \mathcal{B} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{B} \times \mathcal{E}`$ |
 | $`\mathcal{A}`$ | index $`a`$ — `bp` |
@@ -83,20 +83,28 @@ parameters:
 |---|---|
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
-| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, `neutral` where the data has no row |
+| $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{T} \times \mathcal{B}`$ |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{B} \times \mathcal{E}`$, `absent` where the data has no row |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{G} \times \mathcal{B}`$, only where $`\left( g,\ b \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
-| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
-| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, `neutral` where the data has no row |
+| $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
+| $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{G} \times \mathcal{A}`$, $`0`$ where the data has no row |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{G} \times \mathcal{A}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{G} \times \mathcal{A}`$ |
+
+#### Conditions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{dispatchable}`$ | `dispatchable` over $`\mathcal{G}`$ — a unit that dispatches and cannot be turned down |
+| $`\mathrm{priced\_dispatch}`$ | `priced_dispatch` over $`\mathcal{G}`$ |
 
 #### Variables
 
@@ -110,7 +118,7 @@ parameters:
 | $`\mathit{units}`$ | `units` over $`\mathcal{G}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
-| $`\mathit{headroom}`$ | `headroom` (scalar), `neutral` where the mask leaves it out |
+| $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{weight}`$ | `weight` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{T} \times \mathcal{G}`$ |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{T} \times \mathcal{G}`$ |
@@ -126,29 +134,19 @@ parameters:
 | $`\mathrm{rating}`$ | `rating` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{lcoe}`$ | `lcoe` (scalar) |
 | $`\mathit{net}`$ | `net` over $`\mathcal{T}`$ — what a snapshot spills, less what it lacks |
-| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{T} \times \mathcal{B}`$ |
+| $`\mathit{marginal\_price}`$ | `marginal_price` over $`\mathcal{B} \times \mathcal{T}`$ |
 | $`\mathrm{startup\_cost}`$ | `startup_cost` over $`\mathcal{T} \times \mathcal{G}`$ — what starting a unit in this snapshot costs, which the horizon's edge changes |
 
-#### Masks
+#### Notation
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{dispatchable}`$ | `dispatchable` over $`\mathcal{G}`$ — a unit that dispatches and cannot be turned down |
-| $`\mathrm{priced\_dispatch}`$ | `priced_dispatch` over $`\mathcal{G}`$ |
-
-Upright is what the data supplies — a parameter such as $`\mathrm{p}^{\mathrm{max}}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`p`$. An index is italic too, being what a quantifier chooses, and a set is script.
-
-$`t \ominus k`$ denotes cyclic translation: index $`t-k`$ taken modulo the size of the dimension (`roll`). Plain $`t-k`$ (`shift`) has no wraparound — terms translated past the edge are simply absent.
-
-$`t \boxminus_{v} k`$ denotes translation with $`v`$ standing where index $`t-k`$ leaves the dimension (`shift(edge=v)`), so the row at that boundary is built and carries $`v`$ rather than being dropped.
-
-$`t \ominus^{\mathrm{relation}(t)} k`$ denotes a translation counted inside the group a relation puts $`t`$ in (`shift(within=relation[c])`), so a term never crosses out of its own group. The two modifiers take different slots — the group above, the fill below — so $`t \boxminus_{v}^{\mathrm{relation}(t)} k`$ is both at once.
-
-$`\mathrm{pos}(t)`$ denotes where index $`t`$ sits along its dimension's own order — the order `shift` steps along, not the order labels sort in — counted from $`0`$. The index itself stays the coordinate, so $`t`$ compares against labels and $`\mathrm{pos}(t)`$ against positions.
-
-$`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ counts within the group a relation puts $`t`$ in: the subscript names the map, $`\mathcal{T}_{\mathrm{relation}(t)}`$ is the group it lands in, and that group has a first position of its own.
-
-$`\lvert \mathcal{T} \rvert`$ denotes the size of the set being counted along, and a position counted from the end prints against it — $`\lvert \mathcal{T} \rvert - 1`$ is the last position, one less than the size because the first is $`0`$.
+| $`t \ominus k`$ | `edge='wrap'` — $`t-k`$, cyclic |
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
+| $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
+| $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
+| $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
+| $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
 
 ### Variable domains
 
@@ -254,7 +252,7 @@ variables:
 
 #### Scalar variable
 
-an empty dims: a scalar declaration, whose line carries no quantifier
+an empty dims: a scalar entry, whose line carries no quantifier
 
 ```yaml
 variables:
@@ -269,14 +267,14 @@ variables:
 
 #### Scalar variable with a condition
 
-scalar too, but masked, so the condition stands with no set beside it; neutral, so the legend names the reading
+scalar too, but masked, so the condition stands with no set beside it; 0, so the legend names the value
 
 ```yaml
 variables:
   headroom:
     dims: []
     where: "budget"
-    missing: neutral
+    missing: 0
     bounds: { lower: 0 }
 ```
 
@@ -672,7 +670,7 @@ p_{t,g} \le \mathrm{startup\_cost}_{t,g} \qquad \forall\, t \in \mathcal{T},\ g 
 
 #### Expression with a declared frame in a constraint
 
-names the expression with a declared frame: the row reads it at every snapshot, though its body has no snapshot
+names the expression with declared dims, read in the row's own order
 
 ```yaml
 constraints:
@@ -701,17 +699,17 @@ expressions:
 
 #### Named expression with a declared frame
 
-a frame wider than the body, in an order of its own: the value is the same at every snapshot
+dims declared in an order of their own, each one the expression is indexed over
 
 ```yaml
 expressions:
   rating:
     dims: [generator, snapshot]
-    expression: eta * p_max
+    expression: eta * p_max * sum(load, over=bus)
 ```
 
 ```math
-\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathrm{rating}_{g,t} = \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \cdot \left( \sum_{b \in \mathcal{B}} \mathrm{load}_{t,b} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Plain expression that is a signed sum
@@ -798,31 +796,31 @@ expressions:
 ```
 
 ```math
-\mathit{marginal\_price}_{t,b} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B}
+\mathit{marginal\_price}_{b,t} = \lambda_{\mathrm{balance},t,b} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
-### Named masks
+### Named conditions
 
-#### Named mask
+#### Named condition
 
-a named predicate with its words: a use prints the symbol over the dims its predicate reads, the predicate prints once
+a named condition with its words: a use prints the symbol over the dims its condition reads, the condition prints once
 
 ```yaml
-masks:
+conditions:
   dispatchable:
-    where: "p_max > 0 AND NOT is_flexible"
+    condition: "p_max > 0 AND NOT is_flexible"
 ```
 
 ```math
 \mathrm{dispatchable}_{g} \iff \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask that reads a mask
+#### Condition that reads a condition
 
 the one-line form, reading another mask and a data-only entry
 
 ```yaml
-masks:
+conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0"
 ```
 
@@ -830,7 +828,7 @@ masks:
 \mathrm{priced\_dispatch}_{g} \iff \mathrm{dispatchable}_{g} \wedge \mathrm{spend}^{\mathrm{cap}}_{g} > 0 \qquad \forall\, g \in \mathcal{G}
 ```
 
-#### Mask in a condition
+#### Named condition in a condition
 
 a mask as the where, beside a condition of the constraint's own
 
@@ -1034,7 +1032,7 @@ constraints:
 
 ### Piecewise curves
 
-A curve prints as the curve it states, over the frame the block builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
+A curve prints as the curve it states, over the frame the entry builds one per coordinate of, and its expansion prints the rows that curve stands for. One row per `method:`, each from the spec named under it, so the symbols in this section are that spec's.
 
 #### Adjacency method
 
@@ -1062,37 +1060,37 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\left( \mathit{shipment}_{p,m},\ \mathit{scaled}_{p,m} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{b},\ \mathrm{y}_{b}) \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{p,m,b} = 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+0 \le \lambda_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{x}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\delta_{m,p,b} \in \{0, 1\} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
-\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{p,m,b} \cdot \mathrm{y}_{b} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\sum_{b \in \mathcal{B}} \lambda_{m,p,b} = 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \delta_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M}
+\mathit{shipment}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{x}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\lambda_{p,m,b} \le \delta_{p,m,b} + \delta_{p,m,b \boxminus_{0} 1} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\mathit{scaled}_{p,m} = \sum_{b \in \mathcal{B}} \lambda_{m,p,b} \cdot \mathrm{y}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-0 \le \lambda_{p,m,b} \le 1 \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\sum_{b \in \mathcal{B}} \delta_{m,p,b} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
-\delta_{p,m,b} \in \{0, 1\} \qquad \forall\, p \in \mathcal{P},\ m \in \mathcal{M},\ b \in \mathcal{B}
+\lambda_{m,p,b} \le \delta_{m,p,b} + \delta_{m,p,b \boxminus_{0} 1} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P},\ b \in \mathcal{B}
 ```
 
 ```math
@@ -1125,29 +1123,29 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\left( \lambda_{t,g,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \lambda_{g,t,b} \right)_{b \in \mathcal{B}} \in \mathrm{SOS}2 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1156,7 +1154,7 @@ Written out by `spec.expand()`:
 
 #### Convex method
 
-`method: convex` — nothing — the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
+`method: convex` — nothing, so the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
 
 Rendered with the sidecar symbol table `examples/symbols/piecewise.yaml`, which is what the breakpoints print as:
 
@@ -1180,25 +1178,25 @@ piecewise:
 ```
 
 ```math
-\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\left( \mathit{dispatch}_{t,g},\ \mathit{op\_cost}_{t,g} \right) \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\sum_{b \in \mathcal{B}} \lambda_{t,g,b} = 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le \lambda_{g,t,b} \le 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B}
 ```
 
 ```math
-\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\sum_{b \in \mathcal{B}} \lambda_{g,t,b} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{t,g,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{dispatch}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
-0 \le \lambda_{t,g,b} \le 1 \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B}
+\mathit{op\_cost}_{t,g} = \sum_{b \in \mathcal{B}} \lambda_{g,t,b} \cdot \mathrm{y}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
@@ -1215,7 +1213,7 @@ Written out by `spec.expand()`:
 
 #### LP method
 
-`method: lp` — no weights at all — one row per segment line, plus the two rows holding the domain, in `examples/piecewise_lp.yaml`.
+`method: lp` — no weights, but one row per segment line, plus the two rows holding the domain, in `examples/piecewise_lp.yaml`.
 
 Rendered with the sidecar symbol table `examples/symbols/piecewise_lp.yaml`, which is what the breakpoints print as:
 
@@ -1238,21 +1236,21 @@ piecewise:
 ```
 
 ```math
-\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+\mathit{op\_cost}_{t,g} \ge \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{x}_{g,b},\ \mathrm{y}_{g,b})(\mathit{dispatch}_{t,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 Written out by `spec.expand()`:
 
 ```math
-\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
+\mathit{op\_cost}_{t,g} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \ge \left( \mathrm{y}_{g,b} - \mathrm{y}_{g,b \boxminus_{0} 1} \right) \cdot \left( \mathit{dispatch}_{t,g} - \mathrm{x}_{g,b} \right) + \mathrm{y}_{g,b} \cdot \left( \mathrm{x}_{g,b} - \mathrm{x}_{g,b \boxminus_{0} 1} \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) > 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
+\mathit{dispatch}_{t,g} \ge \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = 0
 ```
 
 ```math
-\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
+\mathit{dispatch}_{t,g} \le \mathrm{x}_{g,b} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{pos}(b) = \lvert \mathcal{B} \rvert - 1
 ```
 
 ```math
@@ -1273,7 +1271,7 @@ Written out by `spec.expand()`:
 
 ### Special ordered sets
 
-A set prints beside the variable it restricts, because it restricts that variable rather than adding a row of its own. Under it are the rows it is written out as.
+A set prints under Subject to, after the constraints and before the curves, because a solver holds it as a constraint. Under it are the rows it is written out as.
 
 #### Special ordered set of type 2
 
@@ -1294,15 +1292,15 @@ sos:
 Written out by `spec.expand()`:
 
 ```math
+\mathit{adjacent\_seg}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+```
+
+```math
 \sum_{g \in \mathcal{G}} \mathit{adjacent\_seg}_{t,g} \le 1 \qquad \forall\, t \in \mathcal{T}
 ```
 
 ```math
 \mathit{weight}_{t,g} \le \mathit{adjacent\_seg}_{t,g} + \mathit{adjacent\_seg}_{t,g \boxminus_{0} 1} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
-```
-
-```math
-\mathit{adjacent\_seg}_{t,g} \in \{0, 1\} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
 ```
 
 ### Assumptions
@@ -1597,7 +1595,7 @@ constraints:
 
 #### Count over a dimension
 
-a count of the coordinates a predicate admits, which reduces one dim away
+a count of the coordinates a condition admits, which reduces one dim away
 
 ```yaml
 constraints:
@@ -1627,9 +1625,9 @@ constraints:
 \theta_{b} \le \mathrm{tech\_cap}_{b,e} \qquad \forall\, b \in \mathcal{B},\ e \in \mathcal{E} \,:\, \lvert \{ e' \in \mathcal{E} \,:\, \mathrm{tech\_cap}_{b,e'} > 0 \} \rvert \ge 2
 ```
 
-#### Predicate at the previous coordinate
+#### Condition at the previous coordinate
 
-a predicate read one coordinate back, which is false where the translation vacates
+a condition read one coordinate back, which is false where the translation vacates
 
 ```yaml
 constraints:
@@ -1643,9 +1641,9 @@ constraints:
 \mathit{slack}_{t} \le \mathrm{load}_{t,b} \qquad \forall\, t \in \mathcal{T},\ b \in \mathcal{B} \,:\, \mathrm{load}_{t,b} \text{ is defined} \wedge \neg \left( \mathrm{load}_{t - 1,b} \text{ is defined} \right)
 ```
 
-#### Predicate through a relation
+#### Condition through a relation
 
-a predicate read through a relation: a bus is held only where its zone has a cap at all
+a condition read through a relation: a bus is held only where its zone has a cap at all
 
 ```yaml
 constraints:
@@ -1659,3 +1657,9 @@ constraints:
 \theta_{b} \le \mathrm{budget} \qquad \forall\, b \in \mathcal{B} \,:\, \mathrm{zone\_cap}_{\mathrm{zone\_of}(b)} \text{ is defined}
 ```
 <!-- notation:end -->
+
+!!! info "See also"
+
+    - [typeset output](typeset.md), for the three formats and their options
+    - [operators](language/operators.md), for what each operator does
+    - [symbol tables](typeset.md#symbol-tables), to set other symbols

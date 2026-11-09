@@ -37,12 +37,6 @@ constraints:
   Generator_com_p_upper:
     - snapshot
     - generator
-  Generator_com_status_must_stay_down:
-    - snapshot
-    - generator
-  Generator_com_status_must_stay_up:
-    - snapshot
-    - generator
   Generator_com_transition_shut_down:
     - snapshot
     - generator
@@ -196,12 +190,6 @@ constraints:
   Link_com_p_upper:
     - snapshot
     - link
-  Link_com_status_must_stay_down:
-    - snapshot
-    - link
-  Link_com_status_must_stay_up:
-    - snapshot
-    - link
   Link_com_transition_shut_down:
     - snapshot
     - link
@@ -295,12 +283,6 @@ constraints:
     - snapshot
     - process
   Process_com_p_upper:
-    - snapshot
-    - process
-  Process_com_status_must_stay_down:
-    - snapshot
-    - process
-  Process_com_status_must_stay_up:
     - snapshot
     - process
   Process_com_transition_shut_down:
@@ -515,10 +497,10 @@ parameters:
     - generator
   Generator_modules_installed:
     - generator
-  Generator_must_stay_down:
+  Generator_down_time_brought_in:
     - snapshot
     - generator
-  Generator_must_stay_up:
+  Generator_up_time_brought_in:
     - snapshot
     - generator
   Generator_operational_limit_weight:
@@ -646,10 +628,10 @@ parameters:
     - link
   Link_modules_installed:
     - link
-  Link_must_stay_down:
+  Link_down_time_brought_in:
     - snapshot
     - link
-  Link_must_stay_up:
+  Link_up_time_brought_in:
     - snapshot
     - link
   Link_output_cyclic_delay:
@@ -729,10 +711,10 @@ parameters:
     - process
   Process_modules_installed:
     - process
-  Process_must_stay_down:
+  Process_down_time_brought_in:
     - snapshot
     - process
-  Process_must_stay_up:
+  Process_up_time_brought_in:
     - snapshot
     - process
   Process_output_cyclic_delay:

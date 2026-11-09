@@ -23,23 +23,14 @@ from mathspec.errors import SchemaError
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping
 
-#: The relation a comparison may carry — the three an expression may be
-#: written with, which is what a constraint's sense is read off.
-ComparisonOperator = Literal['<=', '>=', '==']
+Sense = Literal['<=', '>=', '==']
 
-#: The sign a unary operator applies to its operand.
 UnaryOperator = Literal['+', '-']
 
-#: The arithmetic a binary operator may spell. Closed by the grammar, and the
-#: vocabulary a renderer dispatching on [`BinaryOperatorNode.op`][]
-#: switches over — it keeps no list of its own.
 BinaryOperator = Literal['+', '-', '*', '/', '**']
 
-#: What an expression writes to refer to a declaration, and so what a
-#: declaration may be named.
 NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
-#: A float — a fractional part or an exponent. A sign is the unary operator's.
 REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 
 # ---------------------------------------------------------------------------
@@ -58,7 +49,7 @@ class NumberNode:
 
 @dataclass(frozen=True)
 class NameNode:
-    """A bare name whose kind only the schema knows; resolution rewrites every one into a program node."""
+    """A bare name whose kind only the spec knows; resolution rewrites every one into a program node."""
 
     name: str
 
@@ -147,9 +138,6 @@ class FunctionCallNode:
         return f'{self.name}({", ".join(passed)})'
 
 
-#: Every arithmetic node the grammar builds. A name, a name list, a column
-#: selection and a quoted keyword are what resolution reads for their kind; the
-#: rest is structure.
 ArithmeticNode = (
     NumberNode
     | NameNode
@@ -164,7 +152,7 @@ ArithmeticNode = (
 
 @dataclass(frozen=True)
 class ComparisonNode:
-    op: ComparisonOperator
+    op: Sense
     left: ArithmeticNode
     right: ArithmeticNode
 
@@ -173,7 +161,6 @@ class ComparisonNode:
         return f'{self.left} {self.op} {self.right}'
 
 
-#: A whole parsed expression: arithmetic, or one comparison over it.
 ParsedNode = ArithmeticNode | ComparisonNode
 
 
@@ -244,8 +231,6 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
-#: A bracketed list of names as a kwarg value, in an expression and in a where
-#: string alike.
 NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
     lambda t: NameListNode(tuple(str(x) for x in t))
 )
@@ -291,7 +276,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserEleme
 
     arith <<= add_sub
 
-    comparator = pp.one_of(list(get_args(ComparisonOperator)))
+    comparator = pp.one_of(list(get_args(Sense)))
     expression = (arith + pp.Optional(comparator + arith)).set_parse_action(
         lambda t: ComparisonNode(t[1], t[0], t[2]) if len(t) == 3 else t[0]
     )
@@ -313,7 +298,7 @@ def keywords[V](name: str, pairs: Iterable[tuple[str, V]]) -> dict[str, V]:
     kwargs: dict[str, V] = {}
     for key, value in pairs:
         if key in kwargs:
-            msg = f'{name}({key}=) is given twice. A keyword names one value; drop one of them.'
+            msg = f'{name}({key}=) is given twice. Delete one of them.'
             raise SchemaError(msg)
         kwargs[key] = value
     return kwargs
@@ -333,16 +318,9 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-#: The arithmetic half on its own, for the where grammar to put a predicate's
-#: comparator over: one grammar for what a side may say, wherever it stands.
-#: The column selection is shared too, so a kwarg reads one the same way in
-#: both grammars.
 ARITHMETIC, _GRAMMAR, COLUMNS = _build_grammar()
 
 
-#: How deep a tree the language admits. Every pass over an expression recurses,
-#: so a deeper one exhausts the interpreter's stack instead of failing as a
-#: ``LanguageError``; the whole pipeline survives 300 on a default stack (#359).
 MAX_DEPTH = 100
 
 
@@ -392,7 +370,7 @@ def parse_text[T](
         result = grammar.parse_string(text, parse_all=True)
     except pp.ParseException as e:
         hint = rewrite(text, e.loc)
-        msg = f'Failed to parse {what}: {text!r}\n{f"{hint}\n" if hint is not None else ""}{e}'
+        msg = f'Cannot parse the {what} {text!r}.\n{f"{hint}\n" if hint is not None else ""}{e}'
         raise SchemaError(msg) from e
     except RecursionError:
         raise SchemaError(_too_deep(what, text, None, deep_rewrite)) from None
@@ -409,31 +387,19 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     A two-character token is tested before its one-character prefix.
     """
     rest = text[loc:].lstrip()
-    if rest.startswith(get_args(ComparisonOperator)):
-        return (
-            f"'{rest[:2]}' follows a complete comparison, and an expression carries "
-            f'one comparison, at the top. Split the chain into two constraints.'
-        )
+    if rest.startswith(get_args(Sense)):
+        return f"'{rest[:2]}' follows a complete comparison. Split the chain into two constraints."
     if rest.startswith('!='):
-        return (
-            "'!=' is not a constraint sense — the senses are <=, >= and ==. "
-            'Holding rows apart is a where matter: write the test in where:, where != is legal.'
-        )
+        return "'!=' is not a constraint sense. Write <=, >= or ==, or move the != test to where:."
     if rest.startswith(('<', '>')):
-        return f"'{rest[0]}' is not a constraint sense — the senses are <=, >= and ==. Write the bound inclusive."
+        return f"'{rest[0]}' is not a constraint sense. Write '{rest[0]}=' instead."
     if rest.startswith('='):
-        return (
-            "'=' on its own is how a kwarg is written inside a call, like sum(x, over=d). "
-            'Equality between two sides is written ==.'
-        )
+        return "A single '=' passes a keyword argument, as in sum(x, over=d). Write == for equality."
     if rest.startswith('^'):
         return "power is written '**', not '^'."
     return None
 
 
-#: The rewrite an over-deep expression is given. Writing the terms out is
-#: what ``sum`` exists to replace, so the refusal points at the language's own
-#: answer before it offers the general one.
 _DEEP_REWRITE = (
     'Reduce over a dimension with sum() rather than writing the terms out, or name an intermediate '
     'quantity under expressions: and refer to it by name.'

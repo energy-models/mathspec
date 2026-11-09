@@ -17,9 +17,9 @@ from __future__ import annotations
 import pytest
 
 from mathspec import advice, merge, to_markdown, to_spec, typeset
+from mathspec._typesetting import FORMATS
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS
-from tests.fixtures import BALANCE
+from tests.fixtures import BALANCE, section
 
 #: One component file: it pins the flow at its own port, and the column it
 #: pins belongs to another fragment.
@@ -54,14 +54,14 @@ def test_given_holds_five_kinds_and_refuses_a_sixth():
     """The section is closed, so a kind nobody has admitted yet is the schema's own refusal."""
     with pytest.raises(LanguageError) as raised:
         to_spec({**SUPPLY, 'given': {'macros': {'twice': {'params': ['x'], 'template': '2 * x'}}}})
-    assert 'Valid keys: constraints, expressions, masks, parameters, variables' in str(raised.value), (
-        'the refusal names what the block takes'
+    assert 'Valid keys: conditions, constraints, expressions, parameters, variables' in str(raised.value), (
+        'the refusal names what the section takes'
     )
 
 
 def test_a_fragment_that_says_what_it_reads_loads_on_its_own():
     spec = to_spec(SUPPLY)
-    assert sorted(spec.given.variables) == ['flow'], 'the column it reads is a declaration like any other'
+    assert sorted(spec.given.variables) == ['flow'], 'the column it reads is an entry like any other'
     assert sorted(spec.variables) == ['gen_p'], 'and it is not one of the columns this file introduces'
 
 
@@ -71,7 +71,7 @@ def test_a_given_name_is_held_to_the_name_rule():
         to_spec({**SUPPLY, 'given': {'variables': {'no-flow': {'dims': ['snapshot', 'port']}}}})
 
 
-def test_a_whole_model_writes_no_given_block():
+def test_a_whole_model_writes_no_given_section():
     whole = to_spec({**SUPPLY, 'given': {}, 'constraints': {}})
     assert 'given' not in whole.to_dict(), 'an empty section is an absence, and is left out'
 
@@ -89,7 +89,7 @@ def test_a_fragment_prints_as_math_in_every_format(fmt):
 def test_the_given_column_prints_under_its_own_heading():
     printed = to_markdown(SUPPLY)
     assert '#### Given' in printed, 'the legend says which symbols the file does not introduce'
-    assert '`flow`' in printed.split('#### Given')[1]
+    assert '`flow`' in section(printed, 'Given')
 
 
 def test_a_program_carries_the_column_it_reads_apart_from_the_ones_it_builds():
@@ -128,7 +128,7 @@ def test_a_name_both_introduced_and_given_in_one_file_is_refused():
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': ['snapshot', 'nowhere']}, 'nowhere', id='a-frame-over-an-undeclared-dimension'),
         pytest.param({'dims': ['snapshot', 'snapshot']}, 'twice', id='a-frame-naming-one-dimension-twice'),
@@ -136,9 +136,9 @@ def test_a_name_both_introduced_and_given_in_one_file_is_refused():
         pytest.param({'dims': ['snapshot'], 'where': 'gen_cost > 0'}, 'where', id='a-mask-the-owner-holds'),
     ],
 )
-def test_a_given_declaration_is_refused_where_it_oversteps(block, says):
+def test_a_given_entry_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**SUPPLY, 'given': {'variables': {'flow': block}}})
+        to_spec({**SUPPLY, 'given': {'variables': {'flow': entry}}})
     assert says in str(raised.value)
 
 
@@ -148,11 +148,11 @@ def test_an_expression_reads_a_given_column_as_it_reads_any_other():
     assert spec.constraints['gen_injects'].dims == ['snapshot', 'generator']
 
 
-def test_merging_folds_the_given_declaration_into_the_one_that_introduces_it():
+def test_merging_folds_the_given_entry_into_the_one_that_introduces_it():
     spec = merge([SURFACE, SUPPLY])
     assert not spec.given, 'the expectation is spent once the column is in the composition'
     assert sorted(spec.variables) == ['flow', 'gen_p']
-    assert spec.variables['flow'].bounds.lower == -1000, "the introducer's declaration is the one that survives"
+    assert spec.variables['flow'].bounds.lower == -1000, "the introducer's entry is the one that survives"
     assert sorted(to_spec(spec).program.variables) == ['flow', 'gen_p'], 'a composed library lowers like any spec'
 
 
@@ -164,7 +164,7 @@ def test_merging_folds_the_given_declaration_into_the_one_that_introduces_it():
         pytest.param({'dims': ['snapshot', 'port'], 'description': 'the flow, in my words'}, id='its-own-prose'),
     ],
 )
-def test_a_given_declaration_may_say_less_than_the_introducer(reads):
+def test_a_given_entry_may_say_less_than_the_introducer(reads):
     """Bounds are the introducer's, so the reader states the frame and stops."""
     composed = merge([SURFACE, {**SUPPLY, 'given': {'variables': {'flow': reads}}}])
     assert composed.variables['flow'].bounds.upper == 1000
@@ -215,8 +215,8 @@ PORTS_ONLY = {
         ),
     ],
 )
-def test_a_given_declaration_that_disagrees_with_the_introducer_is_refused(misread):
-    with pytest.raises(LanguageError, match=r'says the same as the declaration it is folded into, or less') as raised:
+def test_a_given_entry_that_disagrees_with_the_introducer_is_refused(misread):
+    with pytest.raises(LanguageError, match=r'Restate the dims as .* declares them, or leave the field out') as raised:
         merge([SURFACE, misread])
     message = str(raised.value)
     assert "'#2'" in message and "'#1'" in message, 'both sides of a disagreement are named'
@@ -249,7 +249,7 @@ def test_a_fragment_that_reads_what_it_builds_is_refused(given, says):
     assert says in str(raised.value), "the fragment's own refusal names the name it reads twice"
 
 
-def test_a_given_declaration_nothing_introduces_stays_for_a_consumer_to_bind():
+def test_a_given_entry_nothing_introduces_stays_for_a_consumer_to_bind():
     composed = merge([SUPPLY, {'dimensions': {'snapshot': {'dtype': 'int'}}}])
     assert composed.given.variables['flow'].dims == ['snapshot', 'port'], 'a name nothing introduces is still read'
     assert sorted(composed.program.given.variables) == ['flow']
@@ -284,20 +284,23 @@ def test_the_program_carries_the_row_family_a_consumer_binds():
     )
 
 
-def test_the_dual_takes_its_frame_from_the_given_declaration():
+def test_the_dual_takes_its_frame_from_the_given_entry():
     """Without the frame the reported expression has no dims, and nothing downstream could shape it."""
     assert to_markdown(LAYER).count(r'\lambda_{\mathrm{balance},t,b}') == 1
 
 
 def test_a_given_row_family_prints_under_the_given_heading():
-    given = to_markdown(LAYER).split('#### Given')[1]
+    given = section(to_markdown(LAYER), 'Given')
     assert '`balance`' in given
     assert 'reads the dual of' in given, 'the legend says what the file may do with it'
 
 
 def test_a_row_family_both_built_and_given_is_refused():
     both = {**LAYER, 'constraints': {**LAYER['constraints'], 'balance': {'dims': [], 'expression': 'sum(p) >= 0'}}}
-    with pytest.raises(LanguageError, match=r"'balance'.*either built by this file or given to it"):
+    with pytest.raises(
+        LanguageError,
+        match=r"Given constraint 'balance' is also declared under 'constraints:'. Delete one of the two\.",
+    ):
         to_spec(both)
 
 
@@ -312,15 +315,15 @@ def test_a_dual_naming_nothing_says_where_to_declare_it():
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': [], 'expression': 'sum(p) >= 0'}, 'expression', id='a-body-the-owner-holds'),
         pytest.param({'dims': [], 'sense': '<='}, 'sense', id='a-sense-nothing-here-could-check'),
     ],
 )
-def test_a_given_row_family_is_refused_where_it_oversteps(block, says):
+def test_a_given_row_family_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**LAYER, 'given': {**LAYER['given'], 'constraints': {'balance': block}}})
+        to_spec({**LAYER, 'given': {**LAYER['given'], 'constraints': {'balance': entry}}})
     assert says in str(raised.value)
 
 
@@ -337,14 +340,14 @@ def test_merging_folds_a_row_family_into_the_file_that_builds_it():
     assert not program.given.constraints, 'nothing is left for a host model to provide'
 
 
-def test_the_advice_names_every_declaration_a_consumer_has_to_bind():
+def test_the_advice_names_every_entry_a_consumer_has_to_bind():
     subjects = {note.subject for note in advice(LAYER) if note.kind == 'given'}
     assert subjects == {'p', 'balance'}, 'both the column and the row family are named'
 
 
 #: `port` is named by nothing but the given column's frame, and `bus` by
-#: nothing but the given row family's, so each is in use only through a
-#: declaration this file does not build.
+#: nothing but the given row family's, so each is in use only through an
+#: entry this file does not build.
 REACHED_ONLY_BY_A_GIVEN_FRAME = {
     'dimensions': {'g': {'dtype': 'str'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
     'given': {'variables': {'flow': {'dims': ['port']}}, 'constraints': {'balance': {'dims': ['bus']}}},
@@ -354,7 +357,7 @@ REACHED_ONLY_BY_A_GIVEN_FRAME = {
 }
 
 
-def test_a_dimension_only_a_given_declaration_indexes_is_in_use():
+def test_a_dimension_only_a_given_entry_indexes_is_in_use():
     """The never-an-axis pass reads the frames a build emits, and these two are in neither."""
     unreached = {note.subject for note in advice(REACHED_ONLY_BY_A_GIVEN_FRAME) if note.kind == 'never-an-axis'}
     assert not unreached, 'a dimension a given column or row family is indexed by is used'
@@ -408,20 +411,20 @@ def test_a_given_parameter_is_read_in_a_bound_as_any_parameter_is():
 
 
 def test_a_given_parameter_prints_under_the_given_heading():
-    given = to_markdown(PRICED).split('#### Given')[1]
+    given = section(to_markdown(PRICED), 'Given')
     assert '`gen_cost`' in given and '`gen_on`' in given
 
 
 @pytest.mark.parametrize(
-    ('block', 'says'),
+    ('entry', 'says'),
     [
         pytest.param({'dims': ['nowhere']}, 'nowhere', id='a-frame-over-an-undeclared-dimension'),
         pytest.param({'dims': ['generator'], 'default': 0}, 'default', id='a-field-a-parameter-does-not-have'),
     ],
 )
-def test_a_given_parameter_is_refused_where_it_oversteps(block, says):
+def test_a_given_parameter_is_refused_where_it_oversteps(entry, says):
     with pytest.raises(LanguageError) as raised:
-        to_spec({**PRICED, 'given': {**PRICED['given'], 'parameters': {'gen_cost': block}}})
+        to_spec({**PRICED, 'given': {**PRICED['given'], 'parameters': {'gen_cost': entry}}})
     assert says in str(raised.value)
 
 
@@ -443,7 +446,7 @@ FLEET = {
 }
 
 
-def test_merging_folds_a_given_parameter_into_the_declaration():
+def test_merging_folds_a_given_parameter_into_the_entry():
     composed = merge([FLEET, PRICED])
     assert not composed.given, 'every reading is spent once the fleet is in the composition'
     assert sorted(composed.parameters) == ['gen_cost', 'gen_on', 'gen_p_max', 'weight']
@@ -456,7 +459,7 @@ def test_merging_folds_a_given_parameter_into_the_declaration():
         pytest.param({'dims': ['generator'], 'dtype': 'int'}, id='another-dtype'),
     ],
 )
-def test_a_given_parameter_that_disagrees_with_the_declaration_is_refused(misread):
+def test_a_given_parameter_that_disagrees_with_the_entry_is_refused(misread):
     cost = {**PRICED, 'given': {**PRICED['given'], 'parameters': {**PRICED['given']['parameters'], 'gen_on': misread}}}
     with pytest.raises(LanguageError, match=r"reads the given parameter 'gen_on' as"):
         merge([FLEET, cost])
@@ -500,7 +503,7 @@ def test_a_program_carries_the_expression_it_reads_apart_from_the_ones_it_define
 
 
 def test_a_given_expression_prints_under_the_given_heading():
-    given = to_markdown(BALANCE).split('#### Given')[1]
+    given = section(to_markdown(BALANCE), 'Given')
     assert '`injection`' in given
     assert 'an expression another file defines' in given, 'the legend says what kind of thing the file reads'
 
@@ -564,7 +567,7 @@ def test_a_definition_over_fewer_dimensions_merges_where_the_row_carries_the_res
 
 def test_the_composed_load_refuses_a_row_a_narrower_definition_repeats():
     """With nothing else carrying `snapshot`, the row would repeat per snapshot, which the composed spec refuses."""
-    with pytest.raises(LanguageError, match='repeated across'):
+    with pytest.raises(LanguageError, match='which its dims: declares'):
         merge([BALANCE, FLAT_INJECTOR])
 
 

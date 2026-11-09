@@ -3,50 +3,62 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# PyPSA in 24 files
+# PyPSA in 25 files
 
-[PyPSA in one file](../pypsa.md) is `examples/pypsa.yaml`, one spec of some
-four thousand lines. This is the same spec as 24 files under
-`examples/pypsa/`, one per topic, and `merge` gives the one file back: the
-two have one [canonical form](../../howto/compare.md).
+This section states the PyPSA spec one topic at a time.
+[PyPSA in one file](../pypsa_ladder.md) states it as `examples/pypsa.yaml`, one spec of
+about 5,100 lines. Here the same spec is split into 25 whole specs of one topic
+each ([fragments](../../reference/glossary.md#fragment)), under
+`examples/pypsa/`. [`merge`](../../reference/composition.md#merge) composes the
+25 files into one spec, which has the same
+[canonical form](../../reference/reading.md#comparing-two-specs) as the one
+file.
 
-Every fragment loads, prints and gets advice on its own. What it reads and does
-not declare, it states under
-[`given`](../../reference/language/declarations.md#given). A component that
-puts something into a sum every component adds to, such as the bus balance or
-the operating cost, names its share as an expression of its own, a
-[term](../../reference/language/declarations.md#terms) whose `adds_to:` names
-the sum. One fragment reads each sum and adds nothing to it, so the terms
-always have a reader. A new component is one new file, and the network does
-not change.
+Each fragment loads and prints on its own, and
+[`advice`](../../reference/api.md#advice) runs on each fragment alone. A
+fragment lists each name that it uses but does not declare under
+[`given`](../../reference/language/parameters-variables-constraints.md#given).
 
-The split is written by `tools/pypsa_split.py` from the one file and checked
-against it, so the two cannot drift. It is a proof of concept: a decision on
-which of the two is the source comes after both land.
+Some sums take a share from every component, such as the bus balance or the
+operating cost. A component states its share of such a sum as an expression of
+its own, a [term](../../reference/language/named.md#adds_to), whose `adds_to:`
+key is the sum. For each sum, one fragment lists it under `given:` and adds
+nothing to it, so every term adds to a sum that some fragment lists. A
+component is one file, and adding it leaves the network file unchanged.
 
-## What each file says
+`tools/pypsa_split.py` writes the 25 files from the one file, and a test
+compares them with it, so the two always agree.
 
-Three kinds of file. A **component** owns PyPSA's class of that name: its
-dimension, its data, its columns, its rows, and its share of each sum. The
-committable classes, `Generator`, `Link` and `Process`, are cut by feature into
-a file each for the class, its commitment, its ramping and its maintenance,
-and the three sets read alike because PyPSA's rows do. An **owner** reads a
-sum with its description, and holds the row that reads it: the network reads
-`Bus_injection`, power flow reads `Cycle_angle_sum`. **Settings** holds what
-every topic reads, the weightings and the flags, and reads the totals whose
-own readers, the cost, the carriers and the global constraints, a model may
-leave out. It also sets the objective, which reads `total_cost`: each
-component adds its capital cost to it, and the cost file adds the operating
-cost at risk.
+## The four kinds of fragment
+
+- A **component** file states the PyPSA class of that name: its dimension, its
+  data, its variables, its rows and its share of each sum. The committable
+  classes are `Generator`, `Link` and `Process`. Each of them is split by
+  feature into four files: the class, its commitment, its ramping and its
+  maintenance. The three sets of four files are alike, because PyPSA builds
+  the same rows for each class.
+- A file that describes a sum lists it under `given:` with its description,
+  and states the row that contains it. The network and power flow files are
+  of this kind.
+- A file of one feature states rows that span several classes. The cost,
+  carrier, global constraints and security files state the risk-weighted
+  operating cost, the growth limits, the five caps and the outage rows.
+- The **settings** file states the weightings and the flags that the other
+  fragments use. It also lists the totals that the cost, carrier and global
+  constraints files list, because a spec may leave those files out. Its
+  objective minimises `total_cost`. Each component adds its capital cost to
+  `total_cost`, and the cost file adds the risk-weighted operating cost.
+
+## Sums and fragments
 
 <!-- gallery:begin -->
 ### The sums
 
 | Sum | Over | Read in | The terms, by the fragment that adds each |
 | --- | --- | --- | --- |
+| `Bus_injection` | `scenario, snapshot, bus` | [network](network.md) | [`FlowBased_injection`](flow_based.md), [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
 | `total_cost` | scalar | [settings](settings.md) | [`risk_weighted_opex`](cost.md), [`Generator_capex`](generator.md), [`Line_capex`](line.md), [`Link_capex`](link.md), [`Process_capex`](process.md), [`StorageUnit_capex`](storage_unit.md), [`Store_capex`](store.md), [`Transformer_capex`](transformer.md) |
 | `scenario_opex` | `scenario` | [settings](settings.md) | [`Generator_opex`](generator.md), [`Generator_commitment_opex`](generator_commitment.md), [`Link_opex`](link.md), [`Link_commitment_opex`](link_commitment.md), [`Process_opex`](process.md), [`Process_commitment_opex`](process_commitment.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
-| `Bus_injection` | `scenario, snapshot, bus` | [network](network.md) | [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
 | `tech_capacity_expansion` | `global_constraint` | [settings](settings.md) | [`Generator_tech_capacity_expansion`](generator.md), [`Line_tech_capacity_expansion`](line.md), [`Link_tech_capacity_expansion`](link.md), [`Process_tech_capacity_expansion`](process.md), [`StorageUnit_tech_capacity_expansion`](storage_unit.md), [`Store_tech_capacity_expansion`](store.md) |
 | `Carrier_additions` | `period, carrier` | [settings](settings.md) | [`Generator_additions`](generator.md), [`Line_additions`](line.md), [`Link_additions`](link.md), [`Process_additions`](process.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
 | `primary_energy` | `scenario, global_constraint` | [settings](settings.md) | [`Generator_primary_energy`](generator.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
@@ -61,34 +73,45 @@ cost at risk.
 | --- | --- | --- | --- | --- | --- |
 | [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
 | [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
-| [generator](generator.md) | 23 | 3 | 11 | 17 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [generator_commitment](generator_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
+| [flow_based](flow_based.md) | 4 | 1 | 2 | 5 | `Bus_injection` |
+| [generator](generator.md) | 24 | 3 | 11 | 17 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [generator_commitment](generator_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 21 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
-| [link](link.md) | 23 | 3 | 9 | 16 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [link_commitment](link_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
+| [line](line.md) | 22 | 4 | 14 | 9 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `total_cost`, `Carrier_additions`, `Bus_injection`, `Cycle_angle_sum` |
+| [link](link.md) | 26 | 3 | 11 | 17 | `transmission_volume_expansion`, `transmission_expansion_cost`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [link_commitment](link_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [link_ramping](link_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [link_ramping](link_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
 | [network](network.md) | 0 | 0 | 1 | 1 |  |
 | [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
-| [process](process.md) | 21 | 3 | 9 | 14 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [process_commitment](process_commitment.md) | 10 | 3 | 20 | 17 | `scenario_opex` |
+| [process](process.md) | 24 | 3 | 11 | 15 | `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [process_commitment](process_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 9 |  |
-| [process_ramping](process_ramping.md) | 5 | 0 | 6 | 14 |  |
+| [process_ramping](process_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [security](security.md) | 2 | 0 | 8 | 10 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 35 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [store](store.md) | 28 | 4 | 11 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
-| [transformer](transformer.md) | 23 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
+| [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [store](store.md) | 42 | 6 | 22 | 15 | `primary_energy`, `operational_limit`, `tech_capacity_expansion`, `scenario_opex`, `total_cost`, `Carrier_additions`, `Bus_injection` |
+| [transformer](transformer.md) | 24 | 5 | 16 | 5 | `total_cost`, `Bus_injection`, `Cycle_angle_sum` |
 <!-- gallery:end -->
 
 ## Leaving a file out
 
-A model may leave a component family out, or the cost, the carriers, the
-global constraints or security, and what is left is a whole model: nothing
-stays under `given:`. It may not leave the network or power flow out while a
-component is in, because the component's terms would land on no name, and
-`merge` says so.
+A spec may leave out a component family, the cost, the carriers, the global
+constraints or security. What remains is a whole spec, with nothing left
+under `given:`. Lines and transformers leave only together with security,
+because security lists `Line_s_nom` and four more line names, and the same for
+transformers, under `given:`. While a component is in, a spec may not leave
+out the network, power flow or settings. The terms of the component would then
+add to a sum that no fragment lists, and `merge` refuses the files.
+
+!!! info "See also"
+
+    - [Composition](../../reference/composition.md), for what `merge` refuses
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by
+      rung
+    - [`given`](../../reference/language/parameters-variables-constraints.md#given),
+      for the names a fragment uses but does not declare

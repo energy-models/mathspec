@@ -5,17 +5,20 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Least-cost dispatch
 
-The smallest file that is a whole spec: generators with a capacity, an hourly
-load to meet, and a cost to minimise. It is the spec on the
-[home page](../index.md).
-
-The `where:` on `dispatch` deletes the rows where a generator has no capacity
-([absence](../reference/language/absence.md)). `sum(dispatch, over=generator)`
-names the dimension it reduces, so the constraint's `dims` is what remains.
+Least-cost dispatch is the smallest specification of an optimisation model
+([a spec](../reference/glossary.md#spec)) with a balance, a bound and a cost.
+The [home page](../index.md) has the same spec. Wherever a generator has no
+capacity, the [`where:`](../reference/language/absence.md#where) on `dispatch`
+leaves the [variable](../reference/language/parameters-variables-constraints.md#variables) with no row there
+([absent](../reference/language/absence.md)).
+[`sum(dispatch, over=generator)`](../reference/language/operators.md#sum) sums
+over `generator` and keeps `snapshot`, which is the one
+[dimension](../reference/language/dimensions.md) that
+`power_balance` declares.
 
 <!-- gallery:begin -->
 ```yaml
-description: Least-cost dispatch of a generator fleet against an hourly load.
+description: Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 dimensions:
   snapshot: { dtype: int, description: dispatch periods }
@@ -43,7 +46,7 @@ objective:
   expression: sum(dispatch * cost)
 ```
 
-Least-cost dispatch of a generator fleet against an hourly load.
+Least-cost dispatch of a generator fleet against a load in each dispatch period.
 
 #### Sets
 
@@ -66,7 +69,13 @@ Least-cost dispatch of a generator fleet against an hourly load.
 |---|---|
 | $`\mathit{dispatch}`$ | `dispatch` over $`\mathcal{T} \times \mathcal{G}`$ — output of a generator in a snapshot |
 
-Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{dispatch}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+#### Variable domains
+
+**`dispatch`**
+
+```math
+0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
+```
 
 #### Objective
 
@@ -81,14 +90,12 @@ Upright is what the data supplies — a parameter such as $`\mathrm{capacity}`$,
 ```math
 \sum_{g \in \mathcal{G}} \mathit{dispatch}_{t,g} = \mathrm{load}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
-
-#### Variable domains
-
-**`dispatch`**
-
-```math
-0 \le \mathit{dispatch}_{t,g} \le \mathrm{capacity}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G} \,:\, \mathrm{capacity}_{g} > 0
-```
 <!-- gallery:end -->
 
-Regenerate with `pixi run python -m tools.gallery`.
+!!! info "See also"
+
+    - [Absence](../reference/language/absence.md), for what an absent variable
+      does to the expressions that use it
+    - [`sum`](../reference/language/operators.md#sum), for every form of the call
+    - [Unit commitment](commitment.md), for the same dispatch with an on/off
+      decision for each unit

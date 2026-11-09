@@ -11,17 +11,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from mathspec._typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
+from mathspec._typesetting.format import number
+from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
-from mathspec.typesetting import SymbolTable, to_latex, to_markdown, to_typst, typeset
-from mathspec.typesetting.format import number
-from mathspec.validation import to_spec
 from tests.fixtures import DISPATCH_MODEL, varied
 from tests.typesetting.fixtures import EVERY_FORMAT, TYPST_SYMBOLS
 
 if TYPE_CHECKING:
+    from mathspec._typesetting import FormatName
+    from mathspec._typesetting.format import Format
     from mathspec.spec import Spec
-    from mathspec.typesetting import FormatName
-    from mathspec.typesetting.format import Format
 
 
 WITH_MARGINAL_COST = varied(
@@ -73,7 +73,7 @@ DESCRIBED = varied(
 
 @EVERY_FORMAT
 def test_a_description_reaches_the_legend_without_hiding_the_name(name: FormatName, fmt: Format):
-    """The declaration's own `description:` is what the legend reads — no
+    """The entry's own `description:` is what the legend reads — no
     sidecar involved, so a model carries its prose wherever it goes."""
     out = typeset(DESCRIBED, name)
     for text in (
@@ -104,7 +104,7 @@ DEFAULTED = varied(
         'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
-        'parameters.load.missing': 'neutral',
+        'parameters.load.missing': 0,
         'parameters.floor': {'dims': [], 'missing': '-inf'},
         'parameters.online': {'dims': ['generator'], 'dtype': 'bool', 'missing': True},
         'parameters.p_set': {'dims': ['generator'], 'missing': 'absent'},
@@ -115,14 +115,14 @@ DEFAULTED = varied(
 
 @EVERY_FORMAT
 def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
-    """The legend printed a value and left out a reading, so `absent`, `neutral` and a partial map looked complete."""
+    """The legend printed a value and left out a reading, so `absent`, `0` and a partial map looked complete."""
     out = typeset(DEFAULTED, name)
     for shown in (
         fmt.math(number(math.inf, fmt)),
         fmt.math(number(-math.inf, fmt)),
         fmt.math('1'),
         fmt.mono('true'),
-        fmt.mono('neutral'),
+        fmt.math(number(0, fmt)),
         fmt.mono('absent'),
         f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
     ):
@@ -137,8 +137,8 @@ def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Forma
 MASKED = varied(
     DISPATCH_MODEL,
     **{
-        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': 'neutral'},
-        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 'neutral'},
+        'parameters.on': {'dims': ['generator'], 'dtype': 'bool', 'missing': False},
+        'variables.spill': {'dims': ['snapshot', 'generator'], 'where': 'on', 'missing': 0},
         'variables.store': {'dims': ['snapshot', 'generator'], 'where': 'on'},
     },
 )
@@ -146,10 +146,12 @@ MASKED = varied(
 
 @EVERY_FORMAT
 def test_the_legend_prints_what_a_masked_out_variable_means(name: FormatName, fmt: Format):
-    """The legend printed a parameter's reading and not a variable's, so `missing: neutral` on a variable was unseen."""
+    """The legend printed a parameter's reading and not a variable's, so `missing: 0` on a variable was unseen."""
     out = typeset(MASKED, name)
     [row] = [line for line in out.splitlines() if fmt.mono('spill') in line and ' over ' in line]
-    assert f'{fmt.mono("spill")} over ' in row and f', {fmt.mono("neutral")} where the mask leaves it out' in row, row
+    assert (
+        f'{fmt.mono("spill")} over ' in row and f', {fmt.math(number(0, fmt))} where the mask leaves it out' in row
+    ), row
     assert out.count('where the mask leaves it out') == 1, '`store` keeps the default, absent, and says nothing'
 
 
@@ -167,14 +169,14 @@ CURVED = varied(
 )
 
 
-def test_one_table_spells_the_blocks_a_file_states_and_the_rows_they_state():
-    """The weights are named after the block, which no equation can carry, and the
+def test_one_table_spells_the_entries_a_file_states_and_the_rows_they_state():
+    """The weights are named after the entry, which no equation can carry, and the
     table that renames them has to render the file they came from too."""
     spec = to_spec(CURVED)
     table = {'notation': 'latex', 'names': {'curve_lam': r'\lambda'}}
 
     assert r'\lambda' not in to_latex(spec, symbols=table, legend=False), 'no weight stands where the curve prints'
-    assert r'\lambda_{t,g,b}' in to_latex(spec.expand(), symbols=table, legend=False)
+    assert r'\lambda_{g,t,b}' in to_latex(spec.expand(), symbols=table, legend=False)
 
 
 def test_a_misspelled_name_is_still_a_typo_where_a_formulation_could_have_emitted_it():
@@ -262,14 +264,14 @@ def test_an_entry_naming_nothing_is_an_error_with_the_near_miss(symbols, match):
         pytest.param(
             to_typst,
             {'notation': 'latex', 'names': {'p_max': r'\bar p'}},
-            'written in latex, but this is a typst render',
+            'written in latex, but this render is typst',
             id='a-latex-table-into-typst',
         ),
-        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-latex'),
+        pytest.param(to_latex, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-latex'),
         pytest.param(
-            to_markdown, TYPST_SYMBOLS, 'written in typst, but this is a latex render', id='typst-table-markdown'
+            to_markdown, TYPST_SYMBOLS, 'written in typst, but this render is latex', id='typst-table-markdown'
         ),
-        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is required", id='a-table-that-does-not-say'),
+        pytest.param(to_latex, {'names': {'p': 'x'}}, "'notation:' is missing", id='a-table-that-does-not-say'),
         pytest.param(
             to_latex,
             {'notation': 'latx', 'names': {'p': 'x'}},

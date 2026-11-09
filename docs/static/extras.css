@@ -196,6 +196,24 @@
   mask-image: url("icons/transmission-tower.svg");
 }
 
+/* Index-page cards: the card's title is its one link, and the link's overlay
+ * makes the whole card the click target. The same overlay serves a card that
+ * is nothing but a link, as on the contributing page. */
+.md-typeset .grid.cards > ul > li {
+  position: relative;
+}
+
+.md-typeset .grid.cards > ul > li > strong:first-child > a::after,
+.md-typeset .grid.cards > ul > li > a:only-child::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.md-typeset .grid.cards > ul > li:has(> strong:first-child > a):hover {
+  border-color: var(--md-accent-fg-color);
+}
+
 /* --- Anchor target highlight ---
  * When the URL has a #hash, the matching element gets :target. Flash the
  * background once on arrival so it's obvious where the page jumped to — the

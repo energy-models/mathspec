@@ -1,10 +1,10 @@
 {
   "$defs": {
-    "AssumptionBlock": {
+    "AssumptionSpec": {
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "What the spec assumes of its data: a predicate every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
+          "description": "What the spec assumes of its data: a condition every coordinate it is checked at has to satisfy.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``where:`` or a ``description:``, and serialised back to whichever form it\nwas written in::\n\n    assumptions:\n      efficiency_is_a_fraction: \"efficiency > 0 AND efficiency <= 1\"\n      bounds_do_not_cross:\n        holds: \"p_min <= p_max\"\n        where: \"p_min\"\n        description: a unit with no minimum is unconstrained below\n\nThe language decides nothing about the numbers, so the consumer attaching\nthe data checks it, and refuses the data where it does not hold.",
           "properties": {
             "description": {
               "anyOf": [
@@ -38,7 +38,7 @@
           "required": [
             "holds"
           ],
-          "title": "AssumptionBlock",
+          "title": "AssumptionSpec",
           "type": "object"
         },
         {
@@ -46,7 +46,7 @@
         }
       ]
     },
-    "BoundsBlock": {
+    "BoundsSpec": {
       "additionalProperties": false,
       "description": "Variable bounds \u2014 each side is a finite number, a parameter name, or ``None`` where it is open.\n\nAn omitted bound leaves the variable unbounded on that side, not\nimplicitly non-negative. An infinity is refused: an open side is ``null``,\nand the other infinity leaves no value at all.",
       "properties": {
@@ -81,10 +81,44 @@
           "title": "Upper"
         }
       },
-      "title": "BoundsBlock",
+      "title": "BoundsSpec",
       "type": "object"
     },
-    "ConstraintBlock": {
+    "ConditionSpec": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "description": "A named condition: one condition, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    conditions:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        condition: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nIts bare name in another condition stands for it, inside ``count``,\n``shift`` and ``at`` too. Its frame is the dims its condition reads, so\nit declares none. It is true or false, so it is never a value in an\nexpression.",
+          "properties": {
+            "condition": {
+              "title": "Condition",
+              "type": "string"
+            },
+            "description": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Description"
+            }
+          },
+          "required": [
+            "condition"
+          ],
+          "title": "ConditionSpec",
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "ConstraintSpec": {
       "additionalProperties": false,
       "description": "A declared constraint: one rule, over one frame.",
       "properties": {
@@ -128,12 +162,12 @@
         "dims",
         "expression"
       ],
-      "title": "ConstraintBlock",
+      "title": "ConstraintSpec",
       "type": "object"
     },
-    "DimensionBlock": {
+    "DimensionSpec": {
       "additionalProperties": false,
-      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as, never which coordinates there are \u2014\nthose are data, and arrive when the data is attached. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationBlock`][]), keyed by their own name.",
+      "description": "A declared dimension, the dtype its coordinates must be, and whether their order means anything.\n\nA dimension is an axis and nothing else: it declares that the axis exists\nand what its coordinates are typed as. Which coordinates there are is data,\nand arrives when the data is attached; a ``one_of`` only names the labels a\ncoordinate may have. The maps its members carry \u2014 a\ngenerator's bus, a snapshot's period \u2014 are top-level ``relations:``\n([`RelationSpec`][]), keyed by their own name.",
       "properties": {
         "description": {
           "anyOf": [
@@ -158,20 +192,64 @@
           "title": "Dtype",
           "type": "string"
         },
+        "one_of": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "One Of"
+        },
         "ordered": {
           "default": false,
           "title": "Ordered",
           "type": "boolean"
         }
       },
-      "title": "DimensionBlock",
+      "title": "DimensionSpec",
       "type": "object"
     },
-    "ExpressionBlock": {
+    "ExpressionCaseSpec": {
+      "additionalProperties": false,
+      "description": "One region of a named expression: the value, and when it is the value.\n\nEvery case says where it applies. The value wherever none of them does is\nthe entry's ``otherwise:``, which is written outside ``cases:`` because it\nis not a region like these \u2014 it is what is left::\n\n    cases:\n      opening: { when: \"position(snapshot) == 0\", expression: p_max }\n    otherwise: 0",
+      "properties": {
+        "expression": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Expression"
+        },
+        "when": {
+          "title": "When",
+          "type": "string"
+        }
+      },
+      "required": [
+        "when",
+        "expression"
+      ],
+      "title": "ExpressionCaseSpec",
+      "type": "object"
+    },
+    "ExpressionSpec": {
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through [`Spec.to_yaml`][] reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\n``dims:`` declares the frame the quantity is read over. A plain entry may\nleave it out, and its body then decides the frame; a body that carries a\ndimension the frame does not name is refused, and one that carries fewer\nis constant along the rest. A quantity whose value varies by region is\nwritten as ``cases:`` over a declared ``dims:``, with an ``otherwise:``\nfor the rest \u2014 see the language reference.\n\n``adds_to:`` adds this entry as a term to the sum it names, a\n``given: expressions:`` entry of this file: a write, where the given entry\nis the read.\n[`merge`][mathspec.composition.merge] adds every term to that name by\nname, after the body a file defines where one does. The term is read over at most the\nframe the given entry states, and does not read the name it adds to.",
+          "description": "A named quantity: one arithmetic expression, referenced by the math or read back after a solve.\n\nWritten in YAML as a bare string, or as a mapping once it carries a\n``description:`` \u2014 and serialised back to whichever form it was written in,\nso a round trip through [`Spec.to_yaml`][] reproduces the file::\n\n    expressions:\n      total_generation: sum(p, over=generator)\n      emissions:\n        expression: sum(p * rate, over=generator)\n        description: CO2 released, the quantity the cap bounds\n\n``dims:`` gives the dimensions over which the quantity is indexed. A plain\nentry may leave it out, and its expression then decides them. A declared\n``dims:`` gives exactly the dimensions over which the expression is\nindexed: an expression indexed over a dimension ``dims:`` does not give is\nrefused, and so is a ``dims:`` that gives one over which the expression is\nnot indexed. A quantity whose value varies by region is\nwritten as ``cases:`` over a declared ``dims:``, with an ``otherwise:``\nfor the rest \u2014 see the language reference.\n\n``adds_to:`` adds this entry as a term to the sum it names, a\n``given: expressions:`` entry of this file: a write, where the given entry\nis the read.\n[`merge`][mathspec.merge] adds every term to that name by\nname, after the body a file defines where one does. The term is read over at most the\nframe the given entry states, and does not read the name it adds to.",
           "properties": {
             "adds_to": {
               "anyOf": [
@@ -187,7 +265,7 @@
             },
             "cases": {
               "additionalProperties": {
-                "$ref": "#/$defs/ExpressionCase"
+                "$ref": "#/$defs/ExpressionCaseSpec"
               },
               "default": {},
               "minProperties": 1,
@@ -252,7 +330,7 @@
               "title": "Otherwise"
             }
           },
-          "title": "ExpressionBlock",
+          "title": "ExpressionSpec",
           "type": "object"
         },
         {
@@ -260,82 +338,37 @@
         }
       ]
     },
-    "ExpressionCase": {
+    "GivenConditionSpec": {
       "additionalProperties": false,
-      "description": "One region of a named expression: the value, and when it is the value.\n\nEvery case says where it applies. The value wherever none of them does is\nthe block's ``otherwise:``, which is written outside ``cases:`` because it\nis not a region like these \u2014 it is what is left::\n\n    cases:\n      opening: { when: \"position(snapshot) == 0\", expression: p_max }\n    otherwise: 0",
+      "description": "A named condition this file reads and another file defines.\n\nThe frame is all this file states, and it names the dims the definer's\ncondition reads. A condition reads the name as data over that frame, true or false at each coordinate, since a condition reads nothing\na solve decides: the condition is the definer's.",
       "properties": {
-        "expression": {
+        "description": {
           "anyOf": [
             {
               "type": "string"
             },
             {
-              "type": "number"
+              "type": "null"
             }
           ],
-          "title": "Expression"
+          "default": null,
+          "title": "Description"
         },
-        "when": {
-          "title": "When",
-          "type": "string"
+        "dims": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dims",
+          "type": "array"
         }
       },
       "required": [
-        "when",
-        "expression"
+        "dims"
       ],
-      "title": "ExpressionCase",
+      "title": "GivenConditionSpec",
       "type": "object"
     },
-    "GivenBlock": {
-      "additionalProperties": false,
-      "description": "What this file reads and does not build, by kind. Closed at the five kinds.",
-      "properties": {
-        "constraints": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenConstraintBlock"
-          },
-          "default": {},
-          "title": "Constraints",
-          "type": "object"
-        },
-        "expressions": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenExpressionBlock"
-          },
-          "default": {},
-          "title": "Expressions",
-          "type": "object"
-        },
-        "masks": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenMaskBlock"
-          },
-          "default": {},
-          "title": "Masks",
-          "type": "object"
-        },
-        "parameters": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenParameterBlock"
-          },
-          "default": {},
-          "title": "Parameters",
-          "type": "object"
-        },
-        "variables": {
-          "additionalProperties": {
-            "$ref": "#/$defs/GivenVariableBlock"
-          },
-          "default": {},
-          "title": "Variables",
-          "type": "object"
-        }
-      },
-      "title": "GivenBlock",
-      "type": "object"
-    },
-    "GivenConstraintBlock": {
+    "GivenConstraintSpec": {
       "additionalProperties": false,
       "description": "A row family this file reads the dual of and another model builds.\n\nThe frame says how many duals there are and what indexes them, which is\nwhat ``dual()`` needs. There is no ``expression:``, because nothing here\nbuilds a row.",
       "properties": {
@@ -362,12 +395,12 @@
       "required": [
         "dims"
       ],
-      "title": "GivenConstraintBlock",
+      "title": "GivenConstraintSpec",
       "type": "object"
     },
-    "GivenExpressionBlock": {
+    "GivenExpressionSpec": {
       "additionalProperties": false,
-      "description": "A named expression this file reads and another file defines.\n\nThe frame is all this file states. This file reads the name as a quantity\nover that frame, affine in the columns, as it reads a given variable: the\nbody is the definer's, and the composed spec holds the body to the rules\nof every place this file reads it.\n\nA named expression of this file may add to the name with ``adds_to:``.\n[`merge`][mathspec.composition.merge] then writes every term the files\nadd after the body a file defines, or as the whole body where no file\ndefines it. The file itself reads the name as the whole sum, alone and\ncomposed.",
+      "description": "A named expression this file reads and another file defines.\n\nThe frame is all this file states. This file reads the name as a quantity\nover that frame, affine in the columns, as it reads a given variable: the\nbody is the definer's, and the composed spec holds the body to the rules\nof every place this file reads it.\n\nA named expression of this file may add to the name with ``adds_to:``.\n[`merge`][mathspec.merge] then writes every term the files\nadd after the body a file defines, or as the whole body where no file\ndefines it. The file itself reads the name as the whole sum, alone and\ncomposed.",
       "properties": {
         "description": {
           "anyOf": [
@@ -392,42 +425,12 @@
       "required": [
         "dims"
       ],
-      "title": "GivenExpressionBlock",
+      "title": "GivenExpressionSpec",
       "type": "object"
     },
-    "GivenMaskBlock": {
+    "GivenParameterSpec": {
       "additionalProperties": false,
-      "description": "A mask this file reads and another file defines.\n\nThe frame is all this file states, and it names the dims the definer's\npredicate reads. A where reads the name as data over that frame, true or false at each coordinate, since a mask reads nothing\na solve decides: the predicate is the definer's.",
-      "properties": {
-        "description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Description"
-        },
-        "dims": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Dims",
-          "type": "array"
-        }
-      },
-      "required": [
-        "dims"
-      ],
-      "title": "GivenMaskBlock",
-      "type": "object"
-    },
-    "GivenParameterBlock": {
-      "additionalProperties": false,
-      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterBlock`][], which are what\nthis file reads: a where compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
+      "description": "Data this file reads and another file declares.\n\nIt says the frame and the dtype of a [`ParameterSpec`][], which are what\nthis file reads: a condition compares against the dtype, and the dim rules read\nthe frame. What a missing row means is the declaring file's ``missing:``.",
       "properties": {
         "description": {
           "anyOf": [
@@ -463,10 +466,58 @@
       "required": [
         "dims"
       ],
-      "title": "GivenParameterBlock",
+      "title": "GivenParameterSpec",
       "type": "object"
     },
-    "GivenVariableBlock": {
+    "GivenSpec": {
+      "additionalProperties": false,
+      "description": "What this file reads and does not build, by kind. Closed at the five kinds.",
+      "properties": {
+        "conditions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenConditionSpec"
+          },
+          "default": {},
+          "title": "Conditions",
+          "type": "object"
+        },
+        "constraints": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenConstraintSpec"
+          },
+          "default": {},
+          "title": "Constraints",
+          "type": "object"
+        },
+        "expressions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenExpressionSpec"
+          },
+          "default": {},
+          "title": "Expressions",
+          "type": "object"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenParameterSpec"
+          },
+          "default": {},
+          "title": "Parameters",
+          "type": "object"
+        },
+        "variables": {
+          "additionalProperties": {
+            "$ref": "#/$defs/GivenVariableSpec"
+          },
+          "default": {},
+          "title": "Variables",
+          "type": "object"
+        }
+      },
+      "title": "GivenSpec",
+      "type": "object"
+    },
+    "GivenVariableSpec": {
       "additionalProperties": false,
       "description": "A column this file reads and another file introduces.\n\nThe frame and the domain are all this file states. The file that introduces\nthe column owns its bounds and its mask.",
       "properties": {
@@ -503,10 +554,10 @@
       "required": [
         "dims"
       ],
-      "title": "GivenVariableBlock",
+      "title": "GivenVariableSpec",
       "type": "object"
     },
-    "MacroBlock": {
+    "MacroSpec": {
       "additionalProperties": false,
       "description": "A parameterised expression template, defined in the YAML itself.\n\nLanguage, not code: formals (``args`` positional, ``kwargs`` keyword)\nshadow the spec's names inside the template, and every call site expands in\nthe syntax tree before resolution reads the expression.",
       "properties": {
@@ -546,44 +597,10 @@
       "required": [
         "template"
       ],
-      "title": "MacroBlock",
+      "title": "MacroSpec",
       "type": "object"
     },
-    "MaskBlock": {
-      "anyOf": [
-        {
-          "additionalProperties": false,
-          "description": "A named predicate: one where string, read wherever a ``where:``, a ``when:`` or a ``holds:`` names it.\n\nWritten in YAML as a bare where string, or as a mapping once it carries a\n``description:``, and serialised back to whichever form it was written in::\n\n    masks:\n      committable: \"Generator_committable AND Generator_active\"\n      stands:\n        where: build_year <= period_year AND period_year < build_year + lifetime\n        description: the generator stands in this period\n\nA bare mask name in a where string stands for its predicate, inside\n``count``, ``shift`` and ``at`` too. The mask's frame is the dims its\npredicate reads, so it declares none. A mask is a predicate, so it is\nnever a value in an expression.",
-          "properties": {
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Description"
-            },
-            "where": {
-              "title": "Where",
-              "type": "string"
-            }
-          },
-          "required": [
-            "where"
-          ],
-          "title": "MaskBlock",
-          "type": "object"
-        },
-        {
-          "type": "string"
-        }
-      ]
-    },
-    "ObjectiveBlock": {
+    "ObjectiveSpec": {
       "additionalProperties": false,
       "description": "A declared objective function.",
       "properties": {
@@ -616,12 +633,12 @@
       "required": [
         "expression"
       ],
-      "title": "ObjectiveBlock",
+      "title": "ObjectiveSpec",
       "type": "object"
     },
-    "ParameterBlock": {
+    "ParameterSpec": {
       "additionalProperties": false,
-      "description": "A declared parameter with dims and dtype, and what a missing row of its data means.",
+      "description": "A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means.",
       "properties": {
         "description": {
           "anyOf": [
@@ -658,8 +675,7 @@
             {
               "enum": [
                 "refused",
-                "absent",
-                "neutral"
+                "absent"
               ]
             },
             {
@@ -677,15 +693,69 @@
           ],
           "default": "refused",
           "title": "Missing"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Where"
         }
       },
       "required": [
         "dims"
       ],
-      "title": "ParameterBlock",
+      "title": "ParameterSpec",
       "type": "object"
     },
-    "PiecewiseBlock": {
+    "PiecewiseLinkSpec": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "description": "One link of a piecewise entry: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n[`Spec.to_yaml`][] reproduces the file.",
+          "properties": {
+            "expression": {
+              "title": "Expression",
+              "type": "string"
+            },
+            "sign": {
+              "default": "==",
+              "enum": [
+                "<=",
+                ">=",
+                "=="
+              ],
+              "title": "Sign",
+              "type": "string"
+            },
+            "values": {
+              "title": "Values",
+              "type": "string"
+            }
+          },
+          "required": [
+            "expression",
+            "values"
+          ],
+          "title": "PiecewiseLinkSpec",
+          "type": "object"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "type": "array"
+        }
+      ]
+    },
+    "PiecewiseSpec": {
       "additionalProperties": false,
       "description": "N expressions jointly pinned to a breakpoint-indexed piecewise curve.\n\nMirrors ``linopy.Spec.add_piecewise_formulation``. Each link is\n``[expression, values_parameter]`` or ``[expression, values_parameter,\nsign]``: *expression* is any affine expression string, *values_parameter*\nnames a parameter carrying the ``over`` dim, and *sign* bounds the link by\nthe curve instead of pinning it (at most one non-``\"==\"``, and only with\nexactly two links).",
       "properties": {
@@ -715,7 +785,7 @@
         },
         "links": {
           "items": {
-            "$ref": "#/$defs/PiecewiseLink"
+            "$ref": "#/$defs/PiecewiseLinkSpec"
           },
           "title": "Links",
           "type": "array"
@@ -752,54 +822,12 @@
         "over",
         "links"
       ],
-      "title": "PiecewiseBlock",
+      "title": "PiecewiseSpec",
       "type": "object"
     },
-    "PiecewiseLink": {
-      "anyOf": [
-        {
-          "additionalProperties": false,
-          "description": "One link of a piecewise block: an expression pinned to a values curve.\n\nWritten in YAML as ``[expression, values]`` or ``[expression, values,\nsign]`` and serialised back to exactly that form, so a round trip through\n[`Spec.to_yaml`][] reproduces the file.",
-          "properties": {
-            "expression": {
-              "title": "Expression",
-              "type": "string"
-            },
-            "sign": {
-              "default": "==",
-              "enum": [
-                "<=",
-                ">=",
-                "=="
-              ],
-              "title": "Sign",
-              "type": "string"
-            },
-            "values": {
-              "title": "Values",
-              "type": "string"
-            }
-          },
-          "required": [
-            "expression",
-            "values"
-          ],
-          "title": "PiecewiseLink",
-          "type": "object"
-        },
-        {
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 3,
-          "minItems": 2,
-          "type": "array"
-        }
-      ]
-    },
-    "RelationBlock": {
+    "RelationSpec": {
       "additionalProperties": false,
-      "description": "A named relation between dimensions: the columns a row is keyed by, and the columns that key determines.\n\nEach side is a dimension, a list of them, or a mapping of column name to\ndimension where two columns share one. ``key:`` is the claim the language\nchecks when the data is attached: one row per key tuple, so every ``values:`` column is a\nfunction of it. A relation with no ``values:`` is **bare** \u2014 every column is\nin its key, a row is its own identity, and nothing reads it::\n\n    relations:\n      gen_bus: {key: generator, values: bus}\n      gen_bt: {key: [generator], values: [bus, technology]}\n      zone_of: {key: [generator, period], values: zone}\n      ends: {key: line, values: {bus0: bus, bus1: bus}}\n      connection: {key: [generator, bus]}\n\nA sum joins the table on the columns ``over=`` names and every other key\ncolumn, and groups by the columns ``by=relation[...]`` names; a lookup\njoins on the columns it names. The declaration fixes no direction, and a\ncolumn is named after its own dimension or after none, so a name in a\ncall reads the same as a column and as a dimension. The map itself is data, and arrives with the rest of it, under\nthe relation's name, one column per role.",
+      "description": "A named relation between dimensions: the columns a row is keyed by, and the columns that key determines.\n\nEach side is a dimension, a list of them, or a mapping of column name to\ndimension where two columns share one. ``key:`` is the claim the language\nchecks when the data is attached: one row per key tuple, so every ``values:`` column is a\nfunction of it. A relation with no ``values:`` is **bare** \u2014 every column is\nin its key, a row is its own identity, and nothing reads it::\n\n    relations:\n      gen_bus: {key: generator, values: bus}\n      gen_bt: {key: [generator], values: [bus, technology]}\n      zone_of: {key: [generator, period], values: zone}\n      ends: {key: line, values: {bus0: bus, bus1: bus}}\n      connection: {key: [generator, bus]}\n\nA sum joins the table on the columns ``over=`` names and every other key\ncolumn, and groups by the columns ``by=relation[...]`` names. A lookup\njoins on the columns it names. The entry fixes no direction. A\ncolumn is named after its own dimension or after none, so a name in a\ncall reads the same as a column and as a dimension. The map itself is\ndata, and arrives with the rest of it, under the relation's name, one\ncolumn per role.",
       "properties": {
         "description": {
           "anyOf": [
@@ -839,7 +867,8 @@
             "refused",
             "absent"
           ],
-          "title": "Missing"
+          "title": "Missing",
+          "type": "string"
         },
         "values": {
           "anyOf": [
@@ -869,10 +898,10 @@
       "required": [
         "key"
       ],
-      "title": "RelationBlock",
+      "title": "RelationSpec",
       "type": "object"
     },
-    "SosBlock": {
+    "SosSpec": {
       "additionalProperties": false,
       "description": "A special-ordered set over one dimension of one variable.\n\nOne set per coordinate of the variable's ``dims`` minus ``along``; the\nmembers are the variable's *existing* coordinates along ``along``, in that\ndimension's declared order.\n\n``type: 1`` admits at most one nonzero member, ``type: 2`` at most two,\nand those two consecutive. A consumer with the concept takes the set as\none; [`Spec.expand`][] states it as binaries instead, and the rows it\nwrites multiply by the member's own ``bounds``, which is why a member\nneeds both.",
       "properties": {
@@ -910,15 +939,15 @@
         "along",
         "type"
       ],
-      "title": "SosBlock",
+      "title": "SosSpec",
       "type": "object"
     },
-    "VariableBlock": {
+    "VariableSpec": {
       "additionalProperties": false,
       "description": "A declared decision variable.",
       "properties": {
         "bounds": {
-          "$ref": "#/$defs/BoundsBlock",
+          "$ref": "#/$defs/BoundsSpec",
           "default": {
             "lower": null,
             "upper": null
@@ -954,13 +983,18 @@
           "type": "string"
         },
         "missing": {
-          "default": "absent",
-          "enum": [
-            "absent",
-            "neutral"
+          "anyOf": [
+            {
+              "enum": [
+                "absent"
+              ]
+            },
+            {
+              "type": "number"
+            }
           ],
-          "title": "Missing",
-          "type": "string"
+          "default": "absent",
+          "title": "Missing"
         },
         "where": {
           "anyOf": [
@@ -978,25 +1012,33 @@
       "required": [
         "dims"
       ],
-      "title": "VariableBlock",
+      "title": "VariableSpec",
       "type": "object"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "The declared math \u2014 one YAML file, or one dict, validated. Nothing here has seen data.\n\nA ``Spec`` that exists has passed the whole language: constructing one by\nany route \u2014 ``to_spec``, [`model_validate`][], the constructor \u2014 runs\nevery load-time check, expression pass included, and raises\n[`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.\nHolding one is the proof, so nothing downstream checks it again.\n\nThe API is the thirteen declaration sections plus ``version`` and\n``description``, three ways back out \u2014 [`to_dict`][] for the spec as\ndata, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the\nspec with its formulations written out as plain rows \u2014 and [`program`][], the\nspec typed, which every reader after load walks. Everything else on this\nclass is pydantic's, not a contract this package keeps.",
+  "description": "The declared math \u2014 one YAML file, or one dict, validated. Nothing here has seen data.\n\nA ``Spec`` that exists has passed the whole language: constructing one by\nany route \u2014 ``to_spec``, [`model_validate`][], the constructor \u2014 runs\nevery load-time check, expression pass included, and raises\n[`LanguageError`][mathspec.errors.LanguageError] on a spec the language refuses.\nHolding one is the proof, so nothing downstream checks it again.\n\nThe API is the thirteen sections plus ``version`` and\n``description``, three ways back out \u2014 [`to_dict`][] for the spec as\ndata, [`to_yaml`][] for the file a reviewer reads, [`expand`][] for the\nspec with its formulations written out as plain rows \u2014 and [`program`][], the\nspec typed, which every reader after load walks. Everything else on this\nclass is pydantic's, not a contract this package keeps.",
   "properties": {
     "assumptions": {
       "additionalProperties": {
-        "$ref": "#/$defs/AssumptionBlock"
+        "$ref": "#/$defs/AssumptionSpec"
       },
       "default": {},
       "title": "Assumptions",
       "type": "object"
     },
+    "conditions": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ConditionSpec"
+      },
+      "default": {},
+      "title": "Conditions",
+      "type": "object"
+    },
     "constraints": {
       "additionalProperties": {
-        "$ref": "#/$defs/ConstraintBlock"
+        "$ref": "#/$defs/ConstraintSpec"
       },
       "default": {},
       "title": "Constraints",
@@ -1016,7 +1058,7 @@
     },
     "dimensions": {
       "additionalProperties": {
-        "$ref": "#/$defs/DimensionBlock"
+        "$ref": "#/$defs/DimensionSpec"
       },
       "default": {},
       "title": "Dimensions",
@@ -1024,42 +1066,34 @@
     },
     "expressions": {
       "additionalProperties": {
-        "$ref": "#/$defs/ExpressionBlock"
+        "$ref": "#/$defs/ExpressionSpec"
       },
       "default": {},
       "title": "Expressions",
       "type": "object"
     },
     "given": {
-      "$ref": "#/$defs/GivenBlock",
+      "$ref": "#/$defs/GivenSpec",
       "default": {
+        "conditions": {},
         "constraints": {},
         "expressions": {},
-        "masks": {},
         "parameters": {},
         "variables": {}
       }
     },
     "macros": {
       "additionalProperties": {
-        "$ref": "#/$defs/MacroBlock"
+        "$ref": "#/$defs/MacroSpec"
       },
       "default": {},
       "title": "Macros",
       "type": "object"
     },
-    "masks": {
-      "additionalProperties": {
-        "$ref": "#/$defs/MaskBlock"
-      },
-      "default": {},
-      "title": "Masks",
-      "type": "object"
-    },
     "objective": {
       "anyOf": [
         {
-          "$ref": "#/$defs/ObjectiveBlock"
+          "$ref": "#/$defs/ObjectiveSpec"
         },
         {
           "type": "null"
@@ -1069,7 +1103,7 @@
     },
     "parameters": {
       "additionalProperties": {
-        "$ref": "#/$defs/ParameterBlock"
+        "$ref": "#/$defs/ParameterSpec"
       },
       "default": {},
       "title": "Parameters",
@@ -1077,7 +1111,7 @@
     },
     "piecewise": {
       "additionalProperties": {
-        "$ref": "#/$defs/PiecewiseBlock"
+        "$ref": "#/$defs/PiecewiseSpec"
       },
       "default": {},
       "title": "Piecewise",
@@ -1085,7 +1119,7 @@
     },
     "relations": {
       "additionalProperties": {
-        "$ref": "#/$defs/RelationBlock"
+        "$ref": "#/$defs/RelationSpec"
       },
       "default": {},
       "title": "Relations",
@@ -1093,7 +1127,7 @@
     },
     "sos": {
       "additionalProperties": {
-        "$ref": "#/$defs/SosBlock"
+        "$ref": "#/$defs/SosSpec"
       },
       "default": {},
       "title": "Sos",
@@ -1101,7 +1135,7 @@
     },
     "variables": {
       "additionalProperties": {
-        "$ref": "#/$defs/VariableBlock"
+        "$ref": "#/$defs/VariableSpec"
       },
       "default": {},
       "title": "Variables",

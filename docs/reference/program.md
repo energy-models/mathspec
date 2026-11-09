@@ -5,9 +5,11 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Program API
 
-This page documents every name that `mathspec.program` exports: the
-declarations, the expression and predicate nodes, the reports a program
-answers, and the `Advice` that [`advice`](api.md#mathspec.advice) returns. [Reading a spec and its program](reading.md) says how they fit together.
+`mathspec.program` contains what a file means. It has the typed entries, the
+expression and condition nodes, and the reports that a program has. It also has
+each warning that [`advice`](api.md#mathspec.advice) returns (an
+[`Advice`](glossary.md#advice)). This page lists every name that the module exports,
+in alphabetical order.
 
 <!-- prettier-ignore-start -->
 
@@ -19,3 +21,8 @@ answers, and the `Advice` that [`advice`](api.md#mathspec.advice) returns. [Read
       members_order: alphabetical
 
 <!-- prettier-ignore-end -->
+
+!!! info "See also"
+
+    - [reading a spec and its program](reading.md), for how a tool reads a program
+    - [Spec API](spec.md), for the file as written

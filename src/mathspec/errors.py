@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from pydantic import ValidationError
 
 
-#: What ``mathspec.errors`` promises a consumer.
 __all__ = ['DimensionError', 'LanguageError', 'MathSpecError', 'SchemaError', 'did_you_mean']
 
 
@@ -48,7 +47,7 @@ def unordered(context: str, construct: str, dimension: str) -> str:
     """The refusal for *construct* reading the order of *dimension*, which is not declared ordered."""
     return (
         f"{context}: {construct} reads the order of '{dimension}', which is not declared ordered, so the "
-        f'order it read would be the row order of the data. Declare the order part of the model with '
+        f'order would come from the row order of the data. Declare '
         f"'{dimension}: {{ordered: true}}' under dimensions:."
     )
 
@@ -84,7 +83,7 @@ def case_context(name: str, label: str | None) -> str:
 
     Args:
         name: The named expression the arm belongs to.
-        label: The case's name, or ``None`` for the block's ``otherwise:``.
+        label: The case's name, or ``None`` for the entry's ``otherwise:``.
     """
     where = 'otherwise' if label is None else f"case '{label}'"
     return f"Named expression '{name}', {where}"

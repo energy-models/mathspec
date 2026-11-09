@@ -19,7 +19,7 @@ import re
 import textwrap
 
 from mathspec import to_spec
-from mathspec.typesetting import to_markdown
+from mathspec._typesetting import to_markdown
 from tools._page import ROOT, splice
 from tools._page import main as page_main
 

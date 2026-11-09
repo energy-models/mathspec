@@ -5,7 +5,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Transformers
 
-One of the [24 fragments](index.md) of `examples/pypsa.yaml`: PyPSA's `Transformer`. It adds a term to `total_cost`, `Bus_injection`, `Cycle_angle_sum`. It reads `scenario_weight`, `transmission_losses` under [`given`](../../reference/language/declarations.md#given).
+This file states PyPSA's `Transformer`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to each of these sums: `total_cost`, `Bus_injection` and `Cycle_angle_sum`. `Transformer_v_ang_var_lower` and `Transformer_v_ang_var_upper` limit the angle of a transformer whose phase shift is a decision.
 
 <!-- gallery:begin -->
 ```yaml
@@ -31,18 +31,18 @@ dimensions:
     description: passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised
   cycle:
     description: >-
-      independent cycles of the passive network graph — the cycle basis, data
-      prep. Each period has its own basis, of the branches that stand in it;
-      a label is a position in that period's basis, so one label names a
-      different cycle in another period
+      independent cycles of the passive network graph, the cycle basis, data
+      prep. Each period has its own basis, of the branches that are active in it. A
+      label is a position in that period's basis, so one label is a different
+      cycle in another period
   segment:
     description: >-
-      the cuts a passive branch's loss curve is held above — PyPSA's tangents,
-      as many as its `segments` count, or its secants, as many as its tolerance
-      loop places; none in a lossless run
+      the cuts a passive branch's loss curve is held above. They are PyPSA's
+      tangents, as many as its `segments` count, or its secants, as many as
+      its tolerance loop places. A lossless run has none
     dtype: int
   period:
-    description: investment periods — PyPSA's `investment_periods`
+    description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
 
@@ -62,11 +62,19 @@ relations:
 
 parameters:
   Transformer_active:
-    description: whether a transformer stands in a snapshot's period — PyPSA's `active`, data prep
+    description: whether a transformer is active in a snapshot's period. It is PyPSA's `active`, data prep
     dims: [snapshot, transformer]
     dtype: bool
+  Transformer_active_asset:
+    description: >-
+      whether a transformer is one of PyPSA's `active_assets`, by its `active`
+      flag alone, without build year and lifetime. A unit that is active in no
+      snapshot of the horizon still counts. PyPSA refuses one that differs by
+      scenario (`constants.py:54`)
+    dims: [transformer]
+    dtype: bool
   Transformer_capital_weight:
-    description: the sum of period weights a transformer stands in — PyPSA's `active * period_weighting`, summed, data prep
+    description: the sum of period weights a transformer is active in. It is PyPSA's `active * period_weighting`, summed, data prep
     dims: [transformer]
   Transformer_s_nom:
     description: nominal apparent power
@@ -76,9 +84,9 @@ parameters:
     dims: [transformer]
     dtype: bool
   Transformer_s_nom_mod:
-    description: the module size a build comes in whole numbers of; no value means the build is continuous
+    description: the module size a build comes in whole numbers of. No value means the build is continuous
     dims: [transformer]
-    missing: neutral
+    missing: absent
   Transformer_s_max_pu:
     description: most flow either way, per unit of nominal apparent power
     dims: [scenario, snapshot, transformer]
@@ -90,98 +98,101 @@ parameters:
     dims: [scenario, transformer]
   Transformer_capital_cost:
     description: >-
-      cost of one unit of nominal apparent power for the modelled horizon —
-      PyPSA's `periodized_cost`: `overnight_cost` as an annuity over
-      `lifetime` at `discount_rate`, times `nyears`, where it is given, and
-      `capital_cost` where it is not, plus `fom_cost`
-      (`components.py:1126-1147`, `costs.py:102-203`), data prep
+      cost of one unit of nominal apparent power for the modelled horizon
+      (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
+      annuity over `lifetime` at `discount_rate`, times `nyears`, where
+      `overnight_cost` is given, and `capital_cost` where it is not. Both add
+      `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`)
     dims: [scenario, transformer]
   Transformer_s_nom_set:
-    description: a given nominal apparent power for an extendable transformer; one without a value has no row here
+    description: a given nominal apparent power for an extendable transformer. One without a value has no row here
     dims: [transformer]
-    missing: neutral
+    missing: absent
   Transformer_s_set:
-    description: a given flow schedule; a transformer without one has no row here
+    description: a given flow schedule. A transformer without one has no row here
     dims: [scenario, snapshot, transformer]
-    missing: neutral
+    missing: absent
   Transformer_v_ang_max:
     description: >-
       the most the voltage angle difference across a transformer, its phase
-      shift included, may be either way, in degrees — PyPSA's `v_ang_max`;
-      infinite, and so no row, by default. The deprecated `v_ang_min` is
-      ignored, as a line's
+      shift included, may be either way, in degrees. It is PyPSA's
+      `v_ang_max`. Infinite, and so no row, by default. The deprecated
+      `v_ang_min` is ignored, as a line's
     dims: [scenario, transformer]
-    missing: neutral
+    missing: absent
   Transformer_x_pu_eff:
     description: >-
-      the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x`
-      over its `s_nom` times its tap ratio, data prep
+      the transformer's effective series reactance. It is PyPSA's `x_pu_eff`,
+      `x` over its `s_nom` times its tap ratio, data prep
     dims: [scenario, transformer]
   Transformer_cycle_weight:
     description: >-
       the transformer's effective series reactance, `x` times its tap ratio,
-      signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle
-      basis, data prep; a transformer in no cycle has no row. From the first
-      scenario only, as a line's
+      signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the
+      cycle basis, data prep. A transformer in no cycle has no row. It is the
+      same in every scenario, as a line's
     dims: [period, transformer, cycle]
-    missing: neutral
+    missing: absent
   Transformer_phase_shift_weight:
     description: >-
       a fixed transformer's phase shift in radians at each snapshot, signed by
-      its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a
-      varying transformer, whose shift is a decision instead, so the constant and
-      the variable term never both count a shift. A transformer with no shift or
-      in no cycle of its snapshot's period has no row
+      its orientation in the cycle, data prep. It is a constant added to the
+      cycle sum. It is zero for a varying transformer, whose shift is a
+      decision instead. The constant and the variable term thus never both
+      count a shift. A transformer with no shift or in no cycle of its
+      snapshot's period has no row
     dims: [snapshot, transformer, cycle]
-    missing: neutral
+    missing: absent
   Transformer_phase_shift_varying:
     description: >-
-      whether a transformer's phase shift is a decision — PyPSA's
-      `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a
-      fixed shift carried by `phase_shift`. The shift parameters carry no
-      scenario, while PyPSA reads them per scenario (`variables.py:433-443`,
-      `constraints.py:1652`, `:1735`): a parity gap (#783)
+      whether a transformer's phase shift is a decision (PyPSA's
+      `phase_shift_min < phase_shift_max`, read as a flag in data prep). False
+      is a fixed shift, set by `phase_shift`. The shift parameters have no
+      scenario, but PyPSA reads them per scenario (`variables.py:432-442`,
+      `constraints.py:1660`, `:1743`). The spec and PyPSA differ here (#783)
     dims: [transformer]
     dtype: bool
   Transformer_phase_shift_min:
     description: >-
-      the least a varying transformer's phase shift may take, in degrees —
-      PyPSA's `phase_shift_min`; where it is below `phase_shift_max` the shift is
-      a decision, otherwise the transformer keeps its fixed `phase_shift`
+      the least a varying transformer's phase shift may take, in degrees. It
+      is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the
+      shift is a decision, otherwise the transformer keeps its fixed
+      `phase_shift`
     dims: [transformer]
   Transformer_phase_shift_max:
     description: >-
-      the most a varying transformer's phase shift may take, in degrees —
-      PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer
+      the most a varying transformer's phase shift may take, in degrees. It is
+      PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed
+      transformer
     dims: [transformer]
   Transformer_phase_shift_fixed:
     description: >-
-      a fixed transformer's phase shift at each snapshot, in degrees — PyPSA's
-      `phase_shift`, zero by default; a varying transformer's shift is a
-      decision instead
+      a fixed transformer's phase shift at each snapshot, in degrees. It is
+      PyPSA's `phase_shift`, zero by default. A varying transformer's shift is
+      a decision instead
     dims: [snapshot, transformer]
   Transformer_phase_shift_cycle_weight:
     description: >-
       the cycle sign for a varying transformer's phase shift, times π/180 so a
-      shift in degrees enters the cycle sum in radians — data prep; zero for a
-      fixed transformer or one in no cycle
+      shift in degrees enters the cycle sum in radians, data prep. It is zero
+      for a fixed transformer or one in no cycle
     dims: [period, transformer, cycle]
   Transformer_loss_max:
     description: >-
-      the loss at a transformer's rating — PyPSA's `r_pu_eff * (s_max_pu *
-      s_nom_max)**2`, its `r_pu_eff` the resistance over the given `s_nom` times
-      the tap ratio, data prep
+      the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu *
+      s_nom_max)**2`), data prep. Its `r_pu_eff` is the resistance over the
+      given `s_nom` times the tap ratio
     dims: [scenario, snapshot, transformer]
   Transformer_loss_slope:
     description: >-
-      the slope of a cut to a transformer's loss curve — a tangent's
-      `2 * r_pu_eff * p_k`, a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's,
-      over the transformer's own `r_pu_eff` and rating, data prep
+      the slope of a cut to a transformer's loss curve, data prep. It is a
+      tangent's `2 * r_pu_eff * p_k` or a secant's `r_pu_eff * (p_k + p_k+1)`,
+      as a line's. It uses the transformer's own `r_pu_eff` and rating
     dims: [scenario, snapshot, transformer, segment]
   Transformer_loss_offset:
     description: >-
-      where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`,
-      a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep
+      where that cut meets the loss axis: a tangent's `loss_k - slope_k *
+      p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep
     dims: [scenario, snapshot, transformer, segment]
 
 variables:
@@ -195,35 +206,36 @@ variables:
   Transformer_loss:
     description: >-
       `Transformer-loss` — what a transformer dissipates carrying its flow, as
-      a line does; absent, and zero in the balance, where the network is
+      a line does. Absent, and zero in the balance, where the network is
       lossless
     dims: [scenario, snapshot, transformer]
     where: Transformer_lossy
-    missing: neutral
+    missing: 0
     bounds:
       lower: 0
   Transformer_phase_shift:
     description: >-
       `Transformer-phase_shift` — a phase-shifting transformer's voltage angle
-      shift in degrees, chosen per snapshot to redistribute the flows around its
-      cycles without moving active power; absent, and zero in the cycle sum,
-      where the shift is fixed
+      shift in degrees, chosen per snapshot to redistribute the flows around
+      its cycles without moving active power. Absent, and zero in the cycle
+      sum, where the shift is fixed
     dims: [scenario, snapshot, transformer]
     where: Transformer_phase_shift_varying AND Transformer_active
-    missing: neutral
+    missing: 0
     bounds:
       lower: Transformer_phase_shift_min
       upper: Transformer_phase_shift_max
   Transformer_s_nom_ext:
     description: >-
-      `Transformer-s_nom` — nominal apparent power where it is a decision; the
-      parameter of the same PyPSA name carries the fixed regime
+      `Transformer-s_nom` — nominal apparent power where it is a decision, for
+      a transformer that is active. A fixed build is the parameter of the same
+      PyPSA name
     dims: [transformer]
-    where: Transformer_s_nom_extendable
+    where: Transformer_s_nom_extendable AND Transformer_active_asset
   Transformer_n_mod:
-    description: "`Transformer-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot"
+    description: "`Transformer-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND count(Transformer_active, over=snapshot) > 0
+    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
     domain: integer
     bounds:
       lower: 0
@@ -252,12 +264,12 @@ expressions:
       + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
     adds_to: Cycle_angle_sum
 
-masks:
+conditions:
   Transformer_lossy:
     description: >-
-      a transformer that stands in the snapshot's period, where the run models
+      a transformer that is active in the snapshot's period, where the run models
       transmission losses
-    where: transmission_losses AND Transformer_active
+    condition: transmission_losses AND Transformer_active
 
 constraints:
   Transformer_fix_s_lower:
@@ -283,22 +295,22 @@ constraints:
   Transformer_ext_s_nom_lower:
     description: "`Transformer-ext-s_nom-lower` — the chosen build is at least its floor in every scenario"
     dims: [scenario, transformer]
-    where: Transformer_s_nom_extendable
+    where: Transformer_s_nom_extendable AND Transformer_active_asset
     expression: Transformer_s_nom_ext >= Transformer_s_nom_min
   Transformer_ext_s_nom_upper:
-    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario; a cap of infinity is no row"
+    description: "`Transformer-ext-s_nom-upper` — the chosen build is at most its cap in every scenario. A cap of infinity is no row"
     dims: [scenario, transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_max
+    where: Transformer_s_nom_extendable AND Transformer_active_asset AND Transformer_s_nom_max
     expression: Transformer_s_nom_ext <= Transformer_s_nom_max
   Transformer_s_nom_set:
     description: "`Transformer-s_nom_set` — the chosen build pinned, wherever a value is given"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_set
+    where: Transformer_s_nom_extendable AND Transformer_active_asset AND Transformer_s_nom_set
     expression: Transformer_s_nom_ext == Transformer_s_nom_set
   Transformer_s_nom_modularity:
     description: "`Transformer-s_nom_modularity` — the chosen build is a whole number of modules"
     dims: [transformer]
-    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND count(Transformer_active, over=snapshot) > 0
+    where: Transformer_s_nom_extendable AND Transformer_s_nom_mod > 0 AND Transformer_active_asset
     expression: Transformer_s_nom_ext == Transformer_s_nom_mod * Transformer_n_mod
   Transformer_s_set:
     description: "`Transformer-s_set` — flow pinned to the given schedule, wherever one is given"
@@ -308,24 +320,24 @@ constraints:
   Transformer_v_ang_lower:
     description: >-
       `Transformer-v_ang-lower` — a transformer with a fixed shift carries at
-      least the flow at which the voltage angle difference across it,
-      `x_pu_eff` times the flow plus the shift, is the negative of its limit
+      least the flow at which the voltage angle difference across it is minus
+      its limit. That difference is `x_pu_eff` times the flow plus the shift
     dims: [scenario, snapshot, transformer]
     where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
     expression: Transformer_s >= -(Transformer_v_ang_max + Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
   Transformer_v_ang_upper:
     description: >-
       `Transformer-v_ang-upper` — a transformer with a fixed shift carries at
-      most the flow at which the voltage angle difference across it, the
-      shift included, reaches its limit
+      most the flow at which the voltage angle difference across it reaches
+      its limit. That difference includes the shift
     dims: [scenario, snapshot, transformer]
     where: Transformer_v_ang_max AND NOT Transformer_phase_shift_varying AND Transformer_active
     expression: Transformer_s <= (Transformer_v_ang_max - Transformer_phase_shift_fixed) * (3.141592653589793 / 180) / Transformer_x_pu_eff
   Transformer_v_ang_var_lower:
     description: >-
       `Transformer-v_ang-var-lower` — for a transformer whose shift is a
-      decision, the flow plus the shift over `x_pu_eff` is at least the
-      negative of the limit over `x_pu_eff`
+      decision, the flow plus the shift over `x_pu_eff` is at least minus the
+      limit over `x_pu_eff`
     dims: [scenario, snapshot, transformer]
     where: Transformer_v_ang_max AND Transformer_phase_shift_varying AND Transformer_active
     expression: Transformer_s + Transformer_phase_shift * (3.141592653589793 / 180) / Transformer_x_pu_eff >= -Transformer_v_ang_max * (3.141592653589793 / 180) / Transformer_x_pu_eff
@@ -359,56 +371,6 @@ constraints:
     expression: Transformer_loss - Transformer_loss_slope * Transformer_s >= Transformer_loss_offset
 ```
 
-#### Sets
-
-| Symbol | Meaning |
-|---|---|
-| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
-| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph — the cycle basis, data prep. Each period has its own basis, of the branches that stand in it; a label is a position in that period's basis, so one label names a different cycle in another period |
-| $`\mathcal{S}`$ | index $`s`$ — `segment` — the cuts a passive branch's loss curve is held above — PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places; none in a lossless run |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods — PyPSA's `investment_periods` |
-
-#### Parameters
-
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$ — whether a transformer stands in a snapshot's period — PyPSA's `active`, data prep |
-| $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer stands in — PyPSA's `active * period_weighting`, summed, data prep |
-| $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$ — nominal apparent power |
-| $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$ — whether the nominal apparent power is a decision |
-| $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `neutral` where the data has no row — the module size a build comes in whole numbers of; no value means the build is continuous |
-| $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
-| $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
-| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
-| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon — PyPSA's `periodized_cost`: `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where it is given, and `capital_cost` where it is not, plus `fom_cost` (`components.py:1126-1147`, `costs.py:102-203`), data prep |
-| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `neutral` where the data has no row — a given nominal apparent power for an extendable transformer; one without a value has no row here |
-| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the data has no row — a given flow schedule; a transformer without one has no row here |
-| $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, `neutral` where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees — PyPSA's `v_ang_max`; infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
-| $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance — PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
-| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `neutral` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle — PyPSA's `x_pu_eff`, the cycle basis, data prep; a transformer in no cycle has no row. From the first scenario only, as a line's |
-| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$, `neutral` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle — a constant added to the cycle sum, data prep; zero for a varying transformer, whose shift is a decision instead, so the constant and the variable term never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
-| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision — PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep; false is a fixed shift carried by `phase_shift`. The shift parameters carry no scenario, while PyPSA reads them per scenario (`variables.py:433-443`, `constraints.py:1652`, `:1735`): a parity gap (\#783) |
-| $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_min`; where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
-| $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees — PyPSA's `phase_shift_max`; equal to `phase_shift_min` for a fixed transformer |
-| $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees — PyPSA's `phase_shift`, zero by default; a varying transformer's shift is a decision instead |
-| $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians — data prep; zero for a fixed transformer or one in no cycle |
-| $`\overline{\ell}^{\sigma}`$ | `Transformer_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the loss at a transformer's rating — PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, its `r_pu_eff` the resistance over the given `s_nom` times the tap ratio, data prep |
-| $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — the slope of a cut to a transformer's loss curve — a tangent's `2 * r_pu_eff * p_k`, a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's, over the transformer's own `r_pu_eff` and rating, data prep |
-| $`\mathrm{b}^{\sigma}`$ | `Transformer_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — where that cut meets the loss axis — a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
-
-#### Variables
-
-| Symbol | Meaning |
-|---|---|
-| $`\sigma`$ | `Transformer_s` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — `Transformer-s` — PyPSA's `p0`, the flow measured at the `Transformer_bus0` end: a positive value withdraws there and injects at `Transformer_bus1`, lossless |
-| $`\ell^{\sigma}`$ | `Transformer_loss` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the mask leaves it out — `Transformer-loss` — what a transformer dissipates carrying its flow, as a line does; absent, and zero in the balance, where the network is lossless |
-| $`\mathit{Transformer\_phase\_shift}`$ | `Transformer_phase_shift` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `neutral` where the mask leaves it out — `Transformer-phase_shift` — a phase-shifting transformer's voltage angle shift in degrees, chosen per snapshot to redistribute the flows around its cycles without moving active power; absent, and zero in the cycle sum, where the shift is fixed |
-| $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ — `Transformer-s_nom` — nominal apparent power where it is a decision; the parameter of the same PyPSA name carries the fixed regime |
-| $`N^{\sigma}`$ | `Transformer_n_mod` over $`\mathcal{M}`$ — `Transformer-n_mod` — how many modules of an extendable modular build; none for a build that stands in no snapshot |
-
 #### Given
 
 | Symbol | Meaning |
@@ -419,22 +381,137 @@ constraints:
 | $`\mathit{Bus\_injection}`$ | `Bus_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$, an expression this file adds `Transformer_injection` to |
 | $`\mathit{Cycle\_angle\_sum}`$ | `Cycle_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$, an expression this file adds `Transformer_angle_sum` to |
 
+#### Sets
+
+| Symbol | Meaning |
+|---|---|
+| $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$ — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
+| $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
+| $`\mathcal{S}`$ | index $`s`$ — `segment` — the cuts a passive branch's loss curve is held above. They are PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places. A lossless run has none |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+
+#### Parameters
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$ — whether a transformer is active in a snapshot's period. It is PyPSA's `active`, data prep |
+| $`\mathrm{act}^{\sigma}`$ | `Transformer_active_asset` over $`\mathcal{M}`$ — whether a transformer is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
+| $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
+| $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$ — nominal apparent power |
+| $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$ — whether the nominal apparent power is a decision |
+| $`\sigma^{\mathrm{mod}}`$ | `Transformer_s_nom_mod` over $`\mathcal{M}`$, `absent` where the data has no row — the module size a build comes in whole numbers of. No value means the build is continuous |
+| $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
+| $`\underline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_min` over $`\Xi \times \mathcal{M}`$ — least nominal apparent power an extendable transformer may be built at |
+| $`\overline{\sigma}^{\mathrm{nom}}`$ | `Transformer_s_nom_max` over $`\Xi \times \mathcal{M}`$ — most nominal apparent power an extendable transformer may be built at |
+| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1128-1149`, `costs.py:102-203`) |
+| $`\sigma^{\mathrm{nom,set}}`$ | `Transformer_s_nom_set` over $`\mathcal{M}`$, `absent` where the data has no row — a given nominal apparent power for an extendable transformer. One without a value has no row here |
+| $`\sigma^{\mathrm{set}}`$ | `Transformer_s_set` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a given flow schedule. A transformer without one has no row here |
+| $`\overline{\delta}^{\sigma}`$ | `Transformer_v_ang_max` over $`\Xi \times \mathcal{M}`$, `absent` where the data has no row — the most the voltage angle difference across a transformer, its phase shift included, may be either way, in degrees. It is PyPSA's `v_ang_max`. Infinite, and so no row, by default. The deprecated `v_ang_min` is ignored, as a line's |
+| $`\mathrm{x}^{\mathrm{eff},\sigma}`$ | `Transformer_x_pu_eff` over $`\Xi \times \mathcal{M}`$ — the transformer's effective series reactance. It is PyPSA's `x_pu_eff`, `x` over its `s_nom` times its tap ratio, data prep |
+| $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. It is the same in every scenario, as a line's |
+| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{T} \times \mathcal{M} \times \mathcal{C}`$, `absent` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
+| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. The shift parameters have no scenario, but PyPSA reads them per scenario (`variables.py:432-442`, `constraints.py:1660`, `:1743`). The spec and PyPSA differ here (\#783) |
+| $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
+| $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed transformer |
+| $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees. It is PyPSA's `phase_shift`, zero by default. A varying transformer's shift is a decision instead |
+| $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{Y} \times \mathcal{M} \times \mathcal{C}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians, data prep. It is zero for a fixed transformer or one in no cycle |
+| $`\overline{\ell}^{\sigma}`$ | `Transformer_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`), data prep. Its `r_pu_eff` is the resistance over the given `s_nom` times the tap ratio |
+| $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — the slope of a cut to a transformer's loss curve, data prep. It is a tangent's `2 * r_pu_eff * p_k` or a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's. It uses the transformer's own `r_pu_eff` and rating |
+| $`\mathrm{b}^{\sigma}`$ | `Transformer_loss_offset` over $`\Xi \times \mathcal{T} \times \mathcal{M} \times \mathcal{S}`$ — where that cut meets the loss axis: a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
+
+#### Conditions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that is active in the snapshot's period, where the run models transmission losses |
+
+#### Variables
+
+| Symbol | Meaning |
+|---|---|
+| $`\sigma`$ | `Transformer_s` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — `Transformer-s` — PyPSA's `p0`, the flow measured at the `Transformer_bus0` end: a positive value withdraws there and injects at `Transformer_bus1`, lossless |
+| $`\ell^{\sigma}`$ | `Transformer_loss` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-loss` — what a transformer dissipates carrying its flow, as a line does. Absent, and zero in the balance, where the network is lossless |
+| $`\mathit{Transformer\_phase\_shift}`$ | `Transformer_phase_shift` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-phase_shift` — a phase-shifting transformer's voltage angle shift in degrees, chosen per snapshot to redistribute the flows around its cycles without moving active power. Absent, and zero in the cycle sum, where the shift is fixed |
+| $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ — `Transformer-s_nom` — nominal apparent power where it is a decision, for a transformer that is active. A fixed build is the parameter of the same PyPSA name |
+| $`N^{\sigma}`$ | `Transformer_n_mod` over $`\mathcal{M}`$ — `Transformer-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
+
 #### Definitions
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathit{Transformer\_capex}`$ | `Transformer_capex` (scalar) |
 | $`\check{\sigma}`$ | `Transformer_s_monitored` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the flow a transformer's post-contingency rows read, as a line's |
-| $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\Xi \times \mathcal{T} \times \mathcal{N}`$ |
-| $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\Xi \times \mathcal{T} \times \mathcal{C}`$ |
+| $`\mathit{Transformer\_injection}`$ | `Transformer_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
+| $`\mathit{Transformer\_angle\_sum}`$ | `Transformer_angle_sum` over $`\mathcal{C} \times \Xi \times \mathcal{T}`$ |
 
-#### Masks
+#### Conditions
 
-| Symbol | Meaning |
-|---|---|
-| $`\mathrm{on}^{\sigma,\mathrm{lossy}}`$ | `Transformer_lossy` over $`\mathcal{T} \times \mathcal{M}`$ — a transformer that stands in the snapshot's period, where the run models transmission losses |
+**`Transformer_lossy`**
 
-Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\_phase\_shift\_varying}`$, a coordinate map, a label — and italic is what the solver chooses, such as $`\mathit{Transformer\_phase\_shift}`$. An index is italic too, being what a quantifier chooses, and a set is script.
+```math
+\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+#### Variable domains
+
+**`Transformer_s`**
+
+```math
+\sigma_{\xi,t,m} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma}_{t,m}
+```
+
+**`Transformer_loss`**
+
+```math
+\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
+```
+
+**`Transformer_phase_shift`**
+
+```math
+\mathrm{Transformer\_phase\_shift\_min}_{m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+```
+
+**`Transformer_s_nom_ext`**
+
+```math
+\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
+```
+
+**`Transformer_n_mod`**
+
+```math
+N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
+```
+
+#### Definitions
+
+**`Transformer_capex`**
+
+```math
+\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
+```
+
+**`Transformer_s_monitored`**
+
+```math
+\check{\sigma}_{\xi,t,m} = \begin{cases} \sigma_{\xi,t,m} & \text{if } \mathrm{on}^{\sigma}_{t,m} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M}
+```
+
+**`Transformer_injection`**
+
+```math
+\mathit{Transformer\_injection}_{n,\xi,t} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`Transformer_angle_sum`**
+
+```math
+\mathit{Transformer\_angle\_sum}_{c,\xi,t} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{\mathrm{snapshot\_period}(t),m,c} + \sum_{m \in \mathcal{M}} \vartheta_{t,m,c} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{\mathrm{snapshot\_period}(t),m,c} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
 
 #### Subject to
 
@@ -465,25 +542,25 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 **`Transformer_ext_s_nom_lower`**
 
 ```math
-\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m}
+\Sigma_{m} \ge \underline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m}
 ```
 
 **`Transformer_ext_s_nom_upper`**
 
 ```math
-\Sigma_{m} \le \overline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \overline{\sigma}^{\mathrm{nom}}_{\xi,m} \text{ is defined}
+\Sigma_{m} \le \overline{\sigma}^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m} \wedge \overline{\sigma}^{\mathrm{nom}}_{\xi,m} \text{ is defined}
 ```
 
 **`Transformer_s_nom_set`**
 
 ```math
-\Sigma_{m} = \sigma^{\mathrm{nom,set}}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{nom,set}}_{m} \text{ is defined}
+\Sigma_{m} = \sigma^{\mathrm{nom,set}}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \mathrm{act}^{\sigma}_{m} \wedge \sigma^{\mathrm{nom,set}}_{m} \text{ is defined}
 ```
 
 **`Transformer_s_nom_modularity`**
 
 ```math
-\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{\sigma}_{t,m} \} \rvert > 0
+\Sigma_{m} = \sigma^{\mathrm{mod}}_{m} \cdot N^{\sigma}_{m} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \mathrm{act}^{\sigma}_{m}
 ```
 
 **`Transformer_s_set`**
@@ -533,70 +610,9 @@ Upright is what the data supplies — a parameter such as $`\mathrm{Transformer\
 ```math
 \ell^{\sigma}_{\xi,t,m} - \mathrm{a}^{\sigma}_{\xi,t,m,s} \cdot \sigma_{\xi,t,m} \ge \mathrm{b}^{\sigma}_{\xi,t,m,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M},\ s \in \mathcal{S} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
 ```
-
-#### Definitions
-
-**`Transformer_capex`**
-
-```math
-\mathit{Transformer\_capex} = \sum_{\xi \in \Xi,\ m \in \mathcal{M}} \pi_{\xi} \cdot \Sigma_{m} \cdot \mathrm{c}^{\mathrm{cap},\sigma}_{\xi,m} \cdot \mathrm{W}^{\sigma}_{m}
-```
-
-**`Transformer_s_monitored`**
-
-```math
-\check{\sigma}_{\xi,t,m} = \begin{cases} \sigma_{\xi,t,m} & \text{if } \mathrm{on}^{\sigma}_{t,m} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M}
-```
-
-**`Transformer_injection`**
-
-```math
-\mathit{Transformer\_injection}_{\xi,t,n} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ n \in \mathcal{N}
-```
-
-**`Transformer_angle_sum`**
-
-```math
-\mathit{Transformer\_angle\_sum}_{\xi,t,c} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{\mathrm{snapshot\_period}(t),m,c} + \sum_{m \in \mathcal{M}} \vartheta_{t,m,c} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{\mathrm{snapshot\_period}(t),m,c} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ c \in \mathcal{C}
-```
-
-#### Masks
-
-**`Transformer_lossy`**
-
-```math
-\mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m} \iff \mathrm{lossy} \wedge \mathrm{on}^{\sigma}_{t,m} \qquad \forall\, t \in \mathcal{T},\ m \in \mathcal{M}
-```
-
-#### Variable domains
-
-**`Transformer_s`**
-
-```math
-\sigma_{\xi,t,m} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma}_{t,m}
-```
-
-**`Transformer_loss`**
-
-```math
-\ell^{\sigma}_{\xi,t,m} \ge 0 \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{on}^{\sigma,\mathrm{lossy}}_{t,m}
-```
-
-**`Transformer_phase_shift`**
-
-```math
-\mathrm{Transformer\_phase\_shift\_min}_{m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
-```
-
-**`Transformer_s_nom_ext`**
-
-```math
-\Sigma_{m} \in \mathbb{R} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m}
-```
-
-**`Transformer_n_mod`**
-
-```math
-N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \sigma^{\mathrm{mod}}_{m} > 0 \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{\sigma}_{t,m} \} \rvert > 0
-```
 <!-- gallery:end -->
+
+!!! info "See also"
+
+    - [PyPSA in 25 files](index.md), for how the fragments compose
+    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung

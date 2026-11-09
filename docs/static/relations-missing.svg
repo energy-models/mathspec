@@ -1,0 +1,73 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 146" width="760" height="146" style="max-width: 100%; height: auto" role="img" aria-labelledby="rlm-t rlm-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="rlm-t">A relation with missing absent is absent at a key with no row</title>
+  <desc id="rlm-d">The dimension line has three labels: l1, l2 and l3. The relation line_to, declared with missing absent, maps each line to its bus. Its data has a row for l1 at bus north and a row for l2 at bus south, and no row for l3. At l3 the relation line_to is absent.</desc>
+  <defs>
+    <pattern id="rlm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="rlm-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g transform="translate(0,-60)">
+  <g stroke="none">
+    <path d="M16,118 H176 V175 A3,3 0 0 1 173,178 H19 A3,3 0 0 1 16,175 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,118 V99 A3,3 0 0 1 19,96 H173 A3,3 0 0 1 176,99 V118 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M324,118 H574 V157 A3,3 0 0 1 571,160 H327 A3,3 0 0 1 324,157 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M324,118 V99 A3,3 0 0 1 327,96 H571 A3,3 0 0 1 574,99 V118 Z" fill="#0072B2" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <text x="16" y="86" font-weight="bold">line</text>
+    <text x="50" y="86" fill-opacity="0.7">a dimension</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="110" font-weight="bold">line</text>
+      <text x="24" y="134">l1</text>
+      <text x="24" y="152">l2</text>
+      <text x="24" y="170">l3</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="96" width="160" height="82" rx="3"/>
+    <line x1="16" y1="118" x2="176" y2="118"/>
+    <rect x="17" y="157" width="158" height="20" fill="url(#rlm-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#rlm-arrow)">
+    <path d="M186,140 L312,140"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="198" y="128" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">line_to</text>
+    <text x="198" y="158" fill-opacity="0.7">maps each line</text>
+    <text x="198" y="173" fill-opacity="0.7">to its bus</text>
+  </g>
+  <g fill="currentColor">
+    <text x="324" y="86" font-weight="bold">line_to</text>
+    <text x="378" y="86" fill-opacity="0.7">a relation</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="332" y="110" font-weight="bold">line</text>
+      <text x="418" y="110" font-weight="bold">bus</text>
+      <text x="332" y="134">l1</text><text x="418" y="134">north</text>
+      <text x="332" y="152">l2</text><text x="418" y="152">south</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="324" y="96" width="250" height="64" rx="3"/>
+    <line x1="324" y1="118" x2="574" y2="118"/>
+    <rect x="324" y="164" width="250" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="332" y="180" fill-opacity="0.7" font-style="italic">no row for l3: line_to is absent</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="600" y="102" width="14" height="14" fill="url(#rlm-hatch)"/>
+    <rect x="600" y="126" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="620" y="113">no row in line_to</text>
+    <text x="620" y="137">absent: no row</text>
+  </g>
+  </g>
+</svg>

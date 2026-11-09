@@ -1,0 +1,79 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 254" width="760" height="254" style="max-width: 100%; height: auto" role="img" aria-labelledby="awc-t awc-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="awc-t">A where condition on a constraint removes rows</title>
+  <desc id="awc-d">The parameter capacity is a table with three rows: wind 10, gas 5 and old 0. The constraint min_out, with expression x greater than or equal to 1 and where capacity greater than zero, is a table with two rows: x of wind at least 1 and x of gas at least 1. The row for old, where capacity is zero, is absent, so nothing is required there.</desc>
+  <defs>
+    <pattern id="awc-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
+    </pattern>
+    <marker id="awc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,172 H176 V229 A3,3 0 0 1 173,232 H19 A3,3 0 0 1 16,229 Z" fill="#0072B2" fill-opacity="0.08"/>
+    <path d="M16,172 V153 A3,3 0 0 1 19,150 H173 A3,3 0 0 1 176,153 V172 Z" fill="#0072B2" fill-opacity="0.2"/>
+    <path d="M324,172 H574 V211 A3,3 0 0 1 571,214 H327 A3,3 0 0 1 324,211 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M324,172 V153 A3,3 0 0 1 327,150 H571 A3,3 0 0 1 574,153 V172 Z" fill="#009E73" fill-opacity="0.2"/>
+  </g>
+  <g fill="currentColor">
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
+      <text x="16" y="28">constraints:</text>
+      <text x="31" y="46">min_out:</text>
+      <text x="46" y="64">dims: [generator]</text>
+      <text x="46" y="82">expression: x &gt;= 1</text>
+      <text x="46" y="100" font-weight="bold">where: "capacity &gt; 0"</text>
+    </g>
+    <text x="16" y="140" font-weight="bold">capacity</text>
+    <text x="80" y="140" fill-opacity="0.7">a parameter</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="24" y="164" font-weight="bold">generator</text>
+      <text x="110" y="164" font-weight="bold">value</text>
+      <text x="24" y="188">wind</text><text x="110" y="188">10</text>
+      <text x="24" y="206">gas</text><text x="110" y="206">5</text>
+      <text x="24" y="224">old</text><text x="110" y="224">0</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="150" width="160" height="82" rx="3"/>
+    <line x1="16" y1="172" x2="176" y2="172"/>
+    <rect x="17" y="211" width="158" height="20" fill="url(#awc-hatch)" stroke="none"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#awc-arrow)">
+    <path d="M186,194 L312,194"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="198" y="182">where:</text>
+    <text x="198" y="212" fill-opacity="0.7">keeps a row only</text>
+    <text x="198" y="227" fill-opacity="0.7">where it is true</text>
+  </g>
+  <g fill="currentColor">
+    <text x="324" y="140" font-weight="bold">min_out</text>
+    <text x="384" y="140" fill-opacity="0.7">a constraint</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+      <text x="332" y="164" font-weight="bold">generator</text>
+      <text x="418" y="164" font-weight="bold">row</text>
+      <text x="332" y="188">wind</text><text x="418" y="188">x[wind] &gt;= 1</text>
+      <text x="332" y="206">gas</text><text x="418" y="206">x[gas] &gt;= 1</text>
+    </g>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="324" y="150" width="250" height="64" rx="3"/>
+    <line x1="324" y1="172" x2="574" y2="172"/>
+    <rect x="324" y="218" width="250" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="332" y="234" fill-opacity="0.7" font-style="italic">no row for old: nothing is required</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="600" y="156" width="14" height="14" fill="url(#awc-hatch)"/>
+    <rect x="600" y="180" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="620" y="167">condition is false</text>
+    <text x="620" y="191">absent: no row</text>
+  </g>
+</svg>

@@ -46,8 +46,8 @@ def _verdict(dimension: str = 'h', **patch: Any):
     return to_spec({**BASE, **patch}).program.separability[dimension]
 
 
-def _rows(expression: str, *, dims: list[str] | None = None, **block: Any) -> dict[str, Any]:
-    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **block}}}
+def _rows(expression: str, *, dims: list[str] | None = None, **fields: Any) -> dict[str, Any]:
+    return {'constraints': {'k': {'dims': dims or ['h', 'u'], 'expression': expression, **fields}}}
 
 
 @pytest.mark.parametrize(
@@ -79,7 +79,7 @@ def test_a_separable_model_reports_the_lookahead_a_window_needs(patch, ahead):
 def test_a_model_the_axis_ties_together_names_what_ties_it(patch, fragment):
     verdict = _verdict(**patch)
     assert not verdict.windowable, 'this shape does not survive being cut into windows'
-    assert fragment in verdict.coupled["constraint 'k'"], 'the report names the construct, not just the declaration'
+    assert fragment in verdict.coupled["constraint 'k'"], 'the report names the construct, not just the entry'
     assert not verdict.undecided and not verdict.restarts, 'a coupling is not something data or a driver resolves'
 
 
@@ -150,7 +150,7 @@ def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
 
 
 def test_resolving_a_name_nothing_waits_on_is_refused():
-    with pytest.raises(KeyError, match="'depth' is not a parameter an undecided reach along 'h' waits on"):
+    with pytest.raises(KeyError, match="'depth' is not a parameter that an undecided reach along 'h' waits on"):
         _verdict(**_rows('p >= shift(p, along=h, offset=width, edge=0)')).resolved({'depth': 0})
 
 
@@ -175,7 +175,7 @@ def test_a_sum_over_a_lookup_is_a_sum_and_a_lookup_not_a_grouping():
     rows = _rows('sum(at(q, by=zone_of[zone]), over=u) <= budget', dims=['h'])
     program = to_spec({**BASE, 'variables': variables, **rows}).program
     assert list(program.separability['u'].coupled.values()) == [
-        'sums over u — a rolling sum_back(window=n) windows, a total over the horizon does not'
+        'sums over u (use sum_back(window=n) for a rolling sum)'
     ], 'the sum over u is a plain sum, reported as one'
     assert program.separability['zone'].undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
         'the lookup under it still reads zone at a coordinate the relation chooses'
@@ -195,7 +195,7 @@ def test_a_mask_counting_a_position_is_reported_and_not_refused():
     stays windowable and says where a window would restart the count."""
     verdict = _verdict(**_rows('p >= 0', where='position(h) == 0'))
     assert verdict.windowable, 'a seed is a modelling intent, not a coupling'
-    assert verdict.restarts == {"constraint 'k'": 'counts a position along h'}, 'the report names the declaration'
+    assert verdict.restarts == {"constraint 'k'": 'counts a position along h'}, 'the report names the entry'
 
 
 def test_a_sum_over_the_axis_couples_a_constraint_and_leaves_the_objective_alone():
@@ -245,7 +245,7 @@ def test_a_grouping_that_sums_the_axis_away_couples_it():
     verdict = program.separability['u']
     assert not verdict.windowable, 'the grouping sums u away, so a window of u is a different sum'
     assert verdict.coupled == {
-        "constraint 'z'": 'groups u into zone — window that dimension instead, or cut only at the group edges'
+        "constraint 'z'": 'groups u into zone (window that dimension instead, or cut only at the group edges)'
     }, 'the sum over the join is the grouping, reported once'
     assert not verdict.undecided, 'the join under the sum is not also a lookup waiting on the relation'
 
@@ -302,7 +302,7 @@ def test_the_border_of_a_block_form_is_what_no_one_block_holds():
     bordered block-diagonal form."""
     verdict = _verdict(**BORDER)
     assert verdict.linking_rows == ('budget', 'peak'), (
-        'a row the axis ties together and a row it does not index, in declaration order, and no third'
+        'a row the axis ties together and a row it does not index, in file order, and no third'
     )
     assert verdict.linking_columns == ('built',), 'the one column every block reads, p being a column per block'
     along_u = _verdict('u', **BORDER)
@@ -348,11 +348,11 @@ def test_a_row_reaches_the_border_only_when_no_one_block_holds_it(patch, rows):
         ),
     ],
 )
-def test_a_coupling_carried_by_a_declaration_that_builds_no_row_stays_off_the_border(patch, label):
+def test_a_coupling_carried_by_an_entry_that_builds_no_row_stays_off_the_border(patch, label):
     """The objective is one row that no cut of the axis divides, and a set names
     columns that already exist. Neither builds a constraint row for a block to
     hold, so neither reaches the border. The coupling is reported all the same,
     because a window still cannot honour it."""
     verdict = _verdict(**patch)
-    assert label in verdict.coupled, 'the coupling is reported against the declaration that carries it'
+    assert label in verdict.coupled, 'the coupling is reported against the entry that carries it'
     assert verdict.linking_rows == (), 'and the one constraint here is pointwise, so the border holds no row'

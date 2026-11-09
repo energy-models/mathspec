@@ -21,13 +21,13 @@ import pytest
 import yaml
 
 from mathspec import merge, to_spec, typeset
-from mathspec.canonical import canonical_yaml
+from mathspec._canonical import canonical_yaml
+from mathspec._typesetting import FORMATS
 from mathspec.errors import LanguageError
-from mathspec.typesetting import FORMATS
 from tests.fixtures import BALANCE
 from tests.test_terms import DEMAND, FLEET
 from tools.gallery import split_index
-from tools.pypsa_split import SOURCE, SUM_HOME, Model, _term_block, fragments
+from tools.pypsa_split import SOURCE, SUM_HOME, Model, _term_entry, fragments
 
 FOLDER = Path(__file__).resolve().parent.parent / 'examples' / 'pypsa'
 PATHS = {path.stem: path for path in sorted(FOLDER.glob('*.yaml'))}
@@ -52,7 +52,8 @@ def test_the_fragments_merge_to_the_one_file(model):
 def test_each_sum_is_its_terms_by_name_and_each_term_stays(model):
     merged = merge(list(PATHS.values()))
     assert merged.expressions['Bus_injection'].expression == (
-        'Generator_injection + Line_injection + Link_injection + Load_injection + Process_injection'
+        'FlowBased_injection + Generator_injection + Line_injection + Link_injection + Load_injection'
+        ' + Process_injection'
         ' + StorageUnit_injection + Store_injection + Transformer_injection'
     ), 'the terms in the order the files are given in'
     assert set(model.terms) <= set(merged.expressions), 'every term is a named expression of the composed spec'
@@ -71,13 +72,14 @@ def test_the_fragments_are_what_the_splitter_writes(model):
 OPTIONAL = [
     'carrier',
     'cost',
-    'global_constraints',
+    'global_constraints flow_based',
     'security',
+    'flow_based',
     'load',
     'storage_unit',
     'store',
     'generator',
-    'link',
+    'link flow_based',
     'process',
     'generator_ramping',
     'link_ramping',
@@ -136,7 +138,7 @@ def test_every_fragment_and_the_composition_print(fmt):
 
 
 @pytest.mark.parametrize(
-    'block',
+    'source',
     [
         pytest.param('  Name: a + b', id='one-line'),
         pytest.param('  Name: >-\n      a\n      + b', id='folded'),
@@ -145,14 +147,14 @@ def test_every_fragment_and_the_composition_print(fmt):
         pytest.param('  Name: a\n    + b', id='one-line-continued'),
     ],
 )
-def test_a_term_block_carries_its_body_in_every_source_form(block):
+def test_a_term_entry_carries_its_body_in_every_source_form(source):
     """A body the head line does not hold whole was dropped or nested.
 
     A folded body follows a `>-` on the head line, and a plain body may run on
     to the next line; the splitter kept only the head line. A flow mapping was
     nested under `expression:`.
     """
-    assert yaml.safe_load(_term_block(block, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
+    assert yaml.safe_load(_term_entry(source, 'hub')) == {'Name': {'expression': 'a + b', 'adds_to': 'hub'}}
 
 
 def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_reader():
@@ -170,5 +172,5 @@ def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_rea
     assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
         'every term of the fragment, by fragment then by name'
     )
-    with pytest.raises(ValueError, match=r"no fragment reads 'injection' with a description and adds nothing to it"):
+    with pytest.raises(ValueError, match=r"no fragment that reads 'injection' without adding to it describes it"):
         split_index({'fleet': specs['fleet'], 'demand': specs['demand']})

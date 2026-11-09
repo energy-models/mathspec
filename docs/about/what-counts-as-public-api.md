@@ -5,51 +5,53 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # What counts as public API
 
-This page says which functions may join the package's public API, such as
-`to_spec` and `to_latex`. It is not about the operators a spec may use; those
-are [the limits](limits.md).
+The public application programming interface (API) of mathspec is the set of
+names you import from it, such as
+[`to_spec`](../reference/api.md#mathspec.to_spec) and
+[`to_latex`](../reference/typeset.md). A function joins it when both of these
+are true:
 
-A function may join the public API when both of these hold:
+1. The function returns the same result for the same specification of an
+   optimisation model ([a spec](../reference/glossary.md#spec)).
+   `to_spec('spec.yaml')` returns the same `Spec` today, tomorrow, and on a
+   machine with no data and no solver. A function whose result depends on
+   data, a solver, the network or the clock cannot join. The rule exists because software that reads a spec without data
+   ([a checker](../reference/glossary.md#tool)) and software that builds the
+   model ([an engine](../reference/glossary.md#tool)) must get one result.
+2. Every rule that the function applies is on a page of the reference. So you
+   could rewrite the function in another programming language from the pages
+   alone, and get the same result. The rule exists because software that reads a spec
+   ([a tool](../reference/glossary.md#tool)) may be written in another programming language. Such a tool has only the pages to go by.
 
-1. **Same file in, same answer out.** `to_spec('spec.yaml')` returns the same
-   `Spec` today, tomorrow, and on a machine with no data and no solver. A
-   function whose answer depends on data, a solver, the network or the clock
-   cannot join.
-2. **No rule lives only in the code.** Every rule the function applies is written
-   on a page of this reference, so somebody could rewrite the function in another
-   language from the pages alone and get the same answer.
+The test file `tests/test_public_surface.py` lists the names that `mathspec`
+exports and the list of public modules. So a name joins or leaves the top
+level of the public API only with a change to that test.
 
-Wherever a feature can be a key in the file, it is one: a key shows up in a git
-diff, the typesetter prints it, and an engine in another language reads it.
+## A key or a function
 
-## Where a name lives
+Where a feature can be a key in the file, it is a key and not a function. A function argument, such as an option on `to_spec`, could set the feature
+instead. A key is
+better here, because a key shows up in a git diff. The [typesetter](../reference/typeset.md) prints the key, and an engine written in another programming
+language reads it. An option on a function changes what the file means
+without a trace in the file.
 
-The top level holds what you call. Every other public name lives in one of
-three modules, and the module follows from how you get the name:
+## The size of the public API
 
-| You get it                  | It lives in        | Such as                                  |
-| --------------------------- | ------------------ | ---------------------------------------- |
-| by calling a function       | `mathspec`         | `to_spec`, `merge`, `typeset`, `advice`  |
-| from what a `Spec` holds    | `mathspec.spec`    | `Spec`, `VariableBlock`, `BUILTIN_NAMES` |
-| from what a `Program` holds | `mathspec.program` | `Program`, `Sum`, `Mask`, `Advice`       |
-| by catching it              | `mathspec.errors`  | `LanguageError`, `SchemaError`           |
+A small public API is better here than a public module for every helper,
+because a small API follows from the second rule. Any release can change a private module, such as the one that computes the
+dimensions of an expression. A tool that needs the
+dimensions of an expression instead reads the `dims` of a node in the compiled
+spec ([a `Program`](../reference/program.md)).
 
-`SymbolTable` and `FormatName` are at the top level too: you build or name
-them to pass them to the typesetter. `tests/test_public_surface.py` holds each
-module to its rule.
+You can now judge whether a function belongs in the public API, and whether a
+feature belongs in the file as a key.
 
-## What every function keeps
+!!! info "See also"
 
-- **No state.** No registry, no plugin, and no setting that changes what a
-  spec means. `symbols=` on the typesetter is the shape a legitimate option
-  takes: it changes how `load` prints and nothing about what `load` is.
-- **A value or an error, and nothing between.** `to_spec` either returns a
-  `Spec` or raises an error that names the rewrite. `advice()` is separate: it
-  talks about a file the language accepts, and changes nothing.
-- **Nothing is written out unasked.** A `piecewise:` or `sos:` block stays the
-  block until a caller calls
-  [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand).
-
-What a solver or file format can take, how the numbers attach to the names, and
-which solver runs are each engine's to decide
-([what counts as language](what-counts-as-language.md#what-each-tool-decides-for-itself)).
+    - [the Python API](../reference/api.md), for the module of each public name
+      and the [guarantees](../reference/api.md#guarantees) that every public
+      function keeps
+    - [the limits of the language](limits.md), for which operators and sections
+      can be added to the language
+    - [what each tool decides for itself](what-counts-as-language.md#what-each-tool-decides-for-itself),
+      for the reasons a tool may refuse a spec

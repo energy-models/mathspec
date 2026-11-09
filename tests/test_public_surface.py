@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import pkgutil
 import types
 from pathlib import Path
 
@@ -33,7 +34,7 @@ SURFACE = frozenset(
         # the verdicts a consumer asks for rather than re-deriving
         'advice',
         # typesetting, and the two inputs it takes
-        'typeset', 'typeset_declaration', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
+        'typeset', 'typeset_line', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
         # the two file-level verbs: peers composed, and patches laid over a base
         'merge', 'override',
     }
@@ -50,6 +51,9 @@ SPEC_REEXPORTS = frozenset({'BUILTIN_NAMES'})
 #: out, the verb that writes a formulation out, and the program the file means.
 #: A `model_`-prefixed name is pydantic's, not a contract this project keeps.
 SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'program'})
+
+#: The submodules of `mathspec` whose names carry no leading underscore.
+PUBLIC_MODULES = frozenset({'spec', 'program', 'errors'})
 
 #: The modules whose `__all__` a consumer imports from.
 MODULES = [
@@ -73,6 +77,14 @@ def test_all_matches_the_pinned_surface():
     declared = set(mathspec.__all__)
     assert declared == SURFACE, (
         f'only in __all__: {sorted(declared - SURFACE)}; only in SURFACE: {sorted(SURFACE - declared)}'
+    )
+
+
+def test_only_the_public_modules_have_names_without_a_leading_underscore():
+    """A module named without an underscore reads as public, so a new one is the same decision as a name in `__all__`."""
+    named = {info.name for info in pkgutil.iter_modules(mathspec.__path__) if not info.name.startswith('_')}
+    assert named == PUBLIC_MODULES, (
+        f'only in the package: {sorted(named - PUBLIC_MODULES)}; only in PUBLIC_MODULES: {sorted(PUBLIC_MODULES - named)}'
     )
 
 
@@ -127,7 +139,7 @@ def test_the_top_level_is_what_a_consumer_calls():
 
 
 def test_the_spec_module_exports_every_class_it_defines():
-    """`Spec` hands out its blocks, so each one is public: a block class added without a decision fails here."""
+    """`Spec` hands out its parts, so each one is public: a `*Spec` class added without a decision fails here."""
     declared = set(spec.__all__)
     classes = {n for n, obj in vars(spec).items() if inspect.isclass(obj) and obj.__module__ == spec.__name__}
     public = {n for n in classes if not n.startswith('_')}

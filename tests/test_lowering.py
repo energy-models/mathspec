@@ -16,9 +16,10 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
-from mathspec._where_parser import parse_where
+from mathspec._condition_parser import parse_condition
+from mathspec._exclusivity import overlapping
+from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
-from mathspec.exclusivity import overlapping
 from mathspec.program import (
     Add,
     And,
@@ -29,8 +30,8 @@ from mathspec.program import (
     Column,
     Constant,
     CountComparison,
+    Dimension,
     DimensionComparison,
-    DimensionDeclaration,
     Divide,
     Dual,
     Expression,
@@ -38,34 +39,33 @@ from mathspec.program import (
     Footprint,
     Join,
     JoinColumns,
-    JoinedPredicate,
+    JoinedCondition,
     Mask,
     Multiply,
     Not,
     Or,
-    Parameter,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     Power,
     Program,
     QuadraticPosition,
     Region,
-    RelationDeclaration,
+    Relation,
     Sum,
     Translate,
-    Variable,
+    VariableReference,
     WindowSum,
     assumption_message,
     children,
+    condition_children,
     parameters_of,
     walk,
     walk_regions,
-    where_children,
 )
-from mathspec.resolution import Namespace
 from mathspec.spec import Spec
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, schema_of, varied, where_of
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, expanded, expression_of, spec_of, varied, where_of
 
 DISPATCH_YAML = EXAMPLES / 'dispatch.yaml'
 
@@ -83,12 +83,12 @@ TINY = {
 }
 
 #: `lk` as `sum` joins it: joined on the key, grouped by the value, no key column left unnamed.
-LK = RelationDeclaration((('g', 'g'), ('h', 'h')), ('g',))
-LK2 = RelationDeclaration((('g', 'g'), ('z', 'z')), ('g',))
+LK = Relation((('g', 'g'), ('h', 'h')), ('g',))
+LK2 = Relation((('g', 'g'), ('z', 'z')), ('g',))
 LK_JOIN = JoinColumns('lk', LK, ('g',), ('h',))
-AT_BUS = RelationDeclaration((('g', 'g'), ('bus', 'bus')), ('g',))
+AT_BUS = Relation((('g', 'g'), ('bus', 'bus')), ('g',))
 
-#: `fixtures.SMALL_MODEL` plus a second relation and a per-entity
+#: `fixtures.SMALL_MODEL` plus a second relation and an integer
 #: offset. Which node a construct becomes is mostly a claim about the dim it
 #: joins on and the dim it groups by, and stating that needs a third dimension
 #: and two relations over one of them.
@@ -97,33 +97,33 @@ SHAPES_MODEL = varied(
     **{
         'dimensions.z': {'dtype': 'str'},
         'relations.lk2': {'key': 'g', 'values': 'z'},
-        'parameters.lead': {'dims': ['g'], 'dtype': 'int'},
+        'parameters.lead': {'dims': [], 'dtype': 'int'},
     },
 )
 
 
-def resolved(text: str, schema: Spec) -> Expression:
-    """Parse, expand and resolve — the program tree a declaration holds.
+def resolved(text: str, spec: Spec) -> Expression:
+    """Parse, expand and resolve — the program tree an entry holds.
 
     The ``'t'`` is the error-context label the resolver stamps on refusals,
     not a dimension.
     """
-    return expression_of(text, Namespace(schema), 't')
+    return expression_of(text, Namespace(spec), 't')
 
 
 @pytest.fixture
-def dispatch_schema() -> Spec:
-    return schema_of(DISPATCH_YAML)
+def dispatch_spec() -> Spec:
+    return spec_of(DISPATCH_YAML)
 
 
 @pytest.fixture
-def dispatch_program(dispatch_schema) -> Program:
-    return dispatch_schema.program
+def dispatch_program(dispatch_spec) -> Program:
+    return dispatch_spec.program
 
 
 @pytest.fixture
-def shapes_schema() -> Spec:
-    return schema_of(SHAPES_MODEL)
+def shapes_spec() -> Spec:
+    return spec_of(SHAPES_MODEL)
 
 
 # ---------------------------------------------------------------------------
@@ -132,23 +132,31 @@ def shapes_schema() -> Spec:
 
 
 def test_program_structure(dispatch_program):
-    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in declaration order'
+    assert list(dispatch_program.parameters) == ['capacity', 'load', 'cost'], 'keyed by name, in file order'
     ((vname, v),) = dispatch_program.variables.items()
     assert vname == 'dispatch'
     assert v.dims == ('snapshot', 'generator'), 'the frame is the dims, in the order the file wrote it'
     assert v.where == Mask(CAPACITY_POSITIVE)
-    assert v.upper == Parameter('capacity')
+    assert v.upper == ParameterReference('capacity', dims=('generator',))
 
     ((cname, c),) = dispatch_program.constraints.items()
     assert cname == 'power_balance'
     assert c.dims == ('snapshot',), 'the frame is the dims, in the order the file wrote it'
-    assert c.lhs == Sum(Variable('dispatch'), (Axis('generator'),))
+    assert c.lhs == Sum(
+        VariableReference('dispatch', dims=('generator', 'snapshot')), (Axis('generator'),), dims=('snapshot',)
+    )
     assert c.sense == '==', "the comparison crosses as the file's own operator, untranslated"
-    assert c.rhs == Parameter('load')
+    assert c.rhs == ParameterReference('load', dims=('snapshot',))
 
     assert dispatch_program.objective.sense == 'minimize', "the program carries the language's spelling, untranslated"
     assert dispatch_program.objective.expression == Sum(
-        Multiply(Variable('dispatch'), Parameter('cost')), (Axis('generator'), Axis('snapshot'))
+        Multiply(
+            VariableReference('dispatch', dims=('generator', 'snapshot')),
+            ParameterReference('cost', dims=('generator',)),
+            dims=('generator', 'snapshot'),
+        ),
+        (Axis('generator'), Axis('snapshot')),
+        dims=(),
     ), 'the objective carries the sum the file wrote, over the dims it named none of'
 
 
@@ -168,7 +176,7 @@ def test_a_file_with_no_objective_lowers_to_no_sense():
 
 def test_a_literal_amount_resolves_to_one_signed_number():
     """`offset=-1` parses as a unary minus over `1`; after resolution it is `-1`, for every reader alike."""
-    ns = Namespace(schema_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
+    ns = Namespace(spec_of(DISPATCH_YAML, **{'dimensions.snapshot': {'dtype': 'int', 'ordered': True}}))
     node = expression_of('shift(dispatch, along=snapshot, offset=-1, edge=+0)', ns, 't')
     assert isinstance(node, Translate)
     assert (node.offset, node.fill) == (-1, 0.0)
@@ -190,11 +198,11 @@ def test_a_literal_amount_resolves_to_one_signed_number():
             And(CAPACITY_POSITIVE, Not(ParameterComparison('load', '==', 0.0, ('snapshot',)))),
             id='a-compound-where-keeps-its-connectives',
         ),
-        pytest.param('False', BooleanLiteral(False), id='the-empty-declaration-keeps-its-own-spelling'),
+        pytest.param('False', BooleanLiteral(False), id='the-empty-entry-keeps-its-own-spelling'),
         pytest.param('capacity > 0 AND True', CAPACITY_POSITIVE, id='and-true-is-the-other-side'),
         pytest.param('capacity > 0 OR False', CAPACITY_POSITIVE, id='or-false-is-the-other-side'),
         pytest.param('capacity > 0 OR True', None, id='or-true-is-no-mask-at-all'),
-        pytest.param('capacity > 0 AND False', BooleanLiteral(False), id='and-false-is-the-empty-declaration'),
+        pytest.param('capacity > 0 AND False', BooleanLiteral(False), id='and-false-is-the-empty-entry'),
         pytest.param('NOT True', BooleanLiteral(False), id='not-true-is-false'),
         pytest.param('NOT False', None, id='not-false-is-no-mask'),
         pytest.param('NOT (capacity > 0 AND False)', None, id='a-branch-folded-away-folds-the-one-above-it'),
@@ -210,39 +218,39 @@ def test_a_literal_amount_resolves_to_one_signed_number():
         ),
     ],
 )
-def test_a_where_is_one_resolved_predicate_with_every_literal_folded(dispatch_schema, where, expected):
+def test_a_where_is_one_resolved_condition_with_every_literal_folded(dispatch_spec, where, expected):
     """One mask had two lowerings: `True` was dropped at the root and kept under a connective.
 
     A `BooleanLiteral` is a node a consumer meets at the root or nowhere.
     """
-    mask = where_of(where, Namespace(dispatch_schema), 't')
+    mask = where_of(where, Namespace(dispatch_spec), 't')
     assert (mask.root if mask is not None else None) == expected, (
-        'the Mask carries exactly the resolved predicate, folded at resolution however the file spelled it'
+        'the Mask carries exactly the resolved condition, folded at resolution however the file spelled it'
     )
 
 
-def test_a_folded_mask_reaches_the_declaration_the_shorter_spelling_would_have():
-    """The fold is the program's, not a helper's: two files, one declaration."""
-    written_out = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 AND True'}).program
-    plain = schema_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}).program
-    assert written_out.variables['p'] == plain.variables['p'], 'the same mask, so the same declaration'
+def test_a_folded_mask_reaches_the_entry_the_shorter_spelling_would_have():
+    """The fold is the program's, not a helper's: two files, one entry."""
+    written_out = spec_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0 AND True'}).program
+    plain = spec_of(DISPATCH_MODEL, **{'variables.p.where': 'p_max > 0'}).program
+    assert written_out.variables['p'] == plain.variables['p'], 'the same mask, so the same entry'
 
 
-def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_schema):
+def test_an_unknown_where_name_is_an_error_at_lowering_too(dispatch_spec):
     """It used to be a scalar-False mask in the eager lane: a model that
     builds, solves, and is silently empty. Resolution makes it a load error."""
     with pytest.raises(LanguageError, match="'no_such_param' not found"):
-        where_of('no_such_param', Namespace(dispatch_schema), 't')
+        where_of('no_such_param', Namespace(dispatch_spec), 't')
 
 
 def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     """A consumer handed a program could invert the mask another one reads.
 
-    The where nodes were plain dataclasses while every declaration embedding
+    The condition nodes were plain dataclasses while every entry embedding
     them was frozen, so `variable.where.root.op = '!='` rewrote `capacity > 0` into
     `capacity != 0` on the shared object — two consumers disagreeing about one
     file, which is the failure a program exists to prevent. It also left
-    hashability depending on the file: an unmasked declaration hashed and a
+    hashability depending on the file: an unmasked entry hashed and a
     masked one raised TypeError.
     """
     (v,) = dispatch_program.variables.values()
@@ -251,7 +259,7 @@ def test_a_lowered_mask_cannot_be_rewritten_in_place(dispatch_program):
     with pytest.raises(FrozenInstanceError):
         v.where.root.op = '!='
     assert v.where == Mask(CAPACITY_POSITIVE), 'the mask the file wrote, unchanged'
-    assert isinstance(hash(v), int), 'a masked declaration hashes like an unmasked one'
+    assert isinstance(hash(v), int), 'a masked entry hashes like an unmasked one'
 
 
 def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
@@ -263,7 +271,7 @@ def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
     (v,) = dispatch_program.variables.values()
 
     assert v.where == Mask(CAPACITY_POSITIVE)
-    assert v.where.names_read == {'capacity'}, 'the declarations the mask names'
+    assert v.where.names_read == {'capacity'}, 'the entries the mask names'
     assert v.where.conjuncts == (CAPACITY_POSITIVE,), 'a mask that is not an AND is its own only conjunct'
     assert v.where.atoms == (CAPACITY_POSITIVE,), 'a single leaf, connectives removed'
 
@@ -291,7 +299,7 @@ def test_a_lowered_where_is_a_mask_that_answers_from_its_root(dispatch_program):
     ],
 )
 def test_a_lowered_mask_answers_its_dims_conjuncts_and_atoms(variable, where, dims, conjuncts, atoms):
-    """`Mask.dims` is read off the leaves, which carry their declarations' dims;
+    """`Mask.dims` is read off the leaves, which carry their entries' dims;
     `atoms` crosses the `OR` that `conjuncts` stops at."""
     mask = to_spec(varied(SMALL_MODEL, **{f'variables.{variable}.where': where})).program.variables[variable].where
 
@@ -313,23 +321,23 @@ FLAG = ParameterDefined('flag', ('generator',))
         pytest.param(BooleanLiteral(False), (), id='a-literal-carries-nothing'),
     ],
 )
-def test_where_children_is_the_one_walk_under_a_predicate(where, under):
-    """`where_children` is to a mask what `children` is to an expression.
+def test_condition_children_is_the_one_walk_under_a_condition(where, under):
+    """`condition_children` is to a condition what `children` is to an expression.
 
     The where tree was dispatched by hand at every walk — the grammar's depth
     measure, `Mask.atoms`, each consumer's own — with no shared answer to
     what sits under a node (#401). This is that answer, in file order.
     """
-    assert where_children(where) == under, (
+    assert condition_children(where) == under, (
         'a connective carries its operands, left before right; a leaf carries nothing'
     )
 
 
-def test_a_synthetic_predicate_answers_its_own_dims():
-    """A tree built from resolved pieces answers like a declaration's own mask.
+def test_a_synthetic_condition_answers_its_own_dims():
+    """A tree built from resolved pieces answers like an entry's own mask.
 
     A consumer builds region complements and conjunctions — `Not(root)`,
-    `And(a, b)` — with no declaration behind them. Because the leaves carry
+    `And(a, b)` — with no entry behind them. Because the leaves carry
     their dims, wrapping any such tree in `Mask` answers without a name-to-dims
     mapping, which is what let the mapping die everywhere.
     """
@@ -352,7 +360,7 @@ def test_mask_construction_folds_so_a_literal_stands_at_the_root_or_nowhere():
     assert Mask(Not(BooleanLiteral(True))) == empty, 'NOT over a literal flips at the door'
     assert Mask(Not(Not(x))) == Mask(x), 'a double negation cancels at the door'
 
-    assert ~Mask(x) == Mask(Not(x)), 'a plain predicate negated gains one NOT'
+    assert ~Mask(x) == Mask(Not(x)), 'a plain condition negated gains one NOT'
     assert ~Mask(Not(x)) == Mask(x), '`not (not x)` cancels rather than stacking, so no consumer evaluates it twice'
     assert ~empty == every, 'the empty mask negated admits every row, with no NOT stacked'
     assert ~every == empty, 'and back again'
@@ -375,8 +383,8 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
 
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
     """A tree whose leaves are unresolved is refused where it is wrapped, not where it is read."""
-    with pytest.raises(AssertionError, match='reached a predicate walk unresolved'):
-        Mask(parse_where('a AND b'))
+    with pytest.raises(AssertionError, match='reached a condition walk unresolved'):
+        Mask(parse_condition('a AND b'))
 
 
 def test_an_unwritten_where_lowers_to_none_not_an_empty_mask():
@@ -413,9 +421,12 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     ).program
     where = program.variables['p'].where
     assert where is not None
-    assert where.root == ExpressionComparison(Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',)), (
-        'the sides are lowered as a constraint side is, and the dims are what either side carries'
-    )
+    assert where.root == ExpressionComparison(
+        ParameterReference('c', dims=('g',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('g',),
+    ), 'the sides are lowered as a constraint side is, and the dims are what either side carries'
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, ExpressionComparison)
     assert isinstance(mask.root.right, Add) and isinstance(mask.root.right.left, Join)
@@ -424,7 +435,7 @@ def test_a_comparison_of_expressions_lowers_to_program_expressions_on_both_sides
     )
 
 
-def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
+def test_a_condition_a_leaf_carries_is_lowered_like_any_other_mask():
     """A comparison of expressions inside a count is rebuilt too, so a program mask is program vocabulary throughout."""
     program = to_spec(
         varied(
@@ -434,13 +445,16 @@ def test_a_predicate_a_leaf_carries_is_lowered_like_any_other_mask():
     ).program
     mask = program.constraints['w'].where
     assert mask is not None and isinstance(mask.root, CountComparison)
-    assert mask.root.predicate.root == ExpressionComparison(
-        Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',)
-    ), 'the counted predicate is rebuilt, not handed through with the resolved comparison still in it'
-    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted predicate reads is data the consumer attaches'
+    assert mask.root.condition.root == ExpressionComparison(
+        ParameterReference('c', dims=('g',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('g',),
+    ), 'the counted condition is rebuilt, not handed through with the resolved comparison still in it'
+    assert mask.names_read == frozenset({'c', 'k'}), 'what the counted condition reads is data the consumer attaches'
 
 
-def test_a_translated_predicate_keeps_what_it_reads_in_reach():
+def test_a_translated_condition_keeps_what_it_reads_in_reach():
     """A walk that asks a mask what it names has to see through the translation, or the column is silently dropped."""
     program = to_spec(
         varied(
@@ -460,7 +474,7 @@ def test_a_translated_predicate_keeps_what_it_reads_in_reach():
     assert sorted(mask.dims) == ['g']
 
 
-def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
+def test_a_condition_read_through_a_relation_is_lowered_and_keeps_the_relation_in_reach():
     """The comparison under the read is rebuilt, and the relation is data the consumer attaches as well as the operand."""
     program = to_spec(
         varied(
@@ -476,10 +490,13 @@ def test_a_predicate_read_through_a_relation_is_lowered_and_keeps_the_relation_i
         )
     ).program
     mask = program.constraints['w'].where
-    assert mask is not None and isinstance(mask.root, JoinedPredicate)
+    assert mask is not None and isinstance(mask.root, JoinedCondition)
     assert mask.root.operand.root == ExpressionComparison(
-        Parameter('zcap'), '<=', Multiply(Constant(0.5), Parameter('k')), ('z',)
-    ), 'the read predicate is rebuilt, not handed through with the resolved comparison still in it'
+        ParameterReference('zcap', dims=('z',)),
+        '<=',
+        Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+        ('z',),
+    ), 'the read condition is rebuilt, not handed through with the resolved comparison still in it'
     assert mask.names_read == frozenset({'zcap', 'k', 'lk2'})
     assert sorted(mask.dims) == ['g'], 'z is read at lk2(g), so the mask is over g alone'
 
@@ -488,7 +505,7 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
     """One mapping holds every fact about the data, so a consumer attaching it has one loop and one refusal.
 
     The file's entries come first, in the order it wrote them; each
-    ``piecewise:`` block's conditions follow under the name a refusal quotes.
+    ``piecewise:`` entry's conditions follow under the name a refusal quotes.
     """
     program = expanded(EXAMPLES / 'piecewise_lp.yaml', 'piecewise').program
     derived = [name for name in program.assumptions if name.startswith('cost_curve_')]
@@ -505,12 +522,19 @@ def test_assumptions_carry_the_file_s_entries_and_the_curves_behind_them():
 
 
 def test_an_assumption_lowers_both_of_its_masks():
-    """The predicate and the ``where`` are rebuilt on program expressions, as every other mask is."""
+    """The ``holds`` and the ``where`` are rebuilt on program expressions, as every other mask is."""
     program = to_spec(varied(SHAPES_MODEL, assumptions={'sound': {'holds': 'c <= 0.5 * k', 'where': 'flag'}})).program
     assumption = program.assumptions['sound']
 
     assert assumption == Assumption(
-        Mask(ExpressionComparison(Parameter('c'), '<=', Multiply(Constant(0.5), Parameter('k')), ('g',))),
+        Mask(
+            ExpressionComparison(
+                ParameterReference('c', dims=('g',)),
+                '<=',
+                Multiply(Constant(0.5, dims=()), ParameterReference('k', dims=()), dims=()),
+                ('g',),
+            )
+        ),
         Mask(ParameterDefined('flag', ('g',))),
     ), 'the arithmetic side is a program expression, and the where is the mask the file wrote'
     assert assumption_message('sound', assumption) == (
@@ -519,7 +543,7 @@ def test_an_assumption_lowers_both_of_its_masks():
 
 
 def test_an_assumption_refuses_in_the_words_the_file_wrote():
-    """``description:`` reached no consumer: the block held it and neither the program nor the sentence did.
+    """``description:`` reached no consumer: the entry held it and neither the program nor the sentence did.
 
     The names alone say which columns are wrong. What the author wrote says
     why the rule is there, which is what the reader of a refusal needs, so
@@ -531,7 +555,7 @@ def test_an_assumption_refuses_in_the_words_the_file_wrote():
 
     assert assumption.description == reason, 'the program carries it, so a consumer needs no second read of the file'
     assert assumption_message('sound', assumption) == (
-        f"assumption 'sound' does not hold for the data attached to 'c', 'k' \N{EM DASH} {reason}"
+        f"assumption 'sound' does not hold for the data attached to 'c', 'k': {reason}"
     ), 'the sentence trails what the author wrote'
 
 
@@ -559,12 +583,12 @@ def test_a_cased_side_reads_the_data_its_regions_are_decided_by():
 
 
 def test_a_mask_with_no_arithmetic_is_the_same_mask_after_lowering(dispatch_program):
-    """Every other predicate node is already the program's own, so lowering hands it through unchanged."""
+    """Every other condition node is already the program's own, so lowering hands it through unchanged."""
     assert dispatch_program.variables['dispatch'].where == Mask(CAPACITY_POSITIVE)
 
 
-def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
-    assert isinstance(resolved('cost ** cost', dispatch_schema), Power), 'a variable-free power has a node of its own'
+def test_a_power_resolves_to_a_node_of_its_own(dispatch_spec):
+    assert isinstance(resolved('cost ** cost', dispatch_spec), Power), 'a variable-free power has a node of its own'
 
 
 @pytest.mark.parametrize(
@@ -572,78 +596,88 @@ def test_a_power_resolves_to_a_node_of_its_own(dispatch_schema):
     [
         pytest.param(
             'sum(q)',
-            Sum(Variable('q'), (Axis('g'), Axis('h'))),
+            Sum(VariableReference('q', dims=('g', 'h')), (Axis('g'), Axis('h')), dims=()),
             id='a-bare-sum-sums-away-every-dim-the-operand-carries',
         ),
-        pytest.param('sum(q, over=h)', Sum(Variable('q'), (Axis('h'),)), id='an-over-sums-away-the-dim-it-names'),
+        pytest.param(
+            'sum(q, over=h)',
+            Sum(VariableReference('q', dims=('g', 'h')), (Axis('h'),), dims=('g',)),
+            id='an-over-sums-away-the-dim-it-names',
+        ),
         pytest.param(
             'sum(p, over=g, by=lk[h])',
-            Sum(Join(Variable('p'), LK_JOIN), (Axis('g', Column('lk', 'g')),)),
+            Sum(
+                Join(VariableReference('p', dims=('g',)), LK_JOIN, dims=('h',)),
+                (Axis('g', Column('lk', 'g')),),
+                dims=('h',),
+            ),
             id='a-grouped-sum-is-a-sum-over-the-axis-its-join-opens',
         ),
         pytest.param(
             'at(r, by=lk[h])',
-            Join(Variable('r'), JoinColumns('lk', LK, ('h',), ('g',))),
+            Join(VariableReference('r', dims=('h',)), JoinColumns('lk', LK, ('h',), ('g',)), dims=('g',)),
             id='an-at-is-the-same-join-the-other-way-with-no-sum-over-it',
         ),
         pytest.param(
             "shift(p, along=g, offset=1, edge='wrap')",
-            Translate(Variable('p'), 'g', offset=1, wrap=True, fill=None),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset=1, wrap=True, fill=None, dims=('g',)),
             id='a-wrapping-translation-fills-nothing',
         ),
         pytest.param(
             'shift(p, along=g, offset=-2, edge=0)',
-            Translate(Variable('p'), 'g', offset=-2, wrap=False, fill=0.0),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset=-2, wrap=False, fill=0.0, dims=('g',)),
             id='a-lead-is-a-negative-offset-and-the-edge-is-what-it-fills-with',
         ),
         pytest.param(
             'shift(p, along=g, offset=lead, edge=0)',
-            Translate(Variable('p'), 'g', offset='lead', wrap=False, fill=0.0),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset='lead', wrap=False, fill=0.0, dims=('g',)),
             id='a-named-offset-crosses-as-the-parameter-name',
         ),
         pytest.param(
             "shift(p, along=g, offset=+lead, edge='wrap')",
-            Translate(Variable('p'), 'g', offset='lead', wrap=True, fill=None),
+            Translate(VariableReference('p', dims=('g',)), 'g', offset='lead', wrap=True, fill=None, dims=('g',)),
             id='a-named-offset-written-with-a-plus-is-the-parameter',
         ),
         pytest.param(
             'shift(p, along=g, offset=1, within=lk[h], edge=0)',
             Translate(
-                Variable('p'),
+                VariableReference('p', dims=('g',)),
                 'g',
                 offset=1,
                 wrap=False,
                 fill=0.0,
                 partition=Partition('lk', LK, 'g', ('h',), ()),
+                dims=('g',),
             ),
             id='a-translation-stops-at-the-edges-of-the-relation-it-names',
         ),
         pytest.param(
             'sum_back(p, along=g, window=3)',
-            WindowSum(Variable('p'), 'g', width=3, wrap=False),
+            WindowSum(VariableReference('p', dims=('g',)), 'g', width=3, wrap=False, dims=('g',)),
             id='a-window-is-one-node-rather-than-a-fold-of-translations',
         ),
         pytest.param(
             'sum_back(p, along=g, window=lead)',
-            WindowSum(Variable('p'), 'g', width='lead', wrap=False),
+            WindowSum(VariableReference('p', dims=('g',)), 'g', width='lead', wrap=False, dims=('g',)),
             id='a-named-width-crosses-as-the-parameter-name',
         ),
         pytest.param(
             'sum_back(p, along=g, window=2, within=lk[h])',
             WindowSum(
-                Variable('p'),
+                VariableReference('p', dims=('g',)),
                 'g',
                 width=2,
                 wrap=False,
                 partition=Partition('lk', LK, 'g', ('h',), ()),
+                dims=('g',),
             ),
             id='a-window-stops-at-the-edges-of-the-relation-it-names',
         ),
     ],
 )
-def test_a_construct_resolves_to_its_node(shapes_schema, expression, expected):
+def test_a_construct_resolves_to_its_node(shapes_spec, expression, expected):
     """Which node each surface construct becomes, and every field it arrives with."""
-    assert resolved(expression, shapes_schema) == expected, 'the whole frozen node, so no field is asserted by omission'
+    assert resolved(expression, shapes_spec) == expected, 'the whole frozen node, so no field is asserted by omission'
 
 
 def test_a_partition_keeps_its_group_when_the_relation_gains_a_value_column():
@@ -713,11 +747,15 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     ).program
 
     columns = (('generator', 'generator'), ('snapshot', 'snapshot'), ('zone', 'zone'))
-    declared = RelationDeclaration(columns, ('generator', 'snapshot'))
+    declared = Relation(columns, ('generator', 'snapshot'))
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('zone', 'snapshot'))
-    assert zonal == Sum(Join(Variable('p'), columns), (Axis('generator', Column('zone_of', 'generator')),)), (
+    assert zonal == Sum(
+        Join(VariableReference('p', dims=('generator', 'snapshot')), columns, dims=('snapshot', 'zone')),
+        (Axis('generator', Column('zone_of', 'generator')),),
+        dims=('snapshot', 'zone'),
+    ), (
         'a grouped sum is a sum over a join: the join names the column over the over= dim and the unnamed key '
         'column as joined on, the by= column and that key column as grouped by, and the sum stands over the axis '
         'the join opens for the column it drops'
@@ -729,15 +767,22 @@ def test_a_relation_lowers_with_the_join_each_call_names():
         ('snapshot',),
     ), 'the dims a consumer reads are read off the join: dropped, added, and the key columns kept'
     assert zonal.operand.columns.relation is program.relations['zone_of'], (
-        'the join holds the one declaration the program holds, not an equal copy built again'
+        'the join holds the one entry the program holds, not an equal copy built again'
     )
     assert program.constraints['history'].lhs == Sum(
-        Join(Variable('p'), JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator'))),
+        Join(
+            VariableReference('p', dims=('generator', 'snapshot')),
+            JoinColumns('zone_of', declared, ('snapshot', 'generator'), ('zone', 'generator')),
+            dims=('generator', 'zone'),
+        ),
         (Axis('snapshot', Column('zone_of', 'snapshot')),),
+        dims=('generator', 'zone'),
     ), 'the same table joined on its other key column'
     priced = program.constraints['priced'].rhs
     assert priced == Join(
-        Parameter('price'), JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot'))
+        ParameterReference('price', dims=('snapshot', 'zone')),
+        JoinColumns('zone_of', declared, ('zone', 'snapshot'), ('generator', 'snapshot')),
+        dims=('generator', 'snapshot'),
     ), 'and an at is the bare join, on the value column, grouped by the key columns'
     assert isinstance(priced, Join)
     assert (priced.columns.dropped_dims, priced.columns.added_dims, priced.columns.kept) == (
@@ -757,41 +802,52 @@ def test_a_relation_lowers_with_the_join_each_call_names():
 
 
 def test_a_binary_variable_lowers_to_a_binary_domain():
-    program = schema_of(
-        DISPATCH_YAML, **{'variables.dispatch.domain': 'binary', 'variables.dispatch.bounds': {}}
-    ).program
+    program = spec_of(DISPATCH_YAML, **{'variables.dispatch.domain': 'binary', 'variables.dispatch.bounds': {}}).program
     assert program.variables['dispatch'].domain == 'binary'
 
 
 def test_a_divisor_under_a_join_is_still_named():
     """`children` has to descend through every node, or a refusal loses its name."""
-    quotient = Divide(Variable('x'), Parameter('rate'))
-    component_of = RelationDeclaration((('flow', 'flow'), ('component', 'component')), ('flow',))
-    looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)))
+    quotient = Divide(
+        VariableReference('x', dims=('component',)),
+        ParameterReference('rate', dims=('component',)),
+        dims=('component',),
+    )
+    component_of = Relation((('flow', 'flow'), ('component', 'component')), ('flow',))
+    looked_up = Join(quotient, JoinColumns('component_of', component_of, ('component',), ('flow',)), dims=('flow',))
 
     assert parameters_of(looked_up) == frozenset({'rate'}), 'the walk descends through `Join`'
-    assert parameters_of(Sum(looked_up, (Axis('flow'),))) == frozenset({'rate'}), 'and through a `Sum` over it'
+    assert parameters_of(Sum(looked_up, (Axis('flow'),), dims=())) == frozenset({'rate'}), 'and through a `Sum` over it'
 
 
 def test_a_divisor_under_a_power_is_still_named():
     """`children` had no branch for `Power`, so every walk stopped at it and a divisor written
     `d ** 2` was reported with no parameter at all (#403)."""
-    quotient = Divide(Variable('x'), Power(Parameter('d'), Constant(2.0)))
+    d, two = ParameterReference('d', dims=()), Constant(2.0, dims=())
+    quotient = Divide(VariableReference('x', dims=()), Power(d, two, dims=()), dims=())
 
-    assert children(quotient.divisor) == (Parameter('d'), Constant(2.0)), 'the base first, then the exponent'
+    assert children(quotient.divisor) == (d, two), 'the base first, then the exponent'
     assert parameters_of(quotient) == frozenset({'d'}), 'the walk descends through `Power`'
 
 
 OUTER = Mask(ParameterDefined('committable', ('g',)))
 INNER = Mask(ParameterDefined('flag', ('g',)))
+X, P, ZERO, Q = (
+    VariableReference('x', dims=('g',)),
+    VariableReference('p', dims=('g',)),
+    Constant(0.0, dims=()),
+    ParameterReference('q', dims=('g',)),
+)
 NESTED = Add(
-    Variable('x'),
+    X,
     Cases(
         (
-            Region(OUTER, Cases((Region(INNER, Variable('p')), Region(~INNER, Constant(0.0))))),
-            Region(~OUTER, Parameter('q')),
-        )
+            Region(OUTER, Cases((Region(INNER, P), Region(~INNER, ZERO)), dims=('g',))),
+            Region(~OUTER, Q),
+        ),
+        dims=('g',),
     ),
+    dims=('g',),
 )
 
 
@@ -800,15 +856,15 @@ def test_walk_regions_carries_the_regions_a_node_stands_under():
     and every consumer recursed for it on its own (#473)."""
     assert list(walk_regions(NESTED)) == [
         (NESTED, ()),
-        (Variable('x'), ()),
+        (X, ()),
         (NESTED.right, ()),
         (NESTED.right.regions[0].value, (OUTER,)),
-        (Variable('p'), (OUTER, INNER)),
-        (Constant(0.0), (OUTER, ~INNER)),
-        (Parameter('q'), (~OUTER,)),
+        (P, (OUTER, INNER)),
+        (ZERO, (OUTER, ~INNER)),
+        (Q, (~OUTER,)),
     ], (
-        'parents first; a node outside any block carries nothing; a `Cases` carries only the regions '
-        'above it; a value under two blocks carries both, the outer one first'
+        'parents first; a node outside any `cases:` carries nothing; a `Cases` carries only the regions '
+        'above it; a value under two `cases:` carries both, the outer one first'
     )
 
 
@@ -831,11 +887,11 @@ def test_a_relation_is_declared_as_the_file_declares_it():
     ).program
 
     assert program.relations == {
-        'season_of': RelationDeclaration((('g', 'g'), ('season', 'season')), ('g',)),
-        'at_bus': RelationDeclaration((('g', 'g'), ('bus', 'bus')), ('g',)),
-    }, 'every relation under its own name, in declaration order'
+        'season_of': Relation((('g', 'g'), ('season', 'season')), ('g',)),
+        'at_bus': Relation((('g', 'g'), ('bus', 'bus')), ('g',)),
+    }, 'every relation under its own name, in file order'
     assert program.relations['season_of'].values == ('season',), 'and each says what its key determines'
-    assert program.dimensions['g'] == DimensionDeclaration(dtype='str'), 'a dimension carries its dtype and no relation'
+    assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no relation'
 
 
 @pytest.mark.parametrize('ordered', [pytest.param(True, id='ordered'), pytest.param(False, id='unordered')])
@@ -853,7 +909,7 @@ def test_a_program_is_built_by_keyword_so_a_field_added_later_cannot_reorder_an_
 
 
 @pytest.mark.parametrize('group', ['parameters', 'variables', 'constraints', 'dimensions', 'relations', 'sos'])
-def test_a_program_seals_its_declaration_groups(dispatch_program, group):
+def test_a_program_seals_its_entry_groups(dispatch_program, group):
     """`frozen=True` sealed the fields and said nothing about what was behind them."""
     with pytest.raises(TypeError):
         getattr(dispatch_program, group)['sneak'] = None  # pyrefly: ignore[unsupported-operation]  the point of the test
@@ -874,7 +930,7 @@ def test_roots_are_the_trees_a_row_is_built_from():
         program.objective.expression,
         program.constraints['c'].lhs,
         program.constraints['c'].rhs,
-    ), 'the objective first, then both sides of each constraint, in declaration order'
+    ), 'the objective first, then both sides of each constraint, in file order'
     assert program.expressions['spend'].expression not in program.roots, (
         'a named expression builds no row, so it is not one of the trees a row is built from'
     )
@@ -937,8 +993,8 @@ def test_a_named_expression_is_not_in_the_footprint():
     """It builds no row, so counting it would answer wrongly about what is solved."""
     program = to_spec(varied(TINY, expressions={'spend': 'sum(p * cost, over=g)'})).program
 
-    assert Parameter not in program.footprint.kinds, "the named expression's parameter reaches no row"
-    assert Parameter in {type(n) for n in walk(program.expressions['spend'].expression)}, (
+    assert ParameterReference not in program.footprint.kinds, "the named expression's parameter reaches no row"
+    assert ParameterReference in {type(n) for n in walk(program.expressions['spend'].expression)}, (
         'though it is in the expression'
     )
 
@@ -986,7 +1042,7 @@ def test_a_cased_expression_lowers_to_one_region_per_case():
     cases = _cases_in(to_spec(CASED).program)
 
     assert len(cases.regions) == 3, 'one region per case, the `otherwise` among them'
-    assert [type(r.value).__name__ for r in cases.regions] == ['Constant', 'Parameter', 'Translate'], (
+    assert [type(r.value).__name__ for r in cases.regions] == ['Constant', 'ParameterReference', 'Translate'], (
         'each region carries its own value, lowered — a number, a parameter and a shift'
     )
 
@@ -1006,7 +1062,7 @@ def test_the_fallback_region_carries_the_mask_the_file_left_unwritten():
 
 
 def test_a_region_s_when_is_a_mask_with_its_own_dims():
-    """`Region.when` arrives in the same carrier as a declaration's `where`.
+    """`Region.when` arrives in the same carrier as an entry's `where`.
 
     It was the one mask left as a bare node, so a helper written over `Mask`
     branched on where a mask came from — the divergence the carrier exists to
@@ -1015,7 +1071,7 @@ def test_a_region_s_when_is_a_mask_with_its_own_dims():
     always_on, boundary, remainder = _cases_in(to_spec(CASED).program).regions
 
     assert all(isinstance(r.when, Mask) for r in (always_on, boundary, remainder)), (
-        'every region, the synthesized remainder included, carries its predicate as a Mask'
+        'every region, the synthesized remainder included, carries its condition as a Mask'
     )
     assert always_on.when.dims == frozenset({'g'}), "`not committable` reads the parameter's dims"
     assert boundary.when.dims == frozenset({'g', 't'}), 'the position comparison adds its dimension'
@@ -1029,7 +1085,7 @@ def test_the_lowered_regions_are_still_proved_apart():
     the other half: the mask lowering invents for `otherwise` is put through the
     same prover, against each stated case, and must overlap none of them.
     """
-    spec = schema_of(CASED)
+    spec = spec_of(CASED)
     regions = _cases_in(spec.program).regions
     named = {f'region{i}': r.when.root for i, r in enumerate(regions)}
 
@@ -1113,9 +1169,9 @@ def test_a_macro_formal_named_like_an_entry_keeps_the_entry_out_of_the_math():
 def test_an_entry_that_reads_a_dual_is_a_reported_quantity():
     """A dual is read after the solve, so an entry calling one is never in the math: it lowers to a Dual leaf and stays reported."""
     program = to_spec(varied(TINY, expressions={'shadow_price': 'dual(c)'})).program
-    declaration = program.expressions['shadow_price']
-    assert declaration.in_math is False, 'the entry reading a dual is reported, never in the math'
-    assert isinstance(declaration.expression, Dual), 'and it lowers to a Dual leaf'
+    entry = program.expressions['shadow_price']
+    assert entry.in_math is False, 'the entry reading a dual is reported, never in the math'
+    assert isinstance(entry.expression, Dual), 'and it lowers to a Dual leaf'
 
 
 def test_a_spec_answers_with_one_program_however_often_it_is_asked():
@@ -1155,7 +1211,7 @@ def test_a_lowered_spec_still_pickles_and_lowers_to_the_same_program():
 def test_a_lowered_program_pickles_and_is_the_same_program():
     """A program crosses a process as itself, walked or not.
 
-    Every group of declarations is sealed against writes, and the seal used
+    Every group of entries is sealed against writes, and the seal used
     to be a ``MappingProxyType``, which pickle refuses — so a program could
     be built by one process and never handed to another, and a consumer
     running slices in a pool re-lowered the file per slice. The seal now
@@ -1185,7 +1241,7 @@ def test_a_lowered_program_pickles_and_is_the_same_program():
 def test_two_groups_of_a_program_merge_with_or_as_they_did_behind_the_proxy():
     """`program.constraints | program.variables` is a dict of both, as it was
     when the groups were `MappingProxyType`s — a consumer that walks every
-    declaration this way (specsolve's parity harness does) broke on alpha.78,
+    entry this way (specsolve's parity harness does) broke on alpha.78,
     where the seal answered `|` with a `TypeError`."""
     program = to_spec(
         {

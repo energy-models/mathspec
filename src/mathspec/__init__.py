@@ -9,7 +9,7 @@ file, and the verbs over what it returns. The rest of the surface is three
 modules, each with one rule:
 
 - [`mathspec.spec`][] is what the file *says*: [`Spec`][mathspec.spec.Spec]
-  and the blocks it holds.
+  and the `*Spec` parts it holds.
 - [`mathspec.program`][] is what the file *means*: the
   [`Program`][mathspec.program.Program] a spec lowers to, its nodes, and the
   [`Advice`][mathspec.program.Advice] the language gives about it.
@@ -20,18 +20,18 @@ package-private, because a consumer reads a program instead.
 """
 
 from mathspec import errors, program, spec
-from mathspec.advising import advice
-from mathspec.composition import merge, override
-from mathspec.typesetting import (
+from mathspec._advising import advice
+from mathspec._composition import merge, override
+from mathspec._typesetting import (
     FormatName,
     SymbolTable,
     to_latex,
     to_markdown,
     to_typst,
     typeset,
-    typeset_declaration,
+    typeset_line,
 )
-from mathspec.validation import to_spec
+from mathspec._validation import to_spec
 
 __all__ = [
     'FormatName',
@@ -47,7 +47,7 @@ __all__ = [
     'to_spec',
     'to_typst',
     'typeset',
-    'typeset_declaration',
+    'typeset_line',
 ]
 
 import warnings as _warnings

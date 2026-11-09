@@ -7,7 +7,7 @@
     "global_constraints": {},
     "objective": 7182.222222222223,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 12,
@@ -27,12 +27,13 @@
       "StorageUnit-spill": 4,
       "StorageUnit-state_of_charge": 8,
       "Store-e": 4,
-      "Store-p": 4
+      "Store-p": 4,
+      "Store-p_store": 4
     },
     "global_constraints": {},
     "objective": 4456.659315422356,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -51,7 +52,11 @@
       "Store-e_set": 1,
       "Store-energy_balance": 4,
       "Store-fix-e-lower": 4,
-      "Store-fix-e-upper": 4
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4
     }
   },
   "rung_03_expansion": {
@@ -66,7 +71,8 @@
       "StorageUnit-state_of_charge": 8,
       "Store-e": 8,
       "Store-e_nom": 1,
-      "Store-p": 8
+      "Store-p": 8,
+      "Store-p_store": 8
     },
     "global_constraints": {
       "cost_dc": {
@@ -104,7 +110,7 @@
     },
     "objective": 7633.908502024292,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-e_sum_max": 1,
@@ -157,8 +163,16 @@
       "Store-ext-e-upper": 4,
       "Store-ext-e_nom-lower": 1,
       "Store-ext-e_nom-upper": 1,
+      "Store-ext-p-lower": 0,
+      "Store-ext-p-upper": 0,
+      "Store-ext-p_store-lower": 4,
+      "Store-ext-p_store-upper": 4,
       "Store-fix-e-lower": 4,
-      "Store-fix-e-upper": 4
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4
     }
   },
   "rung_04_ramps": {
@@ -169,7 +183,7 @@
     "global_constraints": {},
     "objective": 8785.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -190,7 +204,8 @@
       "StorageUnit-p_store": 4,
       "StorageUnit-state_of_charge": 4,
       "Store-e": 4,
-      "Store-p": 4
+      "Store-p": 4,
+      "Store-p_store": 4
     },
     "global_constraints": {
       "co2_cap": {
@@ -220,7 +235,7 @@
     },
     "objective": 10282.833333333334,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 20,
@@ -242,7 +257,11 @@
       "StorageUnit-fix-state_of_charge-upper": 4,
       "Store-energy_balance": 4,
       "Store-fix-e-lower": 4,
-      "Store-fix-e-upper": 4
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4
     }
   },
   "rung_06_kvl": {
@@ -276,7 +295,7 @@
     },
     "objective": 23962.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -310,16 +329,15 @@
     "global_constraints": {},
     "objective": 7775.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
-      "Generator-com-down-time": 6,
+      "Generator-com-down-time": 8,
       "Generator-com-p-lower": 8,
       "Generator-com-p-upper": 8,
-      "Generator-com-status-min_up_time_must_stay_up": 2,
       "Generator-com-transition-shut-down": 8,
       "Generator-com-transition-start-up": 8,
-      "Generator-com-up-time": 6,
+      "Generator-com-up-time": 8,
       "Generator-fix-p-lower": 8,
       "Generator-fix-p-upper": 8,
       "Generator-p-ramp_limit_down": 7,
@@ -344,7 +362,7 @@
     "global_constraints": {},
     "objective": 15915.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 8,
@@ -384,7 +402,7 @@
     "global_constraints": {},
     "objective": 11714.4,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 28,
       "Generator-fix-p-lower": 24,
@@ -401,7 +419,7 @@
     "global_constraints": {},
     "objective": 12587.437500000098,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 16,
@@ -428,7 +446,7 @@
     },
     "objective": -3474256.0405499237,
     "objective_constant": 21915277.518279143,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 90,
       "Generator-ext-p-lower": 60,
@@ -455,20 +473,19 @@
     "global_constraints": {},
     "objective": 7775.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
-      "Generator-com-down-time": 6,
+      "Generator-com-down-time": 8,
       "Generator-com-p-before": 3,
-      "Generator-com-p-current": 3,
+      "Generator-com-p-current": 4,
       "Generator-com-p-lower": 8,
       "Generator-com-p-upper": 8,
       "Generator-com-partly-shut-down": 3,
       "Generator-com-partly-start-up": 3,
-      "Generator-com-status-min_up_time_must_stay_up": 2,
       "Generator-com-transition-shut-down": 8,
       "Generator-com-transition-start-up": 8,
-      "Generator-com-up-time": 6,
+      "Generator-com-up-time": 8,
       "Generator-fix-p-lower": 8,
       "Generator-fix-p-upper": 8,
       "Generator-p-ramp_limit_down": 7,
@@ -492,7 +509,7 @@
     "global_constraints": {},
     "objective": 10645.295879552297,
     "objective_constant": 160.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -525,7 +542,7 @@
     "global_constraints": {},
     "objective": 9267.386666666665,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "CVaR-def": 1,
@@ -550,7 +567,7 @@
     "global_constraints": {},
     "objective": 12747.19109626398,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Carrier-growth_limit": 2,
@@ -572,7 +589,7 @@
     "global_constraints": {},
     "objective": 5262.5,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -591,7 +608,7 @@
     "global_constraints": {},
     "objective": 9730.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -622,7 +639,7 @@
     "global_constraints": {},
     "objective": 12274.401472395122,
     "objective_constant": 1080.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -654,7 +671,7 @@
     "global_constraints": {},
     "objective": 10840.926895402912,
     "objective_constant": 160.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -684,7 +701,7 @@
     "global_constraints": {},
     "objective": 16455.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -707,12 +724,13 @@
       "StorageUnit-state_of_charge": 4,
       "Store-e": 6,
       "Store-e_nom": 2,
-      "Store-p": 6
+      "Store-p": 6,
+      "Store-p_store": 6
     },
     "global_constraints": {},
     "objective": 8452.5,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -731,7 +749,11 @@
       "Store-ext-e-lower": 6,
       "Store-ext-e-upper": 6,
       "Store-ext-e_nom-lower": 2,
-      "Store-ext-e_nom-upper": 2
+      "Store-ext-e_nom-upper": 2,
+      "Store-ext-p-lower": 0,
+      "Store-ext-p-upper": 0,
+      "Store-ext-p_store-lower": 6,
+      "Store-ext-p_store-upper": 6
     }
   },
   "rung_22_transformer_losses": {
@@ -748,7 +770,7 @@
     "global_constraints": {},
     "objective": 10643.477135410736,
     "objective_constant": 160.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -794,7 +816,7 @@
     "global_constraints": {},
     "objective": 10821.999155213578,
     "objective_constant": 160.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -829,13 +851,12 @@
     "global_constraints": {},
     "objective": 9007.5,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
-      "Generator-com-down-time": 3,
+      "Generator-com-down-time": 4,
       "Generator-com-p-lower": 4,
       "Generator-com-p-upper": 4,
-      "Generator-com-status-min_down_time_must_stay_up": 2,
       "Generator-com-transition-shut-down": 4,
       "Generator-com-transition-start-up": 4,
       "Generator-fix-p-lower": 8,
@@ -860,12 +881,12 @@
     "global_constraints": {},
     "objective": 13982.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
       "Generator-fix-p-upper": 8,
-      "Link-com-down-time": 6,
+      "Link-com-down-time": 8,
       "Link-com-ext-p-lower": 4,
       "Link-com-ext-p-lower-nonneg": 4,
       "Link-com-ext-p-upper-bigM": 4,
@@ -874,11 +895,9 @@
       "Link-com-mod-p-upper": 8,
       "Link-com-p-lower": 8,
       "Link-com-p-upper": 8,
-      "Link-com-status-min_down_time_must_stay_up": 2,
-      "Link-com-status-min_up_time_must_stay_up": 2,
       "Link-com-transition-shut-down": 20,
       "Link-com-transition-start-up": 20,
-      "Link-com-up-time": 6,
+      "Link-com-up-time": 8,
       "Link-ext-p_nom-lower": 2,
       "Link-ext-p_nom-upper": 2,
       "Link-fix-p-lower": 4,
@@ -912,14 +931,14 @@
     "global_constraints": {},
     "objective": 15865.124999999998,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
       "Generator-fix-p-upper": 8,
       "Link-fix-p-lower": 4,
       "Link-fix-p-upper": 4,
-      "Process-com-down-time": 6,
+      "Process-com-down-time": 8,
       "Process-com-ext-p-lower": 4,
       "Process-com-ext-p-lower-nonneg": 4,
       "Process-com-ext-p-upper-bigM": 4,
@@ -928,11 +947,9 @@
       "Process-com-mod-p-upper": 8,
       "Process-com-p-lower": 8,
       "Process-com-p-upper": 8,
-      "Process-com-status-min_down_time_must_stay_up": 2,
-      "Process-com-status-min_up_time_must_stay_up": 2,
       "Process-com-transition-shut-down": 20,
       "Process-com-transition-start-up": 20,
-      "Process-com-up-time": 6,
+      "Process-com-up-time": 8,
       "Process-ext-p_nom-lower": 2,
       "Process-ext-p_nom-upper": 2,
       "Process-p-ramp_limit_down": 3,
@@ -974,7 +991,7 @@
     "global_constraints": {},
     "objective": 45469.49999999998,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-mod-p-lower": 4,
@@ -1037,7 +1054,7 @@
     "global_constraints": {},
     "objective": 83282.99999999983,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-p-lower": 4,
@@ -1080,12 +1097,13 @@
       "StorageUnit-p_store": 16,
       "StorageUnit-state_of_charge": 16,
       "Store-e": 16,
-      "Store-p": 16
+      "Store-p": 16,
+      "Store-p_store": 16
     },
     "global_constraints": {},
     "objective": 7438.461538461539,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 16,
@@ -1101,7 +1119,11 @@
       "StorageUnit-fix-state_of_charge-upper": 16,
       "Store-energy_balance": 16,
       "Store-fix-e-lower": 16,
-      "Store-fix-e-upper": 16
+      "Store-fix-e-upper": 16,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 16,
+      "Store-fix-p_store-upper": 16
     }
   },
   "rung_30_security_constrained": {
@@ -1116,7 +1138,7 @@
     "global_constraints": {},
     "objective": 22113.333333333332,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 20,
@@ -1161,12 +1183,13 @@
       "StorageUnit-p_store": 4,
       "StorageUnit-state_of_charge": 4,
       "Store-e": 8,
-      "Store-p": 8
+      "Store-p": 8,
+      "Store-p_store": 8
     },
     "global_constraints": {},
     "objective": 7230.4866975671375,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 16,
@@ -1180,7 +1203,11 @@
       "StorageUnit-fix-state_of_charge-upper": 4,
       "Store-energy_balance": 8,
       "Store-fix-e-lower": 8,
-      "Store-fix-e-upper": 8
+      "Store-fix-e-upper": 8,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 8,
+      "Store-fix-p_store-upper": 8
     }
   },
   "rung_33_maintenance": {
@@ -1204,7 +1231,7 @@
     "global_constraints": {},
     "objective": 7367.560185185185,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-ext-p-lower": 4,
@@ -1284,7 +1311,7 @@
     "global_constraints": {},
     "objective": 6420.048611111111,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 4,
@@ -1295,7 +1322,6 @@
       "Generator-com-mod-p-upper": 4,
       "Generator-com-p-lower": 4,
       "Generator-com-p-upper": 4,
-      "Generator-com-status-min_up_time_must_stay_up": 0,
       "Generator-com-transition-shut-down": 12,
       "Generator-com-transition-start-up": 12,
       "Generator-ext-p_nom-lower": 2,
@@ -1330,7 +1356,6 @@
       "Link-com-mod-p-upper": 4,
       "Link-com-p-lower": 4,
       "Link-com-p-upper": 4,
-      "Link-com-status-min_up_time_must_stay_up": 0,
       "Link-com-transition-shut-down": 12,
       "Link-com-transition-start-up": 12,
       "Link-ext-p_nom-lower": 2,
@@ -1365,7 +1390,6 @@
       "Process-com-mod-p-upper": 4,
       "Process-com-p-lower": 4,
       "Process-com-p-upper": 4,
-      "Process-com-status-min_up_time_must_stay_up": 0,
       "Process-com-transition-shut-down": 12,
       "Process-com-transition-start-up": 12,
       "Process-ext-p_nom-lower": 2,
@@ -1399,7 +1423,8 @@
       "StorageUnit-p_store": 8,
       "StorageUnit-state_of_charge": 8,
       "Store-e": 8,
-      "Store-p": 8
+      "Store-p": 8,
+      "Store-p_store": 8
     },
     "global_constraints": {
       "co2_2030": {
@@ -1417,7 +1442,7 @@
     },
     "objective": 4886.764705882353,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 32,
@@ -1434,7 +1459,11 @@
       "StorageUnit-fix-state_of_charge-upper": 8,
       "Store-energy_balance": 8,
       "Store-fix-e-lower": 8,
-      "Store-fix-e-upper": 8
+      "Store-fix-e-upper": 8,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 8,
+      "Store-fix-p_store-upper": 8
     }
   },
   "rung_36_quadratic_storage_process": {
@@ -1446,12 +1475,13 @@
       "StorageUnit-p_store": 4,
       "StorageUnit-state_of_charge": 4,
       "Store-e": 4,
-      "Store-p": 4
+      "Store-p": 4,
+      "Store-p_store": 4
     },
     "global_constraints": {},
     "objective": 19185.241281403858,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -1469,7 +1499,11 @@
       "StorageUnit-fix-state_of_charge-upper": 4,
       "Store-energy_balance": 4,
       "Store-fix-e-lower": 4,
-      "Store-fix-e-upper": 4
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4
     }
   },
   "rung_37_fixed_storage_dispatch": {
@@ -1480,12 +1514,13 @@
       "StorageUnit-p_store": 4,
       "StorageUnit-state_of_charge": 4,
       "Store-e": 4,
-      "Store-p": 4
+      "Store-p": 4,
+      "Store-p_store": 4
     },
     "global_constraints": {},
     "objective": 6395.833333333333,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -1504,6 +1539,10 @@
       "Store-energy_balance": 4,
       "Store-fix-e-lower": 4,
       "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4,
       "Store-p_set": 2
     }
   },
@@ -1516,7 +1555,7 @@
     "global_constraints": {},
     "objective": 12918.75,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 24,
       "Generator-fix-p-lower": 24,
@@ -1532,12 +1571,13 @@
       "Generator-p": 8,
       "Store-e": 6,
       "Store-e_nom": 2,
-      "Store-p": 6
+      "Store-p": 6,
+      "Store-p_store": 6
     },
     "global_constraints": {},
     "objective": 8600.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -1547,7 +1587,11 @@
       "Store-ext-e-lower": 6,
       "Store-ext-e-upper": 6,
       "Store-ext-e_nom-lower": 2,
-      "Store-ext-e_nom-upper": 2
+      "Store-ext-e_nom-upper": 2,
+      "Store-ext-p-lower": 0,
+      "Store-ext-p-upper": 0,
+      "Store-ext-p_store-lower": 6,
+      "Store-ext-p_store-upper": 6
     }
   },
   "rung_40_scenario_global_constraints": {
@@ -1577,7 +1621,7 @@
     },
     "objective": 15106.666666666666,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -1599,7 +1643,7 @@
     "global_constraints": {},
     "objective": 17964.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 24,
@@ -1617,7 +1661,7 @@
     "global_constraints": {},
     "objective": 5049.999999999999,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-ext-p-lower": 8,
@@ -1638,12 +1682,13 @@
       "StorageUnit-p_store": 4,
       "StorageUnit-state_of_charge": 4,
       "Store-e": 4,
-      "Store-p": 4
+      "Store-p": 4,
+      "Store-p_store": 4
     },
     "global_constraints": {},
     "objective": 2125.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 12,
@@ -1659,7 +1704,11 @@
       "StorageUnit-fix-state_of_charge-upper": 4,
       "Store-energy_balance": 4,
       "Store-fix-e-lower": 4,
-      "Store-fix-e-upper": 4
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 4
     }
   },
   "rung_44_linearized_commitment": {
@@ -1676,13 +1725,12 @@
     "global_constraints": {},
     "objective": 7400.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
-      "Generator-com-down-time": 3,
+      "Generator-com-down-time": 4,
       "Generator-com-p-lower": 16,
       "Generator-com-p-upper": 16,
-      "Generator-com-status-min_down_time_must_stay_up": 2,
       "Generator-com-transition-shut-down": 16,
       "Generator-com-transition-start-up": 16,
       "Generator-fix-p-lower": 12,
@@ -1710,7 +1758,7 @@
     "global_constraints": {},
     "objective": 10996.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 16,
@@ -1740,7 +1788,7 @@
     "global_constraints": {},
     "objective": 101294.125,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 4,
@@ -1749,7 +1797,6 @@
       "Generator-com-ext-p-upper-cap": 4,
       "Generator-com-p-lower": 4,
       "Generator-com-p-upper": 4,
-      "Generator-com-status-min_up_time_must_stay_up": 0,
       "Generator-com-transition-shut-down": 8,
       "Generator-com-transition-start-up": 8,
       "Generator-ext-p-lower": 4,
@@ -1788,16 +1835,15 @@
     "global_constraints": {},
     "objective": 12862.5,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
-      "Generator-com-p-before": 3,
-      "Generator-com-p-current": 3,
+      "Generator-com-p-before": 4,
+      "Generator-com-p-current": 4,
       "Generator-com-p-lower": 12,
       "Generator-com-p-upper": 12,
-      "Generator-com-partly-shut-down": 3,
-      "Generator-com-partly-start-up": 3,
-      "Generator-com-status-min_up_time_must_stay_up": 0,
+      "Generator-com-partly-shut-down": 4,
+      "Generator-com-partly-start-up": 4,
       "Generator-com-transition-shut-down": 12,
       "Generator-com-transition-start-up": 12,
       "Generator-fix-p-lower": 20,
@@ -1811,7 +1857,7 @@
       "Link-fix-p-upper": 4
     }
   },
-  "rung_48_unweighted_start_up": {
+  "rung_48_start_up_period_weight": {
     "columns": {
       "Generator-p": 18,
       "Generator-shut_down": 6,
@@ -1819,9 +1865,9 @@
       "Generator-status": 6
     },
     "global_constraints": {},
-    "objective": 7325.0,
+    "objective": 7125.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 6,
       "Generator-com-p-lower": 6,
@@ -1844,7 +1890,7 @@
     "global_constraints": {},
     "objective": 335.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-ext-p-lower": 4,
@@ -1865,7 +1911,7 @@
     "global_constraints": {},
     "objective": 7380.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -1882,7 +1928,7 @@
     "global_constraints": {},
     "objective": 3432.5,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -1912,7 +1958,7 @@
     },
     "objective": 15630.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -1944,7 +1990,7 @@
     },
     "objective": 15005.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -1965,7 +2011,7 @@
     "global_constraints": {},
     "objective": 13105.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 32,
@@ -1986,7 +2032,7 @@
     "global_constraints": {},
     "objective": 18205.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 32,
@@ -2009,7 +2055,7 @@
     "global_constraints": {},
     "objective": 4800.000000000001,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-ext-p-lower": 8,
@@ -2034,14 +2080,14 @@
     "global_constraints": {},
     "objective": 7430.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-com-p-lower": 8,
       "Generator-com-p-upper": 8,
       "Generator-com-transition-shut-down": 8,
       "Generator-com-transition-start-up": 8,
-      "Generator-com-up-time": 6,
+      "Generator-com-up-time": 8,
       "Generator-fix-p-lower": 16,
       "Generator-fix-p-upper": 16,
       "Generator-shut_down-p-fixed-upper": 8,
@@ -2070,7 +2116,7 @@
     },
     "objective": 130562.09418409193,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 20,
@@ -2105,7 +2151,7 @@
     "global_constraints": {},
     "objective": 121834.62083205313,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 24,
@@ -2135,7 +2181,7 @@
     "global_constraints": {},
     "objective": 6850.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 5,
       "Generator-com-p-lower": 5,
@@ -2166,6 +2212,7 @@
       "Store-e_nom": 1,
       "Store-n_mod": 1,
       "Store-p": 4,
+      "Store-p_store": 4,
       "Transformer-n_mod": 1,
       "Transformer-s": 4,
       "Transformer-s_nom": 1
@@ -2173,7 +2220,7 @@
     "global_constraints": {},
     "objective": 13927.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -2198,6 +2245,10 @@
       "Store-ext-e-lower": 4,
       "Store-ext-e-upper": 4,
       "Store-ext-e_nom-lower": 1,
+      "Store-ext-p-lower": 0,
+      "Store-ext-p-upper": 0,
+      "Store-ext-p_store-lower": 4,
+      "Store-ext-p_store-upper": 4,
       "Transformer-ext-s-lower": 4,
       "Transformer-ext-s-upper": 4,
       "Transformer-ext-s_nom-lower": 1,
@@ -2221,9 +2272,9 @@
       "Process-status": 4
     },
     "global_constraints": {},
-    "objective": 9245.0,
+    "objective": 9140.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-com-ext-p-lower": 8,
@@ -2232,7 +2283,6 @@
       "Generator-com-ext-p-upper-cap": 8,
       "Generator-com-p-lower": 4,
       "Generator-com-p-upper": 4,
-      "Generator-com-status-min_up_time_must_stay_up": 0,
       "Generator-com-transition-shut-down": 12,
       "Generator-com-transition-start-up": 12,
       "Generator-ext-p_nom-lower": 1,
@@ -2243,7 +2293,6 @@
       "Generator-status-p-fixed-upper": 12,
       "Link-com-p-lower": 4,
       "Link-com-p-upper": 4,
-      "Link-com-status-min_up_time_must_stay_up": 0,
       "Link-com-transition-shut-down": 4,
       "Link-com-transition-start-up": 4,
       "Link-shut_down-p-fixed-upper": 4,
@@ -2251,7 +2300,6 @@
       "Link-status-p-fixed-upper": 4,
       "Process-com-p-lower": 4,
       "Process-com-p-upper": 4,
-      "Process-com-status-min_up_time_must_stay_up": 0,
       "Process-com-transition-shut-down": 4,
       "Process-com-transition-start-up": 4,
       "Process-shut_down-p-fixed-upper": 4,
@@ -2267,7 +2315,7 @@
     "global_constraints": {},
     "objective": 16000.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -2295,7 +2343,7 @@
     "global_constraints": {},
     "objective": 47777.33333333333,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -2304,15 +2352,15 @@
       "Link-com-ext-p-lower-nonneg": 4,
       "Link-com-ext-p-upper-bigM": 4,
       "Link-com-ext-p-upper-cap": 4,
-      "Link-com-p-before": 3,
-      "Link-com-p-current": 3,
+      "Link-com-p-before": 4,
+      "Link-com-p-current": 4,
       "Link-com-p-lower": 4,
       "Link-com-p-upper": 4,
-      "Link-com-partly-shut-down": 3,
-      "Link-com-partly-start-up": 3,
+      "Link-com-partly-shut-down": 4,
+      "Link-com-partly-start-up": 4,
       "Link-com-transition-shut-down": 8,
       "Link-com-transition-start-up": 8,
-      "Link-com-up-time": 3,
+      "Link-com-up-time": 4,
       "Link-ext-p_nom-lower": 1,
       "Link-ext-p_nom-upper": 1,
       "Link-fix-p-lower": 4,
@@ -2326,15 +2374,15 @@
       "Link-shut_down-p-fixed-upper": 8,
       "Link-start_up-p-fixed-upper": 8,
       "Link-status-p-fixed-upper": 8,
-      "Process-com-p-before": 3,
-      "Process-com-p-current": 3,
+      "Process-com-p-before": 4,
+      "Process-com-p-current": 4,
       "Process-com-p-lower": 4,
       "Process-com-p-upper": 4,
-      "Process-com-partly-shut-down": 3,
-      "Process-com-partly-start-up": 3,
+      "Process-com-partly-shut-down": 4,
+      "Process-com-partly-start-up": 4,
       "Process-com-transition-shut-down": 4,
       "Process-com-transition-start-up": 4,
-      "Process-com-up-time": 3,
+      "Process-com-up-time": 4,
       "Process-p-ramp_limit_down": 4,
       "Process-p-ramp_limit_up": 4,
       "Process-shut_down-p-fixed-upper": 4,
@@ -2350,7 +2398,7 @@
     "global_constraints": {},
     "objective": 13000.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -2369,7 +2417,8 @@
       "StorageUnit-p_store": 2,
       "StorageUnit-state_of_charge": 2,
       "Store-e": 2,
-      "Store-p": 2
+      "Store-p": 2,
+      "Store-p_store": 2
     },
     "global_constraints": {
       "co2_cap": {
@@ -2379,7 +2428,7 @@
     },
     "objective": 350.0,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 4,
       "Generator-fix-p-lower": 4,
@@ -2394,7 +2443,11 @@
       "StorageUnit-fix-state_of_charge-upper": 2,
       "Store-energy_balance": 2,
       "Store-fix-e-lower": 2,
-      "Store-fix-e-upper": 2
+      "Store-fix-e-upper": 2,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 2,
+      "Store-fix-p_store-upper": 2
     }
   },
   "rung_70_risk_preference_zero": {
@@ -2409,7 +2462,7 @@
     "global_constraints": {},
     "objective": 7946.733333333334,
     "objective_constant": 0.0,
-    "pypsa": "1.3.0.post1.dev41+g51986084b",
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
     "rows": {
       "Bus-nodal_balance": 16,
       "CVaR-def": 1,
@@ -2423,6 +2476,309 @@
       "Generator-fix-p-upper": 16,
       "Link-fix-p-lower": 8,
       "Link-fix-p-upper": 8
+    }
+  },
+  "rung_71_running_unless_committable": {
+    "columns": {
+      "Generator-p": 16,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 4836.111111111111,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-com-p-lower": 4,
+      "Generator-com-p-upper": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p-ramp_limit_down": 0,
+      "Generator-p-ramp_limit_up": 4,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_72_modular_down_time": {
+    "columns": {
+      "Generator-n_mod": 1,
+      "Generator-p": 20,
+      "Generator-p_nom": 1,
+      "Generator-shut_down": 8,
+      "Generator-start_up": 8,
+      "Generator-status": 8,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 17190.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-com-down-time": 8,
+      "Generator-com-mod-p-lower": 8,
+      "Generator-com-mod-p-upper": 8,
+      "Generator-com-transition-shut-down": 8,
+      "Generator-com-transition-start-up": 8,
+      "Generator-ext-p_nom-lower": 1,
+      "Generator-ext-p_nom-upper": 1,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p_nom_modularity": 1,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-shut_down-p_nom-variable-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-start_up-p_nom-variable-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Generator-status-p_nom-variable-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_73_fixed_modular_ramp": {
+    "columns": {
+      "Generator-p": 16,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 12300.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "Generator-com-mod-p-lower": 4,
+      "Generator-com-mod-p-upper": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-p-ramp_limit_down": 4,
+      "Generator-p-ramp_limit_up": 4,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_74_linearized_late_opening": {
+    "columns": {
+      "Generator-p": 12,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4
+    },
+    "global_constraints": {},
+    "objective": 24825.277777777777,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-com-p-before": 4,
+      "Generator-com-p-current": 4,
+      "Generator-com-p-lower": 4,
+      "Generator-com-p-upper": 4,
+      "Generator-com-partly-shut-down": 4,
+      "Generator-com-partly-start-up": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Generator-p-ramp_limit_down": 3,
+      "Generator-p-ramp_limit_up": 3,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4
+    }
+  },
+  "rung_75_period_primary_energy_storage": {
+    "columns": {
+      "Generator-p": 16,
+      "StorageUnit-p_dispatch": 8,
+      "StorageUnit-p_store": 8,
+      "StorageUnit-state_of_charge": 8,
+      "Store-e": 8,
+      "Store-p": 8,
+      "Store-p_store": 8
+    },
+    "global_constraints": {
+      "co2_2030": {
+        "sense": "<=",
+        "type": "primary_energy"
+      }
+    },
+    "objective": 12900.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-fix-p-lower": 16,
+      "Generator-fix-p-upper": 16,
+      "GlobalConstraint-co2_2030": 1,
+      "StorageUnit-energy_balance": 8,
+      "StorageUnit-fix-p_dispatch-lower": 8,
+      "StorageUnit-fix-p_dispatch-upper": 8,
+      "StorageUnit-fix-p_store-lower": 8,
+      "StorageUnit-fix-p_store-upper": 8,
+      "StorageUnit-fix-state_of_charge-lower": 8,
+      "StorageUnit-fix-state_of_charge-upper": 8,
+      "Store-energy_balance": 8,
+      "Store-fix-e-lower": 8,
+      "Store-fix-e-upper": 8,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 8,
+      "Store-fix-p_store-upper": 8
+    }
+  },
+  "rung_76_store_power": {
+    "columns": {
+      "Generator-p": 8,
+      "Link-p": 4,
+      "Store-e": 16,
+      "Store-e_nom": 2,
+      "Store-p": 16,
+      "Store-p_store": 16,
+      "Store-spill": 4
+    },
+    "global_constraints": {},
+    "objective": 11362.944444444443,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4,
+      "Store-energy_balance": 16,
+      "Store-ext-e-lower": 8,
+      "Store-ext-e-upper": 8,
+      "Store-ext-e_nom-lower": 2,
+      "Store-ext-e_nom-upper": 1,
+      "Store-ext-p-lower": 4,
+      "Store-ext-p-upper": 4,
+      "Store-ext-p_store-lower": 8,
+      "Store-ext-p_store-upper": 8,
+      "Store-fix-e-lower": 8,
+      "Store-fix-e-upper": 8,
+      "Store-fix-p-lower": 8,
+      "Store-fix-p-upper": 8,
+      "Store-fix-p_store-lower": 8,
+      "Store-fix-p_store-upper": 8
+    }
+  },
+  "rung_77_energy_limits": {
+    "columns": {
+      "Generator-p": 24,
+      "Link-p": 8,
+      "Process-p": 8,
+      "Store-e": 8,
+      "Store-p": 8,
+      "Store-p_store": 8
+    },
+    "global_constraints": {},
+    "objective": 11618.75,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 16,
+      "Generator-e_sum_max": 1,
+      "Generator-fix-p-lower": 24,
+      "Generator-fix-p-upper": 24,
+      "Link-e_sum_max": 1,
+      "Link-e_sum_min": 1,
+      "Link-fix-p-lower": 8,
+      "Link-fix-p-upper": 8,
+      "Process-e_sum_max": 1,
+      "Process-e_sum_min": 1,
+      "Process-fix-p-lower": 8,
+      "Process-fix-p-upper": 8,
+      "Store-e_sum_max": 1,
+      "Store-e_sum_min": 1,
+      "Store-energy_balance": 8,
+      "Store-fix-e-lower": 8,
+      "Store-fix-e-upper": 8,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 8,
+      "Store-fix-p_store-upper": 8
+    }
+  },
+  "rung_78_store_cycles": {
+    "columns": {
+      "Generator-p": 8,
+      "Link-p": 4,
+      "Store-e": 8,
+      "Store-e_nom": 1,
+      "Store-p": 8,
+      "Store-p_store": 8
+    },
+    "global_constraints": {},
+    "objective": 15004.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4,
+      "Store-cycles_max": 2,
+      "Store-energy_balance": 8,
+      "Store-ext-e-lower": 4,
+      "Store-ext-e-upper": 4,
+      "Store-ext-e_nom-lower": 1,
+      "Store-ext-p-lower": 4,
+      "Store-ext-p-upper": 0,
+      "Store-ext-p_store-lower": 4,
+      "Store-ext-p_store-upper": 0,
+      "Store-fix-e-lower": 4,
+      "Store-fix-e-upper": 4,
+      "Store-fix-p-lower": 4,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 4,
+      "Store-fix-p_store-upper": 0
+    }
+  },
+  "rung_79_flow_based": {
+    "columns": {
+      "FlowBased-net_position": 12,
+      "Generator-p": 12,
+      "Link-p": 4
+    },
+    "global_constraints": {
+      "cs79": {
+        "sense": "<=",
+        "type": "flow_based"
+      },
+      "ns79": {
+        "sense": "<=",
+        "type": "flow_based"
+      }
+    },
+    "objective": 17005.31914893617,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev49+g061974e3e",
+    "rows": {
+      "Bus-nodal_balance": 12,
+      "FlowBased-balance": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "GlobalConstraint-ram": 7,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
     }
   }
 }
