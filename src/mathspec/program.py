@@ -64,6 +64,7 @@ __all__ = [
     'ExpressionComparison',
     'ExpressionReference',
     'Footprint',
+    'Gate',
     'Given',
     'GivenParameter',
     'GivenTargets',
@@ -902,6 +903,26 @@ class Link:
 
 
 @dataclass(frozen=True)
+class Gate:
+    """The binary a ``piecewise:`` entry's weights sum to, as each curve reads it.
+
+    ``variable`` is the binary the file named, and ``read`` the gate at one
+    curve: the variable on the entry's own frame, or the variable read through
+    a relation, as ``at(..., by=)`` reads it. ``exists`` is where a curve reads
+    the gate, and the curve is ungated elsewhere, its weights summing to 1; it
+    is ``None`` where every curve reads it. A masked variable exists only on
+    its mask, and a relation declared ``missing: absent`` may have no row for
+    a curve, so both leave curves ungated; ``missing: 0`` reads the variable
+    as 0 off its mask instead, which pins those curves off. Under the
+    relation's ``missing: refused`` every curve has a row.
+    """
+
+    variable: str
+    read: Expression
+    exists: Mask | None = None
+
+
+@dataclass(frozen=True)
 class Piecewise:
     """A ``piecewise:`` entry as the curve it states, which [`expand`][mathspec.spec.Spec.expand] writes out as rows.
 
@@ -921,7 +942,7 @@ class Piecewise:
         where: Which coordinates of ``frame`` have a curve — and, where it
             reads ``along`` too, how far each runs — or ``None`` where every
             coordinate has a whole curve.
-        activity: The binary the weights sum to, or ``None`` where they sum
+        activity: The gate the weights sum to, or ``None`` where they sum
             to 1.
         description: What the file wrote under ``description:``, or ``None``.
     """
@@ -931,7 +952,7 @@ class Piecewise:
     method: PiecewiseMethod
     frame: tuple[str, ...]
     where: Mask | None = None
-    activity: str | None = None
+    activity: Gate | None = None
     description: str | None = None
 
     @property

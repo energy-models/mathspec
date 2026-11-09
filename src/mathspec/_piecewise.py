@@ -22,18 +22,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._expression_parser import NAME, ColumnsNode
+from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, parse_expression
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec._resolution import resolve_expression_text
-from mathspec.errors import DimensionError
-from mathspec.program import Link, Piecewise, PiecewiseMethod, Variable, carries_variable
+from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
+from mathspec.errors import DimensionError, SchemaError
+from mathspec.program import Gate, Join, Link, Piecewise, PiecewiseMethod, Variable, carries_variable
 from mathspec.spec import AssumptionSpec, Curvature, PiecewiseLinkSpec, PiecewiseSpec, Spec, VariableSpec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Mapping
 
     from mathspec._resolution import Namespace
-    from mathspec.program import Expression, JoinColumns, Mask, Program
+    from mathspec.program import Expression, JoinColumns, Mask, Program, Relation
 
 
 _UNGATED = '_ungated'
@@ -235,6 +235,17 @@ def through(text: str | None, link: Link) -> str | None:
     return f'at({text}, by={link.by})'
 
 
+def _walked(text: str, dims: Iterable[str], link: Link | None) -> str:
+    """*text*, over *dims*, as *link*'s row reads it: through its relation where the walk drops one of *dims*.
+
+    A gate over fewer dims than the curve may carry none the walk drops, and
+    then reads as written on the link's row, as a where does.
+    """
+    if link is None or link.walk is None or not set(dims) & set(link.walk.dropped_dims):
+        return text
+    return f'at({text}, by={link.by})'
+
+
 def _on_walk(text: str | None, link: Link) -> str | None:
     """*text* as *link*'s row reads it, admitted only at the keys its relation has a row for.
 
@@ -371,7 +382,7 @@ class Emitted:
         """The variables and constraints [`expand`][mathspec.spec.Spec.expand] declares for an entry of *method*.
 
         *gated* is whether the entry names an ``activity:``, and *ungated*
-        [`leaves_ungated`][] of that gate. The set a
+        whether some curve does not read it, as [`leaves_ungated`][] says. The set a
         ``sos2`` or ``adjacency`` entry states is written out too, since
         ``expand()`` writes every set.
         """
@@ -421,13 +432,52 @@ class Emitted:
         )
 
 
-def leaves_ungated(gate: VariableSpec | Variable | None) -> bool:
-    """Whether a curve gated by *gate* runs ungated where the gate does not exist, which takes a second convexity row.
+def leaves_ungated(gate: VariableSpec | Variable, relation: Relation | None = None) -> bool:
+    """Whether a curve gated by *gate*, read through *relation* if any, can run ungated, which takes a second row.
 
     A masked gate is absent off its mask, and there the curve sums to 1;
     ``missing: 0`` reads the gate as 0 there instead, which one row states.
+    A relation declared ``missing: absent`` may have no row for a curve, and
+    there the read is absent whatever the gate's ``missing:``. Under
+    ``missing: refused`` every curve has a row.
     """
-    return gate is not None and gate.where is not None and gate.missing != 0
+    absent = relation is not None and relation.missing == 'absent'
+    return absent or (gate.where is not None and gate.missing != 0)
+
+
+def gate_of(text: str) -> str | None:
+    """The variable an ``activity:`` names, or ``None`` where it is neither a bare name nor ``at(<name>, by=...)``.
+
+    The weights sum to the gate, so it is a binary as written, or read
+    through a relation as ``at`` reads it. What the ``by=`` names is
+    resolution's to refuse, with the refusals ``at`` gives.
+    """
+    try:
+        node = parse_expression(text)
+    except SchemaError:
+        return None
+    match node:
+        case NameNode(name):
+            return name
+        case FunctionCallNode('at', (NameNode(name),), kwargs) if set(kwargs) == {'by'}:
+            return name
+        case _:
+            return None
+
+
+def gate_text(text: str, gate: VariableSpec | Variable, read: Expression) -> tuple[str, str | None]:
+    """The gate as a curve reads it, and the where a curve reads it under, or ``None`` where every curve does.
+
+    *text* is the ``activity:`` the file wrote, and *read* the expression it
+    resolved to. Where [`leaves_ungated`][] says a curve can run ungated,
+    the where is the read itself, which exists where the gate and the row of
+    its relation both do. Under ``missing: 0`` a walked gate reads 0 off its
+    mask, so the relation alone decides, and its name is the where.
+    """
+    walk = read.columns if isinstance(read, Join) else None
+    if not leaves_ungated(gate, None if walk is None else walk.relation):
+        return text, None
+    return text, text if walk is None or gate.missing != 0 else walk.name
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +545,31 @@ def _columns_of(text: str) -> ColumnsNode | None:
     return ColumnsNode(match.group(1), tuple(c.strip() for c in match.group(2).split(',')))
 
 
+def resolve_gate(
+    name: str, pw: PiecewiseSpec, variables: Mapping[str, Variable], ns: Namespace, errors: list[str]
+) -> Gate | None:
+    """Entry *name*'s gate typed, *variables* being the spec's as lowered, or ``None`` once it failed.
+
+    The gate is resolved as the expression the file wrote, so a walked gate
+    is held to every rule ``at(..., by=)`` is held to before anything reads
+    its relation. Each refusal is appended to *errors*.
+    """
+    assert pw.activity is not None
+    variable = gate_of(pw.activity)
+    assert variable is not None, 'reference_errors refuses a gate of any other shape'
+    declared = variables[variable]
+    context = f"piecewise '{name}' activity"
+    if (read := resolve_expression_text(pw.activity, ns, context, errors, ceiling=1)) is None:
+        return None
+    _, exists_text = gate_text(pw.activity, declared, read)
+    if exists_text is None:
+        return Gate(variable, read)
+    if not isinstance(read, Join):
+        return Gate(variable, read, declared.where)
+    exists = mask_of(resolve_condition_text(exists_text, ns, context, errors))
+    return None if exists is None else Gate(variable, read, exists)
+
+
 def lp_domain_refusal(name: str, pw: PiecewiseSpec, links: tuple[Expression, ...]) -> str | None:
     """The refusal for a ``method: lp`` curve whose x-link carries no variable, or ``None``.
 
@@ -519,9 +594,10 @@ def declaration_of(
     links: tuple[Expression, ...],
     walks: dict[str, JoinColumns],
     where: Mask | None,
+    gate: Gate | None,
     spec: Spec,
 ) -> Piecewise:
-    """Entry *name* as the program carries it, with *links*, *walks* and *where* typed, every fit rule decided.
+    """Entry *name* as the program carries it, with *links*, *walks*, *where* and *gate* typed, every fit rule decided.
 
     A walk reads the curve's weights at the entry's own dims, so it drops
     dims of ``dims:``, joins on dims of ``dims:``, and adds dims of its own.
@@ -529,10 +605,10 @@ def declaration_of(
     its expression carries exactly that row, its values parameter varies
     along it and the breakpoint dim and nothing else, and the ``where:``
     tests ``dims:`` and the breakpoint dim alone. A walked row reads the where
-    through its relation when the mask carries a dim the walk drops. Decided
-    here, on the link the file wrote, rather than on the rows the expansion
-    writes, whose refusal would name ``<entry>_lam``, a variable the author
-    never wrote.
+    through its relation when the mask carries a dim the walk drops. The gate
+    lands inside ``dims:``. Decided here, on the link the file wrote, rather
+    than on the rows the expansion writes, whose refusal would name
+    ``<entry>_lam``, a variable the author never wrote.
 
     Raises:
         DimensionError: A walk that does not fit ``dims:``, a link that does
@@ -547,8 +623,8 @@ def declaration_of(
     for (key, link), row in zip(pw.links.items(), rows.values(), strict=True):
         _values_fit(spec, ctx, key, pw, link, row)
     _where_fits(ctx, pw, where, walks)
-    if pw.activity is not None:
-        _gate_fits(ctx, pw, spec.variables[pw.activity].dims, walks)
+    if gate is not None:
+        _gate_fits(ctx, pw, gate, walks)
     carried = (where.dims if where is not None else frozenset()) - {pw.along}
     typed = tuple(
         Link(
@@ -563,9 +639,7 @@ def declaration_of(
         )
         for node, (key, link) in zip(links, pw.links.items(), strict=True)
     )
-    return Piecewise(
-        pw.along, typed, pw.method, tuple(pw.dims), where, activity=pw.activity, description=pw.description
-    )
+    return Piecewise(pw.along, typed, pw.method, tuple(pw.dims), where, activity=gate, description=pw.description)
 
 
 def _walk_fits(ctx: str, entry: PiecewiseSpec, walk: JoinColumns) -> None:
@@ -718,19 +792,30 @@ def _where_fits(ctx: str, entry: PiecewiseSpec, where: Mask | None, walks: dict[
         )
 
 
-def _gate_fits(ctx: str, entry: PiecewiseSpec, gate: Iterable[str], walks: dict[str, JoinColumns]) -> None:
-    """An entry's gate is over dims of ``dims:``, and nothing else.
+def _gate_fits(ctx: str, entry: PiecewiseSpec, gate: Gate, walks: dict[str, JoinColumns]) -> None:
+    """An entry's gate is over dims of ``dims:`` once it is looked up, and nothing else.
 
     The advice to add a stray dim to ``dims:`` is left out where ``dims:``
     would refuse it: the breakpoint dim, and a dim a walk adds.
     """
-    if not (stray := [d for d in gate if d not in entry.dims]):
+    if not (stray := sorted(set(gate.read.dims) - set(entry.dims))):
         return
     unlistable = {entry.along, *(d for walk in walks.values() for d in walk.added_dims)}
-    rewrite = 'Gate' if unlistable & set(stray) else f'Add {stray} to dims:, or gate'
+    listable = not unlistable & set(stray)
+    if entry.activity != gate.variable:
+        found = f'over {stray} after the lookup'
+        rewrite = 'Look it up through a relation that leaves it over dims:' + (
+            f', or add {stray} to dims:.' if listable else '.'
+        )
+    else:
+        found = f'over {stray}'
+        rewrite = (f'Add {stray} to dims:, or gate' if listable else 'Gate') + (
+            f' with a variable over dims:, or read the gate through a relation with '
+            f'activity: at({gate.variable}, by=<relation>[<column>]).'
+        )
     raise DimensionError(
-        f"{ctx}: activity '{entry.activity}' is over {stray}, which is not in dims: {entry.dims}. The gate "
-        f'switches the curve of one coordinate of dims:. {rewrite} with a variable over dims:.'
+        f"{ctx}: activity '{gate.variable}' is {found}, which is not in dims: {entry.dims}. The gate switches "
+        f'the curve of one coordinate of dims:. {rewrite}'
     )
 
 
@@ -796,12 +881,12 @@ class _Expansion:
             'bounds': {'lower': 0.0, 'upper': 1.0},
             'description': 'convex-combination weight on a breakpoint',
         }
-        for suffix, gate, rhs in self._gate_rows():
+        for suffix, where, gate in self._gate_rows():
             self._constraint(
                 emitted.convexity + suffix,
                 self.frame,
-                f'sum({emitted.lam}, over={d}) == {rhs}',
-                _all_of(self.exists, gate),
+                f'sum({emitted.lam}, over={d}) == {"1" if gate is None else f"({gate})"}',
+                _all_of(self.exists, where),
             )
         for cname, written, link in zip(emitted.links, pw.links.values(), self.curve.links, strict=True):
             self._constraint(
@@ -843,31 +928,19 @@ class _Expansion:
         self._constraint(emitted.delta_bound, dims, f'{emitted.delta} <= {emitted.order}')
         self._constraint(emitted.fill_order, dims, f'{emitted.delta} <= shift({emitted.delta}, along={d}, offset=1)')
         self._constraint(emitted.binary_order, dims, f'{emitted.order} <= shift({emitted.delta}, along={d}, offset=1)')
-        if pw.activity is not None:
-            self._constraint(emitted.active_bound, dims, f'{emitted.delta} <= {pw.activity}')
+        if (gate := self._gate_rows()[0][2]) is not None:
+            self._constraint(emitted.active_bound, dims, f'{emitted.delta} <= {gate}')
         first = _all_of(self.frame_mask, _edge(d, self.mask, 'first'))
         for cname, written, link in zip(emitted.links, pw.links.values(), self.curve.links, strict=True):
-            filled = f'sum({self._read(emitted.delta, link, self.frame)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
-            gated = self.spec.variables[pw.activity].dims if pw.activity is not None else []
-            for suffix, gate, on in self._gate_rows():
-                start = link.values if on == '1' else f'{link.values} * ({self._read(pw.activity, link, gated)})'
+            filled = f'sum({_walked(emitted.delta, self.frame, link)} * ({_back(link.values, d, -1)} - {link.values}), over={d})'
+            for suffix, where, gate in self._gate_rows(link):
+                start = link.values if gate is None else f'{link.values} * ({gate})'
                 self._constraint(
                     cname + suffix,
                     [*link.dims, d],
                     f'({written.expression}) {link.sign} {start} + {filled}',
-                    _all_of(_on_walk(first, link), self._read(gate, link, gated)),
+                    _all_of(_on_walk(first, link), where),
                 )
-
-    @staticmethod
-    def _read(text: str | None, link: Link, dims: Iterable[str]) -> str | None:
-        """*text*, over *dims* of the curve's own, as *link*'s row reads it: through the relation where it walks one off them.
-
-        A text over none of the dims the walk drops is over dims the row
-        keeps, and the lookup would have nothing to join on.
-        """
-        if text is None or link.walk is None or not set(link.walk.dropped_dims) & set(dims):
-            return text
-        return f'at({text}, by={link.by})'
 
     def _weights_read(self, link: Link) -> str:
         """How one link reads the curve's weights: by name, or through the relation that refines its frame.
@@ -880,8 +953,8 @@ class _Expansion:
             return self.emitted.lam
         return f'at({self.emitted.lam}, by={link.by})'
 
-    def _gate_rows(self) -> tuple[tuple[str, str | None, str], ...]:
-        """What the weights sum to, as ``(name suffix, where, right-hand side)``.
+    def _gate_rows(self, link: Link | None = None) -> tuple[tuple[str, str | None, str | None], ...]:
+        """What the weights sum to, as ``(name suffix, where, gate)``, the gate ``None`` where they sum to 1.
 
         One row where the gate exists at every coordinate the entry builds a curve
         for, and **two** where it does not. A gate is a variable, so a masked one
@@ -892,14 +965,23 @@ class _Expansion:
         weights without the convexity that makes them a curve at all (#1158).
 
         ``missing: 0`` is the other reading and stays one row — the gate is 0
-        where it does not exist, so the curve is pinned off there.
+        where it does not exist, so the curve is pinned off there. A gate read
+        through a relation declared ``missing: absent`` takes two whatever its
+        ``missing:``, since the relation may have no row for a curve.
+
+        *link* reads the gate and its where as its row does: through its
+        relation where either carries a dim the walk drops.
         """
-        activity = self.pw.activity
-        if activity is None:
-            return (('', None, '1'),)
-        if not leaves_ungated(self.spec.variables[activity]):
-            return (('', None, f'({activity})'),)
-        return (('', activity, f'({activity})'), (_UNGATED, f'NOT {activity}', '1'))
+        gate, activity = self.curve.activity, self.pw.activity
+        if gate is None or activity is None:
+            return (('', None, None),)
+        read, exists = gate_text(activity, self.spec.variables[gate.variable], gate.read)
+        read = _walked(read, gate.read.dims, link)
+        if exists is None:
+            return (('', None, read),)
+        assert gate.exists is not None
+        exists = _walked(exists, gate.exists.dims if isinstance(gate.read, Join) else gate.read.dims, link)
+        return (('', exists, read), (_UNGATED, f'NOT {_operand(exists)}', None))
 
     def _segment_lines(self) -> None:
         """The segment-line form: a row per segment, and the two domain rows.

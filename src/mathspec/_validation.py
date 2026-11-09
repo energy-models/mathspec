@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
+from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
@@ -339,7 +340,13 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield f'{context}: dims repeats a dimension: {pw.dims}. Write each dimension once.'
         for key, link in pw.links.items():
             yield from _piecewise_link_shape(spec, name, pw, key, link)
-        if (activity := pw.activity) is None:
+        if pw.activity is None:
+            continue
+        if (activity := gate_of(pw.activity)) is None:
+            yield (
+                f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
+                f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
+            )
             continue
         if activity not in spec.variables:
             yield (

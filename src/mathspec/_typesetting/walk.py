@@ -970,21 +970,21 @@ class Walk:
     def _gate(self, entry: Piecewise, ctx: _Context) -> str:
         """The factor an ``activity:`` puts on the locus, or ``''`` where the entry has none.
 
-        Where the gate is a variable that does not exist at every coordinate
-        the curve is built for, the factor is the gate where it exists and 1
-        where it does not — the two rows the expansion writes there, because a
-        variable that does not exist takes its row with it and would leave the
-        curve unstated rather than ungated. ``missing: 0`` is the other
-        reading and pins the curve off, which is the factor on its own.
+        The gate prints as each curve reads it: the variable on the curve's
+        own frame, or read through its relation. Where some curve does not read
+        it, off a masked variable or where a relation declared
+        ``missing: absent`` has no row, the factor is the gate where it is
+        read and 1 elsewhere: the two rows the expansion writes
+        there, because a gate that is not there takes its row with it and would
+        leave the curve unstated rather than ungated. ``missing: 0`` is the
+        other reading and pins the curve off, which is the factor on its own.
         """
-        if (activity := entry.activity) is None:
+        if (gate := entry.activity) is None:
             return ''
-        gate = self.program.variables[activity]
-        symbol = ctx.indexed(self.symbols.name[activity], list(gate.dims))
-        mask = gate.where
-        if mask is None or gate.missing == 0:
+        symbol = self._expression(gate.read, ctx)
+        if gate.exists is None:
             return symbol
-        where = self._condition(mask.root, ctx, need=_CONDITION_PRECEDENCE['and'])
+        where = self._condition(gate.exists.root, ctx, need=_CONDITION_PRECEDENCE['and'])
         return self.format.cases(
             [(symbol, f'{self.format.prose("if ")} {where}'), ('1', self.format.prose('otherwise'))]
         )
