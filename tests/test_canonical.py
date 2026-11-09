@@ -340,7 +340,8 @@ def test_a_condition_is_printed_one_way(written, canonical):
 
 def _piecewise_with_its_links_reversed() -> dict[str, object]:
     raw = raw_of(EXAMPLES / 'piecewise.yaml')
-    return varied(raw, **{'piecewise.cost_curve.links': raw['piecewise']['cost_curve']['links'][::-1]})
+    links = raw['piecewise']['cost_curve']['links']
+    return varied(raw, **{'piecewise.cost_curve.links': dict(reversed(links.items()))})
 
 
 @pytest.mark.parametrize(

@@ -537,6 +537,18 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 \left( \mathit{weight}_{g,t} \right)_{g \in \mathcal{G}} \in \mathrm{SOS}2 \qquad \forall\, t \in \mathcal{T}
 ```
 
+**`bus_curve`**
+
+```math
+\left( p_{g,t} \right)_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = u} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_x}_{b,g} \right)_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = u}) \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{load}_{u,t} \text{ is defined}
+```
+
+**`chp_curve`**
+
+```math
+\left( p_{g,t},\ \mathit{fuel}_{g,t},\ \mathit{heat}_{g,t} \right) \in \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g},\ \mathrm{bp\_heat}_{b,g}) + \{0\} \times \mathbb{R}_{\ge 0} \times \mathbb{R}_{\le 0} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 **`cost_curve`**
 
 ```math
@@ -617,6 +629,18 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 \mathrm{zone\_of}(u) = \mathrm{area\_of}(u) \qquad \forall\, u \in \mathcal{U}
 ```
 
+**`bus_curve_p_complete`**
+
+```math
+\mathrm{bp\_x}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{load}_{\mathrm{gen\_bus}(g),t} \text{ is defined}
+```
+
+**`chp_curve_complete`**
+
+```math
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
+```
+
 **`cost_curve_complete`**
 
 ```math
@@ -626,7 +650,7 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 **`cost_curve_contiguous`**
 
 ```math
-\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \} \rvert > 0
 ```
 
 **`fuel_curve_complete`**
@@ -674,13 +698,13 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 **`lp_curve_breakpoints`**
 
 ```math
-\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0
 ```
 
 **`lp_curve_contiguous`**
 
 ```math
-\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G}
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0
 ```
 
 **`ramp_curve_complete`**

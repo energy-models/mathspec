@@ -267,3 +267,5 @@ why the language has no `join` operator.
       for the refused `join` operator and what you write instead
     - [the notation page](../reference/notation.md), for how the typesetter
       prints each use
+    - [understanding a spec in SQL and dataframe terms](sql-and-dataframes.md),
+      for the same operators as queries

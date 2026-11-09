@@ -64,6 +64,7 @@ __all__ = [
     'ExpressionComparison',
     'ExpressionReference',
     'Footprint',
+    'Gate',
     'Given',
     'GivenParameter',
     'GivenTargets',
@@ -166,7 +167,7 @@ ObjectiveSense = Literal['minimize', 'maximize']
 SosType = Literal[1, 2]
 """The types of special ordered set: 1 or 2."""
 
-PiecewiseMethod = Literal['adjacency', 'sos2', 'convex', 'lp']
+PiecewiseMethod = Literal['adjacency', 'sos2', 'incremental', 'convex', 'lp']
 """The methods a ``piecewise:`` entry may declare to restrict its interpolation weights.
 [`PIECEWISE_METHODS`][mathspec.spec.PIECEWISE_METHODS] lists what each method adds.
 """
@@ -883,13 +884,51 @@ class NamedCondition:
 class Link:
     """One link of a ``piecewise:`` entry: an expression tied to the breakpoints a values parameter holds.
 
-    ``sign`` is ``'=='`` where the link is pinned to the curve, and one side
-    of it where the link is bounded by the curve instead.
+    ``name`` is the link's key in the entry, and ``<entry>_<name>`` is the row
+    the expansion writes for it. ``sign`` is ``'=='`` where the link is pinned
+    to the curve, and one side of it where the link is bounded by the curve
+    instead. A link that walks a relation reads the curve's weights through
+    it, as ``at(..., by=)`` reads an array: ``by`` is the ``relation[column]``
+    the file wrote, and ``walk`` the join it resolves to. ``dims`` is the row
+    the link builds: the entry's frame, or, for a walked link, that frame with
+    the dims the join drops replaced by the ones it adds. ``reads`` says
+    whether that row reads the entry's ``where`` through the relation, which
+    it does when the mask carries every dim the join drops or keeps.
     """
 
+    name: str
     expression: Expression
     values: str
+    dims: tuple[str, ...]
     sign: ConstraintSense = '=='
+    by: str | None = None
+    walk: JoinColumns | None = None
+    reads: bool = False
+
+    @property
+    def walks(self) -> bool:
+        """Whether the link reads the curve's weights through a relation, rather than on the entry's own frame."""
+        return self.walk is not None
+
+
+@dataclass(frozen=True)
+class Gate:
+    """The binary a ``piecewise:`` entry's weights sum to, as each curve reads it.
+
+    ``variable`` is the binary the file named, and ``read`` the gate at one
+    curve: the variable on the entry's own frame, or the variable read through
+    a relation, as ``at(..., by=)`` reads it. ``exists`` is where a curve reads
+    the gate, and the curve is ungated elsewhere, its weights summing to 1; it
+    is ``None`` where every curve reads it. A masked variable exists only on
+    its mask, and a relation declared ``missing: absent`` may have no row for
+    a curve, so both leave curves ungated; ``missing: 0`` reads the variable
+    as 0 off its mask instead, which pins those curves off. Under the
+    relation's ``missing: refused`` every curve has a row.
+    """
+
+    variable: str
+    read: Expression
+    exists: Mask | None = None
 
 
 @dataclass(frozen=True)
@@ -903,29 +942,32 @@ class Piecewise:
     consumer building rows takes the expanded spec.
 
     Attributes:
-        over: The breakpoint dimension.
-        links: The links, in the order the file wrote them.
+        along: The dimension each curve runs along.
+        links: The links, in the order the file wrote them, each with the row
+            it builds.
         method: How the weights are restricted.
-        activity: The binary the weights sum to, or ``None`` where they sum
+        frame: The ``dims:`` the entry builds one curve per coordinate of, in
+            the order the file wrote them.
+        where: Which coordinates of ``frame`` have a curve — and, where it
+            reads ``along`` too, how far each runs — or ``None`` where every
+            coordinate has a whole curve.
+        activity: The gate the weights sum to, or ``None`` where they sum
             to 1.
-        points: The parameter saying how far each curve runs, or ``None``.
-        frame: The dimensions the entry builds one curve per coordinate of,
-            sorted by name.
         description: What the file wrote under ``description:``, or ``None``.
     """
 
-    over: str
+    along: str
     links: tuple[Link, ...]
     method: PiecewiseMethod
     frame: tuple[str, ...]
-    activity: str | None = None
-    points: str | None = None
+    where: Mask | None = None
+    activity: Gate | None = None
     description: str | None = None
 
     @property
-    def nominated(self) -> str | None:
-        """The entry's own values parameter ``points:`` names, so the mask is derived from it — or ``None``."""
-        return self.points if self.points in {link.values for link in self.links} else None
+    def ragged(self) -> bool:
+        """Whether ``where`` reads ``along``, and so says how far each curve runs rather than only which exist."""
+        return self.where is not None and self.along in self.where.dims
 
     @property
     def curve(self) -> tuple[Link, Link]:

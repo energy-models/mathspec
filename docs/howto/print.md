@@ -150,10 +150,11 @@ variables:
   cost: { dims: [], bounds: { lower: 0 } }
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: []
     links:
-      - [power, power_bp]
-      - [cost, cost_bp]
+      power: [power, power_bp]
+      cost: [cost, cost_bp]
 objective:
   sense: minimize
   expression: cost

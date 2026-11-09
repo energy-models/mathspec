@@ -18,6 +18,9 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
   - Breaks the program API: `Sealed` is now `Frozen`. `Mask.dims` is a sorted tuple, not a `frozenset`. `Relation.columns` lists the key first, each side sorted by role. Every `dims` and `frame` is sorted by name, so the layout of a result changes.
   - Breaks a patch: over a dimension or a relation of its base, it may change only `description`, `ordered` and `missing`. Any other field restates the whole entry.
   - Breaks `to_yaml()`: it writes only the fields the file wrote, plus `version:`. The canonical form writes no default, and prints every `where:`, `when:`, `condition:` and `holds:` from its parsed tree. A numeric `missing:` on a variable or a float parameter loads and writes as a float, as `bounds` does.
+- feat(language)!: a piecewise gate may walk a relation ([#784](https://github.com/energy-models/mathspec/pull/784))
+- feat(language)!: piecewise links are named and may walk ([#630](https://github.com/energy-models/mathspec/pull/630))
+- docs: a SQL reader can read a spec as queries ([#856](https://github.com/energy-models/mathspec/pull/856))
 - fix(api): the API pages describe every public attribute of a spec and a program ([#978](https://github.com/energy-models/mathspec/pull/978))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - feat(language): a parameter may declare the coordinates it has with `where:`, and outside them it is absent ([#945](https://github.com/energy-models/mathspec/pull/945))

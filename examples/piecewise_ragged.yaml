@@ -5,9 +5,9 @@
 description: >-
   The same least-cost dispatch as `piecewise_lp.yaml`, with curves of different
   lengths. A large unit is metered at every breakpoint and a small one at the
-  first few, so the breakpoint table is ragged. `points:` is what says how far
-  each curve runs: without it every curve claims the whole axis, and the data
-  is refused at a breakpoint with no row.
+  first few, so the breakpoint table is ragged. A `where:` over `bp` sets how
+  far each curve runs. Without it, every curve runs over every breakpoint, and
+  a tool refuses the data at a breakpoint with no row.
 
 dimensions:
   snapshot:
@@ -63,11 +63,12 @@ piecewise:
       mask narrows every condition the method states: the breakpoints are
       counted over it, and the increasing and curvature tests are checked
       between admitted neighbours rather than along the whole axis.
-    over: bp
-    points: metered
+    along: bp
+    dims: [snapshot, generator]
+    where: metered
     links:
-      - [dispatch, bp_x]
-      - [op_cost, bp_y, ">="]
+      dispatch: [dispatch, bp_x]
+      op_cost: [op_cost, bp_y, ">="]
     method: lp
 
 constraints:

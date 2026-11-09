@@ -1053,10 +1053,11 @@ names:
 ```yaml
 piecewise:
   economies_of_scale:
-    over: bp
+    along: bp
+    dims: [plant, market]
     links:
-      - [shipment, bp_x]
-      - [scaled, bp_y]
+      shipment: [shipment, bp_x]
+      scaled: [scaled, bp_y]
 ```
 
 ```math
@@ -1082,7 +1083,7 @@ Written out by `spec.expand()`:
 ```
 
 ```math
-\mathit{shipment}_{m,p} = \sum_{b \in \mathcal{B}} \lambda_{b,m,p} \cdot \mathrm{x}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
+\sum_{b \in \mathcal{B}} \delta_{b,m,p} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
@@ -1090,7 +1091,7 @@ Written out by `spec.expand()`:
 ```
 
 ```math
-\sum_{b \in \mathcal{B}} \delta_{b,m,p} \le 1 \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
+\mathit{shipment}_{m,p} = \sum_{b \in \mathcal{B}} \lambda_{b,m,p} \cdot \mathrm{x}_{b} \qquad \forall\, m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
@@ -1115,10 +1116,11 @@ names:
 ```yaml
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: [snapshot, generator]
     links:
-      - [dispatch, bp_x]
-      - [op_cost, bp_y]
+      dispatch: [dispatch, bp_x]
+      op_cost: [op_cost, bp_y]
     method: sos2
 ```
 
@@ -1152,6 +1154,77 @@ Written out by `spec.expand()`:
 \mathrm{x}_{b,g} \text{ is defined} \wedge \mathrm{y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
+#### Incremental method
+
+`method: incremental` — a filled fraction per segment, each filled only once the one before it is full, ordered by a binary, in `examples/piecewise_incremental.yaml`.
+
+```yaml
+piecewise:
+  cost_curve:
+    along: bp
+    dims: [snapshot, generator]
+    where: on_curve
+    method: incremental
+    activity: status
+    links:
+      p: [p, p_bp]
+      cost: [cost, cost_bp, ">="]
+```
+
+```math
+\mathit{cost}_{g,t} \ge \begin{cases} \mathit{status}_{g,t} & \text{if } \mathrm{committable}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g}}(\mathrm{p}^{\mathrm{bp}}_{b,g},\ \mathrm{cost}^{\mathrm{bp}}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+Written out by `spec.expand()`:
+
+```math
+0 \le \mathit{cost}^{\mathrm{curve,delta}}_{b,g,t} \le 1 \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \mathrm{on\_curve}_{b + 1,g}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,order}}_{b,g,t} \in \{0, 1\} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \mathrm{on\_curve}_{b + 1,g}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{b,g,t} \le \mathit{status}_{g,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,order}}_{b,g,t} \le \mathit{cost}^{\mathrm{curve,delta}}_{b - 1,g,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+```math
+\mathit{cost}_{g,t} \ge \mathrm{cost}^{\mathrm{bp}}_{b,g} \cdot \mathit{status}_{g,t} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{b',g,t} \cdot \left( \mathrm{cost}^{\mathrm{bp}}_{b' \boxplus_{0} 1,g} - \mathrm{cost}^{\mathrm{bp}}_{b',g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \wedge \mathit{status}_{g,t} \text{ exists}
+```
+
+```math
+\mathit{cost}_{g,t} \ge \mathrm{cost}^{\mathrm{bp}}_{b,g} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{b',g,t} \cdot \left( \mathrm{cost}^{\mathrm{bp}}_{b' \boxplus_{0} 1,g} - \mathrm{cost}^{\mathrm{bp}}_{b',g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \wedge \neg \left( \mathit{status}_{g,t} \text{ exists} \right)
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{b,g,t} \le \mathit{cost}^{\mathrm{curve,order}}_{b,g,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+```math
+\mathit{cost}^{\mathrm{curve,delta}}_{b,g,t} \le \mathit{cost}^{\mathrm{curve,delta}}_{b - 1,g,t} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+```math
+p_{g,t} = \mathrm{p}^{\mathrm{bp}}_{b,g} \cdot \mathit{status}_{g,t} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{b',g,t} \cdot \left( \mathrm{p}^{\mathrm{bp}}_{b' \boxplus_{0} 1,g} - \mathrm{p}^{\mathrm{bp}}_{b',g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \wedge \mathit{status}_{g,t} \text{ exists}
+```
+
+```math
+p_{g,t} = \mathrm{p}^{\mathrm{bp}}_{b,g} + \sum_{b' \in \mathcal{B}} \mathit{cost}^{\mathrm{curve,delta}}_{b',g,t} \cdot \left( \mathrm{p}^{\mathrm{bp}}_{b' \boxplus_{0} 1,g} - \mathrm{p}^{\mathrm{bp}}_{b',g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \wedge \neg \left( \mathit{status}_{g,t} \text{ exists} \right)
+```
+
+```math
+\mathrm{p}^{\mathrm{bp}}_{b,g} \text{ is defined} \wedge \mathrm{cost}^{\mathrm{bp}}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{on\_curve}_{b,g}
+```
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g} \wedge \neg \mathrm{on\_curve}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{on\_curve}_{b,g} \} \rvert > 0
+```
+
 #### Convex method
 
 `method: convex` — nothing, so the weights range over the hull, which is a pure LP, in `examples/piecewise.yaml`.
@@ -1170,10 +1243,11 @@ names:
 ```yaml
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: [snapshot, generator]
     links:
-      - [dispatch, bp_x]
-      - [op_cost, bp_y]
+      dispatch: [dispatch, bp_x]
+      op_cost: [op_cost, bp_y]
     method: convex
 ```
 
@@ -1228,10 +1302,11 @@ names:
 ```yaml
 piecewise:
   cost_curve:
-    over: bp
+    along: bp
+    dims: [snapshot, generator]
     links:
-      - [dispatch, bp_x]
-      - [op_cost, bp_y, ">="]
+      dispatch: [dispatch, bp_x]
+      op_cost: [op_cost, bp_y, ">="]
     method: lp
 ```
 

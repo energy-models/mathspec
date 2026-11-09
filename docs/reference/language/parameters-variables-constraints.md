@@ -384,7 +384,7 @@ mathspec suggests two rewrites, `absent` and `refused`.
 A `given:` parameter has no `missing:` and no `where:`, because the file that
 declares the parameter sets both.
 
-A values parameter of a curve with `points:` must declare a
+A values parameter of a curve with a `where:` over its breakpoints must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
