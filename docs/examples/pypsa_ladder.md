@@ -6390,7 +6390,8 @@ with one call to linopy per component (`optimize.py:301-332`). The curve runs
 over `Link-p`, `Process-p`, `StorageUnit-p_dispatch` or `Store-p`. Its
 breakpoints are `p_pu` times `p_nom`, and `p_dispatch_pu` times `p_nom` for a
 storage unit. A store's breakpoints are `p_pu` times `e_nom`, not times the
-power rating `e_nom / max_hours` that bounds `Store-p` (`piecewise.py:276-298`).
+power rating `e_nom / max_hours` that bounds `Store-p` (`piecewise.py:276-298`,
+PyPSA/PyPSA#2118).
 
 The file states each component's curve as two `piecewise:` entries, as it
 does a generator's. `Link_marginal_cost_lp` states the segment lines where
@@ -6403,8 +6404,10 @@ requires the first breakpoint at or below zero and the last at or above one
 (`io.py:2316-2336`). The link `curve83` starts at full reverse flow, so it
 costs 60 while it is idle in the first snapshot: 1 per MWh over 60 MW of
 reverse flow. The store `tank83` starts at full charging and costs 20 while
-it is idle. This cost is the same in every snapshot, so it changes the
-objective and not the dispatch. A curve that starts at zero bounds its
+it is idle. Where a unit is not committable, this cost is the same in every
+snapshot, so it changes the objective and not the dispatch. A committable unit
+pays it only while it is on, so the cost can change the commitment
+(PyPSA/PyPSA#2119). A curve that starts at zero bounds its
 variable from below, so a store with such a curve cannot charge.
 
 In the last three snapshots, `curve83` carries 60 MW at a cost of 450 and
