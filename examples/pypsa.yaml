@@ -82,6 +82,12 @@ dimensions:
       flow-based rows name no domain has one. A run without them has none
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 parameters:
   snapshot_weightings_objective:
@@ -103,6 +109,21 @@ parameters:
   Generator_marginal_cost:
     description: cost of one unit of output
     dims: [scenario, snapshot, generator]
+  Generator_marginal_cost_curve_p:
+    description: >-
+      the output at each breakpoint of a generator's piecewise `marginal_cost`
+      curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator
+      with no curve has no rows
+    dims: [generator, breakpoint]
+    missing: absent
+  Generator_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a generator's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      output times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:272-282`)
+    dims: [generator, breakpoint]
+    missing: absent
   Generator_marginal_cost_quadratic:
     description: cost of the square of one unit of output
     dims: [scenario, snapshot, generator]
@@ -1669,6 +1690,12 @@ variables:
     description: "`Generator-p` — output of a generator in a snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_active
+  Generator_marginal_cost_piecewise:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      that pays along a curve, held above the curve
+    dims: [scenario, snapshot, generator]
+    where: Generator_marginal_cost_curve AND Generator_active
   Link_p:
     description: >-
       `Link-p` — PyPSA's `p0`, the flow measured at the `Link_bus0` end. A
@@ -2767,9 +2794,19 @@ expressions:
     description: >-
       what a `tech_capacity_expansion_limit` row totals: the chosen build of
       the row's carrier-and-bus set
+  Generator_running_cost:
+    description: >-
+      what a generator's output costs in a snapshot: the value read off its
+      piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:305-334`)
+    dims: [scenario, snapshot, generator]
+    cases:
+      curve: { when: Generator_marginal_cost_curve, expression: Generator_marginal_cost_piecewise }
+    otherwise: Generator_p * Generator_marginal_cost
   Generator_opex:
     expression: >-
-      sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      sum(sum((Generator_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
       + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
   Generator_commitment_opex:
     expression: >-
@@ -2989,6 +3026,31 @@ expressions:
       its cycle weight, and every transformer phase shift
 
 conditions:
+  Generator_marginal_cost_curve:
+    description: >-
+      a generator that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:305`)
+    condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
+  Generator_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a generator's cost curve gets less steep: the
+      segment after it rises less per unit of output than the one before
+    condition: >-
+      Generator_marginal_cost_curve_p
+      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Generator_marginal_cost_curve_cost - shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_p)
+      > (shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_cost)
+      * (Generator_marginal_cost_curve_p - shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Generator_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all generator cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      generator with a curve is committable, the incremental rows otherwise
+    condition: >-
+      count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
+      AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
   Generator_com_ext:
     description: >-
       a committable generator with an extendable, non-modular build that
@@ -3108,6 +3170,34 @@ conditions:
       a transformer that is active in the snapshot's period, where the run models
       transmission losses
     condition: transmission_losses AND Transformer_active
+
+piecewise:
+  Generator_marginal_cost_lp:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated as the line of
+      each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
+  Generator_marginal_cost_incremental:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated by segments
+      filled in order and switched by the status of a committable generator,
+      where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: NOT Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: incremental
+    activity: Generator_status
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
 
 constraints:
   Generator_fix_p_lower:
@@ -4778,6 +4868,13 @@ constraints:
     expression: CVaR_theta + 1 / (1 - CVaR_alpha) * sum(scenario_weight * CVaR_a, over=scenario) <= CVaR
 
 assumptions:
+  Generator_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Generator_p_nom_extendable AND Generator_p_nom > 0 AND Generator_p_nom < inf"
+    where: "Generator_marginal_cost_curve"
+    description: >-
+      a generator's cost curve is given per unit of a fixed, positive, finite
+      `p_nom`, which scales it to output. PyPSA refuses another
+      (`piecewise.py:250-271`)
   Generator_big_m_where_committed_and_extendable:
     holds: "Generator_big_m"
     where: "Generator_com_ext"
