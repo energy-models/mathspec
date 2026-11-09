@@ -16,6 +16,7 @@ given:
     Process_p_nom_max: { dims: [scenario, process] }
     Process_committable: { dims: [process], dtype: bool }
     Process_p_nom_mod: { dims: [process] }
+    Process_modules_installed: { dims: [scenario, process] }
     Process_active: { dims: [snapshot, process], dtype: bool }
     snapshot_weightings_generators: { dims: [snapshot] }
   variables:
@@ -117,6 +118,17 @@ variables:
     bounds:
       lower: 0
 
+expressions:
+  Process_maintenance_modules:
+    description: >-
+      how many modules of a modular committable process can be on in
+      maintenance: its build cap in modules where the build is extendable,
+      and the modules installed where it is fixed (`constraints.py:588-594`)
+    dims: [scenario, process]
+    cases:
+      extendable: { when: Process_p_nom_extendable, expression: Process_p_nom_max / Process_p_nom_mod }
+    otherwise: Process_modules_installed
+
 conditions:
   Process_maint_ext:
     description: >-
@@ -193,15 +205,15 @@ constraints:
   Process_maint_modstatus_le_maint:
     description: >-
       `Process-maint-modstatus-le-maint` — out of maintenance, no module is on
-      in maintenance. In it, at most the modules the build cap holds
+      in maintenance. In it, at most its modules in maintenance
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
-    expression: Process_maintenance_status <= Process_p_nom_max / Process_p_nom_mod * Process_maintenance
+    expression: Process_maintenance_status <= Process_maintenance_modules * Process_maintenance
   Process_maint_modstatus_lb:
     description: "`Process-maint-modstatus-lb` — in maintenance, every module on is on in maintenance"
     dims: [scenario, snapshot, process]
     where: Process_maintainable AND Process_committed AND Process_p_nom_mod > 0
-    expression: Process_maintenance_status >= Process_status - Process_p_nom_max / Process_p_nom_mod * (1 - Process_maintenance)
+    expression: Process_maintenance_status >= Process_status - Process_maintenance_modules * (1 - Process_maintenance)
 
 assumptions:
   Process_maintenance_events_positive:
@@ -236,14 +248,6 @@ assumptions:
       the `maintcap` rows bound the chosen build in maintenance by
       `p_nom_max`, so an infinite cap is an infinite coefficient. PyPSA
       refuses it (`consistency.py:1576`)
-  Process_maintenance_module_count_is_finite:
-    holds: "Process_p_nom_max < inf"
-    where: "Process_maintainable AND Process_committable AND NOT Process_p_nom_extendable AND Process_p_nom_mod > 0"
-    description: >-
-      the `maint-modstatus` rows bound the modules on in maintenance by
-      `p_nom_max / p_nom_mod`, so an infinite cap is an infinite coefficient.
-      PyPSA does not check it, and the solver HiGHS refuses the model PyPSA
-      builds (`constraints.py:557-560`)
 ```
 
 #### Given
@@ -252,6 +256,7 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{J} \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$, data another file declares |
+| $`\mathrm{N}^{z,\mathrm{fix}}`$ | `Process_modules_installed` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{z}`$ | `Process_p_nom_extendable` over $`\mathcal{J}`$, data another file declares |
 | $`\overline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_max` over $`\mathcal{J} \times \Xi`$, data another file declares |
 | $`\underline{\mathrm{z}}^{\mathrm{nom}}`$ | `Process_p_nom_min` over $`\mathcal{J} \times \Xi`$, data another file declares |
@@ -294,6 +299,12 @@ assumptions:
 | $`\mu^{z,\mathrm{up}}`$ | `Process_maintenance_start` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Process-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{z,u}`$ | `Process_maintenance_status` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Process-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 
+#### Definitions
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{Process\_maintenance\_modules}`$ | `Process_maintenance_modules` over $`\mathcal{J} \times \Xi`$ — how many modules of a modular committable process can be on in maintenance: its build cap in modules where the build is extendable, and the modules installed where it is fixed (`constraints.py:588-594`) |
+
 #### Conditions
 
 **`Process_maint_ext`**
@@ -328,6 +339,14 @@ assumptions:
 \mu^{z,u}_{j,\xi,t} \ge 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \neg \left( \mathrm{ext}^{z}_{j} \wedge \neg \left( \mathrm{z}^{\mathrm{mod}}_{j} > 0 \right) \right)
 ```
 
+#### Definitions
+
+**`Process_maintenance_modules`**
+
+```math
+\mathrm{Process\_maintenance\_modules}_{j,\xi} = \begin{cases} \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} & \text{if } \mathrm{ext}^{z}_{j} \\ \mathrm{N}^{z,\mathrm{fix}}_{j,\xi} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi
+```
+
 #### Subject to
 
 **`Process_maint_event_count`**
@@ -339,13 +358,13 @@ assumptions:
 **`Process_maint_modstatus_lb`**
 
 ```math
-\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} - \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,u}_{j,\xi,t} \ge u^{z}_{j,\xi,t} - \mathrm{Process\_maintenance\_modules}_{j,\xi} \cdot \left( 1 - \mu^{z}_{j,\xi,t} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_maint_modstatus_le_maint`**
 
 ```math
-\mu^{z,u}_{j,\xi,t} \le \frac{\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi}}{\mathrm{z}^{\mathrm{mod}}_{j}} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
+\mu^{z,u}_{j,\xi,t} \le \mathrm{Process\_maintenance\_modules}_{j,\xi} \cdot \mu^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{on}^{z,\mathrm{com}}_{j,t} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 
 **`Process_maint_modstatus_le_status`**
@@ -438,12 +457,6 @@ assumptions:
 
 ```math
 \mathrm{n}^{z,\mathrm{mnt}}_{j,\xi} > 0 \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j}
-```
-
-**`Process_maintenance_module_count_is_finite`**
-
-```math
-\overline{\mathrm{z}}^{\mathrm{nom}}_{j,\xi} < \infty \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \mathrm{mnt}^{z}_{j} \wedge \mathrm{com}^{z}_{j} \wedge \neg \mathrm{ext}^{z}_{j} \wedge \mathrm{z}^{\mathrm{mod}}_{j} > 0
 ```
 <!-- gallery:end -->
 

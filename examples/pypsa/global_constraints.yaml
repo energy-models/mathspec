@@ -30,7 +30,7 @@ parameters:
   GlobalConstraint_sense:
     description: >-
       the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
-      row's sense per scenario (`global_constraints.py:553`, `:751`, `:831`)
+      row's sense per scenario (`global_constraints.py:572`, `:771`, `:851-856`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
@@ -39,7 +39,7 @@ parameters:
       is folded in here in data prep. That is an initial charge, times its
       period's years for each counted period where the storage reopens per
       period, or a non-extendable build. PyPSA reads it per scenario
-      (`global_constraints.py:554`, `:752`, `:831`)
+      (`global_constraints.py:573`, `:772`, `:851-856`)
     dims: [scenario, global_constraint]
 
 constraints:
@@ -125,6 +125,6 @@ assumptions:
     where: "count(scenario_weight, over=scenario) > 1"
     description: >-
       PyPSA does not build a `tech_capacity_expansion_limit` row on a network
-      with scenarios and refuses it (`global_constraints.py:67-69`). The spec
+      with scenarios and refuses it (`global_constraints.py:68-70`). The spec
       cannot tell a network with one scenario from one with none. A tool thus
       refuses the row only where there is more than one scenario
