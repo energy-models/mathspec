@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 222" width="760" height="222" style="max-width: 100%; height: auto" role="img" aria-labelledby="dor-t dor-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="dor-t">shift reads the label before along an ordered dimension</title>
-  <desc id="dor-d">The dimension snapshot is declared ordered, with labels 1, 2 and 3. The variable p is a table with three rows: snapshot 1, 2 and 3 for generator wind. shift of p along snapshot with offset 1 is a table with two rows: at snapshot 2 it holds p at snapshot 1, and at snapshot 3 it holds p at snapshot 2. Snapshot 1 has no label before it, so shift has no row there and is absent.</desc>
+  <desc id="dor-d">The dimension snapshot is declared ordered, with labels 1, 2 and 3. The variable p is a table with three rows: generator wind at snapshot 1, 2 and 3. shift of p along snapshot with offset 1 is a table with two rows: at wind and snapshot 2 it holds p at wind and snapshot 1, and at wind and snapshot 3 it holds p at wind and snapshot 2. Snapshot 1 has no label before it, so shift has no row there and is absent.</desc>
   <defs>
     <marker id="dor-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -27,11 +27,11 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="16" y="140" font-weight="bold">p</text>
     <text x="30" y="140" fill-opacity="0.7">a variable</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-      <text x="24" y="164" font-weight="bold">snapshot</text>
-      <text x="104" y="164" font-weight="bold">generator</text>
-      <text x="24" y="188">1</text><text x="104" y="188">wind</text>
-      <text x="24" y="206">2</text><text x="104" y="206">wind</text>
-      <text x="24" y="224">3</text><text x="104" y="224">wind</text>
+      <text x="24" y="164" font-weight="bold">generator</text>
+      <text x="104" y="164" font-weight="bold">snapshot</text>
+      <text x="24" y="188">wind</text><text x="104" y="188">1</text>
+      <text x="24" y="206">wind</text><text x="104" y="206">2</text>
+      <text x="24" y="224">wind</text><text x="104" y="224">3</text>
     </g>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">
@@ -51,11 +51,11 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="344" y="140" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">shift(p, along=snapshot, offset=1)</text>
     <text x="600" y="140" fill-opacity="0.7">an expression</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
-      <text x="352" y="164" font-weight="bold">snapshot</text>
-      <text x="432" y="164" font-weight="bold">generator</text>
+      <text x="352" y="164" font-weight="bold">generator</text>
+      <text x="432" y="164" font-weight="bold">snapshot</text>
       <text x="520" y="164" font-weight="bold">value</text>
-      <text x="352" y="211">2</text><text x="432" y="211">wind</text><text x="520" y="211">p[1, wind]</text>
-      <text x="352" y="229">3</text><text x="432" y="229">wind</text><text x="520" y="229">p[2, wind]</text>
+      <text x="352" y="211">wind</text><text x="432" y="211">2</text><text x="520" y="211">p[wind, 1]</text>
+      <text x="352" y="229">wind</text><text x="432" y="229">3</text><text x="520" y="229">p[wind, 2]</text>
     </g>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">

@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from mathspec._piecewise import Emitted, leaves_ungated
+from mathspec._piecewise import Emitted
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._typesetting.format import NOTATIONS
 from mathspec._yaml import read_yaml
@@ -298,7 +298,8 @@ def _emitted(program: Program) -> set[str]:
     curves = (
         Emitted.of(name, curve).written(
             curve.method,
-            ungated=leaves_ungated(program.variables[curve.activity] if curve.activity is not None else None),
+            gated=curve.activity is not None,
+            ungated=curve.activity is not None and curve.activity.exists is not None,
         )
         for name, curve in program.piecewise.items()
     )

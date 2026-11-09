@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 390" width="700" height="390" style="max-width: 100%; height: auto" role="img" aria-labelledby="pwp-t pwp-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="pwp-t">With points, each curve runs only over the breakpoints where its parameter has a row</title>
-  <desc id="pwp-d">The parameters bp_x and bp_y have rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. Neither has a row for coal at breakpoint 2. The piecewise entry cost_curve, with points bp_x, has a curve for gas over three breakpoints, at the points 0 and 0, 50 and 40, and 100 and 110. Its curve for coal runs over two breakpoints, at the points 0 and 0, and 80 and 60, and stops at breakpoint 1.</desc>
+  <title id="pwp-t">With where: bp_x, each curve runs only over the breakpoints where its parameter has a row</title>
+  <desc id="pwp-d">The parameters bp_x and bp_y have rows for gas at the breakpoints 0, 1 and 2, and for coal at the breakpoints 0 and 1. Neither has a row for coal at breakpoint 2. The piecewise entry cost_curve, with where: bp_x, has a curve for gas over three breakpoints, at the points 0 and 0, 50 and 40, and 100 and 110. Its curve for coal runs over two breakpoints, at the points 0 and 0, and 80 and 60, and stops at breakpoint 1.</desc>
   <defs>
     <marker id="pwp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -24,7 +24,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="16" y="218" font-weight="bold">bp_y</text>
     <text x="52" y="218" fill-opacity="0.7">a parameter, missing: 0</text>
     <text x="380" y="120" font-weight="bold">cost_curve</text>
-    <text x="456" y="120" fill-opacity="0.7">a piecewise entry, points: bp_x</text>
+    <text x="456" y="120" fill-opacity="0.7">a piecewise entry, where: bp_x</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="52" font-weight="bold">generator</text>
       <text x="108" y="52" font-weight="bold">bp</text>
@@ -73,7 +73,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M226,290 C300,290 300,216 350,216 H374"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="232" y="62">points: bp_x</text>
+    <text x="232" y="62">where: bp_x</text>
     <text x="232" y="77" fill-opacity="0.7">the curve runs where</text>
     <text x="232" y="92" fill-opacity="0.7">bp_x has a row</text>
     <text x="232" y="310">link: op_cost</text>

@@ -134,6 +134,7 @@ class Legend:
     symbols: Symbols
     format: Format
     parameter_masks: Mapping[str, str] = field(default_factory=dict)
+    parameter_confinements: Mapping[str, str] = field(default_factory=dict)
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -156,7 +157,7 @@ class Legend:
         parameters = [
             self._item(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._only_where(p)}{self._missing(entry.missing)}',
+                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._confined(p)}{self._only_where(p)}{self._missing(entry.missing)}',
                 entry.description,
             )
             for p, entry in program.parameters.items()
@@ -198,7 +199,7 @@ class Legend:
             *(
                 self._item(
                     self.symbols.constraint[g],
-                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a row family this file reads the dual of',
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a row family another file builds',
                     entry.description,
                 )
                 for g, entry in program.given.constraints.items()
@@ -243,6 +244,10 @@ class Legend:
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
 
+    def _confined(self, parameter: str) -> str:
+        rows = self.parameter_confinements.get(parameter)
+        return '' if rows is None else f', a row of data refused unless {self.format.math(rows)}'
+
     def _only_where(self, parameter: str) -> str:
         mask = self.parameter_masks.get(parameter)
         return '' if mask is None else f', only where {self.format.math(mask)}'
@@ -262,7 +267,7 @@ class Legend:
         return self.format.math(number(value, self.format))
 
     def _by(self, value: MissingBy) -> str:
-        """Each reading with the labels of ``by`` that take it, in file order, and ``otherwise`` last."""
+        """Each reading with the labels of ``by`` that take it, by label, and ``otherwise`` last."""
         labels: dict[ParameterReading, list[str]] = {}
         for label, reading in value.fill.items():
             labels.setdefault(reading, []).append(self.format.mono(label))
@@ -302,6 +307,12 @@ class Legend:
                 f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
                 for c, lk in carried.items()
                 if lk.missing == 'absent'
+            )
+            clauses.extend(
+                f', every parameter over the key of {self.format.mono(c)} has data only where {self.format.mono(c)} '
+                f'has a row'
+                for c, lk in carried.items()
+                if lk.confines and dim in {lk.dim(role) for role in lk.key}
             )
         return ''.join(clauses)
 

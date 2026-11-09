@@ -17,10 +17,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec, sorted_dims
+from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
+from mathspec._exclusivity import Existence, Undecidable, left_out
 from mathspec._expansion import expand, parse_template
-from mathspec._piecewise import assumptions_of, curve_frame, lp_domain_refusal, refused_under_points, resolve_links
+from mathspec._piecewise import (
+    assumptions_of,
+    declaration_of,
+    lp_domain_refusal,
+    refused_under_where,
+    resolve_gate,
+    resolve_links,
+    resolve_walks,
+)
 from mathspec._resolution import (
     Namespace,
     mask_of,
@@ -30,29 +39,32 @@ from mathspec._resolution import (
     resolve_expression_text,
     self_existence,
 )
-from mathspec._sealed import Sealed
 from mathspec._validation import emitted_name_errors, reference_errors
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.program import (
+    And,
     Assumption,
     BooleanLiteral,
+    ConditionReference,
     Constant,
     Constraint,
+    ConstraintDefined,
     Dimension,
     ExpressionReference,
     Given,
     GivenParameter,
     GivenTargets,
-    Link,
     Mask,
     MissingBy,
     NamedCondition,
     NamedExpression,
+    Not,
     Objective,
+    Or,
     Parameter,
     ParameterReference,
-    Piecewise,
     Program,
+    RelationDefined,
     Sos,
     Variable,
     VariableDefined,
@@ -64,7 +76,7 @@ from mathspec.spec import MissingBySpec
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Expression, ParameterMissing, ParameterReading
+    from mathspec.program import Condition, Expression, Gate, JoinColumns, ParameterMissing, ParameterReading
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -89,9 +101,9 @@ def lower(spec: Spec) -> Program:
       curve as lowered;
     - every dim rule (``dimensions.check_spec``), once names resolve.
 
-    A ``piecewise:`` entry's links are resolved and its frame checked here, on
-    the link the file wrote, so the expansion writes rows the language has
-    already held to every rule; what its method assumes of the breakpoints
+    A ``piecewise:`` entry's links and ``where:`` are resolved here, and each
+    link's row and its fit decided, on the link the file wrote, so the
+    expansion writes rows the language has already held to every rule; what its method assumes of the breakpoints
     stands under the program's assumptions with the file's own, so a spec
     states what it assumes whether or not its curves are written out.
 
@@ -140,7 +152,7 @@ def lower(spec: Spec) -> Program:
         errors.extend(refusals)
         if named is not None:
             body = Mask(named.body)
-            conditions[mname] = NamedCondition(body, tuple(sorted(body.dims)), mdef.description)
+            conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     parameter_masks = _parameter_masks(spec, ns, errors)
 
@@ -154,7 +166,7 @@ def lower(spec: Spec) -> Program:
         else:
             lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
-            tuple(vdef.dims),
+            vdef.dims,
             where=mask_of(where),
             lower=lower_bound,
             upper=upper_bound,
@@ -169,9 +181,7 @@ def lower(spec: Spec) -> Program:
         where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
-            constraints[cname] = Constraint(
-                tuple(cdef.dims), lhs, sense, rhs, mask_of(where), description=cdef.description
-            )
+            constraints[cname] = Constraint(cdef.dims, lhs, sense, rhs, mask_of(where), description=cdef.description)
 
     objective = None
     if spec.objective is not None:
@@ -180,43 +190,45 @@ def lower(spec: Spec) -> Program:
             objective = Objective(spec.objective.sense, expression, spec.objective.description)
 
     assumptions: dict[str, Assumption] = {}
+    existence = Existence(
+        {name: v.where for name, v in variables.items()}, {name: c.where for name, c in constraints.items()}
+    )
     for aname, adef in spec.assumptions.items():
-        if (assumption := _assumption(aname, adef, ns, errors)) is not None:
+        if (assumption := _assumption(aname, adef, ns, errors, existence)) is not None:
             assumptions[aname] = assumption
 
-    curves: dict[str, tuple[Expression, ...]] = {}
+    curves: dict[str, tuple[tuple[Expression, ...], dict[str, JoinColumns], Mask | None, Gate | None]] = {}
     for pname, pdef in spec.piecewise.items():
         links = resolve_links(pname, pdef, ns, errors)
-        if links is None:
+        walks = resolve_walks(pname, pdef, ns, errors)
+        where = mask_of(resolve_condition_text(pdef.where, ns, f"piecewise '{pname}' where", errors))
+        gate = None
+        if pdef.activity is not None:
+            gate = resolve_gate(pname, pdef, variables, ns, errors)
+            if gate is None:
+                continue
+        if links is None or walks is None:
             continue
         if pdef.method == 'lp' and (refusal := lp_domain_refusal(pname, pdef, links)) is not None:
             errors.append(refusal)
-        curves[pname] = links
+        curves[pname] = (links, walks, where, gate)
 
-    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, curves))
+    linked = {pname: links for pname, (links, *_) in curves.items()}
+    errors.extend(_zero_divisor_refusals(spec, variables, entries, constraints, objective, linked))
     if errors:
         raise ns.error(errors)
 
     roots = [side for c in constraints.values() for side in (c.lhs, c.rhs)]
     if objective is not None:
         roots.append(objective.expression)
-    roots.extend(link for links in curves.values() for link in links)
+    roots.extend(link for links in linked.values() for link in links)
     roots.extend(terms)
     in_math = frozenset(node.name for node in walk(*roots) if isinstance(node, ExpressionReference))
 
     piecewise = {}
-    for pname, links in curves.items():
-        pdef = spec.piecewise[pname]
-        piecewise[pname] = Piecewise(
-            over=pdef.over,
-            links=tuple(Link(node, link.values, link.sign) for node, link in zip(links, pdef.links, strict=True)),
-            method=pdef.method,
-            frame=curve_frame(spec, pname, pdef, links),
-            activity=pdef.activity,
-            points=pdef.points,
-            description=pdef.description,
-        )
-        for aname, assumed in assumptions_of(pname, piecewise[pname]).items():
+    for pname, (links, walks, where, gate) in curves.items():
+        piecewise[pname] = declaration_of(pname, spec.piecewise[pname], links, walks, where, gate, spec)
+        for aname, assumed in assumptions_of(pname, piecewise[pname], spec.piecewise[pname].where).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
             assumptions[aname] = assumption
@@ -224,7 +236,12 @@ def lower(spec: Spec) -> Program:
     program = Program(
         parameters={
             name: Parameter(
-                tuple(pdef.dims), pdef.dtype, _missing(pdef.missing), pdef.description, parameter_masks.get(name)
+                pdef.dims,
+                pdef.dtype,
+                _missing(pdef.missing),
+                pdef.description,
+                parameter_masks.get(name),
+                tuple(ns.confining(pdef.dims)),
             )
             for name, pdef in spec.parameters.items()
         },
@@ -245,7 +262,7 @@ def lower(spec: Spec) -> Program:
         expressions={
             name: NamedExpression(
                 entry.body,
-                _frame_of(name, entry, spec),
+                entry.dims,
                 in_math=name in in_math,
                 description=spec.expressions[name].description,
                 adds_to=spec.expressions[name].adds_to,
@@ -255,16 +272,16 @@ def lower(spec: Spec) -> Program:
         conditions=conditions,
         given=GivenTargets(
             parameters={
-                name: GivenParameter(tuple(g.dims), g.dtype, g.description) for name, g in spec.given.parameters.items()
+                name: GivenParameter(g.dims, g.dtype, g.description) for name, g in spec.given.parameters.items()
             },
-            variables={name: Given(tuple(g.dims), g.description) for name, g in spec.given.variables.items()},
-            constraints={name: Given(tuple(g.dims), g.description) for name, g in spec.given.constraints.items()},
-            expressions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.expressions.items()},
-            conditions={name: Given(tuple(g.dims), g.description) for name, g in spec.given.conditions.items()},
+            variables={name: Given(g.dims, g.description) for name, g in spec.given.variables.items()},
+            constraints={name: Given(g.dims, g.description) for name, g in spec.given.constraints.items()},
+            expressions={name: Given(g.dims, g.description) for name, g in spec.given.expressions.items()},
+            conditions={name: Given(g.dims, g.description) for name, g in spec.given.conditions.items()},
         ),
         description=spec.description,
     )
-    if errors := [*emitted_name_errors(spec, program), *refused_under_points(spec)]:
+    if errors := [*emitted_name_errors(spec, program), *refused_under_where(program, spec)]:
         raise SchemaError('\n'.join(errors))
     check_spec(spec, program)
     return program
@@ -377,17 +394,11 @@ def _zero_divisor_refusals(
     return list(dict.fromkeys(found))
 
 
-def _frame_of(name: str, entry: ExpressionReference, spec: Spec) -> tuple[str, ...]:
-    """The dims an entry is read over: the ``dims:`` it declares, as written, else the body's, sorted by name."""
-    declared = spec.expressions[name].dims
-    return entry.dims if declared is None else tuple(declared)
-
-
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=sorted_dims(ns.leaf_dims[value]))
+        return ParameterReference(value, dims=ns.leaf_dims[value])
     return Constant(value, dims=())
 
 
@@ -406,6 +417,14 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
         mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
         if mask is None:
             continue
+        if (
+            (confining := ns.confining(spec.parameters[pname].dims))
+            and (decided := Mask(_inside(mask.root, frozenset(confining))).root) != mask.root
+            and isinstance(decided, BooleanLiteral)
+        ):
+            errors.append(
+                _decided_by_relations(context, pname, spec.parameters[pname].where, confining, value=decided.value)
+            )
         errors.extend(
             f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
             f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
@@ -422,36 +441,85 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
     return masks
 
 
-def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
+def _inside(node: Condition, confining: frozenset[str]) -> Condition:
+    """*node* with each of the *confining* relations read as true, since a confined parameter has no coordinate outside them."""
+    match node:
+        case RelationDefined(name=name) if name in confining:
+            return BooleanLiteral(value=True)
+        case Not(operand=operand):
+            return Not(_inside(operand, confining))
+        case And(left=left, right=right):
+            return And(_inside(left, confining), _inside(right, confining))
+        case Or(left=left, right=right):
+            return Or(_inside(left, confining), _inside(right, confining))
+        case ConditionReference(body=body):
+            return _inside(body, confining)
+        case _:
+            return node
+
+
+def _decided_by_relations(context: str, pname: str, text: str | None, confining: list[str], *, value: bool) -> str:
+    """The refusal for a parameter's ``where:`` that the relations confining the parameter already decide."""
+    named = ' and '.join(f"'{r}'" for r in confining)
+    head = (
+        f"{context}: '{pname}' has coordinates only where {named} {'has' if len(confining) == 1 else 'have'} a row, "
+        f'under confines: true, so `where: {text}`'
+    )
+    if value:
+        return f'{head} narrows nothing. Delete the `where:`, or the relation from it.'
+    return f"{head} leaves '{pname}' no coordinate. Write a `where:` that holds somewhere inside the relation."
+
+
+def _assumption(
+    name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str], existence: Existence | None = None
+) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
     A condition the connectives decide is refused: one that folds to true
     assumes nothing, and one that folds to false refuses every dataset. A
-    variable is refused too, since an assumption is about the data and a
-    variable is what the solver decides from it.
+    bare variable or constraint name asks whether a row exists, which the
+    data decides before any solve. An assumption on rows alone is refused
+    with the region that the ``where:`` of the entries in *existence* leave
+    out ([`left_out`][mathspec._exclusivity.left_out]).
     """
     context = f"Assumption '{name}'"
     found = len(errors)
-    holds = resolve_condition_text(entry.holds, ns, context, errors)
-    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors)
+    holds = resolve_condition_text(entry.holds, ns, context, errors, rows=True)
+    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors, rows=True)
     if isinstance(holds, BooleanLiteral):
         errors.append(_decided_assumption(context, entry.holds, value=holds.value))
     if isinstance(where, BooleanLiteral):
         assert entry.where is not None, 'a `where:` the file did not write resolves to nothing'
         errors.append(_decided_where(context, entry.where, value=where.value))
-    for mask, key in ((holds, 'holds'), (where, 'where')):
-        if mask is None or isinstance(mask, BooleanLiteral):
-            continue
-        errors.extend(
-            f"{context}: variable '{atom.name}' appears in '{key}:', and an assumption checks only data. "
-            f'Name a parameter, or state the rule as a constraint.'
-            for atom in Mask(mask).atoms
-            if isinstance(atom, VariableDefined)
-        )
     if len(errors) > found:
         return None
     assert holds is not None, 'a condition that read to nothing appended an error'
+    if existence is not None and (gap := _rows_left_out(holds, where, existence, ns)) is not None:
+        errors.append(
+            f'{context}: the `where:` conditions of the entries it names leave a gap where {gap}. There its `where:` holds '
+            f'and its `holds:` does not, so data with a row there fails it. Add a constraint whose `where:` holds '
+            f'there, or widen the `where:` of an entry that `holds:` names.'
+        )
+        return None
     return Assumption(Mask(holds), mask_of(where), entry.description)
+
+
+def _rows_left_out(holds: Condition, where: Condition | None, entries: Existence, ns: Namespace) -> str | None:
+    """The region an assumption on rows alone fails in, or ``None``.
+
+    Only an assumption whose every atom is a bare variable or constraint name
+    is decided here: it is about how the model is built, so a region the
+    ``where:`` of those entries leave out is a gap whatever the values are. An
+    assumption that also tests a value is about the data, and is left to the
+    tool, as is one the cells cannot decide.
+    """
+    atoms = (*Mask(holds).atoms, *(Mask(where).atoms if where is not None else ()))
+    if not all(isinstance(atom, VariableDefined | ConstraintDefined) for atom in atoms):
+        return None
+    try:
+        return left_out(holds, where, entries, ns.dtypes, ns.defaults)
+    except Undecidable:
+        return None
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:
@@ -480,5 +548,5 @@ def _decided_where(context: str, text: str, *, value: bool) -> str:
 def _missing(missing: ParameterReading | MissingBySpec) -> ParameterMissing:
     """The program's ``missing``: a [`MissingBySpec`][mathspec.spec.MissingBySpec] sealed into a [`MissingBy`][mathspec.program.MissingBy]."""
     if isinstance(missing, MissingBySpec):
-        return MissingBy(missing.by, Sealed(missing.fill), missing.otherwise)
+        return MissingBy(missing.by, missing.fill, missing.otherwise)
     return missing

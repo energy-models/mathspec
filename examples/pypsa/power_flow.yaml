@@ -5,7 +5,7 @@
 given:
   expressions:
     Cycle_angle_sum:
-      dims: [scenario, snapshot, cycle]
+      dims: [cycle, scenario, snapshot]
       description: >-
         the voltage angle differences around a cycle: every branch flow times
         its cycle weight, and every transformer phase shift

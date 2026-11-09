@@ -33,6 +33,11 @@ constraints:
 labels in no order. `sum(dispatch, over=generator)` removes `generator`, so
 `power_balance` has one row per snapshot.
 
+The order of the keys under `dimensions:`, and the order of a `dims:` list,
+change nothing. mathspec sorts both by name at load, and an entry is indexed
+over its dimensions in that order. So `dispatch` above prints as
+$`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` first.
+
 | Key           | What it sets                                                                | Default |
 | ------------- | --------------------------------------------------------------------------- | ------- |
 | `dtype`       | the type of a label: `float`, `int`, `str` or `datetime`                    | `str`   |
@@ -81,6 +86,9 @@ A `one_of` list meets four rules:
   declares the same dimension. mathspec refuses a `one_of` with any other
   `dtype`.
 - In every other rule, the dimension is an ordinary `str` dimension.
+
+The order of the list changes nothing. mathspec sorts it by name at load, so
+`one_of: [wind, ccgt, ocgt]` declares the same dimension.
 
 At load, mathspec refuses a [condition](expressions.md#conditions) that
 compares the dimension, or a relation column over it, against a label that is

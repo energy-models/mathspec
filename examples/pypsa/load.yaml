@@ -4,7 +4,7 @@
 
 given:
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:

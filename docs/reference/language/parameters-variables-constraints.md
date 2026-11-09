@@ -315,7 +315,9 @@ A `str` parameter takes any label. A dimension with
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
 no row. It takes `refused` (the default), `absent`, a value of the `dtype`
 of the parameter, or [a reading per label](#a-reading-per-label). On a parameter with a [`where:`](#where), `missing:` applies
-only where the condition is true.
+only where the condition is true. On a parameter that a relation confines
+([`confines`](relations.md#confines)), it applies only where the relation has
+a row.
 
 ```yaml
 dimensions:
@@ -424,7 +426,7 @@ mathspec suggests two rewrites, `absent` and `refused`.
 A `given:` parameter has no `missing:` and no `where:`, because the file that
 declares the parameter sets both.
 
-A values parameter of a curve with `points:` must declare a
+A values parameter of a curve with a `where:` over its breakpoints must declare a
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
@@ -455,7 +457,7 @@ constraints:
     expression: sum(efficiency * p, over=entity) == 0
 ```
 
-$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{e,b,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
+$$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}$$
 
 <figure class="diagram">
 --8<-- "docs/static/parameters-where.svg"
@@ -482,7 +484,11 @@ snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
-either, because the parameter has no row there.
+either, because the parameter has no row there. To have a tool refuse a row at
+a pair that is not wired, declare
+[`confines: true`](relations.md#confines) on the relation instead. It then
+confines `efficiency`, and every other parameter over `entity` and `bus`, and
+the parameter needs no `where:`.
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),

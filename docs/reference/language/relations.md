@@ -37,6 +37,7 @@ no `values:` is a **bare relation**, and its key is every column.
 | `key`         | required. The columns that identify a row                        |           |
 | `values`      | the columns that the key determines                              | `null`    |
 | `missing`     | `refused` or `absent`: whether every key combination needs a row | `refused` |
+| `confines`    | whether every parameter over the key has data only at its rows   | `false`   |
 | `description` | free text                                                        | `null`    |
 
 A column is named after its dimension, or after no dimension. Where two
@@ -50,6 +51,11 @@ Relation 'zp' names column 'period' after dimension 'period', but the column is 
 ```
 
 mathspec suggests one rewrite, which is to rename the column.
+
+The order of the columns under `key:` and under `values:` changes nothing. The
+key's columns come first, and each side is sorted by column name. The
+typesetter prints the columns in that order, so `connection` above prints as
+$`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
 
 ### Cardinalities
 
@@ -145,6 +151,95 @@ pair with no row is then not in the relation.
 
 The typeset legend lists `` `line_to` is `absent` where the data has no row ``
 beside each dimension of the relation, and nothing for `refused`.
+
+### `confines`
+
+Under `confines: true`, each parameter whose dimensions include every
+dimension of the key has coordinates only where the relation has a row. The
+relation declares this once, for every such parameter in the spec, including
+the parameters of other files [merged](../composition.md#merge) with it. A variable
+or a constraint is not confined: its rows come from its own `where:`. In this example,
+`efficiency` and `p_nom_max` have values only at the pairs that `connection`
+lists:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+  role: { dtype: str }
+relations:
+  connection: { key: [entity, bus], values: role, missing: absent, confines: true }
+parameters:
+  efficiency: { dims: [entity, bus, snapshot], missing: 1 }
+  p_nom_max: { dims: [entity, bus], missing: .inf }
+variables:
+  injection: { dims: [entity, snapshot] }
+constraints:
+  nodal_balance:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * injection, over=entity) == 0
+```
+
+With data attached, a tool decides the coordinates of `efficiency` in three
+steps:
+
+1. Where `connection` has no row, `efficiency` is [absent](absence.md), and
+   the tool refuses any row of the data of `efficiency` there.
+2. Where the [`where:`](parameters-variables-constraints.md#where) of
+   `efficiency` is false, the tool drops the row. `efficiency` has no
+   `where:`, so the tool drops nothing.
+3. At each remaining coordinate with no row, `missing: 1` sets the value.
+
+So `missing: 1` fills only the wired pairs, and a data row for an entity at a
+bus it is not wired to is refused. The file declares this once, on the
+relation, for every parameter over `entity` and `bus`. A parameter over
+`entity` alone, or over `bus` alone, is not confined.
+
+A relation confines by its key columns, not by its values. Under `gen_bus: { key: generator, values: bus, missing: absent, confines: true }`,
+every parameter over `generator` has coordinates only at the generators that
+`gen_bus` lists, at every bus. To confine a parameter to the pairs, key the
+relation by both columns, as `connection` is keyed by `[entity, bus]`.
+
+A `where:` on a confined parameter narrows the coordinates further, and the
+tool drops the rows outside it, as in step 2. mathspec reads the `where:` as
+if each relation that confines the parameter held. A `where:` that is then
+always true narrows nothing, as `where: connection` on `efficiency`:
+
+```text
+Parameter 'efficiency': 'efficiency' has coordinates only where 'connection' has a row, under confines: true, so `where: connection` narrows nothing. Delete the `where:`, or the relation from it.
+```
+
+mathspec suggests two rewrites: no `where:`, or a `where:` without the
+relation. A `where:` that is then always false, such as `where: NOT connection`,
+leaves the parameter no coordinate, and mathspec suggests a `where:` that
+holds somewhere inside the relation.
+
+A parameter has each dimension once, so a key with two columns over one
+dimension confines no parameter. For `next: { key: { from: snapshot, to: snapshot }, missing: absent, confines: true }`,
+mathspec prints:
+
+```text
+Relation 'next': confines: true confines each parameter over all the dimensions of the key, and a parameter has 'snapshot' once, so a key with two columns over 'snapshot' confines none. Key the relation by one column over each dimension, or delete confines:.
+```
+
+mathspec suggests two rewrites: one key column over each dimension, or no
+`confines:`.
+
+Under the default `missing: refused`, the relation has a row at every key
+combination, so it confines nothing. mathspec refuses `confines: true` there:
+
+```text
+Relation 'connection': confines: true confines parameters to the rows of the relation, and under missing: refused it has a row at every key combination, so it confines nothing. Write missing: absent, or delete confines:.
+```
+
+mathspec suggests two rewrites: `missing: absent`, or no `confines:`.
+
+The typeset legend lists
+``every parameter over the key of `connection` has data only where `connection` has a row``
+beside each dimension of the key. Beside each confined parameter, it lists the
+relation after `a row of data refused unless`, apart from a `where:`, which it
+lists after `only where`.
 
 ## How a relation is used
 
@@ -357,15 +452,16 @@ at every other pair, so `balance` adds up the generators wired to each bus.
 constraint:
 
 ```math
-\mathit{flow}_{g,b,t} \ge 0 \qquad \forall\, g \in \mathcal{G},\ b \in \mathcal{B},\ t \in \mathcal{T} \,:\, \left( g,\ b \right) \in \mathrm{connection}
+\mathit{flow}_{b,g,t} \ge 0 \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( b,\ g \right) \in \mathrm{connection}
 ```
 
 ```math
-\sum_{g \in \mathcal{G}} \mathit{flow}_{g,b,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\sum_{g \in \mathcal{G}} \mathit{flow}_{b,g,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
-The domain of `flow` ends in the condition that `(g, b)` is in `connection`.
-The condition is over `(generator, bus)`, so it is the same at every snapshot.
+The domain of `flow` ends in the condition that `(b, g)` is in `connection`.
+The key lists `generator` first, and mathspec sorts it to `(bus, generator)`.
+The condition is over those two columns, so it is the same at every snapshot.
 
 !!! info "See also"
 

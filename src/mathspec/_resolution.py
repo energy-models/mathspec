@@ -108,24 +108,37 @@ class Namespace:
         self.one_of: dict[str, tuple[str, ...]] = {
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
+        self.relations: dict[str, Relation] = {
+            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description, lk.confines)
+            for n, lk in spec.relations.items()
+        }
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
-            if isinstance(pd.missing, bool | int | float) and pd.where is None
-        }
-        self.relations: dict[str, Relation] = {
-            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
+            if isinstance(pd.missing, bool | int | float) and pd.where is None and not self.confining(pd.dims)
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
-            **{p: tuple(pd.dims) for p, pd in parameters.items()},
-            **{m: tuple(md.dims) for m, md in spec.given.conditions.items()},
-            **{v: tuple(vd.dims or ()) for v, vd in variables.items()},
+            **{p: pd.dims for p, pd in parameters.items()},
+            **{m: md.dims for m, md in spec.given.conditions.items()},
+            **{v: vd.dims or () for v, vd in variables.items()},
         }
         self._named: dict[str, tuple[ExpressionReference | None, tuple[str, ...]]] = {}
         self._loading: list[str] = []
         self._conditions: dict[str, tuple[ConditionReference | None, tuple[str, ...]]] = {}
         self.dimension_refusals: set[str] = set()
         self.follow_ons: set[str] = set()
+
+    def confining(self, dims: Iterable[str]) -> list[str]:
+        """The relations under ``confines: true`` whose key dimensions are all among *dims*, sorted by name.
+
+        The key has one column per dimension, which a confining relation is
+        refused without, so its dimensions are the key's.
+        """
+        return [
+            name
+            for name, relation in self.relations.items()
+            if relation.confines and {relation.dim(role) for role in relation.key} <= set(dims)
+        ]
 
     def refused_dims(self, refusal: DimensionError) -> str:
         """*refusal*'s text, recorded as a dim rule's."""
@@ -273,6 +286,9 @@ class Namespace:
     def unknown(self, name: str, context: str, *, allow_dims: bool, formals: Iterable[str] = ()) -> str:
         """The refusal for a *name* declared nowhere, listing what it could have been.
 
+        A constraint's name in a condition is declared, but only an assumption
+        may test it, so it gets a refusal of its own.
+
         Args:
             name: The name the file wrote.
             context: The entry it was found in.
@@ -282,6 +298,11 @@ class Namespace:
                 value, lists the variables instead.
             formals: A macro's formals, listed first when there are any.
         """
+        if allow_dims and name in self.constraints:
+            return (
+                f"{context}: '{name}' is a constraint, and only an assumption's `holds:` or `where:` may test "
+                f"whether it has a row, by its bare name. Test the `where:` of '{name}' here instead."
+            )
         shown: list[tuple[str, Iterable[str]]] = [('Formals', formals)] if formals else []
         shown += (
             [
@@ -367,8 +388,13 @@ def resolve_condition(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
+    *,
+    rows: bool = False,
 ) -> Condition | None:
     """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
+
+    *rows* is set for an assumption, where a bare constraint name asks whether
+    the constraint has a row.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -376,7 +402,7 @@ def resolve_condition(
         problems appended to *errors*.
     """
     before = len(errors)
-    resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
+    resolved = ConditionResolver(ns, context, errors, self_variable, rows).build(node)
     return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
@@ -386,6 +412,8 @@ def resolve_condition_text(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
+    *,
+    rows: bool = False,
 ) -> Condition | None:
     """Parse and resolve one condition as [`resolve_condition`][] does, a parse failure appended to *errors*.
 
@@ -399,7 +427,7 @@ def resolve_condition_text(
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
-    return resolve_condition(node, ns, context, errors, self_variable)
+    return resolve_condition(node, ns, context, errors, self_variable, rows=rows)
 
 
 def resolve_expression_text(
@@ -556,7 +584,7 @@ def self_existence(where: Condition, variable: str, context: str) -> str | None:
     return (
         f"{context}: variable '{variable}' asks whether it exists in its own `where:`, through a named condition, which "
         f'nothing can answer — its `where:` is what decides where it exists. Test a parameter, or another '
-        f'variable declared before it.'
+        f'variable.'
     )
 
 

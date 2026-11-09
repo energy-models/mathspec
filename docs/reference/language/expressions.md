@@ -326,6 +326,7 @@ its entry.
 | ---------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `name` (bare)                            | parameter                  | For a number, it is true where the data has a row, whatever the `missing:`. For a `bool`, it is its value, and the `missing:` sets the value at a missing row ([`missing`](parameters-variables-constraints.md#missing)). `0.0` is a row, and `inflow != 0` tests for non-zero |
 | `name` (bare)                            | variable                   | It is true where the variable exists                                                                                                                                                                                                                                           |
+| `name` (bare)                            | constraint                 | In an [assumption](assumptions.md#rows-of-the-model) only, it is true where the constraint has a row                                                                                                                                                                           |
 | `name` (bare)                            | relation                   | It is true where a row exists, tested at the relation's key. A `missing: absent` relation has no row for some key combinations ([`missing`](relations.md#missing)), and the bare name selects the labels that do map                                                           |
 | `name` (bare)                            | dimension                  | mathspec refuses it at load                                                                                                                                                                                                                                                    |
 | `name` (bare)                            | named condition            | It tests the [named condition](named.md#conditions). A given condition is true or false at each coordinate, as a `bool` parameter is                                                                                                                                           |
@@ -397,7 +398,7 @@ objective:
 ```
 
 ```math
-p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \} \rvert \ge 2
+p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{b,g} \} \rvert \ge 2
 ```
 
 <figure class="diagram">
@@ -460,7 +461,7 @@ where: "count(points AND NOT shift(points, along=bp, offset=1), over=bp) == 1"
 ```
 
 ```math
-p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{g,b} \wedge \neg \mathrm{points}_{g,b - 1} \} \rvert = 1
+p_{g} \ge 0 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{points}_{b,g} \wedge \neg \mathrm{points}_{b - 1,g} \} \rvert = 1
 ```
 
 <figure class="diagram">

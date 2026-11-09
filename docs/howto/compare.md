@@ -36,20 +36,17 @@ spec:
 ```text
 version: {{ mathspec.language_version }}
 dimensions:
-  generator: {dtype: str}
+  generator: {}
   snapshot: {dtype: int}
 parameters:
-  capacity: {dims: [generator], dtype: float}
-  cost: {dims: [generator], dtype: float}
-  load: {dims: [snapshot], dtype: float}
+  capacity: {dims: [generator]}
+  cost: {dims: [generator]}
+  load: {dims: [snapshot]}
 variables:
   dispatch:
-    dims: [snapshot, generator]
+    dims: [generator, snapshot]
     bounds: {lower: 0.0, upper: capacity}
-    domain: continuous
-    missing: absent
 objective:
-  sense: minimize
   expression: sum(cost * dispatch)
 constraints:
   power_balance:
@@ -57,9 +54,9 @@ constraints:
     expression: sum(dispatch, over=generator) == load
 ```
 
-The sections come in a fixed order, the names within a section are sorted,
-and `dispatch` has its defaults `domain: continuous` and `missing: absent`
-written out. The objective is `sum(cost * dispatch)`, although the file has
+The sections come in a fixed order, and the names within a section and the
+`dims` of `dispatch` are sorted. A field at its default, such as `dtype: str` or
+`sense: minimize`, is left out. The objective is `sum(cost * dispatch)`, although the file has
 `sum(dispatch * cost)`, because mathspec writes the factors of a product in a
 fixed order.
 
@@ -91,10 +88,10 @@ cost:
 ```diff
 --- before.yaml
 +++ after.yaml
-@@ -14,7 +14,7 @@
-     missing: absent
+@@ -11,7 +11,7 @@
+     dims: [generator, snapshot]
+     bounds: {lower: 0.0, upper: capacity}
  objective:
-   sense: minimize
 -  expression: sum(cost * dispatch)
 +  expression: sum((2 * cost) * dispatch)
  constraints:
@@ -123,10 +120,10 @@ Python, where the specs differ, `before == after` is `False`.
     prints:
 
     ```diff
-    @@ -14,7 +14,7 @@ variables:
-         missing: absent
+    @@ -11,7 +11,7 @@ variables:
+         dims: [generator, snapshot]
+         bounds: {lower: 0.0, upper: capacity}
      objective:
-       sense: minimize
     -  expression: sum(cost * dispatch)
     +  expression: sum((2 * cost) * dispatch)
      constraints:

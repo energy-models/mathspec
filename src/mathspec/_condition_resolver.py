@@ -25,7 +25,7 @@ from mathspec._condition_parser import (
     UnresolvedConditionNode,
     UnresolvedCountNode,
 )
-from mathspec._dimensions import join_dims
+from mathspec._dimensions import join_dims, sorted_dims
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand
 from mathspec._expression_parser import (
@@ -46,6 +46,7 @@ from mathspec.program import (
     Condition,
     ConditionReference,
     Constant,
+    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -91,15 +92,17 @@ class ConditionResolver:
     A node that cannot be typed comes back unresolved with its refusal
     appended to ``errors``; every sibling is still read, so a mask with two
     faults reports both. ``self_variable`` is the variable whose own
-    ``where`` is being read, which may not ask whether it exists. A side
-    that is an expression is built by an [`ExpressionResolver`][] over
-    the same namespace.
+    ``where`` is being read, which may not ask whether it exists. ``rows``
+    is set for an assumption, the one place a bare constraint name asks
+    whether the constraint has a row. A side that is an expression is built
+    by an [`ExpressionResolver`][] over the same namespace.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
+    rows: bool = False
 
     @property
     def _expressions(self) -> ExpressionResolver:
@@ -130,13 +133,28 @@ class ConditionResolver:
         """Every named condition this file declares or is given."""
         return self.ns.conditions | self.ns.given_conditions
 
+    @property
+    def _variable_value_rewrite(self) -> str:
+        """The rewrite for a variable's value in a condition, which the solver decides only after every condition is read."""
+        if self.rows:
+            return (
+                'The solver decides its value, so an assumption tests only whether it has a row: write its bare '
+                'name, or state the bound as a constraint.'
+            )
+        return 'Test only parameters and dimension coordinates.'
+
     def _child(self, node: Condition | UnresolvedConditionNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Condition', self.build(node))
 
     def _bare_name(self, node: NameNode) -> Condition | UnresolvedConditionNode:
-        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
+        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence.
+
+        In an assumption, a constraint's name asks whether the constraint has a row.
+        """
         ns, context = self.ns, self.context
+        if self.rows and node.name in ns.constraints:
+            return self._constraint_row(node)
         if node.name in ns.conditions:
             try:
                 return ns.condition(node.name, context)
@@ -155,6 +173,7 @@ class ConditionResolver:
                     and declared.missing == 'refused'
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
+                    and not ns.confining(declared.dims)
                 ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
@@ -176,7 +195,7 @@ class ConditionResolver:
                 )
             case 'relation':
                 shape = ns.relations[node.name]
-                dims = tuple(shape.dim(k) for k in shape.key)
+                dims = tuple(sorted(shape.dim(k) for k in shape.key))
                 if len(set(dims)) < len(dims):
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
@@ -189,11 +208,24 @@ class ConditionResolver:
                 if node.name == self.self_variable:
                     self.errors.append(
                         f"{context}: variable '{node.name}' tests itself in its own where. "
-                        f'Test a parameter, or another variable declared before it.'
+                        f'Test a parameter, or another variable.'
                     )
                 else:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
+
+    def _constraint_row(self, node: NameNode) -> Condition | UnresolvedConditionNode:
+        """Whether constraint *node* has a row. Constraints have a namespace of their own, so a shared name is refused."""
+        ns = self.ns
+        other = 'named condition' if node.name in self.conditions else ns.kind(node.name)
+        if other is not None:
+            self.errors.append(
+                f"{self.context}: '{node.name}' names a constraint and a {other}, so the bare name is ambiguous. "
+                f'Rename one of the two.'
+            )
+            return node
+        declared = ns.spec.constraints.get(node.name) or ns.spec.given.constraints[node.name]
+        return ConstraintDefined(node.name, tuple(declared.dims))
 
     def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
         """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=relation[column])`` — the two operators that read a condition and answer one.
@@ -243,13 +275,13 @@ class ConditionResolver:
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
-                f'not read. Step along one of {_listed(sorted(mask.dims))}.'
+                f'not read. Step along one of {_listed(list(mask.dims))}.'
             )
             return node
         if self.ns.unordered(along.name):
             self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
             return node
-        return TranslatedCondition(mask, along.name, int(offset.value), tuple(sorted(mask.dims)))
+        return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
     def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
         """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
@@ -263,15 +295,15 @@ class ConditionResolver:
             self.errors.append(refusal)
             return node
         columns = self._expressions.columns_ref(node.kwargs['by'], 'at', 'by')
-        by = None if columns is None else self._expressions.lookup(columns, mask.dims)
+        by = None if columns is None else self._expressions.lookup(columns, frozenset(mask.dims))
         if by is None:
             return node
         try:
-            dims = join_dims(by, mask.dims, context, 'the condition')
+            dims = join_dims(by, frozenset(mask.dims), context, 'the condition')
         except DimensionError as refusal:
             self.errors.append(self.ns.refused_dims(refusal))
             return node
-        return JoinedCondition(mask, by, tuple(sorted(dims)))
+        return JoinedCondition(mask, by, sorted_dims(dims))
 
     def _count(self, node: UnresolvedCountNode) -> Condition | UnresolvedConditionNode:
         """``count(<condition>, over=<dim>) <op> <integer>`` — how many coordinates the condition admits.
@@ -310,10 +342,10 @@ class ConditionResolver:
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
-                f'not read. Count along one of {_listed(sorted(mask.dims))}.'
+                f'not read. Count along one of {_listed(list(mask.dims))}.'
             )
             return node
-        dims = tuple(sorted(mask.dims - {over.name}))
+        dims = tuple(d for d in mask.dims if d != over.name)
         return CountComparison(mask, over.name, node.op, value.value, dims)
 
     def _comparison(self, node: UnresolvedComparisonNode) -> Condition | UnresolvedConditionNode:
@@ -400,8 +432,8 @@ class ConditionResolver:
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a condition compares expressions, and one side names a variable. Test only '
-                    f'parameters and dimension coordinates.'
+                    f'{context}: a condition compares expressions, and one side names a variable. '
+                    f'{self._variable_value_rewrite}'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
@@ -424,7 +456,7 @@ class ConditionResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, tuple(sorted(dims)))
+        return ExpressionComparison(left, node.op, right, sorted_dims(dims))
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
@@ -481,7 +513,7 @@ class ConditionResolver:
                     if (refusal := _relation_pair_error(context, plain, value, ns, left, right)) is not None:
                         self.errors.append(refusal)
                         return node
-                    dims = tuple(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key)
+                    dims = tuple(sorted(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key))
                     return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
                 given = right_name in ns.spec.given.expressions
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
@@ -530,16 +562,16 @@ class ConditionResolver:
             case 'relation':
                 assert column is not None
                 shape = ns.relations[left_name]
-                return RelationComparison(left_name, column, plain.op, value, tuple(shape.dim(k) for k in shape.key))
+                return RelationComparison(
+                    left_name, column, plain.op, value, tuple(sorted(shape.dim(k) for k in shape.key))
+                )
             case 'variable' if left_name in ns.spec.given.expressions:
                 self.errors.append(
                     f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"
                 )
             case 'variable':
-                self.errors.append(
-                    f"{context}: where references variable '{left_name}'. Test only parameters "
-                    f'and dimension coordinates.'
-                )
+                head = f"'{left_name}' is a variable" if self.rows else f"where references variable '{left_name}'"
+                self.errors.append(f'{context}: {head}. {self._variable_value_rewrite}')
         return node
 
     def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:

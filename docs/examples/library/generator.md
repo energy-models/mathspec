@@ -61,29 +61,29 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{T} \times \mathcal{J}`$ — declared by the surface, and fixed at each generator's port by `Generator_injection` |
+| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — declared by the surface, and fixed at each generator's port by `Generator_injection` |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
-| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — the connections components make, one label per connection |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
+| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — the connections components make, one label per connection |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
 | $`\mathrm{c}`$ | `Generator_marginal_cost` over $`\mathcal{G}`$ — cost of one unit of output |
+| $`\mathrm{p}^{\mathrm{nom}}`$ | `Generator_p_nom` over $`\mathcal{G}`$ — nominal power |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`p`$ | `Generator_p` over $`\mathcal{T} \times \mathcal{G}`$ — `Generator-p` — what a generator produces in a snapshot |
+| $`p`$ | `Generator_p` over $`\mathcal{G} \times \mathcal{T}`$ — `Generator-p` — what a generator produces in a snapshot |
 
 #### Definitions
 
@@ -96,7 +96,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_p`**
 
 ```math
-0 \le p_{t,g} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+0 \le p_{g,t} \le \mathrm{p}^{\mathrm{nom}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 #### Definitions
@@ -104,7 +104,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_cost`**
 
 ```math
-\mathit{Generator\_cost} = \sum_{t \in \mathcal{T},\ g \in \mathcal{G}} p_{t,g} \cdot \mathrm{c}_{g}
+\mathit{Generator\_cost} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \cdot \mathrm{c}_{g}
 ```
 
 #### Subject to
@@ -112,7 +112,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_injection`**
 
 ```math
-f_{t,\mathrm{Generator\_port}(g)} = p_{t,g} \qquad \forall\, t \in \mathcal{T},\ g \in \mathcal{G}
+f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
 

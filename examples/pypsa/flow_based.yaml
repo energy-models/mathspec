@@ -10,7 +10,7 @@ given:
   variables:
     Link_p: { dims: [scenario, snapshot, link] }
   expressions:
-    Bus_injection: { dims: [scenario, snapshot, bus] }
+    Bus_injection: { dims: [bus, scenario, snapshot] }
 
 dimensions:
   scenario:

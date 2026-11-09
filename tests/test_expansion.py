@@ -264,7 +264,14 @@ def test_macro_collisions_rejected(patch, match):
             id='a-cycle',
         ),
         pytest.param(
-            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}}, 'formal names repeat', id='a-duplicate-formal'
+            {'m': {'args': ['a'], 'kwargs': ['a'], 'template': 'a'}},
+            "formal 'a' is named twice",
+            id='a-formal-both-positional-and-keyword',
+        ),
+        pytest.param(
+            {'m': {'args': ['x'], 'kwargs': ['z', 'a', 'z'], 'template': 'x'}},
+            "formal 'z' is named twice",
+            id='a-keyword-named-twice',
         ),
         pytest.param(
             {'unused': {'args': ['x'], 'template': 'x * cots'}},
@@ -314,7 +321,8 @@ def test_macro_templates_validated_even_when_unused(macros, match):
     The relation beside formal columns loaded once the columns were formals,
     because the formals sent the call back before the relation's name was
     read; a fractional offset in a template nothing calls loaded before the
-    form of an amount was decided in resolution.
+    form of an amount was decided in resolution. A repeated formal was
+    reported in a list whose keywords were already sorted, not as written.
     """
     with pytest.raises(LanguageError, match=match):
         spec(macros=macros)
