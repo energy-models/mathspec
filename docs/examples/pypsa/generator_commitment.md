@@ -22,6 +22,7 @@ given:
     Generator_maintenance_pu: { dims: [scenario, generator] }
     period_weight_objective: { dims: [period] }
     Generator_active: { dims: [snapshot, generator], dtype: bool }
+    Generator_active_asset: { dims: [generator], dtype: bool }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
     Generator_marginal_cost_piecewise: { dims: [scenario, snapshot, generator] }
@@ -33,8 +34,6 @@ given:
     Generator_modules: { dims: [generator, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
-    Generator_marginal_cost_curve: { dims: [generator] }
-    Generator_marginal_cost_as_lp: { dims: [] }
     Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
@@ -50,12 +49,6 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
-  breakpoint:
-    description: >-
-      the corners of a piecewise-linear curve, in order. A curve runs over the
-      breakpoints its data has rows for, so curves may differ in length
-    dtype: int
-    ordered: true
 
 relations:
   snapshot_period:
@@ -64,21 +57,16 @@ relations:
     values: period
 
 parameters:
-  Generator_marginal_cost_curve_p:
+  Generator_marginal_cost_curve:
     description: >-
-      the output at each breakpoint of a generator's piecewise `marginal_cost`
-      curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator
-      with no curve has no rows
-    dims: [generator, breakpoint]
-    missing: absent
-  Generator_marginal_cost_curve_cost:
-    description: >-
-      the running cost at each breakpoint of a generator's piecewise
-      `marginal_cost` curve: zero at the first, then each segment's width in
-      output times the `marginal_cost` at its upper breakpoint, summed, data
-      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
-    dims: [generator, breakpoint]
-    missing: absent
+      a generator's piecewise `marginal_cost` curve, one row per breakpoint.
+      The breakpoint `p` is PyPSA's `p_pu` breakpoint times `p_nom`. The value
+      is the running cost there: zero at the first, then each segment's width
+      in output times the `marginal_cost` at its upper breakpoint, summed,
+      data prep. It is linopy's `Slopes(...).to_breakpoints`
+      (`piecewise.py:303-305`). A generator with no curve has no rows
+    dims: [generator]
+    breakpoints: p
   Generator_committable:
     description: whether output is gated by an on/off status decision
     dims: [generator]
@@ -190,6 +178,35 @@ expressions:
     adds_to: scenario_opex
 
 conditions:
+  Generator_has_marginal_cost_curve:
+    description: >-
+      a generator that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Generator_marginal_cost_curve.p, over=Generator_marginal_cost_curve.breakpoint) > 0 AND Generator_active_asset
+  Generator_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a generator's cost curve gets less steep: the
+      segment after it rises less per unit of output than the one before
+    condition: >-
+      Generator_marginal_cost_curve.p
+      AND shift(Generator_marginal_cost_curve.p, along=Generator_marginal_cost_curve.breakpoint, offset=1)
+      AND shift(Generator_marginal_cost_curve.p, along=Generator_marginal_cost_curve.breakpoint, offset=-1)
+      AND (Generator_marginal_cost_curve - shift(Generator_marginal_cost_curve, along=Generator_marginal_cost_curve.breakpoint, offset=1, edge=0))
+      * (shift(Generator_marginal_cost_curve.p, along=Generator_marginal_cost_curve.breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve.p)
+      > (shift(Generator_marginal_cost_curve, along=Generator_marginal_cost_curve.breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve)
+      * (Generator_marginal_cost_curve.p - shift(Generator_marginal_cost_curve.p, along=Generator_marginal_cost_curve.breakpoint, offset=1, edge=0))
+  Generator_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all generator cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      generator with a curve is committable, the incremental rows otherwise.
+      PyPSA gates the curves by `Generator-status` where one is committable,
+      and linopy states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
+    condition: >-
+      count(Generator_has_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=Generator_marginal_cost_curve.breakpoint) > 0, over=generator) == 0
+      AND count(Generator_has_marginal_cost_curve AND Generator_committable, over=generator) == 0
   Generator_com_ext:
     description: >-
       a committable generator with an extendable, non-modular build that
@@ -201,35 +218,26 @@ conditions:
       AND NOT (Generator_p_nom_mod > 0)
       AND Generator_active
 
-piecewise:
+constraints:
   Generator_marginal_cost_lp:
     description: >-
       `Generator-marginal_cost_piecewise` — the running cost of a generator
       with a curve is at least the curve at its output, stated as the line of
       each segment, where linopy chooses the segment lines
-    along: breakpoint
     dims: [scenario, snapshot, generator]
-    where: Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
-    method: lp
-    links:
-      p: [Generator_p, Generator_marginal_cost_curve_p]
-      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
+    where: Generator_marginal_cost_as_lp AND Generator_has_marginal_cost_curve AND Generator_active
+    expression: Generator_marginal_cost_piecewise >= curve(x=Generator_p, y=Generator_marginal_cost_curve, method='lp')
   Generator_marginal_cost_incremental:
     description: >-
       `Generator-marginal_cost_piecewise` — the running cost of a generator
       with a curve is at least the curve at its output, stated by segments
       filled in order and switched by the status of a committable generator,
       where linopy chooses the incremental rows
-    along: breakpoint
     dims: [scenario, snapshot, generator]
-    where: NOT Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
-    method: incremental
-    activity: Generator_status
-    links:
-      p: [Generator_p, Generator_marginal_cost_curve_p]
-      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
-
-constraints:
+    where: NOT Generator_marginal_cost_as_lp AND Generator_has_marginal_cost_curve AND Generator_active
+    expression: >-
+      Generator_marginal_cost_piecewise
+      >= curve(x=Generator_p, y=Generator_marginal_cost_curve, active=Generator_status, method='incremental')
   Generator_com_p_lower:
     description: "`Generator-com-p-lower` — a committed unit outputs at least its minimum. Off, it outputs at least nothing"
     dims: [scenario, snapshot, generator]
@@ -374,6 +382,7 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$, data another file declares |
+| $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$, data another file declares |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\mathrm{N}^{\mathrm{fix}}`$ | `Generator_modules_installed` over $`\mathcal{G} \times \Xi`$, data another file declares |
 | $`\overline{\mathrm{p}}`$ | `Generator_p_max_pu` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, data another file declares |
@@ -393,14 +402,12 @@ assumptions:
 | $`\mathrm{M}`$ | `Generator_modules` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$, a condition another file defines |
-| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar), a condition another file defines |
-| $`\mathrm{curve}`$ | `Generator_marginal_cost_curve` over $`\mathcal{G}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
+| $`\mathcal{B}`$ | index $`b`$ — `Generator_marginal_cost_curve.breakpoint` — the breakpoints of 'Generator\_marginal\_cost\_curve', numbered in order of p |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
@@ -413,8 +420,8 @@ assumptions:
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
 | $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
-| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the running cost at each breakpoint of a generator's piecewise `marginal_cost` curve: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
-| $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the output at each breakpoint of a generator's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator with no curve has no rows |
+| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — a generator's piecewise `marginal_cost` curve, one row per breakpoint. The breakpoint `p` is PyPSA's `p_pu` breakpoint times `p_nom`. The value is the running cost there: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`). A generator with no curve has no rows |
+| $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve.p` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the p at each breakpoint of 'Generator\_marginal\_cost\_curve' |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays off once stopped |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays on once started |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
@@ -428,6 +435,9 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\mathrm{com,ext}}`$ | `Generator_com_ext` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator with an extendable, non-modular build that is active in the snapshot's period. These are PyPSA's `com-ext` rows, whose status is relaxed against the chosen build |
+| $`\mathrm{curve}`$ | `Generator_has_marginal_cost_curve` over $`\mathcal{G}`$ — a generator that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar) — linopy's choice of method for all generator cost curves at once (`method="auto"`): the segment lines where every curve is convex and no generator with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Generator-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{bend}`$ | `Generator_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{G}`$ — a breakpoint where a generator's cost curve gets less steep: the segment after it rises less per unit of output than the one before |
 
 #### Variables
 
@@ -458,6 +468,24 @@ assumptions:
 
 ```math
 \mathrm{on}^{\mathrm{com,ext}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{ext}_{g} \wedge \neg \left( \mathrm{p}^{\mathrm{mod}}_{g} > 0 \right) \wedge \mathrm{on}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+**`Generator_has_marginal_cost_curve`**
+
+```math
+\mathrm{curve}_{g} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`Generator_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp} \iff \lvert \{ g \in \mathcal{G} \,:\, \mathrm{curve}_{g} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}_{b,g} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ g \in \mathcal{G} \,:\, \mathrm{curve}_{g} \wedge \mathrm{com}_{g} \} \rvert = 0
+```
+
+**`Generator_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}_{b,g} \iff \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined} \wedge \mathrm{p}^{\mathrm{curve}}_{b + 1,g} \text{ is defined} \wedge \left( \mathrm{C}^{\mathrm{curve}}_{b,g} - \mathrm{C}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{p}^{\mathrm{curve}}_{b,g} \right) > \left( \mathrm{C}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{C}^{\mathrm{curve}}_{b,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b,g} - \mathrm{p}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
 ```
 
 #### Variable domains

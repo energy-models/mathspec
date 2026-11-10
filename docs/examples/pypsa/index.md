@@ -74,8 +74,8 @@ compares them with it, so the two always agree.
 | [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
 | [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
 | [flow_based](flow_based.md) | 4 | 1 | 2 | 5 | `Bus_injection` |
-| [generator](generator.md) | 24 | 4 | 11 | 19 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
-| [generator_commitment](generator_commitment.md) | 12 | 3 | 18 | 19 | `scenario_opex` |
+| [generator](generator.md) | 24 | 4 | 11 | 17 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
+| [generator_commitment](generator_commitment.md) | 11 | 3 | 20 | 20 | `scenario_opex` |
 | [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |

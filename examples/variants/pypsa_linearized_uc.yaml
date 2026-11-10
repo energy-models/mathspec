@@ -70,7 +70,7 @@ variables:
     bounds:
       upper: 1
 
-piecewise:
+constraints:
   Generator_marginal_cost_incremental:
     description: >-
       `Generator-marginal_cost_piecewise` — the running cost of a generator
@@ -78,9 +78,9 @@ piecewise:
       filled in order, where linopy chooses the incremental rows. No status
       gates it, because no generator with a curve is committable under the
       keyword
-    activity: null
-
-constraints:
+    expression: >-
+      Generator_marginal_cost_piecewise
+      >= curve(x=Generator_p, y=Generator_marginal_cost_curve, method='incremental')
   Generator_com_p_before:
     description: >-
       `Generator-com-p-before` — the output a unit had entering this snapshot
@@ -232,7 +232,7 @@ constraints:
 assumptions:
   Generator_marginal_cost_curve_is_not_committable:
     holds: "NOT Generator_committable"
-    where: "Generator_marginal_cost_curve"
+    where: "Generator_has_marginal_cost_curve"
     description: >-
       a generator with a piecewise `marginal_cost` curve is not committable.
       PyPSA gates such a curve by the status share (`optimize.py:314-318`,

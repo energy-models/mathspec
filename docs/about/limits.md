@@ -66,7 +66,11 @@ A macro, a formulation and a section are the other three kinds:
   [expansion](../reference/reading.md#formulations-written-out) instead. In a file, you can
   combine a formulation with other constructs as you can a macro. When mathspec expands a formulation, it adds no parameter, so
   [`spec.expand()`](../reference/spec.md#mathspec.spec.Spec.expand) needs no
-  data beyond the tables that the spec already declares.
+  data beyond the tables that the spec already declares. A
+  [`curve`](../reference/language/piecewise.md#curve) term in a constraint is
+  a formulation too, written inside an expression: the constraint loads as
+  the `piecewise:` entry it states. `curve` is not an operator, so no engine
+  implements it.
 - A **section** is a top-level key of a spec file, such as `variables:`. Only the developers of mathspec add one. A new section must
   meet three conditions. It states something that no other section states,
   mathspec can check its entries without data, and the typesetter prints

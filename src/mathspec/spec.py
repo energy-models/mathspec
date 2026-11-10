@@ -386,7 +386,46 @@ class ParameterSpec(_StrictSpec):
     parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    breakpoints: str | None = None
+    """The name of the x axis of a curve per coordinate of ``dims:``, or ``None`` for a parameter of one value per
+    coordinate. Each row of the data is then a breakpoint: the x value, and the value of the parameter there. A
+    constraint reads the curve as ``curve(x=<expression>, y=<parameter>)``.
+    """
     description: str | None = None
+
+    @field_validator('breakpoints')
+    @classmethod
+    def _an_axis_is_a_name(cls, v: str | None) -> str | None:
+        if v is not None and not re.fullmatch(NAME, v):
+            msg = (
+                f'breakpoints: {v!r} is not a name. It names the x axis of the curve and the parameter of its x '
+                f'values, <parameter>.{v}, so it starts with a letter or an underscore, followed by letters, digits '
+                f'or underscores.'
+            )
+            raise ValueError(msg)
+        if v == 'breakpoint':
+            msg = (
+                'breakpoints: breakpoint names the x axis after the dimension the curve brings, '
+                '<parameter>.breakpoint. Name the axis after what its x values are, such as p.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _a_curve_is_numbers(self) -> ParameterSpec:
+        """A breakpoint is a number on both axes, and each curve stops where its own rows stop."""
+        if self.breakpoints is None:
+            return self
+        if self.dtype not in ('float', 'int'):
+            msg = f'breakpoints: {self.breakpoints} on a {self.dtype} parameter, and a curve is numbers. Declare dtype: float.'
+            raise ValueError(msg)
+        if 'missing' in self.model_fields_set:
+            msg = (
+                f'breakpoints: {self.breakpoints} with missing: {_as_yaml(self.missing)}. Each curve runs over the rows '
+                f'its data has, so a row past the last breakpoint is absent. Delete missing:.'
+            )
+            raise ValueError(msg)
+        return self
 
     @field_validator('missing', mode='before')
     @classmethod

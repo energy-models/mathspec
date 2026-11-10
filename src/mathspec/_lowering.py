@@ -15,8 +15,10 @@ as rows.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from mathspec._curve import desugared
 from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand, parse_template
@@ -109,6 +111,9 @@ def lower(spec: Spec) -> Program:
             nothing else is wrong; else the first rule an entry breaks, once
             every name resolves.
     """
+    written = spec
+    spec = desugared(spec)
+    curves_written = frozenset(written.constraints) - frozenset(spec.constraints)
     errors = reference_errors(spec)
     if errors:
         raise SchemaError('\n'.join(errors))
@@ -216,6 +221,8 @@ def lower(spec: Spec) -> Program:
     piecewise = {}
     for pname, (links, walks, where, gate) in curves.items():
         piecewise[pname] = declaration_of(pname, spec.piecewise[pname], links, walks, where, gate, spec)
+        if pname in curves_written:
+            piecewise[pname] = replace(piecewise[pname], from_curve=True)
         for aname, assumed in assumptions_of(pname, piecewise[pname], spec.piecewise[pname].where).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'

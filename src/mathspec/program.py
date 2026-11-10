@@ -957,6 +957,9 @@ class Piecewise:
         activity: The gate the weights sum to, or ``None`` where they sum
             to 1.
         description: What the file wrote under ``description:``, or ``None``.
+        from_curve: Whether a constraint wrote the curve as a ``curve(x=, y=)``
+            term, with the links ``x`` and ``y``. The entry then has the name
+            of the constraint.
     """
 
     along: str
@@ -966,6 +969,7 @@ class Piecewise:
     where: Mask | None = None
     activity: Gate | None = None
     description: str | None = None
+    from_curve: bool = False
 
     @property
     def ragged(self) -> bool:

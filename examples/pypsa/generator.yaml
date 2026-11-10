@@ -5,8 +5,6 @@
 given:
   parameters:
     snapshot_weightings_objective: { dims: [snapshot] }
-    Generator_marginal_cost_curve_p: { dims: [generator, breakpoint] }
-    Generator_marginal_cost_curve_cost: { dims: [generator, breakpoint] }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_maintenance_pu: { dims: [scenario, generator] }
     scenario_weight: { dims: [scenario] }
@@ -25,6 +23,8 @@ given:
     total_cost: { dims: [] }
     Carrier_additions: { dims: [carrier, period] }
     Bus_injection: { dims: [bus, scenario, snapshot] }
+  conditions:
+    Generator_has_marginal_cost_curve: { dims: [generator] }
 
 dimensions:
   scenario:
@@ -45,12 +45,6 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
-  breakpoint:
-    description: >-
-      the corners of a piecewise-linear curve, in order. A curve runs over the
-      breakpoints its data has rows for, so curves may differ in length
-    dtype: int
-    ordered: true
 
 relations:
   snapshot_period:
@@ -187,7 +181,7 @@ variables:
       `Generator-marginal_cost_piecewise` — the running cost of a generator
       that pays along a curve, held above the curve
     dims: [scenario, snapshot, generator]
-    where: Generator_marginal_cost_curve AND Generator_active
+    where: Generator_has_marginal_cost_curve AND Generator_active
   Generator_n_mod:
     description: "`Generator-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [generator]
@@ -247,7 +241,7 @@ expressions:
       from that term (`optimize.py:333-348`)
     dims: [scenario, snapshot, generator]
     cases:
-      curve: { when: Generator_marginal_cost_curve, expression: Generator_marginal_cost_piecewise }
+      curve: { when: Generator_has_marginal_cost_curve, expression: Generator_marginal_cost_piecewise }
     otherwise: Generator_p * Generator_marginal_cost
   Generator_opex:
     expression: >-
@@ -266,35 +260,6 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
-  Generator_marginal_cost_curve:
-    description: >-
-      a generator that pays along a piecewise `marginal_cost` curve: one of
-      PyPSA's `active_assets` with curve data (`optimize.py:307`,
-      `piecewise.py:223-250`)
-    condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
-  Generator_marginal_cost_curve_bends_down:
-    description: >-
-      a breakpoint where a generator's cost curve gets less steep: the
-      segment after it rises less per unit of output than the one before
-    condition: >-
-      Generator_marginal_cost_curve_p
-      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1)
-      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1)
-      AND (Generator_marginal_cost_curve_cost - shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
-      * (shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_p)
-      > (shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_cost)
-      * (Generator_marginal_cost_curve_p - shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
-  Generator_marginal_cost_as_lp:
-    description: >-
-      linopy's choice of method for all generator cost curves at once
-      (`method="auto"`): the segment lines where every curve is convex and no
-      generator with a curve is committable, the incremental rows otherwise.
-      PyPSA gates the curves by `Generator-status` where one is committable,
-      and linopy states no segment lines under a gate (`optimize.py:314-318`,
-      `piecewise.py:193-217`)
-    condition: >-
-      count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
-      AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
   Generator_committed:
     description: >-
       a committable generator that is active in the snapshot's period: every
@@ -361,7 +326,7 @@ constraints:
 assumptions:
   Generator_marginal_cost_curve_on_a_fixed_build:
     holds: "NOT Generator_p_nom_extendable AND Generator_p_nom > 0 AND Generator_p_nom < inf"
-    where: "Generator_marginal_cost_curve"
+    where: "Generator_has_marginal_cost_curve"
     description: >-
       a generator's cost curve is given per unit of a fixed, positive, finite
       `p_nom`, which scales it to output. PyPSA refuses an extendable unit and

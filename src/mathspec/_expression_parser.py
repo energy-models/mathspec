@@ -31,6 +31,9 @@ BinaryOperator = Literal['+', '-', '*', '/', '**']
 
 NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 
+REFERENCE = rf'{NAME}(?:\.{NAME})?'
+"""A name an expression reads: a declared name, or ``<parameter>.<part>`` of a ``breakpoints:`` parameter."""
+
 REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 
 # ---------------------------------------------------------------------------
@@ -231,7 +234,7 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # ---------------------------------------------------------------------------
 
 
-NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
+NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(REFERENCE)) + pp.Suppress(']')).set_parse_action(
     lambda t: NameListNode(tuple(str(x) for x in t))
 )
 
@@ -260,7 +263,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserEleme
     func_call = (name + pp.Suppress('(') + arg_list + pp.Suppress(')')).set_parse_action(_make_func_call)
 
     # pyrefly: ignore[implicit-any-lambda]
-    name_node = name.copy().set_parse_action(lambda t: NameNode(t[0]))
+    name_node = pp.Regex(REFERENCE).set_parse_action(lambda t: NameNode(t[0]))
     atom = func_call | number | name_node | (pp.Suppress('(') + arith + pp.Suppress(')'))
 
     unary = pp.Forward()

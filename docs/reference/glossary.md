@@ -47,7 +47,9 @@ framework ships. `override` lays [patches](#patch) over a base
 A breakpoint is one corner of a `piecewise:` curve, at one label of its
 ordered `over` dimension. There the expressions under `links:` take their
 values from the data. Straight lines join neighbouring breakpoints
-([piecewise](language/piecewise.md#piecewise)).
+([piecewise](language/piecewise.md#piecewise)). A parameter that declares
+`breakpoints:` holds one breakpoint per row of its data
+([`curve`](language/piecewise.md#a-parameter-with-breakpoints)).
 
 ## Canonical form
 
@@ -116,8 +118,9 @@ formulation out](language/piecewise.md)). So one variable of the curve
 
 A formulation is an entry that expands into ordinary variables, constraints
 and assumptions before the model is built. `piecewise:` and `sos:` are the two
-formulations ([piecewise curves and SOS](language/piecewise.md)). A file cannot
-add a formulation, and a change to mathspec can.
+formulations ([piecewise curves and SOS](language/piecewise.md)). A constraint
+with a `curve` term loads as a `piecewise:` entry. A file cannot add a
+formulation, and a change to mathspec can.
 
 ## Fragment
 

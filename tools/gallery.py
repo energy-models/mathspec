@@ -118,10 +118,10 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
     table = yaml.safe_load(table_path.read_text())
     given = model.given
     named = {
-        *model.parameters,
+        *model.program.parameters,
         *model.variables,
         *model.expressions,
-        *model.constraints,
+        *model.program.constraints,
         *given.parameters,
         *given.variables,
         *given.expressions,
@@ -131,7 +131,9 @@ def symbols_for(model: Spec, table_path: Path = LIBRARY_SYMBOLS) -> dict[str, An
     }
     return {
         'notation': table['notation'],
-        'dimensions': {name: symbol for name, symbol in table['dimensions'].items() if name in model.dimensions},
+        'dimensions': {
+            name: symbol for name, symbol in table['dimensions'].items() if name in model.program.dimensions
+        },
         'names': {name: symbol for name, symbol in table['names'].items() if name in named},
     }
 
@@ -274,7 +276,11 @@ def _stands_for(name: str, description: str | None) -> str:
 
 
 def declared_block(path: Path) -> str:
-    """The legend, then every entry that prints a line, as YAML beside that line, in the document's order."""
+    """The legend, then every entry that prints a line, as YAML beside that line, in the document's order.
+
+    A constraint with a ``curve`` term is headed by its own name, as a ``piecewise:`` entry is, because it
+    stands for a family of rows rather than one row of the other side.
+    """
     text = without_header(path)
     model = to_spec(path)
     legend, math = split_math(model, symbols=sidecar_for(path), numbered=False)
@@ -300,12 +306,8 @@ def declared_block(path: Path) -> str:
         if _reads_a_sum(model, name):
             line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
             printed = f'```math\n{line}\n```'
-        parts.append(
-            f'### `{_stands_for(name, constraint.description)}`\n\n'
-            f'`{name}`\n\n'
-            f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
-            f'{printed}'
-        )
+        heading = _stands_for(name, constraint.description) if name in model.program.constraints else name
+        parts.append(f'### `{heading}`\n\n`{name}`\n\n```yaml\n{entry(text, "constraints", name)}\n```\n\n{printed}')
     parts.extend(
         f'### `{name}`\n\n```yaml\n{entry(text, section, name)}\n```\n\n{equation[name]}'
         for section, group in (('sos', model.sos), ('piecewise', model.piecewise))
@@ -326,7 +328,8 @@ def patched_block(base: Path, patch: Path) -> str:
     headings = {
         'variables': {name: _stands_for(name, variable.description) for name, variable in model.variables.items()},
         'constraints': {
-            name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
+            name: _stands_for(name, constraint.description) if name in model.program.constraints else name
+            for name, constraint in model.constraints.items()
         },
         'piecewise': {name: name for name in model.piecewise},
         'assumptions': {name: name for name in model.assumptions},
@@ -354,9 +357,11 @@ def _reads_a_sum(model: Spec, name: str) -> bool:
 
     Such a row prints with the sum substituted in, as the one file wrote it
     before each term had a name: the row is what the reader came for, and the
-    terms print once each as definitions below.
+    terms print once each as definitions below. A row with a ``curve`` term is
+    a curve, and reads no sum.
     """
-    row = model.program.constraints[name]
+    if (row := model.program.constraints.get(name)) is None:
+        return False
     lhs, rhs = row.lhs, row.rhs
     return (
         isinstance(lhs, ExpressionReference)

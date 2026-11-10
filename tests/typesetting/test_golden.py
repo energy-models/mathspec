@@ -127,7 +127,7 @@ def _rendered_trees() -> Iterator[object]:
     program = spec.program
     assert program.objective is not None
     yield program.objective.expression
-    for name in spec.constraints:
+    for name in program.constraints:
         constraint = program.constraints[name]
         yield constraint.lhs
         yield constraint.rhs

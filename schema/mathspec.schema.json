@@ -640,6 +640,18 @@
       "additionalProperties": false,
       "description": "A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means.",
       "properties": {
+        "breakpoints": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Breakpoints"
+        },
         "description": {
           "anyOf": [
             {

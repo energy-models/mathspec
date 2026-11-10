@@ -7,6 +7,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $cal(B)$: index $b$ --- `bp`
 / $cal(U)$: index $u$ --- `bus` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
 / $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `connection` is `absent` where the data has no row
+/ $cal(H)$: index $h$ --- `heat_curve.breakpoint` --- the breakpoints of 'heat\_curve', numbered in order of p
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T), upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E)$
@@ -21,6 +22,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("cost")$: `cost` over $cal(G)$, $0$ where the data has no row
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("growth")$: `growth` (scalar)
+/ $upright("heat")^(upright("curve"))$: `heat_curve` over $cal(G) times cal(H)$, `absent` where the data has no row
+/ $upright("heat")^(upright("curve,p"))$: `heat_curve.p` over $cal(G) times cal(H)$, `absent` where the data has no row --- the p at each breakpoint of 'heat\_curve'
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("lead")$: `lead` over $cal(G)$
 / $upright("link_eff")$: `link_eff` over $cal(U) times cal(G)$, only where $(u, g) in upright("connection")$, $1$ where the data has no row
@@ -163,7 +166,8 @@ $ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in ca
   upright("hull_curve") & (p_(g,t), italic("fuel")_(g,t)) & in upright("conv")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_heat")_(b,g)) & forall g in cal(G), t in cal(T) \
   upright("lp_curve") & italic("fuel")_(g,t) & >= upright("pwl")_(b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined"))(upright("bp_x")_(b,g), upright("bp_y")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) \
   upright("module_curve") & italic("fuel")_(g,t) & >= (italic("units")_(g) dot (upright("bp_x")_(min {b in cal(B) colon upright("bp_run")_(b,g)},g), upright("bp_y")_(min {b in cal(B) colon upright("bp_run")_(b,g)},g)) + min(italic("units")_(g), 1) dot (upright("pwl")_(b in cal(B) colon upright("bp_run")_(b,g))(upright("bp_x")_(b,g), upright("bp_y")_(b,g)) - (upright("bp_x")_(min {b in cal(B) colon upright("bp_run")_(b,g)},g), upright("bp_y")_(min {b in cal(B) colon upright("bp_run")_(b,g)},g))))(p_(g,t)) & forall g in cal(G), t in cal(T) \
-  upright("ramp_curve") & italic("heat")_(g,t) & <= upright("pwl")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_heat")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) $
+  upright("ramp_curve") & italic("heat")_(g,t) & <= upright("pwl")_(b in cal(B))(upright("bp_x")_(b,g), upright("bp_heat")_(b,g))(p_(g,t)) & forall g in cal(G), t in cal(T) \
+  upright("heat_cap") & italic("heat")_(g,t) + italic("spill")_(t) & <= cases(italic("warm")_(g,t) & upright("if ") upright("is_flexible")_(g), 1 & upright("otherwise")) dot upright("pwl")_(h in cal(H) colon upright("heat")^(upright("curve,p"))_(g,h) upright(" is defined"))(upright("heat")^(upright("curve,p"))_(g,h), upright("heat")^(upright("curve"))_(g,h))(p_(g,t)) & forall g in cal(G), t in cal(T) $
 
 == Assumptions
 #set math.equation(numbering: "(1)")
@@ -193,4 +197,6 @@ $ upright("bounds_do_not_cross") & upright("p")^(upright("min"))_(g) & <= uprigh
   upright("ramp_curve_complete") & upright("bp_x")_(b,g) upright(" is defined") and upright("bp_heat")_(b,g) upright(" is defined") &  & forall b in cal(B), g in cal(G) \
   upright("ramp_curve_increasing") & upright("bp_x")_(b minus.square_(0) 1,g) & < upright("bp_x")_(b,g) & forall b in cal(B), g in cal(G) colon upright("pos")(b) > 0 \
   upright("ramp_curve_curvature") & (upright("bp_heat")_(b,g) - upright("bp_heat")_(b minus.square_(0) 1,g)) dot (upright("bp_x")_(b plus.square_(0) 1,g) - upright("bp_x")_(b,g)) & >= (upright("bp_heat")_(b plus.square_(0) 1,g) - upright("bp_heat")_(b,g)) dot (upright("bp_x")_(b,g) - upright("bp_x")_(b minus.square_(0) 1,g)) & forall b in cal(B), g in cal(G) colon upright("pos")(b) > 0 and upright("pos")(b) != abs(cal(B)) - 1 \
-  upright("ramp_curve_breakpoints") & abs({b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined")}) & >= 2 & forall g in cal(G) $
+  upright("ramp_curve_breakpoints") & abs({b in cal(B) colon upright("bp_x")_(b,g) upright(" is defined")}) & >= 2 & forall g in cal(G) \
+  upright("heat_cap_complete") & upright("heat")^(upright("curve,p"))_(g,h) upright(" is defined") and upright("heat")^(upright("curve"))_(g,h) upright(" is defined") &  & forall g in cal(G), h in cal(H) colon upright("heat")^(upright("curve,p"))_(g,h) upright(" is defined") \
+  upright("heat_cap_contiguous") & abs({h in cal(H) colon upright("heat")^(upright("curve,p"))_(g,h) upright(" is defined") and not (upright("heat")^(upright("curve,p"))_(g,h - 1) upright(" is defined"))}) & = 1 & forall g in cal(G) colon abs({h in cal(H) colon upright("heat")^(upright("curve,p"))_(g,h) upright(" is defined")}) > 0 $

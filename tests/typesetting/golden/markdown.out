@@ -9,6 +9,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
+| $`\mathcal{H}`$ | index $`h`$ — `heat_curve.breakpoint` — the breakpoints of 'heat\_curve', numbered in order of p |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
@@ -26,6 +27,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{growth}`$ | `growth` (scalar) |
+| $`\mathrm{heat}^{\mathrm{curve}}`$ | `heat_curve` over $`\mathcal{G} \times \mathcal{H}`$, `absent` where the data has no row |
+| $`\mathrm{heat}^{\mathrm{curve,p}}`$ | `heat_curve.p` over $`\mathcal{G} \times \mathcal{H}`$, `absent` where the data has no row — the p at each breakpoint of 'heat\_curve' |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{U} \times \mathcal{G}`$, only where $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
@@ -585,6 +588,12 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 \mathit{heat}_{g,t} \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`heat_cap`**
+
+```math
+\mathit{heat}_{g,t} + \mathit{spill}_{t} \le \begin{cases} \mathit{warm}_{g,t} & \text{if } \mathrm{is\_flexible}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined}}(\mathrm{heat}^{\mathrm{curve,p}}_{g,h},\ \mathrm{heat}^{\mathrm{curve}}_{g,h})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 #### Assumptions
 
 **`bounds_do_not_cross`**
@@ -747,4 +756,16 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 
 ```math
 \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G}
+```
+
+**`heat_cap_complete`**
+
+```math
+\mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \wedge \mathrm{heat}^{\mathrm{curve}}_{g,h} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined}
+```
+
+**`heat_cap_contiguous`**
+
+```math
+\lvert \{ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \wedge \neg \left( \mathrm{heat}^{\mathrm{curve,p}}_{g,h - 1} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \} \rvert > 0
 ```
