@@ -231,7 +231,7 @@ every `sos:` entry. Then write out both with `spec.expand()`:
             expression: sum(curve_seg, over=bp) <= 1
           curve_adjacency:
             dims: [bp]
-            expression: curve_lam <= (curve_seg + shift(curve_seg, along=bp, offset=1, edge=0))
+            expression: curve_lam <= (sum_back(curve_seg, along=bp, window=2))
 
         assumptions:
           curve_complete:
@@ -275,7 +275,7 @@ every `sos:` entry. Then write out both with `spec.expand()`:
         **`curve_adjacency`**
 
         ```math
-        \mathit{curve\_lam}_{b} \le \mathit{curve\_seg}_{b} + \mathit{curve\_seg}_{b \boxminus_{0} 1} \qquad \forall\, b \in \mathcal{B}
+        \mathit{curve\_lam}_{b} \le \sum_{b' \in \mathcal{B} \,:\, 0 \le b - b' < 2} \mathit{curve\_seg}_{b'} \qquad \forall\, b \in \mathcal{B}
         ```
 
         **`curve_convexity`**

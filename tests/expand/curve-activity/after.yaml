@@ -33,7 +33,7 @@ constraints:
     expression: sum(curve_seg, over=bp) <= 1
   curve_adjacency:
     dims: [bp]
-    expression: curve_lam <= (curve_seg + shift(curve_seg, along=bp, offset=1, edge=0))
+    expression: curve_lam <= (sum_back(curve_seg, along=bp, window=2))
 
 assumptions:
   curve_complete:
