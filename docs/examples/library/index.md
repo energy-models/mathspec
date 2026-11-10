@@ -31,9 +31,9 @@ declares its own math against the surface.
 The components couple through one flow variable per port, `Port_p`.
 
 The names are those of an open-source power system framework
-([PyPSA](https://pypsa.org)), spelled `Component_attribute` as on
-[PyPSA in one file](../pypsa_ladder.md). The typesetter prints the math in the
-symbols of that page.
+([PyPSA](https://pypsa.org)), spelled `Component_attribute` as in
+[the PyPSA example](../pypsa/index.md). The typesetter prints the math in the
+symbols of that example.
 
 ## The layout
 

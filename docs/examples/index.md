@@ -12,50 +12,54 @@ Every spec is a file under `examples/` in the repository, and the test suite
 loads each one. Open a page to see whether the language can state a problem
 like yours, and what each line of the file means.
 
-<div class="grid cards" markdown>
+<div class="grid cards tiles" markdown>
 
 <!-- prettier-ignore -->
-- **[Least-cost dispatch](dispatch.md)** is the smallest spec with a balance,
-    a bound and a cost to minimise.
-- **[Unit commitment](commitment.md)** states `previous_status` in three
-    [cases](../reference/language/named.md#cases), so one inequality covers a
-    running unit and a starting unit.
-- **[Units with ports](connection.md)** is a spec with one
-    [relation](../reference/language/relations.md) for the ports of each unit,
-    and a parameter whose
-    [`where:`](../reference/language/parameters-variables-constraints.md#where)
-    keeps only the output ports.
-- **[One construct per spec](operators.md)** contains the smallest file for
-    each form of the four [operators](../reference/language/operators.md) and
-    [`dual`](../reference/language/named.md#dual), each file beside its
-    typeset equation.
-- **[A curve by convex combination](piecewise.md)** is the smallest
-    [`piecewise`](../reference/language/piecewise.md) entry, with one weight
-    per breakpoint. The three pages after it state the same dispatch with
-    another method.
-- **[A curve that is not convex](piecewise_adjacency.md)** holds the weights
-    on one segment with a binary per segment, under the default method.
-- **[A curve as a special ordered set](sos.md)** leaves the same restriction
-    to the solver, in place of the binaries and their rows.
-- **[A curve as segment lines](piecewise_lp.md)** states the curve as
-    inequalities, and its expansion declares no variable.
-- **[A curve filled segment by segment](piecewise_incremental.md)** fills
-    each segment only once the one before it is full. Its curves have
-    different lengths, and a status switches the curve only of a committable
-    generator.
-- **[A component library](library/index.md)** is several files that
-    [`merge`](../reference/composition.md#merge) composes into one spec, each
-    written against one shared [fragment](../reference/glossary.md#fragment)
-    (the [surface](../reference/glossary.md#surface)).
+- **Least-cost dispatch**
+    The smallest spec has a balance, a bound and a cost to minimise.
+    [Open →](dispatch.md)
+- **Unit commitment**
+    An on/off decision has a previous status in three cases, so one
+    inequality covers a running unit and a starting unit.
+    [Open →](commitment.md)
+- **Units with ports**
+    One relation lists the ports of each unit, and a parameter with
+    `where:` keeps only the output ports.
+    [Open →](connection.md)
+- **One construct per spec**
+    Each form of the four operators and `dual` has its smallest file, beside
+    its typeset equation.
+    [Open →](operators.md)
+- **A curve by convex combination**
+    The smallest `piecewise` entry has one weight per breakpoint. The three
+    pages after it state the same dispatch with another method.
+    [Open →](piecewise.md)
+- **A curve that is not convex**
+    A binary per segment holds the weights on one segment, under the default
+    method.
+    [Open →](piecewise_adjacency.md)
+- **A curve as a special ordered set**
+    The solver holds the same restriction, in place of the binaries and their
+    rows.
+    [Open →](sos.md)
+- **A curve as segment lines**
+    The curve is a set of inequalities, and its expansion declares no
+    variable.
+    [Open →](piecewise_lp.md)
+- **A curve filled segment by segment**
+    Each segment fills only once the one before it is full. A status switches
+    the curve only of a committable generator.
+    [Open →](piecewise_incremental.md)
+- **A component library**
+    Several files compose into one spec with `merge`, each written against
+    one shared fragment, the coupling surface.
+    [Open →](library/index.md)
+- **PyPSA**
+    The model that `n.optimize()` builds in the power system modelling
+    framework PyPSA is one file, and 25 fragments that compose into it.
+    [Open →](pypsa/index.md)
 
 </div>
-
-An open-source power system modelling framework
-([PyPSA](https://pypsa.org)) has its own pages in the Development section,
-which start at [PyPSA in one file](pypsa_ladder.md). They state the model that PyPSA
-builds, as a proof that the language can state it.
-[PyPSA in 25 files](pypsa/index.md) states the same spec in fragments
-that `merge` composes.
 
 !!! info "See also"
 

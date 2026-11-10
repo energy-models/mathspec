@@ -41,6 +41,8 @@ optimisation model ([a spec](glossary.md#spec)).
     exist (absent), and how absence spreads through an expression.
 - **[Errors and advice](language/errors.md)** lists what mathspec refuses at load,
     and what it advises without refusing.
+- **[Every construct, as math](notation.md)** lists each construct of the
+    language beside the math that the typesetter prints for it.
 
 </div>
 

@@ -3,9 +3,22 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Generator commitment
+# A sample fragment: generator commitment
 
-This file states the commitment rows of PyPSA's `Generator`. It is one of the 25 whole specs of one topic each ([fragments](../../reference/glossary.md#fragment)) that [`merge`](../../reference/composition.md#merge) composes into the spec of `examples/pypsa.yaml`. It adds a [term](../../reference/language/named.md#adds_to) to the sum `scenario_opex`. `Generator_status_carried_over` is the state at the start of each snapshot, from the state the unit brought into the horizon at the first. `Generator_com_ext_p_upper_big_m` bounds an extendable committed unit by a large constant (big-M).
+You can read one of the 25 PyPSA
+[fragments](../../reference/glossary.md#fragment) here in full, as a
+sample of what every fragment looks like, and the
+[fragment table](index.md#the-fragments) lists the other 24 with a link to
+each YAML file. This fragment contains the on/off decisions of a committable
+`Generator`: its status, start-up and shut-down in each snapshot, its
+minimum up and down time, and the piecewise marginal cost curve of a unit
+that is on.
+[`link_commitment.yaml`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link_commitment.yaml) and
+[`process_commitment.yaml`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_commitment.yaml) contain the same commitment rows
+for `Link` and `Process`. The YAML block below is the whole file, and its
+[`given`](../../reference/language/parameters-variables-constraints.md#given)
+section lists the names that other fragments declare. The math after it is
+what the typesetter prints from this one file.
 
 <!-- gallery:begin -->
 ```yaml
@@ -675,5 +688,6 @@ C^{\mathrm{curve}}_{g,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{l
 
 !!! info "See also"
 
-    - [PyPSA in 25 files](index.md), for how the fragments compose
-    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by rung
+    - [PyPSA](index.md), for how the fragments compose and the table of all 25
+    - [PyPSA: scope and refusals](scope.md), for the `n.optimize()` keywords that
+      the one file states and the data that PyPSA refuses

@@ -221,7 +221,7 @@ balnce = "balnce"
 missable = "missable"
 unparseable = "unparseable"
 # `fom` is PyPSA's `fom_cost` — fixed operation and maintenance — quoted by name
-# in docs/about/pypsa.md, not a misspelling of "from".
+# in `examples/pypsa.yaml` and its fragments, not a misspelling of "from".
 fom = "fom"
 # `egde` is a misspelling of `edge` on purpose in tests/test_validation.py: the
 # case is that a typo of a real operator keyword is refused by the signature, so

@@ -52,7 +52,7 @@ attaches the data to the spec. The file below is a complete spec.
 - **Write full-size specs.** The model that `n.optimize()` builds in the power
   system framework PyPSA is one spec file, with its stochastic, multi-period
   and quadratic classes.
-  [PyPSA in one file →](https://mathspec.readthedocs.io/en/latest/examples/pypsa_ladder/)
+  [PyPSA →](https://mathspec.readthedocs.io/en/latest/examples/pypsa/)
 
 <!--- --8<-- [end:benefits] -->
 

@@ -3,16 +3,21 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# PyPSA in 25 files
+# PyPSA
 
-This section states the PyPSA spec one topic at a time.
-[PyPSA in one file](../pypsa_ladder.md) states it as `examples/pypsa.yaml`, one spec of
-about 5,100 lines. Here the same spec is split into 25 whole specs of one topic
-each ([fragments](../../reference/glossary.md#fragment)), under
-`examples/pypsa/`. [`merge`](../../reference/composition.md#merge) composes the
-25 files into one spec, which has the same
+You can read the spec of the model that `n.optimize()` builds in the power
+system modelling framework PyPSA here, one topic at a time. The spec is one
+file,
+[`examples/pypsa.yaml`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa.yaml),
+of about 5,200 lines, split into 25 whole specs of one topic each
+([fragments](../../reference/glossary.md#fragment)) under `examples/pypsa/`.
+[`merge`](../../reference/composition.md#merge) composes the 25 files into one
+spec with the same
 [canonical form](../../reference/reading.md#comparing-two-specs) as the one
-file.
+file. [A sample page](generator_commitment.md) has one fragment in full beside
+its math, and [PyPSA: scope and refusals](scope.md) lists the `n.optimize()`
+keywords that the file states and the data that PyPSA refuses. [The relaxed commitment](../pypsa_linearized_uc.md) is a patch
+over the file that relaxes the commitment decisions to shares in [0, 1].
 
 Each fragment loads and prints on its own, and
 [`advice`](../../reference/api.md#advice) runs on each fragment alone. A
@@ -54,48 +59,48 @@ compares them with it, so the two always agree.
 <!-- gallery:begin -->
 ### The sums
 
-| Sum | Over | Read in | The terms, by the fragment that adds each |
+| Sum | Over | Listed in | The terms, by the fragment that adds each |
 | --- | --- | --- | --- |
-| `Bus_injection` | `bus, scenario, snapshot` | [network](network.md) | [`FlowBased_injection`](flow_based.md), [`Generator_injection`](generator.md), [`Line_injection`](line.md), [`Link_injection`](link.md), [`Load_injection`](load.md), [`Process_injection`](process.md), [`StorageUnit_injection`](storage_unit.md), [`Store_injection`](store.md), [`Transformer_injection`](transformer.md) |
-| `total_cost` | scalar | [settings](settings.md) | [`risk_weighted_opex`](cost.md), [`Generator_capex`](generator.md), [`Line_capex`](line.md), [`Link_capex`](link.md), [`Process_capex`](process.md), [`StorageUnit_capex`](storage_unit.md), [`Store_capex`](store.md), [`Transformer_capex`](transformer.md) |
-| `scenario_opex` | `scenario` | [settings](settings.md) | [`Generator_opex`](generator.md), [`Generator_commitment_opex`](generator_commitment.md), [`Link_opex`](link.md), [`Link_commitment_opex`](link_commitment.md), [`Process_opex`](process.md), [`Process_commitment_opex`](process_commitment.md), [`StorageUnit_opex`](storage_unit.md), [`Store_opex`](store.md) |
-| `Carrier_additions` | `carrier, period` | [settings](settings.md) | [`Generator_additions`](generator.md), [`Line_additions`](line.md), [`Link_additions`](link.md), [`Process_additions`](process.md), [`StorageUnit_additions`](storage_unit.md), [`Store_additions`](store.md) |
-| `tech_capacity_expansion` | `global_constraint` | [settings](settings.md) | [`Generator_tech_capacity_expansion`](generator.md), [`Line_tech_capacity_expansion`](line.md), [`Link_tech_capacity_expansion`](link.md), [`Process_tech_capacity_expansion`](process.md), [`StorageUnit_tech_capacity_expansion`](storage_unit.md), [`Store_tech_capacity_expansion`](store.md) |
-| `operational_limit` | `global_constraint, scenario` | [settings](settings.md) | [`Generator_operational_limit`](generator.md), [`StorageUnit_operational_limit`](storage_unit.md), [`Store_operational_limit`](store.md) |
-| `primary_energy` | `global_constraint, scenario` | [settings](settings.md) | [`Generator_primary_energy`](generator.md), [`StorageUnit_primary_energy`](storage_unit.md), [`Store_primary_energy`](store.md) |
-| `Cycle_angle_sum` | `cycle, scenario, snapshot` | [power_flow](power_flow.md) | [`Line_angle_sum`](line.md), [`Transformer_angle_sum`](transformer.md) |
-| `transmission_expansion_cost` | `global_constraint, scenario` | [settings](settings.md) | [`Line_transmission_expansion_cost`](line.md), [`Link_transmission_expansion_cost`](link.md) |
-| `transmission_volume_expansion` | `global_constraint, scenario` | [settings](settings.md) | [`Line_transmission_volume_expansion`](line.md), [`Link_transmission_volume_expansion`](link.md) |
+| `Bus_injection` | `bus, scenario, snapshot` | [network](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/network.yaml) | [`FlowBased_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/flow_based.yaml), [`Generator_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`Line_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml), [`Load_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/load.yaml), [`Process_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml), [`StorageUnit_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml), [`Transformer_injection`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/transformer.yaml) |
+| `total_cost` | scalar | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`risk_weighted_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/cost.yaml), [`Generator_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`Line_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml), [`Process_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml), [`StorageUnit_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml), [`Transformer_capex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/transformer.yaml) |
+| `scenario_opex` | `scenario` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Generator_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`Generator_commitment_opex`](generator_commitment.md), [`Link_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml), [`Link_commitment_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link_commitment.yaml), [`Process_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml), [`Process_commitment_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_commitment.yaml), [`StorageUnit_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_opex`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) |
+| `Carrier_additions` | `carrier, period` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Generator_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`Line_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml), [`Process_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml), [`StorageUnit_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_additions`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) |
+| `tech_capacity_expansion` | `global_constraint` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Generator_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`Line_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml), [`Process_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml), [`StorageUnit_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_tech_capacity_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) |
+| `operational_limit` | `global_constraint, scenario` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Generator_operational_limit`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`StorageUnit_operational_limit`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_operational_limit`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) |
+| `primary_energy` | `global_constraint, scenario` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Generator_primary_energy`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml), [`StorageUnit_primary_energy`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml), [`Store_primary_energy`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) |
+| `Cycle_angle_sum` | `cycle, scenario, snapshot` | [power_flow](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/power_flow.yaml) | [`Line_angle_sum`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Transformer_angle_sum`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/transformer.yaml) |
+| `transmission_expansion_cost` | `global_constraint, scenario` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Line_transmission_expansion_cost`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_transmission_expansion_cost`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml) |
+| `transmission_volume_expansion` | `global_constraint, scenario` | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | [`Line_transmission_volume_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml), [`Link_transmission_volume_expansion`](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml) |
 
 ### The fragments
 
-| Fragment | Parameters | Variables | Constraints | Reads | Adds to |
-| --- | --- | --- | --- | --- | --- |
-| [carrier](carrier.md) | 2 | 0 | 1 | 1 |  |
-| [cost](cost.md) | 1 | 3 | 2 | 4 | `total_cost` |
-| [flow_based](flow_based.md) | 4 | 1 | 2 | 5 | `Bus_injection` |
-| [generator](generator.md) | 24 | 4 | 11 | 19 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
-| [generator_commitment](generator_commitment.md) | 12 | 3 | 18 | 19 | `scenario_opex` |
-| [generator_maintenance](generator_maintenance.md) | 5 | 4 | 13 | 10 |  |
-| [generator_ramping](generator_ramping.md) | 5 | 0 | 6 | 15 |  |
-| [global_constraints](global_constraints.md) | 3 | 0 | 15 | 6 |  |
-| [line](line.md) | 22 | 4 | 14 | 9 | `Carrier_additions`, `Cycle_angle_sum`, `total_cost`, `Bus_injection`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
-| [link](link.md) | 26 | 3 | 11 | 17 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
-| [link_commitment](link_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
-| [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 10 |  |
-| [link_ramping](link_ramping.md) | 5 | 0 | 6 | 15 |  |
-| [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
-| [network](network.md) | 0 | 0 | 1 | 1 |  |
-| [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
-| [process](process.md) | 24 | 3 | 11 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion` |
-| [process_commitment](process_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
-| [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 10 |  |
-| [process_ramping](process_ramping.md) | 5 | 0 | 6 | 15 |  |
-| [security](security.md) | 2 | 0 | 8 | 10 |  |
-| [settings](settings.md) | 9 | 0 | 0 | 8 |  |
-| [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
-| [store](store.md) | 42 | 6 | 22 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
-| [transformer](transformer.md) | 24 | 5 | 16 | 5 | `Cycle_angle_sum`, `total_cost`, `Bus_injection` |
+| Fragment | Purpose | Given | Adds to |
+| --- | --- | --- | --- |
+| [carrier](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/carrier.yaml) | The growth limits of each carrier | 1 |  |
+| [cost](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/cost.yaml) | The expected operating cost and its tail, weighted by scenario | 4 | `total_cost` |
+| [flow_based](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/flow_based.yaml) | Flow-based market coupling | 5 | `Bus_injection` |
+| [generator](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator.yaml) | PyPSA's `Generator` | 19 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
+| [generator_commitment](generator_commitment.md) | The commitment rows of PyPSA's `Generator` | 19 | `scenario_opex` |
+| [generator_maintenance](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator_maintenance.yaml) | The maintenance rows of PyPSA's `Generator` | 10 |  |
+| [generator_ramping](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/generator_ramping.yaml) | The ramping rows of PyPSA's `Generator` | 15 |  |
+| [global_constraints](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/global_constraints.yaml) | The five system totals that PyPSA caps | 6 |  |
+| [line](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/line.yaml) | PyPSA's `Line` | 9 | `Carrier_additions`, `Cycle_angle_sum`, `total_cost`, `Bus_injection`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
+| [link](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link.yaml) | PyPSA's `Link` | 17 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion`, `transmission_expansion_cost`, `transmission_volume_expansion` |
+| [link_commitment](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link_commitment.yaml) | The commitment rows of PyPSA's `Link` | 18 | `scenario_opex` |
+| [link_maintenance](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link_maintenance.yaml) | The maintenance rows of PyPSA's `Link` | 10 |  |
+| [link_ramping](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/link_ramping.yaml) | The ramping rows of PyPSA's `Link` | 15 |  |
+| [load](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/load.yaml) | PyPSA's `Load` | 1 | `Bus_injection` |
+| [network](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/network.yaml) | The buses and the balance at each bus | 1 |  |
+| [power_flow](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/power_flow.yaml) | Kirchhoff's voltage law around each cycle | 1 |  |
+| [process](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process.yaml) | PyPSA's `Process` | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion` |
+| [process_commitment](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_commitment.yaml) | The commitment rows of PyPSA's `Process` | 18 | `scenario_opex` |
+| [process_maintenance](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_maintenance.yaml) | The maintenance rows of PyPSA's `Process` | 10 |  |
+| [process_ramping](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_ramping.yaml) | The ramping rows of PyPSA's `Process` | 15 |  |
+| [security](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/security.yaml) | The security-constrained flows over the outages | 10 |  |
+| [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | The weightings, the risk preference and the flags that the other fragments use | 8 |  |
+| [storage_unit](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml) | PyPSA's `StorageUnit` | 14 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
+| [store](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) | PyPSA's `Store` | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
+| [transformer](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/transformer.yaml) | PyPSA's `Transformer` | 5 | `Cycle_angle_sum`, `total_cost`, `Bus_injection` |
 <!-- gallery:end -->
 
 ## Leaving a file out
@@ -111,7 +116,7 @@ add to a sum that no fragment lists, and `merge` refuses the files.
 !!! info "See also"
 
     - [Composition](../../reference/composition.md), for what `merge` refuses
-    - [PyPSA in one file](../pypsa_ladder.md), for the same spec as one file, rung by
-      rung
+    - [PyPSA: scope and refusals](scope.md), for the `n.optimize()` keywords that
+      the one file states and the data that PyPSA refuses
     - [`given`](../../reference/language/parameters-variables-constraints.md#given),
       for the names a fragment uses but does not declare
