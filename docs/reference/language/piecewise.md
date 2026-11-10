@@ -92,7 +92,9 @@ dimension must be declared [ordered](dimensions.md#ordered), because
 admits that member and the next, so it picks the segment between them. A member
 that the binaries do not admit is held at zero, from above and from below. For
 a set `s` over the variable `x` along `d`, let `admitted` be `s_seg` for
-`type: 1`, and `s_seg + shift(s_seg, along=d, offset=1, edge=0)` for `type: 2`:
+`type: 1`, and `sum_back(s_seg, along=d, window=2)` for `type: 2`. The window
+leaves out a binary that does not exist. So the first member along `d`, and a
+member after one that the `where:` of `x` leaves out, still have a row:
 
 | Written out                                        | What it states                                                         |
 | -------------------------------------------------- | ---------------------------------------------------------------------- |

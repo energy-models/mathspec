@@ -114,7 +114,7 @@ def emit(raw: dict[str, object], name: str) -> None:
         'domain': 'binary',
         'description': _SEGMENTS[order],
     }
-    picked = emitted.seg if order == 1 else f'{emitted.seg} + shift({emitted.seg}, along={over}, offset=1, edge=0)'
+    picked = emitted.seg if order == 1 else f'sum_back({emitted.seg}, along={over}, window=2)'
     constraints = section(raw, 'constraints')
     constraints[emitted.pick] = {
         'dims': [d for d in dims if d != over],

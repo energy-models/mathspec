@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from mathspec.errors import SchemaError
+from mathspec.program import Translate, VariableReference, WindowSum, walk
 from tests.fixtures import SMALL_MODEL, expanded, spec_of, varied
 
 #: A set over a bounded member, which is the smallest model `expand('sos')` acts on.
@@ -100,6 +101,24 @@ def test_the_emitted_binary_carries_the_members_own_mask():
     spec = spec_of(varied(PICKED, **{'variables.p.where': 'flag'}))
 
     assert spec.expand('sos').variables['pick_seg'].where == 'flag'
+
+
+def test_a_member_whose_neighbour_is_masked_keeps_its_adjacency_row():
+    """The row read the binary of the segment before a member through `shift`, and
+    an absent input to `shift` takes the row with it (#993). At the first member
+    of a mask that starts after the first position, no row was built, so that
+    member could be nonzero beside any picked segment: a curve whose run started
+    late was its convex hull. A trailing window leaves the absent binary out and
+    keeps the row."""
+    spec = spec_of(varied(PICKED, **{'variables.p.where': 'flag', 'sos.pick.type': 2}))
+    row = spec.expand('sos').program.constraints['pick_adjacency']
+
+    shifted = [node for node in walk(row.rhs) if isinstance(node, Translate)]
+    windows = [node for node in walk(row.rhs) if isinstance(node, WindowSum)]
+    assert not shifted, 'no read of a binary through shift, whose absent input drops the row'
+    assert [(w.operand, w.along, w.width) for w in windows] == [(VariableReference('pick_seg', dims=('g',)), 'g', 2)], (
+        'one window over the segment of the member and the one before it'
+    )
 
 
 def test_a_set_emits_no_parameter_so_the_same_sources_bind_both():
