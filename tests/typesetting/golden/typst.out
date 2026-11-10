@@ -30,13 +30,14 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
 / $upright("tech_cap")$: `tech_cap` over $cal(U) times cal(E)$, `absent` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
-/ $upright("zone_share")$: `zone_share` over $cal(U) times cal(Z)$, a row of data refused unless $(u, z) in upright("bus_zone")$, $1$ where the data has no row
+/ $upright("zone_share")$: `zone_share` over $(u, z) in upright("bus_zone")$, $1$ where the data has no row
 
 == Conditions
 / $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
 / $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
 == Variables
+/ $italic("flow")$: `flow` over $(u, g) in upright("connection"), t in cal(T)$
 / $italic("fuel")$: `fuel` over $cal(G) times cal(T)$
 / $italic("headroom")$: `headroom` (scalar), $0$ where the mask leaves it out
 / $italic("heat")$: `heat` over $cal(G) times cal(T)$
@@ -76,7 +77,8 @@ $ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long 
 
 == Variable domains
 #set math.equation(numbering: "(1)")
-$ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
+$ upright("flow") & italic("flow")_(u,g,t) & >= 0 & forall (u, g) in upright("connection"), t in cal(T) colon upright("p")^(upright("max"))_(g) > 0 \
+  upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
   upright("heat") & italic("heat")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("on") & italic("on")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) \

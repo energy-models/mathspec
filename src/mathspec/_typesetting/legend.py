@@ -133,7 +133,7 @@ class Legend:
     symbols: Symbols
     format: Format
     parameter_masks: Mapping[str, str] = field(default_factory=dict)
-    parameter_confinements: Mapping[str, str] = field(default_factory=dict)
+    index_sets: Mapping[str, str] = field(default_factory=dict)
 
     def _op(self, name: OperatorName) -> str:
         return self.format.operators[name]
@@ -156,7 +156,7 @@ class Legend:
         parameters = [
             self._item(
                 self.symbols.name[p],
-                f'{fmt.mono(p)}{self._over(list(entry.dims))}{self._confined(p)}{self._only_where(p)}{self._missing(entry.missing)}',
+                f'{fmt.mono(p)}{self._over(list(entry.dims), p)}{self._only_where(p)}{self._missing(entry.missing)}',
                 entry.description,
             )
             for p, entry in program.parameters.items()
@@ -164,7 +164,7 @@ class Legend:
         variables = [
             self._item(
                 self.symbols.name[v],
-                f'{fmt.mono(v)}{self._over(list(entry.dims))}{self._missing(entry.missing, "absent", _MASKED_OUT)}',
+                f'{fmt.mono(v)}{self._over(list(entry.dims), v)}{self._missing(entry.missing, "absent", _MASKED_OUT)}',
                 entry.description,
             )
             for v, entry in program.variables.items()
@@ -237,15 +237,14 @@ class Legend:
         meaning = f'{what} {self.format.dash} {self.format.escape(description)}' if description else what
         return LegendItem(symbol, meaning)
 
-    def _over(self, dims: list[str]) -> str:
+    def _over(self, dims: list[str], entry: str | None = None) -> str:
+        """The domain of a legend row: *entry*'s index set where it has one, else the product of its sets."""
+        if entry in self.index_sets:
+            return f' over {self.format.math(self.index_sets[entry])}'
         if not dims:
             return ' (scalar)'
         product = self.format.joined([self.symbols.set[d] for d in dims], self._op('times'))
         return f' over {self.format.math(product)}'
-
-    def _confined(self, parameter: str) -> str:
-        rows = self.parameter_confinements.get(parameter)
-        return '' if rows is None else f', a row of data refused unless {self.format.math(rows)}'
 
     def _only_where(self, parameter: str) -> str:
         mask = self.parameter_masks.get(parameter)

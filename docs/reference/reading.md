@@ -183,22 +183,28 @@ comparison in a condition. Under `'absent'`, a tool leaves a bound open where
 the parameter has no row.
 
 `program.parameters[name].where` is a [`Mask`](#nodes-and-conditions) for the
-`where:` of the parameter, or `None` when the parameter has every coordinate
-of its `dims`. With data attached, an engine applies the condition before
-`missing:`, as
+coordinates of the parameter, or `None` when the parameter has every
+coordinate of its `dims`. It contains each relation of the `on:` of the
+parameter and its `where:`. With data attached, an engine applies the
+condition before `missing:`, as
 [`where` on a parameter](language/parameters-variables-constraints.md#where)
 describes. The condition contains no variable and no parameter with a `where:`
-of its own. So an engine can evaluate every such condition before it reads any
-parameter that has a `where:`.
+or an `on:` of its own. So an engine can evaluate every such condition before
+it reads any parameter that has one.
 
-`program.parameters[name].confined_by` lists the relations that the file
-names under `confined_by:`, sorted by name. With data attached, an engine
-refuses a row of the parameter at a key combination that one of them has no
-row for, and reads the parameter as absent there. It does this before it
-applies the `where:`, and so before `missing:`, as
-[`confined_by`](language/parameters-variables-constraints.md#confined_by) describes. The confinement is not
-part of `program.parameters[name].where`, because an engine drops a row
-outside the `where:` and refuses a row outside the relation.
+`program.parameters[name].on` lists the relations of the `on:` of the
+parameter, sorted by name. With data attached, an engine refuses a row of the
+parameter at a key combination that one of them has no row for. It does this
+before it applies the `where`, and so before `missing:`, as
+[`on`](language/parameters-variables-constraints.md#on) describes. An engine
+drops a row outside the rest of the `where`, and refuses a row outside the
+relations.
+
+`program.variables[name].where` is the same kind of `Mask` for the coordinates
+of the variable, with the relations of its `on:` in it, and
+`program.variables[name].on` lists those relations. A variable has no data, so
+an engine builds it where the `where` is true and needs nothing more from the
+`on`.
 
 With data attached, an engine must refuse a divisor that is `0` in a row it
 builds, and name the divisor. The same applies to a term of a sum that it

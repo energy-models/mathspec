@@ -102,6 +102,12 @@ A relation has no `where:`, so its rows come from the data alone. A tool
 therefore knows the rows of a relation before it evaluates any condition,
 such as the [`where:` of a parameter](parameters-variables-constraints.md#where).
 
+The rows of a bare relation can also be the coordinates of a parameter or a
+variable, its [index set](../glossary.md#index-set). An entry with
+`on: [connection]` has coordinates only at the pairs that `connection` lists,
+and a tool refuses a row of the data of a parameter at any other pair
+([`on`](parameters-variables-constraints.md#on)).
+
 An [assumption](assumptions.md) can require rows of a relation. For `line_to`
 [below](#missing), `{holds: "line_to", where: "closed"}` requires an end for
 every closed line, where `closed` is a `bool` parameter over `line`.
@@ -357,6 +363,9 @@ constraints:
 
 `flow` exists at the pairs that `connection` lists and is [absent](absence.md)
 at every other pair, so `balance` adds up the generators wired to each bus.
+`on: [connection]` in place of the `where:` gives `flow` the same
+coordinates, and mathspec gives advice to write it so
+([`on` on a variable](parameters-variables-constraints.md#on-on-a-variable)).
 
 `python -m mathspec markdown flow.yaml` prints the domain of `flow` and the
 constraint:

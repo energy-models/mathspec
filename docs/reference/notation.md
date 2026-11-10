@@ -55,7 +55,7 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
-  zone_share: { dims: [bus, zone], confined_by: [bus_zone], missing: 1 } # data refused outside the pairs that exist, with no `where:` of its own
+  zone_share: { dims: [bus, zone], on: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -100,7 +100,7 @@ parameters:
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
-| $`\mathrm{zone\_share}`$ | `zone_share` over $`\mathcal{U} \times \mathcal{Z}`$, a row of data refused unless $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
+| $`\mathrm{zone\_share}`$ | `zone_share` over $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
 
 #### Conditions
 
@@ -113,6 +113,7 @@ parameters:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{flow}`$ | `flow` over $`\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -283,6 +284,23 @@ variables:
 
 ```math
 \mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
+```
+
+#### Variable over the rows of a relation
+
+a domain of the pairs `connection` lists, at every snapshot, and a `where:` inside it
+
+```yaml
+variables:
+  flow:
+    dims: [snapshot, generator, bus]
+    on: [connection]
+    where: "p_max > 0"
+    bounds: { lower: 0 }
+```
+
+```math
+\mathit{flow}_{u,g,t} \ge 0 \qquad \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0
 ```
 
 #### Variable in a special ordered set

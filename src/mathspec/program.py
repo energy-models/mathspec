@@ -723,14 +723,13 @@ class Parameter:
     """
     description: str | None = None
     where: Mask | None = None
-    """The condition that limits the coordinates of the parameter, or ``None`` when it has every coordinate of its
-    ``dims`` inside [`confined_by`][mathspec.program.Parameter.confined_by]. Where the condition is false, the parameter
-    is absent and a tool drops its rows of data there. ``missing`` applies where the condition is true.
+    """Where the parameter has coordinates, or ``None`` when it has every coordinate of its ``dims``. It holds each
+    relation in [`on`][mathspec.program.Parameter.on] and the file's ``where:``. Where it is false, the parameter is
+    absent and a tool drops its rows of data there. ``missing`` applies where it is true.
     """
-    confined_by: tuple[str, ...] = ()
-    """The relations the parameter names under ``confined_by:``, sorted by name. A tool
-    attaching the data refuses a row at a key combination one of them has no row for, and reads the parameter as absent
-    there, before ``where`` drops anything and before ``missing`` fills anything.
+    on: tuple[str, ...] = ()
+    """The relations of the parameter's index set, sorted by name. A tool attaching the data refuses a row at a key
+    combination one of them has no row for, before ``where`` drops anything and before ``missing`` fills anything.
     """
 
 
@@ -738,6 +737,9 @@ class Parameter:
 class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
+    """Where the variable exists, or ``None`` when it exists at every coordinate of its ``dims``. It holds each relation
+    in [`on`][mathspec.program.Variable.on] and the file's ``where:``.
+    """
     lower: Expression | None = None
     """A number, a parameter, or ``None`` when that side is open. An engine decides how an open side enters the model.
     """
@@ -746,6 +748,8 @@ class Variable:
     domain: VariableDomain = 'continuous'
     missing: VariableMissing = 'absent'
     description: str | None = None
+    on: tuple[str, ...] = ()
+    """The relations of the variable's index set, sorted by name."""
 
 
 @dataclass(frozen=True)
@@ -1729,6 +1733,23 @@ def _fold(node: Condition) -> Condition:
     return node
 
 
+def _within(node: Condition, relations: frozenset[str]) -> Condition:
+    """*node* with each bare read of *relations* true, and a named condition left whole where nothing in it changes."""
+    match node:
+        case RelationDefined(name=name) if name in relations:
+            return BooleanLiteral(value=True)
+        case Not(operand=operand):
+            return Not(_within(operand, relations))
+        case And(left=left, right=right):
+            return And(_within(left, relations), _within(right, relations))
+        case Or(left=left, right=right):
+            return Or(_within(left, relations), _within(right, relations))
+        case ConditionReference(body=body):
+            return node if (inside := _within(body, relations)) == body else inside
+        case _:
+            return node
+
+
 @dataclass(frozen=True)
 class Mask:
     """A resolved ``where`` and the questions the language answers about it.
@@ -1777,6 +1798,13 @@ class Mask:
         """
         return tuple(sorted({dim for atom in self.atoms for dim in _atom_dims(atom)}))
 
+    def within(self, relations: Iterable[str]) -> Mask:
+        """The mask read inside the rows of *relations*, where each of them, read at the mask's own coordinates, is true.
+
+        A relation read anywhere else, as through ``shift`` or ``at``, is left as it is.
+        """
+        return Mask(_within(self.root, frozenset(relations)))
+
     def __invert__(self) -> Mask:
         """The mask admitting exactly the rows this one refuses — construction folds a double negation or a literal flip."""
         return Mask(Not(self.root))
@@ -1795,7 +1823,7 @@ class Mask:
 # --------------------------------------------------------------------------
 
 
-AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+AdviceKind = Literal['never-an-axis', 'given', 'index-set', 'unbounded']
 """The checks that an [`Advice`][] comes from. The set is closed, so a tool that filters on it can list every value."""
 
 

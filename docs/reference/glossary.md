@@ -153,6 +153,13 @@ column. `within=<relation>[<column>]` makes `shift`, `sum_back` or
 `position()` work separately in each group, such as each season of a year
 ([partitions](language/relations.md#partitions)).
 
+## Index set
+
+The index set of a parameter or a variable is the coordinates its `on:` lists:
+the key combinations where each of its relations has a row. A tool refuses a
+row of the data of a parameter outside its index set
+([`on`](language/parameters-variables-constraints.md#on)).
+
 ## Label
 
 A label is one member of a dimension, such as `wind` in `generator`. The

@@ -108,7 +108,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
-        *_confinements(spec),
+        *_index_sets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -229,33 +229,43 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
             )
 
 
-def _confinements(spec: Spec) -> Iterator[str]:
-    """Each relation a parameter is confined by leaves a key combination out, and is keyed by its dimensions, once each."""
-    for pname, p in spec.parameters.items():
-        head = f"Parameter '{pname}': confined_by: names"
-        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(p.confined_by).items() if count > 1)
-        for rname in dict.fromkeys(p.confined_by):
+def _index_sets(spec: Spec) -> Iterator[str]:
+    """Each relation in an entry's ``on:`` lists coordinates of the entry, leaves one out, and is named once."""
+    entries = [
+        *((f"Parameter '{name}'", name, p.dims, p.on) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", name, v.dims, v.on) for name, v in spec.variables.items()),
+    ]
+    for context, name, dims, on in entries:
+        head = f'{context}: on: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(on).items() if count > 1)
+        for rname in dict.fromkeys(on):
             if (lk := spec.relations.get(rname)) is None:
                 yield (
                     f"{head} '{rname}', which is not a relation. "
                     f'{did_you_mean(rname, spec.relations, label="Relations")}'
                 )
                 continue
+            if values := [role for role, _ in lk.pairs if role not in lk.key_roles]:
+                yield (
+                    f"{head} '{rname}', which has the value column{'s' if len(values) > 1 else ''} {values}. A row "
+                    f"of a relation in `on:` is a coordinate of '{name}', so the relation has no values:. Key "
+                    f"'{rname}' by all its columns, or test it in a `where:`."
+                )
             if lk.missing == 'refused':
                 yield (
                     f"{head} '{rname}', which under missing: refused has a row at every key combination, so it "
-                    f"confines nothing. Write missing: absent on '{rname}', or delete it from confined_by:."
+                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from on:."
                 )
             key = Counter(dict(lk.pairs)[k] for k in lk.key_roles)
             if twice := [d for d, count in key.items() if count > 1]:
                 yield (
-                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{pname}' has "
-                    f"'{twice[0]}' once. Confine it by a relation keyed by one column over each dimension."
+                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{name}' has "
+                    f"'{twice[0]}' once. Name a relation keyed by one column over each dimension."
                 )
-            elif outside := [d for d in key if d not in p.dims]:
+            elif outside := [d for d in key if d not in dims]:
                 yield (
-                    f"{head} '{rname}', keyed by {sorted(key)}, and '{pname}' is not over {outside}. Add "
-                    f"{outside} to its dims:, or delete '{rname}' from confined_by:."
+                    f"{head} '{rname}', keyed by {sorted(key)}, and '{name}' is not over {outside}. Add "
+                    f"{outside} to its dims:, or delete '{rname}' from on:."
                 )
 
 

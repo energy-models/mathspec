@@ -37,7 +37,7 @@
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{U} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
-\item[{$\mathrm{zone\_share}$}] \texttt{zone\_share} over $\mathcal{U} \times \mathcal{Z}$, a row of data refused unless $\left( u,\ z \right) \in \mathrm{bus\_zone}$, $1$ where the data has no row
+\item[{$\mathrm{zone\_share}$}] \texttt{zone\_share} over $\left( u,\ z \right) \in \mathrm{bus\_zone}$, $1$ where the data has no row
 \end{description}
 
 \paragraph{Conditions}
@@ -48,6 +48,7 @@
 
 \paragraph{Variables}
 \begin{description}
+\item[{$\mathit{flow}$}] \texttt{flow} over $\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), $0$ where the mask leaves it out
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{G} \times \mathcal{T}$
@@ -93,6 +94,7 @@
 
 \paragraph{Variable domains}
 \begin{align}
+\text{flow} && \mathit{flow}_{u,g,t} & \ge 0 && \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \\
 \text{fuel} && \mathit{fuel}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{headroom} && \mathit{headroom} & \ge 0 && \text{where } \mathrm{budget} \text{ is defined} \\
 \text{heat} && \mathit{heat}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\

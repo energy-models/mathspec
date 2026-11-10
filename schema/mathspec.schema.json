@@ -640,14 +640,6 @@
       "additionalProperties": false,
       "description": "A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means.",
       "properties": {
-        "confined_by": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Confined By",
-          "type": "array"
-        },
         "description": {
           "anyOf": [
             {
@@ -701,6 +693,14 @@
           ],
           "default": "refused",
           "title": "Missing"
+        },
+        "on": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "On",
+          "type": "array"
         },
         "where": {
           "anyOf": [
@@ -1021,6 +1021,14 @@
           ],
           "default": "absent",
           "title": "Missing"
+        },
+        "on": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "On",
+          "type": "array"
         },
         "where": {
           "anyOf": [

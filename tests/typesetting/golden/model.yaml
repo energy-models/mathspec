@@ -41,7 +41,7 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
-  zone_share: { dims: [bus, zone], confined_by: [bus_zone], missing: 1 } # data refused outside the pairs that exist, with no `where:` of its own
+  zone_share: { dims: [bus, zone], on: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -77,6 +77,11 @@ variables:
     domain: integer
   reserve: # an empty dims: a scalar entry, whose line carries no quantifier
     dims: []
+    bounds: { lower: 0 }
+  flow: # a domain of the pairs `connection` lists, at every snapshot, and a `where:` inside it
+    dims: [snapshot, generator, bus]
+    on: [connection]
+    where: "p_max > 0"
     bounds: { lower: 0 }
   headroom: # scalar too, but masked, so the condition stands with no set beside it; 0, so the legend names the value
     dims: []
