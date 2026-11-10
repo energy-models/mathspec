@@ -574,6 +574,12 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 \mathit{fuel}_{g,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`module_curve`**
+
+```math
+\mathit{fuel}_{g,t} \ge \left( \mathit{units}_{g} \cdot \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) + \min(\mathit{units}_{g},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) - \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) \right) \right)(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 **`ramp_curve`**
 
 ```math
@@ -706,6 +712,18 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 
 ```math
 \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0
+```
+
+**`module_curve_complete`**
+
+```math
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_run}_{b,g}
+```
+
+**`module_curve_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \} \rvert > 0
 ```
 
 **`ramp_curve_complete`**

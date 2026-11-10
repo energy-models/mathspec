@@ -24,6 +24,7 @@ given:
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_marginal_cost_piecewise: { dims: [scenario, snapshot, generator] }
     Generator_n_mod: { dims: [generator], domain: integer }
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
     Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
@@ -32,6 +33,8 @@ given:
     Generator_modules: { dims: [generator, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Generator_marginal_cost_curve: { dims: [generator] }
+    Generator_marginal_cost_as_lp: { dims: [] }
     Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
@@ -47,6 +50,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -55,6 +64,21 @@ relations:
     values: period
 
 parameters:
+  Generator_marginal_cost_curve_p:
+    description: >-
+      the output at each breakpoint of a generator's piecewise `marginal_cost`
+      curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator
+      with no curve has no rows
+    dims: [generator, breakpoint]
+    missing: absent
+  Generator_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a generator's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      output times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
+    dims: [generator, breakpoint]
+    missing: absent
   Generator_committable:
     description: whether output is gated by an on/off status decision
     dims: [generator]
@@ -176,6 +200,34 @@ conditions:
       AND Generator_p_nom_extendable
       AND NOT (Generator_p_nom_mod > 0)
       AND Generator_active
+
+piecewise:
+  Generator_marginal_cost_lp:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated as the line of
+      each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
+  Generator_marginal_cost_incremental:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated by segments
+      filled in order and switched by the status of a committable generator,
+      where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: NOT Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: incremental
+    activity: Generator_status
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
 
 constraints:
   Generator_com_p_lower:
@@ -334,17 +386,21 @@ assumptions:
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
 | $`\mu^{\mathrm{nom}}`$ | `Generator_maintenance_capacity` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`\mu^{u}`$ | `Generator_maintenance_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
+| $`C^{\mathrm{curve}}`$ | `Generator_marginal_cost_piecewise` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ |
 | $`p`$ | `Generator_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ |
 | $`\mathrm{M}`$ | `Generator_modules` over $`\mathcal{G} \times \Xi`$, an expression another file defines |
 | $`\mathit{scenario\_opex}`$ | `scenario_opex` over $`\Xi`$, an expression this file adds `Generator_commitment_opex` to |
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$, a condition another file defines |
+| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar), a condition another file defines |
+| $`\mathrm{curve}`$ | `Generator_marginal_cost_curve` over $`\mathcal{G}`$, a condition another file defines |
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` — generating units, each on one bus |
 | $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
@@ -357,6 +413,8 @@ assumptions:
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
 | $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the running cost at each breakpoint of a generator's piecewise `marginal_cost` curve: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the output at each breakpoint of a generator's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator with no curve has no rows |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays off once stopped |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays on once started |
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
@@ -391,6 +449,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
 
 #### Conditions
@@ -551,12 +610,66 @@ u_{g,\xi,t} \le \mathrm{N}^{\mathrm{fix}}_{g,\xi} \qquad \forall\, g \in \mathca
 u_{g,\xi,t} \le N_{g} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com}}_{g,t} \wedge \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{mod}}_{g} > 0
 ```
 
+**`Generator_marginal_cost_incremental`**
+
+```math
+C^{\mathrm{curve}}_{g,\xi,t} \ge \left( \begin{cases} u_{g,\xi,t} & \text{if } \mathrm{on}^{\mathrm{com}}_{g,t} \\ 1 & \text{otherwise} \end{cases} \cdot \left( \mathrm{p}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \},g},\ \mathrm{C}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \},g} \right) + \min(\begin{cases} u_{g,\xi,t} & \text{if } \mathrm{on}^{\mathrm{com}}_{g,t} \\ 1 & \text{otherwise} \end{cases},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}}(\mathrm{p}^{\mathrm{curve}}_{b,g},\ \mathrm{C}^{\mathrm{curve}}_{b,g}) - \left( \mathrm{p}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \},g},\ \mathrm{C}^{\mathrm{curve}}_{\min \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \},g} \right) \right) \right)(p_{g,\xi,t}) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
+**`Generator_marginal_cost_lp`**
+
+```math
+C^{\mathrm{curve}}_{g,\xi,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}}(\mathrm{p}^{\mathrm{curve}}_{b,g},\ \mathrm{C}^{\mathrm{curve}}_{b,g})(p_{g,\xi,t}) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+```
+
 #### Assumptions
 
 **`Generator_big_m_where_committed_and_extendable`**
 
 ```math
 \mathrm{M}_{g,\xi} \text{ is defined} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t}
+```
+
+**`Generator_marginal_cost_incremental_complete`**
+
+```math
+\mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{C}^{\mathrm{curve}}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}
+```
+
+**`Generator_marginal_cost_incremental_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \neg \left( \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \neg \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert > 0
+```
+
+**`Generator_marginal_cost_lp_complete`**
+
+```math
+\mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{C}^{\mathrm{curve}}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined}
+```
+
+**`Generator_marginal_cost_lp_increasing`**
+
+```math
+\mathrm{p}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} < \mathrm{p}^{\mathrm{curve}}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined}
+```
+
+**`Generator_marginal_cost_lp_curvature`**
+
+```math
+\left( \mathrm{C}^{\mathrm{curve}}_{b,g} - \mathrm{C}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{p}^{\mathrm{curve}}_{b,g} \right) \le \left( \mathrm{C}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{C}^{\mathrm{curve}}_{b,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b,g} - \mathrm{p}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined} \wedge \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b + 1,g} \text{ is defined}
+```
+
+**`Generator_marginal_cost_lp_breakpoints`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert \ge 2 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert > 0
+```
+
+**`Generator_marginal_cost_lp_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{lp} \wedge \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t} \wedge \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert > 0
 ```
 <!-- gallery:end -->
 

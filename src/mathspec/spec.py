@@ -1021,8 +1021,9 @@ class PiecewiseSpec(_StrictSpec):
     method: PiecewiseMethod = 'adjacency'
     """Which of [`PIECEWISE_METHODS`][] restricts the weights."""
     activity: str | None = None
-    """What the weights sum to: 1 when the key is left out, or a binary variable that sets the formulation to 0 when the
-    variable is 0. Written as the name of the variable, or as ``at(<variable>, by=<relation>[<column>])``.
+    """The variable that switches each curve off where it is 0, or no switch when the key is left out. A binary variable,
+    or an integer one under ``method: incremental``, which from 1 up moves the curve by its point at the first breakpoint
+    once per unit above 1. Written as the name of the variable, or as ``at(<variable>, by=<relation>[<column>])``.
     """
     description: str | None = None
 

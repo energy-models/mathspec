@@ -669,7 +669,7 @@ class Walk:
         objective = self.program.objective
         if objective is None:
             return []
-        sense = self._op('minimize' if objective.sense == 'minimize' else 'maximize')
+        sense = self._op('min' if objective.sense == 'minimize' else 'max')
         return [Line(label='', left=sense, right=self._expression(objective.expression, self._context()))]
 
     def _constraints(self) -> list[Line]:
@@ -921,7 +921,8 @@ class Walk:
         elif len(entry.links) == 2:
             (i,) = bounded
             left = points[i]
-            right = f'{self._op(_COMPARISONS[entry.links[i].sign])} {self.format.apply(locus, points[1 - i])}'
+            function = self.format.parenthesise(locus) if self._counts(entry) else locus
+            right = f'{self._op(_COMPARISONS[entry.links[i].sign])} {self.format.apply(function, points[1 - i])}'
         else:
             cone = self.format.joined([self._op(_HALF_LINES[link.sign]) for link in entry.links], self._op('times'))
             left, right = self._tuple(list(points)), f'{self._op("in")} {locus} {self._op("plus")} {cone}'
@@ -969,15 +970,43 @@ class Walk:
     def _locus(self, entry: Piecewise, values: list[str], admitted: Mask | None, ctx: _Context) -> str:
         """The set the links lie on: the curve through the breakpoints, or the hull ``convex`` relaxes it onto.
 
-        A gate multiplies it, which is what gating a curve does — the weights
-        sum to the gate, so the locus is the origin where the gate is 0 and the
-        curve where it is 1.
+        A binary gate multiplies it, which is what gating a curve does — the
+        weights sum to the gate, so the locus is the origin where the gate is 0
+        and the curve where it is 1. Under an integer gate the expansion writes
+        the same incremental rows, which start each link at the first
+        breakpoint times the gate and bound every fill by it. The product is
+        then not the locus, which is ``g·v₀ + min(g, 1)·(curve - v₀)``: the origin at 0, and
+        the curve moved by ``(g - 1)·v₀`` from 1 up.
         """
         operator = self._op('hull' if entry.method == 'convex' else 'curve')
         through = self.format.subscript(operator, [self._breakpoints(entry, admitted, ctx)])
         locus = self.format.apply(through, self.format.joined(values, ''))
         gate = self._gate(entry, ctx)
-        return f'{gate} {self._op("cdot")} {locus}' if gate else locus
+        if not gate:
+            return locus
+        cdot = self._op('cdot')
+        if not self._counts(entry):
+            return f'{gate} {cdot} {locus}'
+        start = self._first_point(entry, admitted, ctx)
+        clipped = self.format.apply(self._op('min'), self.format.joined([gate, '1'], ''))
+        moved = self.format.parenthesise(f'{locus} {self._op("minus")} {start}')
+        return f'{gate} {cdot} {start} {self._op("plus")} {clipped} {cdot} {moved}'
+
+    def _counts(self, entry: Piecewise) -> bool:
+        """Whether the entry's gate is an integer, whose locus is not the gate times the curve."""
+        return entry.activity is not None and self.program.variables[entry.activity.variable].domain == 'integer'
+
+    def _first_point(self, entry: Piecewise, admitted: Mask | None, ctx: _Context) -> str:
+        """The links' values at the first breakpoint each curve runs through, the least one a ragged ``where:`` admits.
+
+        The incremental rows stand there, so it is the point an integer gate
+        moves the curve by.
+        """
+        over = self.symbols.set[entry.along]
+        if admitted is not None:
+            over = self.format.set_of(self._membership(entry.along), self._condition(admitted.root, ctx))
+        first = ctx.looked_up(entry.along, f'{self._op("min")} {over}')
+        return self._tuple([self._link(link, first)[1] for link in entry.links])
 
     def _breakpoints(self, entry: Piecewise, admitted: Mask | None, ctx: _Context) -> str:
         """Which breakpoints the curve runs through: every one of the dimension, or the ones a ragged ``where:`` admits.

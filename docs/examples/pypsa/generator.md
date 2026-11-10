@@ -12,6 +12,8 @@ This file states PyPSA's `Generator`. It is one of the 25 whole specs of one top
 given:
   parameters:
     snapshot_weightings_objective: { dims: [snapshot] }
+    Generator_marginal_cost_curve_p: { dims: [generator, breakpoint] }
+    Generator_marginal_cost_curve_cost: { dims: [generator, breakpoint] }
     Generator_committable: { dims: [generator], dtype: bool }
     Generator_maintenance_pu: { dims: [scenario, generator] }
     scenario_weight: { dims: [scenario] }
@@ -50,6 +52,12 @@ dimensions:
     ordered: true
   carrier:
     description: energy carriers, what a growth limit is set per
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -181,6 +189,12 @@ variables:
     description: "`Generator-p` — output of a generator in a snapshot"
     dims: [scenario, snapshot, generator]
     where: Generator_active
+  Generator_marginal_cost_piecewise:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      that pays along a curve, held above the curve
+    dims: [scenario, snapshot, generator]
+    where: Generator_marginal_cost_curve AND Generator_active
   Generator_n_mod:
     description: "`Generator-n_mod` — how many modules of an extendable modular build. A unit that is not active has none"
     dims: [generator]
@@ -232,9 +246,19 @@ expressions:
   Generator_tech_capacity_expansion:
     expression: sum(Generator_p_nom_ext * Generator_tech_capacity_weight, over=generator)
     adds_to: tech_capacity_expansion
+  Generator_running_cost:
+    description: >-
+      what a generator's output costs in a snapshot: the value read off its
+      piecewise curve where it has one, and its linear `marginal_cost`
+      otherwise. A curve replaces the linear cost, as PyPSA drops the unit
+      from that term (`optimize.py:333-348`)
+    dims: [scenario, snapshot, generator]
+    cases:
+      curve: { when: Generator_marginal_cost_curve, expression: Generator_marginal_cost_piecewise }
+    otherwise: Generator_p * Generator_marginal_cost
   Generator_opex:
     expression: >-
-      sum(sum(((Generator_p * Generator_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+      sum(sum((Generator_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
       + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
     adds_to: scenario_opex
   Generator_capex:
@@ -249,6 +273,35 @@ expressions:
     adds_to: Bus_injection
 
 conditions:
+  Generator_marginal_cost_curve:
+    description: >-
+      a generator that pays along a piecewise `marginal_cost` curve: one of
+      PyPSA's `active_assets` with curve data (`optimize.py:307`,
+      `piecewise.py:223-250`)
+    condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
+  Generator_marginal_cost_curve_bends_down:
+    description: >-
+      a breakpoint where a generator's cost curve gets less steep: the
+      segment after it rises less per unit of output than the one before
+    condition: >-
+      Generator_marginal_cost_curve_p
+      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1)
+      AND shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1)
+      AND (Generator_marginal_cost_curve_cost - shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=1, edge=0))
+      * (shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_p)
+      > (shift(Generator_marginal_cost_curve_cost, along=breakpoint, offset=-1, edge=0) - Generator_marginal_cost_curve_cost)
+      * (Generator_marginal_cost_curve_p - shift(Generator_marginal_cost_curve_p, along=breakpoint, offset=1, edge=0))
+  Generator_marginal_cost_as_lp:
+    description: >-
+      linopy's choice of method for all generator cost curves at once
+      (`method="auto"`): the segment lines where every curve is convex and no
+      generator with a curve is committable, the incremental rows otherwise.
+      PyPSA gates the curves by `Generator-status` where one is committable,
+      and linopy states no segment lines under a gate (`optimize.py:314-318`,
+      `piecewise.py:193-217`)
+    condition: >-
+      count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
+      AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
   Generator_committed:
     description: >-
       a committable generator that is active in the snapshot's period: every
@@ -313,6 +366,14 @@ constraints:
     expression: Generator_p == Generator_p_set
 
 assumptions:
+  Generator_marginal_cost_curve_on_a_fixed_build:
+    holds: "NOT Generator_p_nom_extendable AND Generator_p_nom > 0 AND Generator_p_nom < inf"
+    where: "Generator_marginal_cost_curve"
+    description: >-
+      a generator's cost curve is given per unit of a fixed, positive, finite
+      `p_nom`, which scales it to output. PyPSA refuses an extendable unit and
+      a zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes
+      a negative one, which the file does not state
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
@@ -330,6 +391,8 @@ assumptions:
 | $`\omega`$ | `CVaR_omega` (scalar), data another file declares |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$, data another file declares |
 | $`\gamma`$ | `Generator_maintenance_pu` over $`\mathcal{G} \times \Xi`$, data another file declares |
+| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, data another file declares |
+| $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{G}`$, data another file declares |
 | $`\mathrm{w}^{y}`$ | `period_weight_objective` over $`\mathcal{Y}`$, data another file declares |
 | $`\pi`$ | `scenario_weight` over $`\Xi`$, data another file declares |
 | $`\mathrm{w}`$ | `snapshot_weightings_objective` over $`\mathcal{T}`$, data another file declares |
@@ -349,6 +412,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
 | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N}`$ — network nodes |
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I}`$ — generating units, each on one bus |
@@ -391,11 +455,15 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator that is active in the snapshot's period: every unit-commitment row's set |
+| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar) — linopy's choice of method for all generator cost curves at once (`method="auto"`): the segment lines where every curve is convex and no generator with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Generator-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
+| $`\mathrm{curve}`$ | `Generator_marginal_cost_curve` over $`\mathcal{G}`$ — a generator that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{bend}`$ | `Generator_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{G}`$ — a breakpoint where a generator's cost curve gets less steep: the segment after it rises less per unit of output than the one before |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
+| $`C^{\mathrm{curve}}`$ | `Generator_marginal_cost_piecewise` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-marginal_cost_piecewise` — the running cost of a generator that pays along a curve, held above the curve |
 | $`N`$ | `Generator_n_mod` over $`\mathcal{G}`$ — `Generator-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`p`$ | `Generator_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-p` — output of a generator in a snapshot |
 | $`P`$ | `Generator_p_nom_ext` over $`\mathcal{G}`$ — `Generator-p_nom` — nominal power where it is a decision, for a generator that is active. A fixed build is the parameter of the same PyPSA name |
@@ -413,7 +481,14 @@ assumptions:
 | $`\widehat{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_committed` over $`\mathcal{G} \times \Xi`$ — the build a committed unit's ramp rows are taken against: one module where the build is modular, since its status counts modules, and the given build otherwise (`constraints.py:1131-1134`) |
 | $`\widetilde{\mathrm{p}}^{\mathrm{nom}}`$ | `Generator_p_nom_effective` over $`\mathcal{G} \times \Xi`$ — the build a generator's limits are taken against: the chosen one where it is extendable, the given one otherwise |
 | $`\mathit{Generator\_primary\_energy}`$ | `Generator_primary_energy` over $`\mathcal{L} \times \Xi`$ |
+| $`C^{\mathrm{run}}`$ | `Generator_running_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — what a generator's output costs in a snapshot: the value read off its piecewise curve where it has one, and its linear `marginal_cost` otherwise. A curve replaces the linear cost, as PyPSA drops the unit from that term (`optimize.py:333-348`) |
 | $`\mathit{Generator\_tech\_capacity\_expansion}`$ | `Generator_tech_capacity_expansion` over $`\mathcal{L}`$ |
+
+#### Notation
+
+| Symbol | Meaning |
+|---|---|
+| $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
 
 #### Conditions
 
@@ -423,7 +498,31 @@ assumptions:
 \mathrm{on}^{\mathrm{com}}_{g,t} \iff \mathrm{com}_{g} \wedge \mathrm{on}_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`Generator_marginal_cost_as_lp`**
+
+```math
+\mathrm{lp} \iff \lvert \{ g \in \mathcal{G} \,:\, \mathrm{curve}_{g} \wedge \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bend}_{b,g} \} \rvert > 0 \} \rvert = 0 \wedge \lvert \{ g \in \mathcal{G} \,:\, \mathrm{curve}_{g} \wedge \mathrm{com}_{g} \} \rvert = 0
+```
+
+**`Generator_marginal_cost_curve`**
+
+```math
+\mathrm{curve}_{g} \iff \lvert \{ b \in \mathcal{B} \,:\, \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \} \rvert > 0 \wedge \mathrm{act}_{g} \qquad \forall\, g \in \mathcal{G}
+```
+
+**`Generator_marginal_cost_curve_bends_down`**
+
+```math
+\mathrm{bend}_{b,g} \iff \mathrm{p}^{\mathrm{curve}}_{b,g} \text{ is defined} \wedge \mathrm{p}^{\mathrm{curve}}_{b - 1,g} \text{ is defined} \wedge \mathrm{p}^{\mathrm{curve}}_{b + 1,g} \text{ is defined} \wedge \left( \mathrm{C}^{\mathrm{curve}}_{b,g} - \mathrm{C}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{p}^{\mathrm{curve}}_{b,g} \right) > \left( \mathrm{C}^{\mathrm{curve}}_{b \boxplus_{0} 1,g} - \mathrm{C}^{\mathrm{curve}}_{b,g} \right) \cdot \left( \mathrm{p}^{\mathrm{curve}}_{b,g} - \mathrm{p}^{\mathrm{curve}}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G}
+```
+
 #### Variable domains
+
+**`Generator_marginal_cost_piecewise`**
+
+```math
+C^{\mathrm{curve}}_{g,\xi,t} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{curve}_{g} \wedge \mathrm{on}_{g,t}
+```
 
 **`Generator_n_mod`**
 
@@ -478,7 +577,7 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 **`Generator_opex`**
 
 ```math
-\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot \mathrm{c}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot p_{g,\xi,t} \cdot \mathrm{c}^{(2)}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} C^{\mathrm{run}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot p_{g,\xi,t} \cdot \mathrm{c}^{(2)}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Generator_p_nom_committed`**
@@ -497,6 +596,12 @@ P_{g} \in \mathbb{R} \qquad \forall\, g \in \mathcal{G} \,:\, \mathrm{ext}_{g} \
 
 ```math
 \mathit{Generator\_primary\_energy}_{l,\xi} = \sum_{g \in \mathcal{G}} \sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{\mathrm{gc}}_{l,\xi,t} \cdot \mathrm{a}_{g,l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi
+```
+
+**`Generator_running_cost`**
+
+```math
+C^{\mathrm{run}}_{g,\xi,t} = \begin{cases} C^{\mathrm{curve}}_{g,\xi,t} & \text{if } \mathrm{curve}_{g} \\ p_{g,\xi,t} \cdot \mathrm{c}_{g,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Generator_tech_capacity_expansion`**
@@ -574,6 +679,12 @@ p_{g,\xi,t} = \mathrm{p}^{\mathrm{set}}_{g,\xi,t} \qquad \forall\, g \in \mathca
 ```
 
 #### Assumptions
+
+**`Generator_marginal_cost_curve_on_a_fixed_build`**
+
+```math
+\neg \mathrm{ext}_{g} \wedge \mathrm{p}^{\mathrm{nom}}_{g,\xi} > 0 \wedge \mathrm{p}^{\mathrm{nom}}_{g,\xi} < \infty \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \mathrm{curve}_{g}
+```
 
 **`Generator_marginal_cost_quadratic_without_risk_preference`**
 
