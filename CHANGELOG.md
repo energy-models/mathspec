@@ -12,6 +12,9 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a constraint reads a curve with curve(x=, y=) ([#PR](https://github.com/energy-models/mathspec/pull/PR))
+  - A parameter declares `breakpoints: <axis>` to hold one curve per coordinate, and an expression reads its breakpoint dimension as `<parameter>.breakpoint` and its x values as `<parameter>.<axis>`.
+  - The PyPSA example states its marginal cost curves as `curve` constraints over one `Generator_marginal_cost_curve` parameter. `Generator_marginal_cost_curve_cost`, the `breakpoint` dimension and the `piecewise:` entries are gone, and the condition `Generator_marginal_cost_curve` is now `Generator_has_marginal_cost_curve`.
 - docs(pypsa): the file states a piecewise marginal cost ([#988](https://github.com/energy-models/mathspec/pull/988))
 - feat: an incremental curve takes an integer gate ([#987](https://github.com/energy-models/mathspec/pull/987))
 - docs(pypsa): the reference pins PyPSA at 72a12418 ([#986](https://github.com/energy-models/mathspec/pull/986))

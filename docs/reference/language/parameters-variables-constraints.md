@@ -275,12 +275,13 @@ constraints:
 `load` has one value per snapshot, and `discount_rate` has one value only,
 because `dims: []` declares a scalar.
 
-| Key       | What it sets                                                     | Default   |
-| --------- | ---------------------------------------------------------------- | --------- |
-| `dims`    | required. The dimensions it is indexed over. `[]` means a scalar |           |
-| `dtype`   | `float`, `int`, `bool` or `str`                                  | `float`   |
-| `missing` | what a missing row of the data means ([`missing`](#missing))     | `refused` |
-| `where`   | the condition that limits its coordinates ([`where`](#where))    | `null`    |
+| Key           | What it sets                                                                                  | Default   |
+| ------------- | --------------------------------------------------------------------------------------------- | --------- |
+| `dims`        | required. The dimensions it is indexed over. `[]` means a scalar                              |           |
+| `dtype`       | `float`, `int`, `bool` or `str`                                                               | `float`   |
+| `missing`     | what a missing row of the data means ([`missing`](#missing))                                  | `refused` |
+| `where`       | the condition that limits its coordinates ([`where`](#where))                                 | `null`    |
+| `breakpoints` | the x axis of one curve per coordinate ([`curve`](piecewise.md#a-parameter-with-breakpoints)) | `null`    |
 
 With data attached, a tool requires the column to match the `dtype`:
 

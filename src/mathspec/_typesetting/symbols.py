@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from mathspec._curve import BREAKPOINT
 from mathspec._piecewise import Emitted
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._typesetting.format import NOTATIONS
@@ -65,7 +66,7 @@ def _derive_name_symbol(name: str, declared: frozenset[str], fmt: Format, *, upr
     """
     head, _, tail = name.partition('_')
     if tail and (len(head) == 1 or head in _GREEK or head in declared):
-        return fmt.superscript(_word(head, fmt, upright=upright), fmt.upright(tail.replace('_', ',')))
+        return fmt.superscript(_word(head, fmt, upright=upright), fmt.upright(tail.replace('_', ',').replace('.', ',')))
     return _word(name, fmt, upright=upright)
 
 
@@ -169,7 +170,7 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
 
 
 def _index_candidates(dim: str) -> list[str]:
-    alias = _INDEX_ALIASES.get(dim)
+    alias = _INDEX_ALIASES.get(dim) or ('b' if dim.endswith(f'.{BREAKPOINT}') else None)
     letters = [c for c in dim.lower() if c.isalpha()]
     return [*([alias] if alias else []), *letters, *string.ascii_lowercase, dim]
 

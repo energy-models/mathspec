@@ -35,8 +35,10 @@ from mathspec._expression_parser import (
 from mathspec._operators import (
     AMOUNTS,
     BUILTINS,
+    CURVE,
     EDGE_WRAP,
     call_shape_error,
+    curve_outside_a_constraint,
     edge_error,
     unknown_operator_message,
 )
@@ -224,6 +226,9 @@ class ExpressionResolver:
         faults reports both. A formal anywhere under the call builds nothing
         and refuses nothing.
         """
+        if node.name == CURVE:
+            self.errors.append(curve_outside_a_constraint(self.context))
+            return None
         if node.name not in BUILTINS:
             self.errors.append(f'{self.context}: {unknown_operator_message(node.name)}')
             return None

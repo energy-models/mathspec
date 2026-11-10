@@ -885,7 +885,8 @@ class Walk:
         prints as the function of it that it is, and the bounded link's own
         sign says which side; beside more, the point lies on the locus plus
         the cone the signs span, ``{0}`` for a pinned coordinate and a
-        half-line for a bounded one.
+        half-line for a bounded one. A curve a constraint wrote prints as the
+        function of its x link, whatever its sign.
         """
         entry = self.program.piecewise[name]
         frame = list(entry.frame)
@@ -893,6 +894,8 @@ class Walk:
         points, values = zip(*(self._link(link, ctx) for link in entry.links), strict=True)
         locus = self._locus(entry, list(values), entry.where if entry.ragged else None, ctx)
         bounded = [i for i, link in enumerate(entry.links) if link.sign != '==']
+        if entry.from_curve:
+            bounded = [1]
         if not bounded:
             left, right = self._tuple(list(points)), f'{self._op("in")} {locus}'
         elif len(entry.links) == 2:

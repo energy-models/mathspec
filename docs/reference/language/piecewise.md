@@ -11,6 +11,8 @@ that builds the model (an [engine](../glossary.md#tool)) reads the spec. An
 `sos:` entry lets only one
 member of a variable, or only two neighbouring members, be non-zero. A
 `piecewise:` entry ties two or more quantities to one piecewise-linear curve.
+A [`curve`](#curve) term in a constraint ties one quantity to a curve of
+another, and loads as the `piecewise:` entry it states.
 
 [`Spec.expand()`](../spec.md#mathspec.spec.Spec.expand) replaces each
 formulation entry with the variables, constraints and assumptions it states,
@@ -906,3 +908,157 @@ mathspec suggests the rewrite: `method: incremental`, or a binary gate.
       for a spec printed before and after its expansion.
     - [Formulations written out](../reading.md#formulations-written-out) for the
       program of an expansion.
+
+## `curve`
+
+A `curve(x=..., y=...)` term in a constraint reads a curve as a function of
+`x`. It takes the values of the curve from a parameter that declares
+`breakpoints:`. In the spec below, each generator burns fuel along its own
+curve of power:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+parameters:
+  fuel_curve: { dims: [generator], breakpoints: power }
+variables:
+  power: { dims: [generator], bounds: { lower: 0 } }
+  fuel: { dims: [generator], bounds: { lower: 0 } }
+constraints:
+  fuel_use:
+    dims: [generator]
+    expression: fuel == curve(x=power, y=fuel_curve)
+objective:
+  sense: minimize
+  expression: sum(fuel, over=generator)
+```
+
+```math
+\mathit{fuel}_{g} = \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{fuel}^{\mathrm{curve,power}}_{b,g} \text{ is defined}}(\mathrm{fuel}^{\mathrm{curve,power}}_{b,g},\ \mathrm{fuel}^{\mathrm{curve}}_{b,g})(\mathit{power}_{g}) \qquad \forall\, g \in \mathcal{G}
+```
+
+The typesetter prints the curve as a function of `power`, through the
+breakpoints that the data of each generator has.
+
+| Keyword  | Required | Default     | What it sets                                                                                 |
+| -------- | -------- | ----------- | -------------------------------------------------------------------------------------------- |
+| `x`      | yes      |             | The quantity the curve is read at: any affine expression over the `dims:` of the constraint. |
+| `y`      | yes      |             | The parameter that declares `breakpoints:`, whose rows are the curve.                        |
+| `active` | no       |             | The variable that switches the curve on and off, as [`activity`](#activity) does.            |
+| `method` | no       | `adjacency` | The rows that the expansion writes, quoted, as `method='incremental'` ([`method`](#method)). |
+
+### A parameter with `breakpoints:`
+
+A parameter that declares `breakpoints: <axis>` holds one curve per coordinate
+of its `dims:`. The axis names the x axis of the curve. Each row of the data
+is one breakpoint, with the x value in the column of the axis and the value of
+the parameter beside it. A curve runs over the rows its data has, so curves may
+differ in length.
+
+An expression or a condition reads two parts of the curve parameter `Y`,
+each written with a dot after its name:
+
+| Name           | What it is                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `Y.breakpoint` | a dimension of type `int`, declared ordered, which numbers the breakpoints of each curve in order of x |
+| `Y.<axis>`     | a parameter over the `dims:` of `Y` and `Y.breakpoint`: the x value at each breakpoint                 |
+
+`Y` itself is then over `Y.breakpoint` too. You write `Y.breakpoint` wherever
+a dimension name stands, such as `over=`, `along=` or `dims:`, and `Y.<axis>`
+wherever a parameter name stands. With data attached, a tool reads the rows of
+`fuel_curve` as `fuel_curve.power` and `fuel_curve`, both over
+`[fuel_curve.breakpoint, generator]`. A generator with no rows has no curve,
+so a condition reads `count(fuel_curve.power, over=fuel_curve.breakpoint) > 0`
+as "this generator has a curve".
+
+A `breakpoints:` parameter takes `float` or `int` values and no `missing:`
+key, because a row past the end of a curve is absent. The axis may not be
+named `breakpoint`, which names the dimension. mathspec refuses a dot after any
+other name, or after the name of a parameter without `breakpoints:`:
+
+```text
+conditions.has_curve: 'fuel_curve.fuel' is not part of the curve 'fuel_curve'. Write 'fuel_curve.power' for its x values, or 'fuel_curve.breakpoint' for its breakpoints.
+```
+
+### What a curve term loads as
+
+A constraint with a `curve` term loads as the `piecewise:` entry it states,
+under the name of the constraint. The entry has two links. The link `x` ties
+the `x` expression to `Y.<axis>`. The link `y` ties the rest of the
+constraint to the values of the parameter, with the sign of the comparison.
+The constraint `fuel_use` above is the entry below:
+
+```yaml
+piecewise:
+  fuel_use:
+    along: fuel_curve.breakpoint
+    dims: [generator]
+    where: fuel_curve.power
+    links:
+      x: [power, fuel_curve.power]
+      y: [fuel, fuel_curve]
+```
+
+Its `where:` is the `where:` of the constraint and `fuel_curve.power`, so each
+curve stops where its rows stop ([curves of unequal length](#curves-of-unequal-length)).
+The expansion writes the rows of the entry, such as `fuel_use_x` and
+`fuel_use_y`, and no row named `fuel_use`. mathspec checks the entry as it
+checks any `piecewise:` entry, so a refusal there names the links `x` and `y`.
+
+Other terms may stand beside the curve, and mathspec moves them to the other
+side. The comparison sets the sign of the link `y`:
+
+| The constraint                    | The link `y`          |
+| --------------------------------- | --------------------- |
+| `fuel == curve(x=power, y=c)`     | `[fuel, c]`           |
+| `fuel >= curve(x=power, y=c) + 5` | `[fuel - 5, c, ">="]` |
+| `curve(x=power, y=c) <= fuel`     | `[fuel, c, ">="]`     |
+
+With `active=` and `method=`, the curve is gated and written out as under
+those keys of a `piecewise:` entry:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str }
+parameters:
+  cost_curve: { dims: [generator], breakpoints: p }
+variables:
+  p: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  op_cost: { dims: [snapshot, generator] }
+  running: { dims: [snapshot, generator], domain: binary }
+constraints:
+  cost:
+    dims: [snapshot, generator]
+    expression: op_cost >= curve(x=p, y=cost_curve, active=running, method='incremental')
+objective:
+  sense: minimize
+  expression: sum(op_cost)
+```
+
+```math
+\mathit{op\_cost}_{g,t} \ge \mathit{running}_{g,t} \cdot \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{cost\_curve\_p}_{b,g} \text{ is defined}}(\mathrm{cost\_curve\_p}_{b,g},\ \mathrm{cost\_curve}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+### What a curve term refuses
+
+A curve term ties one quantity to one curve. For a point on one curve that
+three quantities share, such as the power, fuel and heat of a CHP plant
+(combined heat and power), write a `piecewise:` entry with three links.
+
+mathspec refuses at load:
+
+- more than one `curve` term in a constraint;
+- a `curve` term inside another term, such as `2 * curve(...)`;
+- a `curve` term outside a constraint, such as in a named expression or the
+  objective;
+- `method='lp'` under `==`, and `active=` under `method='lp'` or
+  `method='convex'`.
+
+For a `curve` term in a named expression, mathspec prints:
+
+```text
+Named expression 'fuel_used': curve(...) is a term of a constraint, which states the curve as rows, and it stands here outside one. Declare a variable v, write v == curve(x=<expression>, y=<parameter>[, active=<variable>][, method='<method>']) under constraints:, and read v here.
+```
+
+mathspec suggests the rewrite: a variable, tied to the curve by a constraint.

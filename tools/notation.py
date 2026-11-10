@@ -135,7 +135,9 @@ FAMILIES: dict[str, dict[str, str]] = {
         'history': 'Window with a parameter width',
         'seasonal_window': 'Window within a group',
     },
-    'Piecewise curves': {},
+    'Piecewise curves': {
+        'heat_cap': 'Curve term in a constraint',
+    },
     'Special ordered sets': {
         'adjacent': 'Special ordered set of type 2',
     },

@@ -780,7 +780,7 @@ def _derived(node: Expression, spec: Spec) -> frozenset[str]:
     if isinstance(node, Constant):
         return frozenset()
     if isinstance(node, ParameterReference):
-        return frozenset({**spec.parameters, **spec.given.parameters}[node.name].dims)
+        return frozenset({**spec.program.parameters, **spec.given.parameters}[node.name].dims)
     if isinstance(node, VariableReference):
         return frozenset({**spec.variables, **spec.given.variables, **spec.given.expressions}[node.name].dims or ())
     if isinstance(node, Dual):

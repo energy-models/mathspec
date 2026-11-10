@@ -12,6 +12,7 @@
 \item[{$\mathcal{B}$}] index $b$ --- \texttt{bp}
 \item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{connection} is \texttt{absent} where the data has no row
+\item[{$\mathcal{H}$}] index $h$ --- \texttt{heat\_curve.breakpoint} --- the breakpoints of 'heat\_curve', numbered in order of p
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}$
@@ -28,6 +29,8 @@
 \item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{growth}$}] \texttt{growth} (scalar)
+\item[{$\mathrm{heat}^{\mathrm{curve}}$}] \texttt{heat\_curve} over $\mathcal{G} \times \mathcal{H}$, \texttt{absent} where the data has no row
+\item[{$\mathrm{heat}^{\mathrm{curve,p}}$}] \texttt{heat\_curve.p} over $\mathcal{G} \times \mathcal{H}$, \texttt{absent} where the data has no row --- the p at each breakpoint of 'heat\_curve'
 \item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
 \item[{$\mathrm{link\_eff}$}] \texttt{link\_eff} over $\mathcal{U} \times \mathcal{G}$, only where $\left( u,\ g \right) \in \mathrm{connection}$, $1$ where the data has no row
@@ -183,7 +186,8 @@
 \text{hull\_curve} && \left( p_{g,t},\ \mathit{fuel}_{g,t} \right) & \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{lp\_curve} && \mathit{fuel}_{g,t} & \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{module\_curve} && \mathit{fuel}_{g,t} & \ge \left( \mathit{units}_{g} \cdot \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) + \min(\mathit{units}_{g},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) - \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) \right) \right)(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
-\text{ramp\_curve} && \mathit{heat}_{g,t} & \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\text{ramp\_curve} && \mathit{heat}_{g,t} & \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
+\text{heat\_cap} && \mathit{heat}_{g,t} + \mathit{spill}_{t} & \le \begin{cases} \mathit{warm}_{g,t} & \text{if } \mathrm{is\_flexible}_{g} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined}}(\mathrm{heat}^{\mathrm{curve,p}}_{g,h},\ \mathrm{heat}^{\mathrm{curve}}_{g,h})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 \end{align}
 
 \paragraph{Assumptions}
@@ -214,7 +218,9 @@
 \text{ramp\_curve\_complete} && \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} &  && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \\
 \text{ramp\_curve\_increasing} && \mathrm{bp\_x}_{b \boxminus_{0} 1,g} & < \mathrm{bp\_x}_{b,g} && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \\
 \text{ramp\_curve\_curvature} && \left( \mathrm{bp\_heat}_{b,g} - \mathrm{bp\_heat}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) & \ge \left( \mathrm{bp\_heat}_{b \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1 \\
-\text{ramp\_curve\_breakpoints} && \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert & \ge 2 && \forall\, g \in \mathcal{G}
+\text{ramp\_curve\_breakpoints} && \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert & \ge 2 && \forall\, g \in \mathcal{G} \\
+\text{heat\_cap\_complete} && \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \wedge \mathrm{heat}^{\mathrm{curve}}_{g,h} \text{ is defined} &  && \forall\, g \in \mathcal{G},\ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \\
+\text{heat\_cap\_contiguous} && \lvert \{ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \wedge \neg \left( \mathrm{heat}^{\mathrm{curve,p}}_{g,h - 1} \text{ is defined} \right) \} \rvert & = 1 && \forall\, g \in \mathcal{G} \,:\, \lvert \{ h \in \mathcal{H} \,:\, \mathrm{heat}^{\mathrm{curve,p}}_{g,h} \text{ is defined} \} \rvert > 0
 \end{align}
 
 \end{document}

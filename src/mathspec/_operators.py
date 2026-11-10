@@ -99,6 +99,18 @@ BUILTINS: dict[str, Builtin] = {
 
 BUILTIN_NAMES = frozenset(BUILTINS)
 
+CURVE = 'curve'
+"""The term a constraint reads a curve with. It is no operator: the constraint loads as the ``piecewise:`` entry it states."""
+CURVE_USAGE = "curve(x=<expression>, y=<parameter>[, active=<variable>][, method='<method>'])"
+
+
+def curve_outside_a_constraint(context: str) -> str:
+    """The refusal for a ``curve`` term anywhere but on one side of a constraint, as the file wrote it."""
+    return (
+        f'{context}: curve(...) is a term of a constraint, which states the curve as rows, and it stands here outside '
+        f'one. Declare a variable v, write v == {CURVE_USAGE} under constraints:, and read v here.'
+    )
+
 
 class Amount(NamedTuple):
     """What the errors of an operator that steps along an axis say about the amount it takes."""

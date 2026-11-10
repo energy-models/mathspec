@@ -49,6 +49,7 @@ parameters:
   bp_y: { dims: [generator, bp], missing: 0 }
   bp_heat: { dims: [generator, bp] }
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
+  heat_curve: { dims: [generator], breakpoints: p } # a curve per generator in its own rows, which brings its breakpoint set and its x values
 
 variables:
   p: # both bounds, and a where with all three connectives
@@ -195,6 +196,9 @@ conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 
 constraints:
+  heat_cap: # a curve term beside another term, read as the rest of the row against the curve as a function of x
+    dims: [snapshot, generator]
+    expression: heat + spill <= curve(x=p, y=heat_curve, active=warm)
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
     expression: spend <= budget

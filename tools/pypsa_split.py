@@ -20,10 +20,11 @@ reads each hub without adding to it, with its description, so the terms always
 have a reader, and a new component is one new fragment. The reader of
 `total_cost` also sets the objective. A named condition goes to the topic its
 name names, as any entry does, and a fragment that reads another topic's
-named condition reads it under `given: conditions:`. A `piecewise:` entry
-reads its gate and its breakpoints only where it declares them, so a gated
-curve, every curve over the same breakpoints, and the breakpoint parameters
-go to the topic of the gate variable.
+named condition reads it under `given: conditions:`. A `piecewise:` entry,
+or a constraint with a `curve` term, reads its gate and its breakpoints only
+where it declares them, so a gated curve, every curve over the same
+breakpoints, the breakpoint parameters and the conditions that read them go
+to the topic of the gate variable.
 
 `merge` then writes each hub as the file does, so `check` is one comparison:
 the merged fragments and the one file have one canonical form.
@@ -45,6 +46,9 @@ import yaml
 
 from mathspec import merge, to_spec
 from mathspec._canonical import canonical_yaml
+from mathspec._curve import breakpoint_dimension, x_values
+from mathspec._expression_parser import FunctionCallNode, nodes, parse_expression
+from mathspec._operators import CURVE
 from mathspec._piecewise import gate_of
 from mathspec.errors import LanguageError
 
@@ -204,6 +208,31 @@ def _breakpoints(curve: Mapping[str, Any]) -> list[str]:
     return [link['values'] if isinstance(link, dict) else link[1] for link in curve['links'].values()]
 
 
+def _curves(data: Mapping[str, Any]) -> dict[str, tuple[list[str], str | None]]:
+    """Each `piecewise:` entry and each constraint with a `curve` term: the parameters of its breakpoints, and its gate."""
+    curves = {name: (_breakpoints(entry), entry.get('activity')) for name, entry in data.get('piecewise', {}).items()}
+    for name, entry in data.get('constraints', {}).items():
+        calls = [
+            node
+            for node in nodes(parse_expression(entry['expression']))
+            if isinstance(node, FunctionCallNode) and node.name == CURVE
+        ]
+        for call in calls:
+            active = call.kwargs.get('active')
+            curves[name] = ([str(call.kwargs['y'])], None if active is None else str(active))
+    return curves
+
+
+def _reads_curve(entry: object, parameters: Mapping[str, Any]) -> set[str]:
+    """The `breakpoints:` parameters *entry* reads, by name or by the dimension or x values each brings."""
+    tokens = set(IDENT.findall(entry['condition'] if isinstance(entry, dict) else str(entry)))
+    return {
+        name
+        for name, p in parameters.items()
+        if 'breakpoints' in p and tokens & {name, breakpoint_dimension(name), x_values(name, p['breakpoints'])}
+    }
+
+
 def _entry(entry: object) -> dict[str, Any]:
     """A named expression as a mapping, however the file wrote it."""
     return dict(entry) if isinstance(entry, dict) else {'expression': entry}
@@ -228,15 +257,22 @@ class Model:
             self.shares[hub] = dict(sorted(by_topic.items()))
         #: term -> the hub it adds to.
         self.terms = {term: hub for hub, by_topic in self.shares.items() for term in by_topic.values()}
-        curves = {name: _breakpoints(entry) for name, entry in self.data.get('piecewise', {}).items()}
+        curves = _curves(self.data)
         gated = {
-            values: topic(gate_of(entry['activity']) or name)
-            for name, entry in self.data.get('piecewise', {}).items()
-            if 'activity' in entry
-            for values in curves[name]
+            values: topic(gate_of(activity) or name)
+            for name, (breakpoints, activity) in curves.items()
+            if activity is not None
+            for values in breakpoints
         }
-        #: a curve or breakpoint parameter -> the topic of the gate of a curve over those breakpoints.
-        self.with_gate = gated | {name: gated[v] for name, values in curves.items() for v in values if v in gated}
+        readers = {
+            name: gated[curve]
+            for name, entry in self.data.get('conditions', {}).items()
+            for curve in set(gated) & _reads_curve(entry, self.data['parameters'])
+        }
+        #: a curve, its breakpoint parameter or a condition reading one -> the topic of the gate of a curve over them.
+        self.with_gate = (
+            gated | readers | {name: gated[v] for name, (values, _) in curves.items() for v in values if v in gated}
+        )
         frames = self.frames()
         self.sums = {
             hub: {'dims': list(frames[hub]), 'description': _entry(self.data['expressions'][hub]).get('description')}

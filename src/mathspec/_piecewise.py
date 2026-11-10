@@ -19,10 +19,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 import mathspec._sos as sos
-from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, parse_expression
+from mathspec._curve import curve_entries
+from mathspec._expression_parser import NAME, REFERENCE, ColumnsNode, FunctionCallNode, NameNode, parse_expression
 from mathspec._expression_resolver import ExpressionResolver
 from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
 from mathspec.errors import DimensionError, SchemaError
@@ -75,7 +76,7 @@ def _all_of(*clauses: str | None) -> str | None:
 
 def _operand(mask: str) -> str:
     """The mask as one operand of a connective: a bare name as it is, anything else parenthesised."""
-    return mask if re.fullmatch(NAME, mask) else f'({mask})'
+    return mask if re.fullmatch(REFERENCE, mask) else f'({mask})'
 
 
 def _shifted(over: str, mask: str, offset: int) -> str:
@@ -1045,16 +1046,19 @@ def expand_piecewise(spec: Spec) -> Spec:
     set of its own ([`mathspec._sos.emit`][] is where they are spelled).
     Each entry's rows and names are read off the program *spec* lowered to.
     """
-    if not spec.piecewise:
+    entries = {**spec.piecewise, **cast('dict[str, PiecewiseSpec]', curve_entries(spec))}
+    if not entries:
         return spec
     program = spec.program
     raw = spec.model_dump()
     raw.setdefault('variables', {})
-    raw.setdefault('constraints', {})
-    for name, pw in spec.piecewise.items():
+    constraints = sos.section(raw, 'constraints')
+    for name in entries.keys() - spec.piecewise.keys():
+        del constraints[name]
+    for name, pw in entries.items():
         _Expansion(spec, raw, name, pw, program.piecewise[name]).expand()
-    raw['piecewise'].clear()
-    for name, pw in spec.piecewise.items():
+    raw.pop('piecewise', None)
+    for name, pw in entries.items():
         if pw.method == 'adjacency':
             sos.emit(raw, name)
     return Spec.model_validate(raw)

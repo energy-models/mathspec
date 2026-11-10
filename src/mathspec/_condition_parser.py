@@ -25,6 +25,7 @@ from mathspec._expression_parser import (
     ARITHMETIC,
     COLUMNS,
     NAME,
+    REFERENCE,
     ArithmeticNode,
     KeywordNode,
     NameNode,
@@ -178,7 +179,7 @@ def _build_condition_grammar() -> pp.ParserElement:
         # pyrefly: ignore[implicit-any-lambda]
     ).set_parse_action(lambda t: UnresolvedComparisonNode(t[0], t[1], t[2]))
     # pyrefly: ignore[implicit-any-lambda]
-    existence = name.copy().set_parse_action(lambda t: NameNode(t[0]))
+    existence = pp.Regex(REFERENCE).set_parse_action(lambda t: NameNode(t[0]))
 
     atom = (
         true_lit
