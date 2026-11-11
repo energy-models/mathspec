@@ -102,7 +102,7 @@ parameters:
       (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
       annuity over `lifetime` at `discount_rate`, times `nyears`, where
       `overnight_cost` is given, and `capital_cost` where it is not. Both add
-      `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`)
+      `fom_cost` (`components.py:1157-1178`, `costs.py:102-203`)
     dims: [scenario, transformer]
   Transformer_s_nom_set:
     description: a given nominal apparent power for an extendable transformer. One without a value has no row here
@@ -399,7 +399,7 @@ constraints:
 |---|---|
 | $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$ — whether a transformer is active in a snapshot's period. It is PyPSA's `active`, data prep |
 | $`\mathrm{act}^{\sigma}`$ | `Transformer_active_asset` over $`\mathcal{M}`$ — whether a transformer is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
-| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`) |
+| $`\mathrm{c}^{\mathrm{cap},\sigma}`$ | `Transformer_capital_cost` over $`\Xi \times \mathcal{M}`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1157-1178`, `costs.py:102-203`) |
 | $`\mathrm{W}^{\sigma}`$ | `Transformer_capital_weight` over $`\mathcal{M}`$ — the sum of period weights a transformer is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{x}^{\sigma}`$ | `Transformer_cycle_weight` over $`\mathcal{C} \times \mathcal{Y} \times \mathcal{M}`$, `absent` where the data has no row — the transformer's effective series reactance, `x` times its tap ratio, signed by its orientation in the cycle. It is PyPSA's `x_pu_eff`, the cycle basis, data prep. A transformer in no cycle has no row. It is the same in every scenario, as a line's |
 | $`\overline{\ell}^{\sigma}`$ | `Transformer_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`), data prep. Its `r_pu_eff` is the resistance over the given `s_nom` times the tap ratio |

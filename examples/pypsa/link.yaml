@@ -179,7 +179,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1176-1197`, `costs.py:102-203`)
+      (`components.py:1157-1178`, `costs.py:102-203`)
     dims: [scenario, link]
   Link_p_nom_set:
     description: a given nominal power for an extendable link. One without a value has no row here
@@ -200,7 +200,7 @@ parameters:
       periods the link is active in. A link outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Link_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:905-914`)
+      (`components.py:1182-1200`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, link]
     missing: absent
   Link_tech_capacity_weight:
