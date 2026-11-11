@@ -163,8 +163,9 @@ assumptions:
 ```
 
 At load, mathspec decides an assumption whose every test is a bare variable
-or constraint name. It reads each variable as existing where its `where:`
-holds, and each constraint as having a row where its `where:` holds. If
+or constraint name. It reads each variable as existing inside its
+[`in:`](parameters-variables-constraints.md#in-on-a-variable) where its
+`where:` holds, and each constraint as having a row where its `where:` holds. If
 `p_upper_committable` had `where: committable AND NOT extendable`, no
 constraint would bound a unit that is both extendable and committable, and
 mathspec prints:

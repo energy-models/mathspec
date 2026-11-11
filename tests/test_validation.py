@@ -2109,6 +2109,15 @@ class TestAssumptions:
                 {'holds': 's', 'where': 'p'},
                 id='two-variables-whose-where-name-each-other',
             ),
+            pytest.param(
+                {
+                    'relations.lk.missing': 'absent',
+                    'variables.p.in': ['lk'],
+                    'variables.s': {'dims': ['g'], 'in': ['lk']},
+                },
+                {'holds': 'p', 'where': 's'},
+                id='two-variables-in-one-relation',
+            ),
         ],
     )
     def test_an_assumption_on_rows_the_conditions_cannot_fault_loads(self, patch, entry):
@@ -2145,6 +2154,12 @@ class TestAssumptions:
                 {'holds': 'p', 'where': 'q'},
                 "leave a gap where tag is 'x', flag is false.",
                 id='a-gap-through-two-conditions',
+            ),
+            pytest.param(
+                {'relations.lk.missing': 'absent', 'variables.p.in': ['lk']},
+                {'holds': 'p'},
+                'leave a gap where lk has no row.',
+                id='a-variable-whose-in-leaves-a-row-out',
             ),
             pytest.param(
                 {'constraints.c': {'dims': ['g'], 'expression': 'p <= k'}},
