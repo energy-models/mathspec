@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): relation rows may index an entry ([#980](https://github.com/energy-models/mathspec/pull/980))
+- docs(pypsa): the reference pins PyPSA at 3625c816 ([#996](https://github.com/energy-models/mathspec/pull/996))
 - docs(pypsa): the file states a piecewise marginal cost ([#988](https://github.com/energy-models/mathspec/pull/988))
 - feat: an incremental curve takes an integer gate ([#987](https://github.com/energy-models/mathspec/pull/987))
 - docs(pypsa): the reference pins PyPSA at 72a12418 ([#986](https://github.com/energy-models/mathspec/pull/986))

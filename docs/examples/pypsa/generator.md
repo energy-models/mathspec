@@ -277,7 +277,7 @@ conditions:
     description: >-
       a generator that pays along a piecewise `marginal_cost` curve: one of
       PyPSA's `active_assets` with curve data (`optimize.py:307`,
-      `piecewise.py:223-250`)
+      `piecewise.py:230-257`)
     condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
   Generator_marginal_cost_curve_bends_down:
     description: >-
@@ -298,7 +298,7 @@ conditions:
       generator with a curve is committable, the incremental rows otherwise.
       PyPSA gates the curves by `Generator-status` where one is committable,
       and linopy states no segment lines under a gate (`optimize.py:314-318`,
-      `piecewise.py:193-217`)
+      `piecewise.py:200-224`)
     condition: >-
       count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
       AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
@@ -372,7 +372,7 @@ assumptions:
     description: >-
       a generator's cost curve is given per unit of a fixed, positive, finite
       `p_nom`, which scales it to output. PyPSA refuses an extendable unit and
-      a zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes
+      a zero, missing or infinite `p_nom` (`piecewise.py:284-304`), and takes
       a negative one, which the file does not state
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
@@ -455,8 +455,8 @@ assumptions:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{on}^{\mathrm{com}}`$ | `Generator_committed` over $`\mathcal{G} \times \mathcal{T}`$ — a committable generator that is active in the snapshot's period: every unit-commitment row's set |
-| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar) — linopy's choice of method for all generator cost curves at once (`method="auto"`): the segment lines where every curve is convex and no generator with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Generator-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:193-217`) |
-| $`\mathrm{curve}`$ | `Generator_marginal_cost_curve` over $`\mathcal{G}`$ — a generator that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:223-250`) |
+| $`\mathrm{lp}`$ | `Generator_marginal_cost_as_lp` (scalar) — linopy's choice of method for all generator cost curves at once (`method="auto"`): the segment lines where every curve is convex and no generator with a curve is committable, the incremental rows otherwise. PyPSA gates the curves by `Generator-status` where one is committable, and linopy states no segment lines under a gate (`optimize.py:314-318`, `piecewise.py:200-224`) |
+| $`\mathrm{curve}`$ | `Generator_marginal_cost_curve` over $`\mathcal{G}`$ — a generator that pays along a piecewise `marginal_cost` curve: one of PyPSA's `active_assets` with curve data (`optimize.py:307`, `piecewise.py:230-257`) |
 | $`\mathrm{bend}`$ | `Generator_marginal_cost_curve_bends_down` over $`\mathcal{B} \times \mathcal{G}`$ — a breakpoint where a generator's cost curve gets less steep: the segment after it rises less per unit of output than the one before |
 
 #### Variables
