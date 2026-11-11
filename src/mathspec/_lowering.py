@@ -39,7 +39,7 @@ from mathspec._resolution import (
     self_existence,
 )
 from mathspec._validation import emitted_name_errors, reference_errors
-from mathspec.errors import SchemaError, did_you_mean, prefixed
+from mathspec.errors import DimensionError, SchemaError, did_you_mean, prefixed
 from mathspec.program import (
     Assumption,
     BooleanLiteral,
@@ -141,8 +141,7 @@ def lower(spec: Spec) -> Program:
     for mname, mdef in spec.conditions.items():
         named, refusals = ns.condition_entry(mname)
         errors.extend(refusals)
-        if named is not None:
-            body = Mask(named.body)
+        if named is not None and (body := _own_frame(Mask(named.body), ns, f"Condition '{mname}'", errors)) is not None:
             conditions[mname] = NamedCondition(body, body.dims, mdef.description)
 
     parameter_masks = _parameter_masks(spec, ns, errors)
@@ -155,10 +154,13 @@ def lower(spec: Spec) -> Program:
         if vdef.domain == 'binary':
             lower_bound, upper_bound = Constant(0.0, dims=()), Constant(1.0, dims=())
         else:
-            lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
+            lower_bound, upper_bound = (
+                None if bound is None else ns.frames.reframed(bound, vdef.dims)
+                for bound in (_bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns))
+            )
         variables[vname] = Variable(
             vdef.dims,
-            where=mask_of(where),
+            where=ns.frames.reframed_mask(mask_of(where), vdef.dims),
             lower=lower_bound,
             upper=upper_bound,
             domain=vdef.domain,
@@ -172,7 +174,14 @@ def lower(spec: Spec) -> Program:
         where = resolve_condition_text(cdef.where, ns, context, errors)
         if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
             lhs, sense, rhs = sides
-            constraints[cname] = Constraint(cdef.dims, lhs, sense, rhs, mask_of(where), description=cdef.description)
+            constraints[cname] = Constraint(
+                cdef.dims,
+                ns.frames.reframed(lhs, cdef.dims),
+                sense,
+                ns.frames.reframed(rhs, cdef.dims),
+                ns.frames.reframed_mask(mask_of(where), cdef.dims),
+                description=cdef.description,
+            )
 
     objective = None
     if spec.objective is not None:
@@ -234,7 +243,7 @@ def lower(spec: Spec) -> Program:
                 dtype=ddef.dtype,
                 one_of=ddef.one_of,
                 ordered=ddef.ordered,
-                over=ddef.over or (),
+                over=ddef.over,
                 description=ddef.description,
             )
             for name, ddef in spec.dimensions.items()
@@ -401,7 +410,8 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
     masks: dict[str, Mask | None] = {}
     for pname in sorted(masked):
         context = f"Parameter '{pname}'"
-        mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
+        resolved = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
+        mask = masks[pname] = ns.frames.reframed_mask(resolved, spec.parameters[pname].dims)
         if mask is None:
             continue
         errors.extend(
@@ -449,7 +459,24 @@ def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[st
     if len(errors) > found:
         return None
     assert holds is not None, 'a condition that read to nothing appended an error'
-    return Assumption(Mask(holds), mask_of(where), entry.description)
+    try:
+        frame = ns.frames.union(Mask(holds).dims, () if where is None else Mask(where).dims, context=context)
+    except DimensionError as refusal:
+        errors.append(ns.refused_dims(refusal))
+        return None
+    framed = ns.frames.reframed_mask(Mask(holds), frame)
+    assert framed is not None
+    return Assumption(framed, ns.frames.reframed_mask(mask_of(where), frame), entry.description)
+
+
+def _own_frame(mask: Mask, ns: Namespace, context: str, errors: list[str]) -> Mask | None:
+    """*mask* with each leaf read over the one frame its leaves combine into, or ``None`` with the refusal appended."""
+    try:
+        frame = ns.frames.union(mask.dims, context=context)
+    except DimensionError as refusal:
+        errors.append(ns.refused_dims(refusal))
+        return None
+    return ns.frames.reframed_mask(mask, frame)
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:

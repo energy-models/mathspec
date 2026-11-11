@@ -16,11 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
+from mathspec._frames import Frames
 from mathspec.errors import DimensionError, case_context
 from mathspec.program import (
     Cases,
     CountComparison,
     DimensionComparison,
+    DimensionDefined,
     DimensionPosition,
     Expression,
     ExpressionComparison,
@@ -31,6 +33,7 @@ from mathspec.program import (
     ParameterComparison,
     ParameterDefined,
     Partition,
+    ReframedCondition,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -214,6 +217,7 @@ def check_spec(spec: Spec, program: Program) -> None:
     for pname, parameter in program.parameters.items():
         _check_condition_dims(parameter.where, frozenset(parameter.dims), f"Parameter '{pname}'")
 
+    frames = Frames({d: dd.over for d, dd in spec.dimensions.items()})
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
@@ -222,7 +226,7 @@ def check_spec(spec: Spec, program: Program) -> None:
             bound = getattr(vdef.bounds, side)
             if isinstance(bound, str):
                 bdims = frozenset({**spec.parameters, **spec.given.parameters}[bound].dims)
-                if not bdims <= frame:
+                if not frames.members(bdims) <= frames.members(frame):
                     raise DimensionError(
                         f"{context}: bounds.{side} parameter '{bound}' has dims "
                         f"{sorted(bdims - frame)} outside the variable's dims "
@@ -337,15 +341,16 @@ def _check_condition_dims(
     if mask is None:
         return
 
-    for atom in mask.atoms:
-        if not (outside := [d for d in Mask(atom).dims if d not in frame]):
+    for read in mask.atoms:
+        if not (outside := [d for d in Mask(read).dims if d not in frame]):
             continue
+        atom = read.operand if isinstance(read, ReframedCondition) else read
         match atom:
             case ParameterDefined() | ParameterComparison():
                 leaf = f"where-parameter '{atom.name}'"
             case VariableDefined():
                 leaf = f"where-variable '{atom.name}'"
-            case DimensionComparison() | DimensionPosition():
+            case DimensionComparison() | DimensionPosition() | DimensionDefined():
                 leaf = f"where-dimension '{atom.name}'"
             case RelationComparison() | RelationPairComparison() | RelationDefined():
                 leaf = f"where-relation '{atom.name}'"
@@ -357,6 +362,8 @@ def _check_condition_dims(
                 leaf = f"a condition translated along '{atom.along}'"
             case JoinedCondition():
                 leaf = f"a condition read through '{atom.columns.name}'"
+            case ReframedCondition():
+                leaf = 'a condition read over another frame'
             case _:
                 assert_never(atom)
         raise DimensionError(

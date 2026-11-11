@@ -12,6 +12,7 @@
 \item[{$\mathcal{B}$}] index $b$ --- \texttt{bp}
 \item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{connection} is \texttt{absent} where the data has no row
+\item[{$\mathrm{port}$}] index $\left( u,\ g \right)$ --- \texttt{port}, the listed combinations: $\mathrm{port} \subseteq \mathcal{U} \times \mathcal{G}$
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}$
@@ -35,6 +36,7 @@
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
+\item[{$\mathrm{port\_eff}$}] \texttt{port\_eff} over $\mathrm{port} \times \mathcal{T}$, $1$ where the data has no row
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{U} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
 \end{description}
@@ -53,6 +55,8 @@
 \item[{$\mathit{on}$}] \texttt{on} over $\mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{op\_cost}$}] \texttt{op\_cost} over $\mathcal{G} \times \mathcal{T}$
 \item[{$p$}] \texttt{p} over $\mathcal{G} \times \mathcal{T}$
+\item[{$\mathit{port\_flow}$}] \texttt{port\_flow} over $\mathrm{port} \times \mathcal{T}$
+\item[{$\mathit{port\_slack}$}] \texttt{port\_slack} over $\mathcal{U} \times \mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
 \item[{$\mathit{slack}$}] \texttt{slack} over $\mathcal{T}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
@@ -98,6 +102,8 @@
 \text{on} && \mathit{on}_{g,t} & \in \{0, 1\} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{op\_cost} && \mathit{op\_cost}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{p} && \mathrm{p}^{\mathrm{min}}_{g} \le p_{g,t} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0 \\
+\text{port\_flow} && 0 \le \mathit{port\_flow}_{u,g,t} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, \left( u,\ g \right) \in \mathrm{port},\ t \in \mathcal{T} \\
+\text{port\_slack} && \mathit{port\_slack}_{u,g,t} & \in \mathbb{R} && \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( u,\ g \right) \in \mathrm{port} \\
 \text{reserve} && \mathit{reserve} & \ge 0 \\
 \text{slack} && \mathit{slack}_{t} & \le 100 && \forall\, t \in \mathcal{T} \\
 \text{spare} && \mathit{spare}_{g} & \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
@@ -155,6 +161,8 @@
 \text{netted} && \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = u} p_{g,t} + \mathit{net}_{t} & = \mathrm{load}_{u,t} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \\
 \text{never} && \mathit{slack}_{t} & \ge 0 && \forall\, t \in \mathcal{T} \,:\, \bot \\
 \text{northern} && \mathit{slack}_{t} & \le \mathrm{load}_{u,t} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(u) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{zone\_of}(u) \neq \mathrm{area\_of}(u) \wedge \mathrm{zone\_of}(u) \text{ is defined} \\
+\text{port\_balance} && \sum_{g \in \mathcal{G} \,:\, \left( u,\ g \right) \in \mathrm{port}} \mathrm{port\_eff}_{u,g,t} \cdot \mathit{port\_flow}_{u,g,t} - \left( \sum_{g \in \mathcal{G}} \mathit{port\_slack}_{u,g,t} \right) & \le \mathrm{load}_{u,t} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \\
+\text{port\_total} && \sum_{\left( u,\ g \right) \in \mathrm{port}} \mathit{port\_flow}_{u,g,t} & \le \sum_{u \in \mathcal{U}} \mathrm{load}_{u,t} && \forall\, t \in \mathcal{T} \\
 \text{ramp} && p_{g,t} - p_{g,t \ominus 1} & \le p_{g,t - 1} + \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{ramped} && \mathit{slack}_{t} & \le \mathrm{load}_{u,t} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{load}_{u,t} - \mathrm{load}_{u,t \boxminus_{0} 1} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \wedge \mathrm{pos}(t) > 0 \\
 \text{redundant} && \mathit{spill}_{t} & \ge 0 && \forall\, t \in \mathcal{T} \,:\, \mathit{spill}_{t} \text{ exists} \\

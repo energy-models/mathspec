@@ -9,6 +9,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
+| $`\mathrm{port}`$ | index $`\left( u,\ g \right)`$ — `port`, the listed combinations: $`\mathrm{port} \subseteq \mathcal{U} \times \mathcal{G}`$ |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
@@ -33,6 +34,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
+| $`\mathrm{port\_eff}`$ | `port_eff` over $`\mathrm{port} \times \mathcal{T}`$, $`1`$ where the data has no row |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 
@@ -53,6 +55,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`p`$ | `p` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{port\_flow}`$ | `port_flow` over $`\mathrm{port} \times \mathcal{T}`$ |
+| $`\mathit{port\_slack}`$ | `port_slack` over $`\mathcal{U} \times \mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
 | $`\mathit{slack}`$ | `slack` over $`\mathcal{T}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
@@ -135,6 +139,18 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 ```math
 \mathrm{p}^{\mathrm{min}}_{g} \le p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0
+```
+
+**`port_flow`**
+
+```math
+0 \le \mathit{port\_flow}_{u,g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, \left( u,\ g \right) \in \mathrm{port},\ t \in \mathcal{T}
+```
+
+**`port_slack`**
+
+```math
+\mathit{port\_slack}_{u,g,t} \in \mathbb{R} \qquad \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( u,\ g \right) \in \mathrm{port}
 ```
 
 **`reserve`**
@@ -409,6 +425,18 @@ p_{g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, g \in \mathcal{G},\ t
 
 ```math
 \mathit{slack}_{t} \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone\_of}(u) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{zone\_of}(u) \neq \mathrm{area\_of}(u) \wedge \mathrm{zone\_of}(u) \text{ is defined}
+```
+
+**`port_balance`**
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \left( u,\ g \right) \in \mathrm{port}} \mathrm{port\_eff}_{u,g,t} \cdot \mathit{port\_flow}_{u,g,t} - \left( \sum_{g \in \mathcal{G}} \mathit{port\_slack}_{u,g,t} \right) \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
+
+**`port_total`**
+
+```math
+\sum_{\left( u,\ g \right) \in \mathrm{port}} \mathit{port\_flow}_{u,g,t} \le \sum_{u \in \mathcal{U}} \mathrm{load}_{u,t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 **`ramp`**

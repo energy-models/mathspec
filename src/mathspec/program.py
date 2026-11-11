@@ -56,6 +56,7 @@ __all__ = [
     'DeclaredDtype',
     'Dimension',
     'DimensionComparison',
+    'DimensionDefined',
     'DimensionDtype',
     'DimensionPosition',
     'Divide',
@@ -94,6 +95,8 @@ __all__ = [
     'Program',
     'QuadraticPosition',
     'Reach',
+    'Reframe',
+    'ReframedCondition',
     'Region',
     'Relation',
     'RelationComparison',
@@ -114,6 +117,7 @@ __all__ = [
     'VariableReference',
     'WindowSum',
     'assumption_message',
+    'atom_dims',
     'carries_variable',
     'children',
     'condition_children',
@@ -397,6 +401,24 @@ class WindowSum:
 
 
 @dataclass(frozen=True)
+class Reframe:
+    """*operand* read over another frame of the same plain dimensions, which a multi-dimension makes possible.
+
+    Two readings, one per axis that differs. Where ``dims`` holds a
+    multi-dimension and *operand* holds some of its members instead, each label
+    of the multi-dimension reads *operand* at its members' labels (a gather).
+    Where *operand* holds a multi-dimension and ``dims`` holds its members
+    instead, *operand* is spread onto every combination of the members, absent
+    at a combination the multi-dimension does not list (a scatter). Resolution
+    inserts it wherever two frames meet, so a tool never infers either reading.
+    The math is the same, so the typesetter prints the operand.
+    """
+
+    operand: Expression
+    dims: tuple[str, ...] = field(kw_only=True)
+
+
+@dataclass(frozen=True)
 class Region:
     """One region of a [`Cases`][]: where it applies, and the value there.
 
@@ -451,6 +473,7 @@ Expression = (
     | Join
     | Translate
     | WindowSum
+    | Reframe
     | Cases
     | ExpressionReference
 )
@@ -474,7 +497,7 @@ def children(expression: Expression) -> tuple[Expression, ...]:
         return (expression.numerator, expression.divisor)
     if isinstance(expression, Power):
         return (expression.base, expression.exponent)
-    if isinstance(expression, (Sum, Join, Translate, WindowSum)):
+    if isinstance(expression, (Sum, Join, Translate, WindowSum, Reframe)):
         return (expression.operand,)
     if isinstance(expression, Cases):
         return tuple(region.value for region in expression.regions)
@@ -1501,6 +1524,31 @@ class JoinedCondition:
 
 
 @dataclass(frozen=True)
+class DimensionDefined:
+    """True at every label of a multi-dimension, which is a bare multi-dimension's name in a condition.
+
+    Over its own multi-dimension it holds everywhere. Read over the members
+    by a [`ReframedCondition`][], it holds at the combinations the
+    multi-dimension lists and nowhere else.
+    """
+
+    name: str
+
+
+@dataclass(frozen=True)
+class ReframedCondition:
+    """One leaf of a condition read over another frame, as a [`Reframe`][] reads an expression.
+
+    Each leaf is read on its own before a connective combines it, so ``NOT``
+    of a leaf spread off a multi-dimension is true where the multi-dimension
+    has no label.
+    """
+
+    operand: TypedCondition
+    dims: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Not:
     operand: Condition
 
@@ -1544,6 +1592,8 @@ TypedCondition = (
     | CountComparison
     | TranslatedCondition
     | JoinedCondition
+    | DimensionDefined
+    | ReframedCondition
 )
 """The condition nodes that refer to an entry whose kind mathspec knows at load."""
 
@@ -1592,7 +1642,7 @@ def _atoms(where: Condition) -> Iterator[TypedCondition]:
         raise AssertionError(msg)
 
 
-def _atom_dims(atom: TypedCondition) -> frozenset[str]:
+def atom_dims(atom: TypedCondition) -> frozenset[str]:
     """One leaf's dims — the rule [`Mask.dims`][] is the union of.
 
     A parameter or variable leaf carries its own dims off the entry; a
@@ -1616,9 +1666,10 @@ def _atom_dims(atom: TypedCondition) -> frozenset[str]:
             | RelationPairComparison()
             | RelationDefined()
             | JoinedCondition()
+            | ReframedCondition()
         ):
             return frozenset(atom.dims)
-        case DimensionComparison():
+        case DimensionComparison() | DimensionDefined():
             return frozenset({atom.name})
         case DimensionPosition():
             return frozenset({atom.name, *(atom.partition.joined_dims if atom.partition is not None else ())})
@@ -1633,7 +1684,7 @@ def _atom_names(atom: TypedCondition) -> frozenset[str]:
     data to feed — a relation pair names both maps it compares, and a
     comparison of expressions names every parameter and relation its sides
     read, answered on the program's form of it since only a program mask is
-    asked. ``assert_never``-closed for the reason [`_atom_dims`][] is: a condition
+    asked. ``assert_never``-closed for the reason [`atom_dims`][] is: a condition
     node added without a reading is a type error at this one branch rather
     than a name silently dropped at the first spec to use it.
     """
@@ -1650,7 +1701,9 @@ def _atom_names(atom: TypedCondition) -> frozenset[str]:
             return atom.operand.names_read
         case JoinedCondition():
             return atom.operand.names_read | {atom.columns.name}
-        case DimensionComparison() | DimensionPosition():
+        case ReframedCondition():
+            return _atom_names(atom.operand)
+        case DimensionComparison() | DimensionPosition() | DimensionDefined():
             return frozenset()
         case _:
             assert_never(atom)
@@ -1774,7 +1827,7 @@ class Mask:
         resolution stamped with their entries' dims, so a condition built
         from resolved pieces answers exactly as an entry's own does.
         """
-        return tuple(sorted({dim for atom in self.atoms for dim in _atom_dims(atom)}))
+        return tuple(sorted({dim for atom in self.atoms for dim in atom_dims(atom)}))
 
     def __invert__(self) -> Mask:
         """The mask admitting exactly the rows this one refuses — construction folds a double negation or a literal flip."""

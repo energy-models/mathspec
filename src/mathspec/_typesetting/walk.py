@@ -29,6 +29,7 @@ from mathspec.program import (
     Constant,
     CountComparison,
     DimensionComparison,
+    DimensionDefined,
     DimensionPosition,
     Divide,
     Dual,
@@ -48,6 +49,8 @@ from mathspec.program import (
     ParameterReference,
     Partition,
     Power,
+    Reframe,
+    ReframedCondition,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
@@ -156,6 +159,10 @@ class _Context:
     def looked_up(self, dim: str, rendered: str) -> _Context:
         return _Context(self.walk, self.offsets, {**self.lookups, dim: rendered}, self.bound)
 
+    def members(self, dim: str) -> tuple[str, ...]:
+        """The plain dimensions *dim* prints as: its members for a multi-dimension, else itself."""
+        return self.walk.program.dimensions[dim].over or (dim,)
+
     def reducing(self, dim: str) -> tuple[str, _Context]:
         """A dummy index for a reduction over *dim*, and the context its body reads under.
 
@@ -163,6 +170,13 @@ class _Context:
         once per enclosing use of the same dimension, so ``sum(q, over=generator, by=bus_of[bus])``
         under ``∀ g`` sums over ``g'`` and its condition can still name ``g``.
         """
+        if (members := self.members(dim)) != (dim,):
+            dummies: list[str] = []
+            body = self
+            for member in members:
+                dummy, body = body.reducing(member)
+                dummies.append(dummy)
+            return self.walk.format.parenthesise(self.walk.format.joined(dummies, '')), body
         primes = "'" * self.bound.count(dim)
         dummy = f'{self.walk.symbols.index[dim]}{primes}'
         body = _Context(self.walk, self.offsets, {**self.lookups, dim: dummy}, (*self.bound, dim))
@@ -176,6 +190,8 @@ class _Context:
         subscript, so a reading that showed only whichever ran last dropped the
         other operator out of the equation.
         """
+        if (members := self.members(dim)) != (dim,):
+            return self.walk.format.parenthesise(self.walk.format.joined([self.subscript(m) for m in members], ''))
         text = self.lookups.get(dim, self.walk.symbols.index[dim])
         translated = False
         for step in self.offsets.get(dim, ()):
@@ -188,7 +204,8 @@ class _Context:
         return text
 
     def indexed(self, symbol: str, dims: list[str]) -> str:
-        return self.walk.format.subscript(symbol, [self.subscript(d) for d in dims])
+        """*symbol* subscripted by the index of each of *dims*, a multi-dimension by the index of each member."""
+        return self.walk.format.subscript(symbol, [self.subscript(m) for d in dims for m in self.members(d)])
 
 
 def _unsigned(node: Expression) -> Expression | None:
@@ -337,6 +354,9 @@ class Walk:
         if isinstance(node, WindowSum):
             return self._window_sum(node, ctx)
 
+        if isinstance(node, Reframe):
+            return self._arithmetic(node.operand, ctx)
+
         if isinstance(node, Cases):
             return self.format.cases(self._arms(node, ctx)), _ATOM
 
@@ -404,11 +424,21 @@ class Walk:
             return self._grouped_sum(node.operand, ctx)
         memberships = []
         inner = ctx
-        for d in sorted({axis.dimension for axis in node.over}):
+        summed = sorted({axis.dimension for axis in node.over})
+        for d in summed:
             dummy, inner = inner.reducing(d)
             memberships.append(self._membership(d, dummy))
         domain = self.format.joined(memberships, '')
+        if rows := self._spread_rows(node.operand, summed, inner):
+            domain = f'{domain} {self._op("such_that")} {self.format.joined(rows, self._op("and"))}'
         return self.format.summation(domain, self._reduction_body(node.operand, inner)), _PRECEDENCE['+']
+
+    def _spread_rows(self, node: Expression, summed: list[str], ctx: _Context) -> list[str]:
+        """The combination each multi-dimension a sum over its members runs within: ``(b, u) ∈ connection``."""
+        if not isinstance(node, Reframe):
+            return []
+        spread = [d for d in node.operand.dims if d not in node.dims and set(ctx.members(d)) & set(summed)]
+        return [f'{ctx.subscript(d)} {self._op("in")} {self.symbols.set[d]}' for d in spread]
 
     def _grouped_sum(self, join: Join, ctx: _Context) -> tuple[str, int]:
         """A sum over the axes a join opens: a dummy per dim it drops, and the row it joins on as the domain's condition."""
@@ -501,7 +531,7 @@ class Walk:
         return self._number(float(width))
 
     def _membership(self, dim: str, index: str | None = None) -> str:
-        return f'{index or self.symbols.index[dim]} {self._op("in")} {self.symbols.set[dim]}'
+        return f'{index or self._context().subscript(dim)} {self._op("in")} {self.symbols.set[dim]}'
 
     def _reduction_body(self, node: Expression, ctx: _Context) -> str:
         """What sits to the right of a sum, bracketed only where it must be.
@@ -553,6 +583,12 @@ class Walk:
 
         if isinstance(node, RelationDefined):
             return self._relation_row(node.name, self._frame_key(node.name, ctx)), comparison
+
+        if isinstance(node, DimensionDefined):
+            return f'{ctx.subscript(node.name)} {self._op("in")} {self.symbols.set[node.name]}', comparison
+
+        if isinstance(node, ReframedCondition):
+            return self._boolean(node.operand, ctx)
 
         if isinstance(node, Not):
             return (
@@ -1020,6 +1056,8 @@ class Walk:
 
     def _bound(self, ctx: _Context, value: Expression) -> str:
         """A bound as the file wrote it: a number, or a parameter indexed over its dims."""
+        if isinstance(value, Reframe):
+            value = value.operand
         if isinstance(value, ParameterReference):
             return ctx.indexed(self.symbols.name[value.name], list(self._parameters[value.name].dims))
         assert isinstance(value, Constant), 'a bound is a number or the name of a parameter'

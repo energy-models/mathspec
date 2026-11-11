@@ -7,6 +7,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $cal(B)$: index $b$ --- `bp`
 / $cal(U)$: index $u$ --- `bus` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
 / $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `connection` is `absent` where the data has no row
+/ $upright("port")$: index $(u, g)$ --- `port`, the listed combinations: $upright("port") subset.eq cal(U) times cal(G)$
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T), upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E)$
@@ -28,6 +29,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
+/ $upright("port_eff")$: `port_eff` over $upright("port") times cal(T)$, $1$ where the data has no row
 / $upright("tech_cap")$: `tech_cap` over $cal(U) times cal(E)$, `absent` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
 
@@ -42,6 +44,8 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("on")$: `on` over $cal(G) times cal(T)$
 / $italic("op_cost")$: `op_cost` over $cal(G) times cal(T)$
 / $p$: `p` over $cal(G) times cal(T)$
+/ $italic("port_flow")$: `port_flow` over $upright("port") times cal(T)$
+/ $italic("port_slack")$: `port_slack` over $cal(U) times cal(G) times cal(T)$
 / $italic("reserve")$: `reserve` (scalar)
 / $italic("slack")$: `slack` over $cal(T)$
 / $italic("spare")$: `spare` over $cal(G)$
@@ -81,6 +85,8 @@ $ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T
   upright("on") & italic("on")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) \
   upright("op_cost") & italic("op_cost")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("p") & upright("p")^(upright("min"))_(g) <= p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
+  upright("port_flow") & 0 <= italic("port_flow")_(u,g,t) & <= upright("p")^(upright("max"))_(g) & forall (u, g) in upright("port"), t in cal(T) \
+  upright("port_slack") & italic("port_slack")_(u,g,t) & in RR & forall u in cal(U), g in cal(G), t in cal(T) colon (u, g) in upright("port") \
   upright("reserve") & italic("reserve") & >= 0 \
   upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
   upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
@@ -135,6 +141,8 @@ $ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in ca
   upright("netted") & sum_(g in cal(G) colon upright("gen_bus")(g) = u) p_(g,t) + italic("net")_(t) & = upright("load")_(u,t) & forall u in cal(U), t in cal(T) \
   upright("never") & italic("slack")_(t) & >= 0 & forall t in cal(T) colon bot \
   upright("northern") & italic("slack")_(t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon upright("zone_of")(u) = upright("'north'") and upright("zone_of")(u) != upright("area_of")(u) and upright("zone_of")(u) upright(" is defined") \
+  upright("port_balance") & sum_(g in cal(G) colon (u, g) in upright("port")) upright("port_eff")_(u,g,t) dot italic("port_flow")_(u,g,t) - (sum_(g in cal(G)) italic("port_slack")_(u,g,t)) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) \
+  upright("port_total") & sum_((u, g) in upright("port")) italic("port_flow")_(u,g,t) & <= sum_(u in cal(U)) upright("load")_(u,t) & forall t in cal(T) \
   upright("ramp") & p_(g,t) - p_(g,t minus.o 1) & <= p_(g,t - 1) + upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
   upright("ramped") & italic("slack")_(t) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon upright("load")_(u,t) - upright("load")_(u,t minus.square_(0) 1) <= upright("zone_cap")_(upright("zone_of")(u)) and upright("pos")(t) > 0 \
   upright("redundant") & italic("spill")_(t) & >= 0 & forall t in cal(T) colon italic("spill")_(t) upright(" exists") \

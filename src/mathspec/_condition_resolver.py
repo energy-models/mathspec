@@ -37,6 +37,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
+from mathspec._frames import no_order
 from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
     Add,
@@ -48,6 +49,7 @@ from mathspec.program import (
     Constant,
     CountComparison,
     DimensionComparison,
+    DimensionDefined,
     DimensionPosition,
     Divide,
     Expression,
@@ -73,7 +75,7 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from mathspec._resolution import Namespace
     from mathspec.program import DeclaredDtype
@@ -168,6 +170,8 @@ class ConditionResolver:
                     )
                     return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
+            case 'dimension' if node.name in ns.frames.over:
+                return DimensionDefined(node.name)
             case 'dimension':
                 self.errors.append(
                     f"{context}: '{node.name}' is a dimension, and a bare dimension "
@@ -224,6 +228,7 @@ class ConditionResolver:
             return node
         if node.name == 'at':
             return self._joined(node, Mask(operand))
+        frames = self.ns.frames
         if (refusal := _kwargs_error(context, 'shift', node.kwargs, required=('along', 'offset'))) is not None:
             self.errors.append(refusal)
             return node
@@ -239,7 +244,11 @@ class ConditionResolver:
                 f'{context}: shift(<condition>, offset=) is not a literal whole number. Write an integer.'
             )
             return node
-        mask = Mask(operand)
+        if along.name in frames.over:
+            self.errors.append(no_order(context, f'shift(<condition>, along={along.name})', along.name, frames.over))
+            return node
+        if (mask := self._member_view(Mask(operand), (along.name,))) is None:
+            return node
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
@@ -250,6 +259,21 @@ class ConditionResolver:
             self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
+
+    def _framed(self, mask: Mask, *dims: Iterable[str]) -> Mask | None:
+        """*mask* with each leaf read over the frame that combines its own dims with *dims*, or ``None`` once refused."""
+        try:
+            target = self.ns.frames.union(mask.dims, *dims, context=self.context)
+        except DimensionError as refusal:
+            self.errors.append(self.ns.refused_dims(refusal))
+            return None
+        return self.ns.frames.reframed_mask(mask, target)
+
+    def _member_view(self, mask: Mask, names: Iterable[str]) -> Mask | None:
+        """*mask* over one frame, with each multi-dimension that holds one of *names* read over its members."""
+        if (framed := self._framed(mask)) is None:
+            return None
+        return self.ns.frames.reframed_mask(framed, self.ns.frames.unstacked(framed.dims, names))
 
     def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
         """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
@@ -263,6 +287,11 @@ class ConditionResolver:
             self.errors.append(refusal)
             return node
         columns = self._expressions.columns_ref(node.kwargs['by'], 'at', 'by')
+        if columns is not None:
+            viewed = self._member_view(mask, self.ns.relations[columns.relation].dims)
+            if viewed is None:
+                return node
+            mask = viewed
         by = None if columns is None else self._expressions.lookup(columns, frozenset(mask.dims))
         if by is None:
             return node
@@ -306,7 +335,12 @@ class ConditionResolver:
                 f'a count is never negative. Delete the comparison, or write the bound it means.'
             )
             return node
-        mask = Mask(operand)
+        if (mask := self._member_view(Mask(operand), (over.name,))) is None:
+            return node
+        if over.name in self.ns.frames.over and over.name not in mask.dims:
+            mask = self._framed(mask, (over.name,))
+            if mask is None:
+                return node
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
@@ -424,7 +458,13 @@ class ConditionResolver:
                 f'side stands for, or remove the comparison.'
             )
             return node
-        return ExpressionComparison(left, node.op, right, sorted_dims(dims))
+        try:
+            framed = ns.frames.union(dims, context=context)
+        except DimensionError as refusal:
+            self.errors.append(ns.refused_dims(refusal))
+            return node
+        left, right = ns.frames.reframed(left, framed), ns.frames.reframed(right, framed)
+        return ExpressionComparison(left, node.op, right, framed)
 
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
@@ -453,6 +493,9 @@ class ConditionResolver:
                 f"'{dimension}' is {_declared_as(ns, dimension)}. "
                 f'{did_you_mean(dimension, ns.dimensions, label="Dimensions")}'
             )
+            return node
+        if dimension in ns.frames.over:
+            self.errors.append(no_order(context, f'position({dimension})', dimension, ns.frames.over))
             return node
         if ns.unordered(dimension):
             self.errors.append(unordered(context, f'position({dimension})', dimension))
@@ -525,6 +568,11 @@ class ConditionResolver:
             case 'parameter':
                 assert not isinstance(value, datetime.date)
                 return ParameterComparison(left_name, plain.op, value, ns.leaf_dims[left_name])
+            case 'dimension' if left_name in ns.frames.over:
+                self.errors.append(
+                    f"{context}: '{left_name}' combines {list(ns.frames.over[left_name])}, so a label of it is no "
+                    f'single value to compare. Compare one of its members.'
+                )
             case 'dimension':
                 return DimensionComparison(left_name, plain.op, value)
             case 'relation':

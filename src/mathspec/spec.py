@@ -347,7 +347,7 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
-    over: Annotated[Dims, Field(min_length=2, json_schema_extra={'uniqueItems': True})] | None = None
+    over: Annotated[Dims, Field(min_length=2, json_schema_extra={'uniqueItems': True})] = ()
     """The dimensions whose labels a label of this one combines, at least two and each once, sorted by name. Each label
     is one combination that exists, so an entry over this dimension has a row only at those combinations.
     """
@@ -364,7 +364,7 @@ class DimensionSpec(_StrictSpec):
     @model_validator(mode='after')
     def _members_carry_the_labels(self) -> Self:
         """A multi-dimension's labels are its members' labels, so the keys that type a label stay on the members."""
-        if self.over is not None and (typed := sorted({'dtype', 'one_of', 'ordered'} & self.model_fields_set)):
+        if self.over and (typed := sorted({'dtype', 'one_of', 'ordered'} & self.model_fields_set)):
             raise ValueError(
                 f'over: {list(self.over)} takes its labels from its members, so {typed[0]}: belongs on a member. '
                 f'Move {typed[0]}: to one of {list(self.over)}.'

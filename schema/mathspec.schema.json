@@ -215,21 +215,14 @@
           "type": "boolean"
         },
         "over": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "minLength": 2,
-              "type": "array",
-              "uniqueItems": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Over"
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "minLength": 2,
+          "title": "Over",
+          "type": "array",
+          "uniqueItems": true
         }
       },
       "title": "DimensionSpec",

@@ -157,7 +157,7 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
     index: dict[str, str] = {}
     sets: dict[str, str] = {}
     taken_index, taken_set = set(spoken_for), set()
-    for dim in program.dimensions:
+    for dim in (d for d, dd in program.dimensions.items() if not dd.over):
         overridden = dim in table.indices
         letter = table.indices[dim] if overridden else _first_free(_index_candidates(dim), taken_index)
         taken_index.add(letter)
@@ -165,6 +165,10 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         upper = _first_free(_set_candidates(dim, letter), taken_set)
         taken_set.add(upper)
         sets[dim] = table.sets[dim] if dim in table.sets else fmt.script(upper)
+    for dim, dd in program.dimensions.items():
+        if dd.over:
+            index[dim] = fmt.parenthesise(fmt.joined([index[m] for m in dd.over], ''))
+            sets[dim] = table.sets[dim] if dim in table.sets else fmt.upright(dim)
     return Symbols(name, constraint, index, sets)
 
 
