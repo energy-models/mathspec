@@ -121,7 +121,7 @@ parameters:
       the running cost at each breakpoint of a generator's piecewise
       `marginal_cost` curve: zero at the first, then each segment's width in
       output times the `marginal_cost` at its upper breakpoint, summed, data
-      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:310-312`)
     dims: [generator, breakpoint]
     missing: absent
   Generator_marginal_cost_quadratic:
@@ -1399,7 +1399,7 @@ parameters:
   GlobalConstraint_sense:
     description: >-
       the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
-      row's sense per scenario (`global_constraints.py:572`, `:771`, `:851-856`)
+      row's sense per scenario (`global_constraints.py:576`, `:779`, `:859-864`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
@@ -1408,7 +1408,7 @@ parameters:
       is folded in here in data prep. That is an initial charge, times its
       period's years for each counted period where the storage reopens per
       period, or a non-extendable build. PyPSA reads it per scenario
-      (`global_constraints.py:573`, `:772`, `:851-856`)
+      (`global_constraints.py:577`, `:780`, `:859-864`)
     dims: [scenario, global_constraint]
   GlobalConstraint_counts_snapshot:
     description: >-
@@ -1479,14 +1479,14 @@ parameters:
   Line_volume_weight:
     description: >-
       the line's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:874-875`), data prep. A line outside it, or one
+      (`global_constraints.py:882-883`), data prep. A line outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, line]
     missing: absent
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:874-875`), data prep. A link outside it, or one
+      (`global_constraints.py:882-883`), data prep. A link outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, link]
     missing: absent
@@ -1498,7 +1498,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:897-906`)
+      (`components.py:1201-1219`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Link_expansion_cost_weight:
@@ -1509,7 +1509,7 @@ parameters:
       periods the link is active in. A link outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Link_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:897-906`)
+      (`components.py:1201-1219`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, link]
     missing: absent
   Generator_tech_capacity_weight:
@@ -2718,7 +2718,7 @@ expressions:
       one at the last snapshot a row counts where a store is active, and zero
       elsewhere. A store that retires before the last counted snapshot closes
       on its last active level. PyPSA forward-fills the level over the counted
-      snapshots (`global_constraints.py:528-531`)
+      snapshots (`global_constraints.py:530-533`)
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       last:
@@ -3060,7 +3060,7 @@ conditions:
     description: >-
       a generator that pays along a piecewise `marginal_cost` curve: one of
       PyPSA's `active_assets` with curve data (`optimize.py:307`,
-      `piecewise.py:223-250`)
+      `piecewise.py:230-257`)
     condition: count(Generator_marginal_cost_curve_p, over=breakpoint) > 0 AND Generator_active_asset
   Generator_marginal_cost_curve_bends_down:
     description: >-
@@ -3081,7 +3081,7 @@ conditions:
       generator with a curve is committable, the incremental rows otherwise.
       PyPSA gates the curves by `Generator-status` where one is committable,
       and linopy states no segment lines under a gate (`optimize.py:314-318`,
-      `piecewise.py:193-217`)
+      `piecewise.py:200-224`)
     condition: >-
       count(Generator_marginal_cost_curve AND count(Generator_marginal_cost_curve_bends_down, over=breakpoint) > 0, over=generator) == 0
       AND count(Generator_marginal_cost_curve AND Generator_committable, over=generator) == 0
@@ -4911,7 +4911,7 @@ assumptions:
     description: >-
       a generator's cost curve is given per unit of a fixed, positive, finite
       `p_nom`, which scales it to output. PyPSA refuses an extendable unit and
-      a zero, missing or infinite `p_nom` (`piecewise.py:277-297`), and takes
+      a zero, missing or infinite `p_nom` (`piecewise.py:284-304`), and takes
       a negative one, which the file does not state
   Generator_big_m_where_committed_and_extendable:
     holds: "Generator_big_m"
@@ -5085,22 +5085,6 @@ assumptions:
       a store that opens past the first snapshot of the horizon opens on its
       initial level, or its last level where it is cyclic. This holds only
       where `Store_opens_late` is true at the snapshot
-  StorageUnit_primary_energy_per_period_without_scenarios:
-    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
-    where: "StorageUnit_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      PyPSA reads the closing charge of a unit that reopens per period by
-      snapshot alone, and fails on a network with scenarios
-      (`global_constraints.py:490`, PyPSA/PyPSA#2113). It fails with or without
-      an `investment_period`. A tool refuses the unit only where there is
-      more than one scenario, since the spec cannot tell one scenario from
-      none
-  StorageUnit_operational_limit_per_period_without_scenarios:
-    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
-    where: "StorageUnit_operational_limit_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      the same for an `operational_limit` row, which fails the same way
-      (`global_constraints.py:696`, PyPSA/PyPSA#2113)
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -5114,23 +5098,7 @@ assumptions:
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:670`)
-  Store_primary_energy_per_period_without_scenarios:
-    holds: "NOT Store_e_initial_per_period"
-    where: "Store_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      PyPSA reads the closing energy of a store that reopens per period by
-      snapshot alone, and fails on a network with scenarios
-      (`global_constraints.py:542`, PyPSA/PyPSA#2113). It fails with or without
-      an `investment_period`. A tool refuses the store only where there is
-      more than one scenario, since the spec cannot tell one scenario from
-      none
-  Store_operational_limit_per_period_without_scenarios:
-    holds: "NOT Store_e_initial_per_period"
-    where: "Store_operational_limit_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      the same for an `operational_limit` row, which fails the same way
-      (`global_constraints.py:741`, PyPSA/PyPSA#2113)
+      PyPSA refuses it (`global_constraints.py:674`)
   Store_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "Store_primary_energy_weight AND NOT Store_e_initial_per_period"
@@ -5138,13 +5106,13 @@ assumptions:
       a store that carries its energy from one period to the next closes once,
       at the last counted snapshot. No period's years weighs that level. PyPSA
       refuses it where any period's years is not one
-      (`global_constraints.py:516`)
+      (`global_constraints.py:518`)
   Store_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:718`)
+      PyPSA refuses it (`global_constraints.py:724`)
   Generator_marginal_cost_quadratic_without_risk_preference:
     holds: "Generator_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
