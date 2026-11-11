@@ -69,7 +69,7 @@ parameters:
       the running cost at each breakpoint of a generator's piecewise
       `marginal_cost` curve: zero at the first, then each segment's width in
       output times the `marginal_cost` at its upper breakpoint, summed, data
-      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:310-312`)
     dims: [generator, breakpoint]
     missing: absent
   Generator_committable:

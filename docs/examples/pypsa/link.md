@@ -195,7 +195,7 @@ parameters:
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:874-875`), data prep. A link outside it, or one
+      (`global_constraints.py:882-883`), data prep. A link outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, link]
     missing: absent
@@ -207,7 +207,7 @@ parameters:
       periods the link is active in. A link outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Link_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:897-906`)
+      (`components.py:1201-1219`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, link]
     missing: absent
   Link_tech_capacity_weight:
@@ -438,7 +438,7 @@ assumptions:
 | $`\overline{\mathrm{E}}^{f}`$ | `Link_e_sum_max` over $`\mathcal{L} \times \Xi`$ — most energy of its flow at `bus0`, the withdrawal there, over the horizon. It is infinity where no cap is meant |
 | $`\underline{\mathrm{E}}^{f}`$ | `Link_e_sum_min` over $`\mathcal{L} \times \Xi`$ — least energy of its flow at `bus0`, the withdrawal there, over the horizon. It is minus infinity where no floor is meant |
 | $`\eta`$ | `Link_efficiency` over $`\mathcal{O} \times \Xi \times \mathcal{T}`$ — share of the flow that arrives at an output port, PyPSA's `efficiency`, `efficiency2`, … read long: negative where that port consumes rather than delivers. Read at the snapshot the flow arrives, so a delayed port delivers at its arrival snapshot's efficiency (`constraints.py:1575`) |
-| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `absent` where the data has no row — the link's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the link is active in. A link outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1201-1219`, `global_constraints.py:897-906`) |
+| $`\mathrm{cc}^{f}`$ | `Link_expansion_cost_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `absent` where the data has no row — the link's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the link is active in. A link outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Link_capital_cost` without `fom_cost` (`components.py:1201-1219`, `global_constraints.py:905-914`) |
 | $`\mathrm{new}^{f}`$ | `Link_first_active` over $`\mathcal{L} \times \mathcal{Y}`$ — one in the first period a link is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:278`) |
 | $`\mathrm{c}^{f}`$ | `Link_marginal_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one unit of flow |
 | $`\mathrm{c}^{f,(2)}`$ | `Link_marginal_cost_quadratic` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of the square of one unit of flow |
@@ -456,7 +456,7 @@ assumptions:
 | $`\mathrm{f}^{\mathrm{nom,set}}`$ | `Link_p_nom_set` over $`\mathcal{L}`$, `absent` where the data has no row — a given nominal power for an extendable link. One without a value has no row here |
 | $`\mathrm{f}^{\mathrm{set}}`$ | `Link_p_set` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — a given flow schedule. A link without one has no row here |
 | $`\mathrm{m}^{f}`$ | `Link_tech_capacity_weight` over $`\mathcal{G} \times \mathcal{L}`$, `absent` where the data has no row — one where the link is in the row's carrier-and-bus set, data prep. One outside it, or one that is not active in the row's `investment_period`, has no row |
-| $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `absent` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:874-875`), data prep. A link outside it, or one that is not active in the row's `investment_period`, has no row |
+| $`\mathrm{len}^{f}`$ | `Link_volume_weight` over $`\mathcal{G} \times \mathcal{L} \times \Xi`$, `absent` where the data has no row — the link's length in each scenario where its carrier is in the row's set (`global_constraints.py:882-883`), data prep. A link outside it, or one that is not active in the row's `investment_period`, has no row |
 
 #### Conditions
 

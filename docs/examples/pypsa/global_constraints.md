@@ -37,7 +37,7 @@ parameters:
   GlobalConstraint_sense:
     description: >-
       the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a
-      row's sense per scenario (`global_constraints.py:572`, `:771`, `:851-856`)
+      row's sense per scenario (`global_constraints.py:576`, `:779`, `:859-864`)
     dims: [scenario, global_constraint]
     dtype: str
   GlobalConstraint_constant:
@@ -46,7 +46,7 @@ parameters:
       is folded in here in data prep. That is an initial charge, times its
       period's years for each counted period where the storage reopens per
       period, or a non-extendable build. PyPSA reads it per scenario
-      (`global_constraints.py:573`, `:772`, `:851-856`)
+      (`global_constraints.py:577`, `:780`, `:859-864`)
     dims: [scenario, global_constraint]
 
 constraints:
@@ -159,8 +159,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\mathcal{G} \times \Xi`$ — the constant the total is held against. What a variable cannot represent is folded in here in data prep. That is an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build. PyPSA reads it per scenario (`global_constraints.py:573`, `:772`, `:851-856`) |
-| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\mathcal{G} \times \Xi`$ — the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a row's sense per scenario (`global_constraints.py:572`, `:771`, `:851-856`) |
+| $`\mathrm{K}`$ | `GlobalConstraint_constant` over $`\mathcal{G} \times \Xi`$ — the constant the total is held against. What a variable cannot represent is folded in here in data prep. That is an initial charge, times its period's years for each counted period where the storage reopens per period, or a non-extendable build. PyPSA reads it per scenario (`global_constraints.py:577`, `:780`, `:859-864`) |
+| $`\mathrm{sense}`$ | `GlobalConstraint_sense` over $`\mathcal{G} \times \Xi`$ — the row's sense in each scenario: `<=`, `>=` or `==`. PyPSA reads a row's sense per scenario (`global_constraints.py:576`, `:779`, `:859-864`) |
 | $`\mathrm{type}`$ | `GlobalConstraint_type` over $`\mathcal{G}`$ — which formula the row takes: `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`, `transmission_expansion_cost_limit`, `tech_capacity_expansion_limit` or `flow_based` |
 
 #### Subject to
