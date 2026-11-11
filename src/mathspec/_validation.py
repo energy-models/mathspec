@@ -22,6 +22,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from mathspec._frames import Frames, overlap
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._piecewise import gate_of
@@ -106,6 +107,7 @@ def reference_errors(spec: Spec) -> list[str]:
     """Every cross-entry rule *spec* breaks, collected rather than raised on the first."""
     return [
         *_name_collisions(spec),
+        *_multi_dimensions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
         *_bound_names(spec),
@@ -177,12 +179,51 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
         *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
+    over = {d: dd.over for d, dd in spec.dimensions.items() if dd.over}
     for kind, name, dims in frames:
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
         yield from (
             f"{kind} '{name}' names dimension '{d}' twice. Delete one."
             for d, count in Counter(dims).items()
             if count > 1
+        )
+        yield from (
+            f"{kind} '{name}' names '{member}' beside '{d}', which already combines it. Delete '{member}'."
+            for d in dims
+            for member in over.get(d, ())
+            if member in dims
+        )
+        if (clash := Frames(over).clash(dims)) is not None:
+            yield overlap(f"{kind} '{name}'", *clash, over)
+
+
+def _multi_dimensions(spec: Spec) -> Iterator[str]:
+    """A multi-dimension combines plain declared dimensions, and only an entry's frame is over it."""
+    for dname, ddef in spec.dimensions.items():
+        for member in ddef.over:
+            if member not in spec.dimensions:
+                yield undeclared_dimension('Dimension', dname, member)
+            elif spec.dimensions[member].over:
+                yield (
+                    f"Dimension '{dname}' combines '{member}', which combines {list(spec.dimensions[member].over)} "
+                    f'itself. List the plain dimensions: over: '
+                    f'{sorted({*ddef.over, *spec.dimensions[member].over} - {member})}.'
+                )
+    multis = {d for d, dd in spec.dimensions.items() if dd.over}
+    for lname, lk in spec.relations.items():
+        yield from (
+            f"Relation '{lname}' has column '{role}' over '{dim}', which combines "
+            f'{list(spec.dimensions[dim].over)}. A relation column is over a plain dimension. To give each '
+            f"label of '{dim}' a value, declare a parameter over [{dim}]."
+            for role, dim in lk.pairs
+            if dim in multis
+        )
+    for kind, section in (('Sos', spec.sos), ('Piecewise', spec.piecewise)):
+        yield from (
+            f"{kind} '{name}' runs along '{entry.along}', which combines {list(spec.dimensions[entry.along].over)} "
+            f'and has no order. Run it along an ordered plain dimension.'
+            for name, entry in section.items()
+            if entry.along in multis
         )
 
 

@@ -29,6 +29,7 @@ from mathspec.program import (
     Negate,
     ParameterReference,
     Power,
+    Reframe,
     Sum,
     Translate,
     VariableReference,
@@ -157,7 +158,7 @@ def _record_signs(node: Expression, sign: Sign, signs: dict[str, Sign]) -> None:
         _record_signs(node.base, None, signs)
         _record_signs(node.exponent, None, signs)
         return
-    if isinstance(node, Sum | Join | Translate | WindowSum | Cases | ExpressionReference):
+    if isinstance(node, Sum | Join | Translate | WindowSum | Reframe | Cases | ExpressionReference):
         for child in children(node):
             _record_signs(child, sign, signs)
         return

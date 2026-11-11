@@ -20,6 +20,7 @@ dimensions:
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
+  port: { over: [bus, generator] } # a multi-dimension: an entry over it has a row only at the pairs its data lists
 
 relations:
   gen_bus: { key: generator, values: bus }
@@ -32,6 +33,7 @@ relations:
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
+  port_eff: { dims: [port, snapshot], missing: 1 } # over a multi-dimension: a row only at a listed pair
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
@@ -51,6 +53,12 @@ parameters:
   bp_run: { dims: [generator, bp], dtype: bool } # how far each curve runs, so a piecewise entry has a mask to print
 
 variables:
+  port_flow: # over a multi-dimension, bounded by a parameter over one of its members
+    dims: [port, snapshot]
+    bounds: { lower: 0, upper: p_max }
+  port_slack: # over the members, where the multi-dimension lists the pair
+    dims: [bus, generator, snapshot]
+    where: port
   p: # both bounds, and a where with all three connectives
     dims: [snapshot, generator]
     where: "p_max > 0 AND NOT is_flexible OR p_min > 0"
@@ -195,6 +203,12 @@ conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 
 constraints:
+  port_balance: # a sum over one member of a multi-dimension runs over the pairs it lists
+    dims: [bus, snapshot]
+    expression: sum(port_eff * port_flow, over=generator) - sum(port_slack, over=generator) <= load
+  port_total: # a sum over the whole multi-dimension
+    dims: [snapshot]
+    expression: sum(port_flow, over=port) <= sum(load, over=bus)
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
     expression: spend <= budget

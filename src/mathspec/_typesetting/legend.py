@@ -275,6 +275,11 @@ class Legend:
         """
         carried = self.program.relations_of(dim)
         clauses = []
+        if members := self.program.dimensions[dim].over:
+            product = self.format.joined([self.symbols.set[m] for m in members], self._op('times'))
+            clauses.append(
+                f', the listed combinations: {self.format.math(f"{self.symbols.set[dim]} {self._op('subset_of')} {product}")}'
+            )
         if dim in noticed.numeric_coordinates:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')
         if (labels := self.program.dimensions[dim].one_of) is not None:

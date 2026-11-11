@@ -28,6 +28,7 @@ from mathspec.program import (
     Constant,
     CountComparison,
     DimensionComparison,
+    DimensionDefined,
     DimensionPosition,
     ExpressionComparison,
     JoinedCondition,
@@ -38,12 +39,14 @@ from mathspec.program import (
     ParameterComparison,
     ParameterDefined,
     ParameterReference,
+    ReframedCondition,
     RelationComparison,
     RelationDefined,
     RelationPairComparison,
     TranslatedCondition,
     TypedCondition,
     VariableDefined,
+    atom_dims,
 )
 
 if TYPE_CHECKING:
@@ -182,9 +185,10 @@ class _Grid:
         values: dict[Subject, set[_Literal]] = {}
         subjects: dict[int, Subject] = {}
         for mask in masks:
-            for node in mask.atoms:
-                for relation in _rows_read(node):
+            for atom in mask.atoms:
+                for relation in _rows_read(atom):
                     values.setdefault(Subject('relation', relation), set())
+                node = _unframed(atom)
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()))
@@ -291,9 +295,23 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         values.add(node.value)
 
 
+def _unframed(node: TypedCondition) -> TypedCondition:
+    """The leaf a [`ReframedCondition`][mathspec.program.ReframedCondition] reads, which its subject is the subject of."""
+    return node.operand if isinstance(node, ReframedCondition) else node
+
+
+def _spread(node: TypedCondition) -> tuple[str, ...]:
+    """The multi-dimensions *node* is spread off: a read over their members is false where they list no label."""
+    if not isinstance(node, ReframedCondition):
+        return ()
+    return tuple(sorted(atom_dims(node.operand) - set(node.dims)))
+
+
 def _rows_read(node: TypedCondition) -> tuple[str, ...]:
-    """The relations whose row *node* reads a column of, and so is false without."""
+    """The relations whose row *node* reads a column of, and so is false without; a spread leaf reads its multi-dimensions."""
     match node:
+        case ReframedCondition():
+            return _spread(node) + _rows_read(node.operand)
         case RelationComparison(name=name):
             return (name,)
         case RelationPairComparison(name=name, other=other):
@@ -327,8 +345,10 @@ def _subject_of(node: TypedCondition) -> Subject:
             if partition is None:
                 return Subject('rank', name)
             return Subject('rank', name, partition.name, partition.grouped)
-        case RelationDefined(name=name):
+        case RelationDefined(name=name) | DimensionDefined(name=name):
             return Subject('relation', name)
+        case ReframedCondition(operand=operand):
+            return _subject_of(operand)
         case RelationComparison(name=name, column=column):
             return Subject('relation', name, column)
         case RelationPairComparison(name=name, column=column, other=other, other_column=other_column):
@@ -535,10 +555,12 @@ def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
 def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
     if not all(_has_row(relation, cell) for relation in _rows_read(node)):
         return False
+    if isinstance(node, ReframedCondition):
+        return _atom(node.operand, cell, grid)
     subject = grid.subjects[id(node)]
     value = _read(node, cell[subject], grid)
     match node:
-        case ParameterDefined() | RelationDefined():
+        case ParameterDefined() | RelationDefined() | DimensionDefined():
             if isinstance(value, bool):
                 return value
             return value not in (Special.NULL, Special.POS_INF, Special.NEG_INF)
@@ -548,6 +570,9 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             return bool(value) if op == '==' else not value
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
+            raise AssertionError(msg)
+        case ReframedCondition():
+            msg = 'a leaf read over another frame is read through its operand'
             raise AssertionError(msg)
         case CountComparison() | TranslatedCondition() | JoinedCondition():
             msg = (

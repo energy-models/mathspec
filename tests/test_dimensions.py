@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast, get_args
 import pytest
 
 from mathspec._dimensions import DimensionError, _check_condition_dims
+from mathspec._frames import Frames
 from mathspec._resolution import Namespace
 from mathspec._validation import to_spec
 from mathspec.errors import SchemaError
@@ -29,6 +30,7 @@ from mathspec.program import (
     Join,
     Mask,
     ParameterReference,
+    Reframe,
     Relation,
     RelationPairComparison,
     Sum,
@@ -796,7 +798,13 @@ def _derived(node: Expression, spec: Spec) -> frozenset[str]:
         return _derived(node.operand, spec) - {axis.dimension for axis in node.over if axis.column is None}
     if isinstance(node, Translate | WindowSum):
         return _derived(node.operand, spec)
-    return frozenset().union(*(_derived(child, spec) for child in children(node)))
+    frames = Frames({d: dd.over for d, dd in spec.dimensions.items()})
+    if isinstance(node, Reframe):
+        assert frames.members(_derived(node.operand, spec)) <= frames.members(node.dims), (
+            'a reframe reads its operand over plain dimensions its own frame holds'
+        )
+        return frozenset(node.dims)
+    return frozenset(frames.union(*(_derived(child, spec) for child in children(node)), context=''))
 
 
 def _expressions(root: object) -> Iterator[Expression]:

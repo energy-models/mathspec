@@ -35,6 +35,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
+from mathspec._frames import Frames
 from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
@@ -80,6 +81,7 @@ class Namespace:
         'dimensions',
         'dtypes',
         'follow_ons',
+        'frames',
         'given_conditions',
         'leaf_dims',
         'one_of',
@@ -99,6 +101,7 @@ class Namespace:
         self.given_conditions = frozenset(spec.given.conditions)
         self.parameters = frozenset(parameters) | self.given_conditions
         self.dimensions = frozenset(spec.dimensions)
+        self.frames = Frames({d: dd.over for d, dd in spec.dimensions.items()})
         self.constraints = frozenset({**spec.constraints, **spec.given.constraints})
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
@@ -494,7 +497,11 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     if not entry.cases:
         assert entry.expression is not None
         body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
-        return None if body is None else ExpressionReference(name, body, dims=body.dims)
+        if body is None:
+            return None
+        if entry.dims is not None:
+            body = ns.frames.reframed(body, entry.dims)
+        return ExpressionReference(name, body, dims=body.dims)
 
     found = len(errors)
     regions: list[Region] = []
@@ -516,7 +523,20 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))
     if len(errors) > found:
         return None
-    left_over = Region(remainder(region.when for region in regions), fallback)
+    frames = ns.frames
+    try:
+        target = frames.union(
+            *(r.value.dims for r in regions),
+            *(r.when.dims for r in regions),
+            fallback.dims,
+            entry.dims or (),
+            context=context,
+        )
+    except DimensionError as refusal:
+        errors.append(ns.refused_dims(refusal))
+        return None
+    regions = [Region(frames.reframed_mask(r.when, target), frames.reframed(r.value, target)) for r in regions]
+    left_over = Region(remainder(region.when for region in regions), frames.reframed(fallback, target))
     every = (*regions, left_over)
     cases = Cases(every, dims=sorted_dims(*(r.value.dims for r in every), *(r.when.dims for r in every)))
     return ExpressionReference(name, cases, dims=cases.dims)

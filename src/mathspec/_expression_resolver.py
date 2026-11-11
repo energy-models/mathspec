@@ -32,6 +32,7 @@ from mathspec._expression_parser import (
     names_in,
     shown,
 )
+from mathspec._frames import no_order
 from mathspec._operators import (
     AMOUNTS,
     BUILTINS,
@@ -55,6 +56,7 @@ from mathspec.program import (
     ParameterReference,
     Partition,
     Power,
+    Reframe,
     Relation,
     Sum,
     Translate,
@@ -66,7 +68,7 @@ from mathspec.program import (
 from mathspec.spec import NUMERIC_DTYPES
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
     from mathspec._resolution import Namespace
 
@@ -157,7 +159,12 @@ class ExpressionResolver:
         left, right = self.arith(node.left), self.arith(node.right)
         if left is None or right is None:
             return None
-        dims = sorted_dims(left.dims, right.dims)
+        try:
+            dims = self.ns.frames.union(left.dims, right.dims, context=self.context)
+        except DimensionError as e:
+            self.errors.append(self.ns.refused_dims(e))
+            return None
+        left, right = self.ns.frames.reframed(left, dims), self.ns.frames.reframed(right, dims)
         match node.op:
             case '+':
                 return Add(left, right, dims=dims)
@@ -263,12 +270,18 @@ class ExpressionResolver:
         if shape_error is not None or unread or not args or args[0] is None:
             return None
         operand = args[0]
+        if columns is not None:
+            operand = self._member_view(operand, self.ns.relations[columns.relation].dims)
         if node.name == 'sum':
             return self._sum(operand, over, columns)
         if node.name == 'at':
             assert columns is not None, 'the call shape requires at(by=)'
             return self._at(operand, columns)
         assert along is not None, 'the call shape requires along='
+        if along in self.ns.frames.over:
+            self.errors.append(no_order(self.context, f'{node.name}(along={along})', along, self.ns.frames.over))
+            return None
+        operand = self._member_view(operand, (along,))
         partition = None
         if columns is not None and (partition := self.partition(columns, node.name, along)) is None:
             return None
@@ -284,16 +297,46 @@ class ExpressionResolver:
         if columns is None:
             if over is None:
                 return self._bare_sum(operand)
-            return self._summed(operand, tuple(Axis(d) for d in over))
+            summable = self._summable(operand, over)
+            return None if summable is None else self._summed(summable, tuple(Axis(d) for d in over))
         assert over is not None, 'the call shape requires over= beside by='
         grouping = self._grouping(columns, over)
         if grouping is None:
             return None
         join, plain = grouping
+        summable = self._summable(operand, plain)
+        if summable is None:
+            return None
+        operand = summable
         if (through := self._joined(operand, join)) is None:
             return None
         grouped = self._summed(through, join.axes)
         return self._summed(grouped, tuple(Axis(d) for d in plain)) if plain and grouped is not None else grouped
+
+    def _member_view(self, operand: Expression, names: Iterable[str]) -> Expression:
+        """*operand* over the members of each multi-dimension that holds one of *names*, so an operator reaches them."""
+        dims = self.ns.frames.unstacked(operand.dims, names)
+        return operand if dims == operand.dims else Reframe(operand, dims=dims)
+
+    def _summable(self, operand: Expression, over: Iterable[str]) -> Expression | None:
+        """*operand* over a frame that holds each dimension *over* names as an axis.
+
+        A member of a multi-dimension the operand carries becomes an axis of
+        its own, so the sum projects the multi-dimension onto its other
+        members. A multi-dimension the operand carries only as its members
+        becomes the axis, so the sum runs over the combinations it lists.
+        """
+        frames = self.ns.frames
+        operand = self._member_view(operand, (d for d in over if d not in operand.dims))
+        for d in over:
+            if d in frames.over and d not in operand.dims and frames.members((d,)) & set(operand.dims):
+                try:
+                    target = frames.union(operand.dims, (d,), context=self.context)
+                except DimensionError as e:
+                    self.errors.append(self.ns.refused_dims(e))
+                    return None
+                operand = frames.reframed(operand, target)
+        return operand
 
     def _summed(self, operand: Expression, over: tuple[Axis, ...]) -> Sum | None:
         """A [`Sum`][mathspec.program.Sum] over *over*, which removes the dims its plain axes name; a join's axes are no dims."""

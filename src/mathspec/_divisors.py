@@ -32,6 +32,7 @@ from mathspec.program import (
     ParameterDefined,
     ParameterReference,
     Power,
+    Reframe,
     Sum,
     Translate,
     VariableReference,
@@ -131,7 +132,7 @@ def _zero_in(e: Expression, parameters: Mapping[str, ParameterSpec], spared: fro
             return _edge_zero(along)
         case Sum(operand=operand) | WindowSum(operand=operand) | Translate(operand=operand) | Join(operand=operand):
             return _zero_in(operand, parameters, frozenset())
-        case Negate(operand=operand) | ExpressionReference(body=operand):
+        case Negate(operand=operand) | Reframe(operand=operand) | ExpressionReference(body=operand):
             return _zero_in(operand, parameters, spared)
         case Multiply(left=left, right=right):
             return _zero_in(left, parameters, spared) or _zero_in(right, parameters, spared)

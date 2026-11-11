@@ -153,6 +153,28 @@ assumption, and the engine that attaches the data runs it.
 | Resampling, clustering, file input and output, unit conversion, combining and reindexing tables | Each one changes the tables themselves, which the spec only declares. The list has no end.                   | Data preparation. The spec declares the result as a parameter.                                                                                                                           |
 | Unit checking at load                                                                           | mathspec would need a grammar of units to check them. You already apply the units when you convert the data. | One unit system from data preparation. The `description:` states the system, and an [`assumptions:`](../reference/language/assumptions.md) entry states a range that the data must meet. |
 
+## Multi-dimensions
+
+A [multi-dimension](../reference/language/dimensions.md#over) lists the
+combinations of its members that exist. It adds no meaning: an entry over a
+multi-dimension means the same as an entry over its members confined to the
+listed combinations. So mathspec refuses a request that only a set of
+combinations with a meaning of its own could state.
+
+| Request                                                                                           | Why refused                                                                                                    | What you write instead                                                                                                  |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Two multi-dimensions that share a member in one frame, such as `[unit, bus]` and `[unit, period]` | A frame holds each member once. The rows where both meet are a join of the two tables, which no file declares. | One multi-dimension indexed by its members and confined with `where:`, or one multi-dimension over the members of both. |
+| A multi-dimension over one dimension twice, such as the two buses at the ends of a line           | A member is named after its dimension, so two members over `bus` have no names that tell them apart.           | A dimension `line` and a [relation](../reference/language/relations.md) `{key: line, values: {bus0: bus, bus1: bus}}`.  |
+| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` along a multi-dimension                   | A label is a combination, and the row order of a table of combinations is not part of the spec.                | The operator along an ordered member.                                                                                   |
+| A relation column over a multi-dimension                                                          | A relation column is over a plain dimension.                                                                   | A parameter over the multi-dimension, a `str` parameter for a label.                                                    |
+| A multi-dimension compared against a label, such as `connection == 'a'`                           | A label of a multi-dimension is a combination, and the language has no literal for one.                        | A comparison of a member, such as `bus == 'a'`.                                                                         |
+
+A tool pays for the reading over the members. A constraint over the members
+reads an entry over the multi-dimension at every combination of the members,
+listed or not, and `sum(flow, over=unit)` has a row with no terms at a bus
+that no listed pair holds. Guard such a row with
+`where: count(connection, over=unit) >= 1`.
+
 You can now judge whether a request is a macro, a change to mathspec, a parameter from data preparation, or a refused request.
 
 !!! info "See also"

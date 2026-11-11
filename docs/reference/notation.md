@@ -34,6 +34,7 @@ dimensions:
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
+  port: { over: [bus, generator] } # a multi-dimension: an entry over it has a row only at the pairs its data lists
 
 relations:
   gen_bus: { key: generator, values: bus }
@@ -46,6 +47,7 @@ relations:
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
 
 parameters:
+  port_eff: { dims: [port, snapshot], missing: 1 } # over a multi-dimension: a row only at a listed pair
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
@@ -72,6 +74,7 @@ parameters:
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
+| $`\mathrm{port}`$ | index $`\left( u,\ g \right)`$ — `port`, the listed combinations: $`\mathrm{port} \subseteq \mathcal{U} \times \mathcal{G}`$ |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
@@ -96,6 +99,7 @@ parameters:
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
+| $`\mathrm{port\_eff}`$ | `port_eff` over $`\mathrm{port} \times \mathcal{T}`$, $`1`$ where the data has no row |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 
@@ -116,6 +120,8 @@ parameters:
 | $`\mathit{on}`$ | `on` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{op\_cost}`$ | `op_cost` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`p`$ | `p` over $`\mathcal{G} \times \mathcal{T}`$ |
+| $`\mathit{port\_flow}`$ | `port_flow` over $`\mathrm{port} \times \mathcal{T}`$ |
+| $`\mathit{port\_slack}`$ | `port_slack` over $`\mathcal{U} \times \mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{reserve}`$ | `reserve` (scalar) |
 | $`\mathit{slack}`$ | `slack` over $`\mathcal{T}`$ |
 | $`\mathit{spare}`$ | `spare` over $`\mathcal{G}`$ |
@@ -358,6 +364,36 @@ variables:
 \mathit{warm}_{g,t} \in \{0, 1\} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{is\_flexible}_{g}
 ```
 
+#### Variable over a multi-dimension
+
+over a multi-dimension, bounded by a parameter over one of its members
+
+```yaml
+variables:
+  port_flow:
+    dims: [port, snapshot]
+    bounds: { lower: 0, upper: p_max }
+```
+
+```math
+0 \le \mathit{port\_flow}_{u,g,t} \le \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\, \left( u,\ g \right) \in \mathrm{port},\ t \in \mathcal{T}
+```
+
+#### Multi-dimension as a condition
+
+over the members, where the multi-dimension lists the pair
+
+```yaml
+variables:
+  port_slack:
+    dims: [bus, generator, snapshot]
+    where: port
+```
+
+```math
+\mathit{port\_slack}_{u,g,t} \in \mathbb{R} \qquad \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( u,\ g \right) \in \mathrm{port}
+```
+
 ### Objective
 
 #### Products and powers in the objective
@@ -570,6 +606,38 @@ constraints:
 
 ```math
 p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ t)} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{gen\_zone}(g,\ t) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{pos}_{\mathrm{gen\_zone}(g,\ t)}(g) = 0
+```
+
+### Multi-dimensions
+
+#### Sum over one member of a multi-dimension
+
+a sum over one member of a multi-dimension runs over the pairs it lists
+
+```yaml
+constraints:
+  port_balance:
+    dims: [bus, snapshot]
+    expression: sum(port_eff * port_flow, over=generator) - sum(port_slack, over=generator) <= load
+```
+
+```math
+\sum_{g \in \mathcal{G} \,:\, \left( u,\ g \right) \in \mathrm{port}} \mathrm{port\_eff}_{u,g,t} \cdot \mathit{port\_flow}_{u,g,t} - \left( \sum_{g \in \mathcal{G}} \mathit{port\_slack}_{u,g,t} \right) \le \mathrm{load}_{u,t} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
+
+#### Sum over a whole multi-dimension
+
+a sum over the whole multi-dimension
+
+```yaml
+constraints:
+  port_total:
+    dims: [snapshot]
+    expression: sum(port_flow, over=port) <= sum(load, over=bus)
+```
+
+```math
+\sum_{\left( u,\ g \right) \in \mathrm{port}} \mathit{port\_flow}_{u,g,t} \le \sum_{u \in \mathcal{U}} \mathrm{load}_{u,t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 ### Arithmetic and literals

@@ -76,6 +76,8 @@ FAMILIES: dict[str, dict[str, str]] = {
         'heat': 'Third axis of a curve',
         'op_cost': 'Variable bounded by a curve',
         'warm': 'Binary variable with a condition',
+        'port_flow': 'Variable over a multi-dimension',
+        'port_slack': 'Multi-dimension as a condition',
     },
     'Objective': {
         'objective': 'Products and powers in the objective',
@@ -94,6 +96,10 @@ FAMILIES: dict[str, dict[str, str]] = {
         'zonal_history': 'Sum over the other key of a two-key map',
         'zonal_membership': 'Sum between the two keys of a map',
         'zonal_lookup': '`at` through a two-key map',
+    },
+    'Multi-dimensions': {
+        'port_balance': 'Sum over one member of a multi-dimension',
+        'port_total': 'Sum over a whole multi-dimension',
     },
     'Arithmetic and literals': {
         'arithmetic': 'Signs, division and number literals',

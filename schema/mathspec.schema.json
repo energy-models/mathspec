@@ -213,6 +213,16 @@
           "default": false,
           "title": "Ordered",
           "type": "boolean"
+        },
+        "over": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "minLength": 2,
+          "title": "Over",
+          "type": "array",
+          "uniqueItems": true
         }
       },
       "title": "DimensionSpec",
