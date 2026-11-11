@@ -76,7 +76,7 @@ parameters:
       the running cost at each breakpoint of a generator's piecewise
       `marginal_cost` curve: zero at the first, then each segment's width in
       output times the `marginal_cost` at its upper breakpoint, summed, data
-      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:310-312`)
     dims: [generator, breakpoint]
     missing: absent
   Generator_committable:
@@ -413,7 +413,7 @@ assumptions:
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
 | $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
-| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the running cost at each breakpoint of a generator's piecewise `marginal_cost` curve: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`) |
+| $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the running cost at each breakpoint of a generator's piecewise `marginal_cost` curve: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:310-312`) |
 | $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the output at each breakpoint of a generator's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator with no curve has no rows |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays off once stopped |
 | $`\mathrm{UT}`$ | `Generator_min_up_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays on once started |

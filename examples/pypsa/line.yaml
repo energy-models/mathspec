@@ -162,7 +162,7 @@ parameters:
   Line_volume_weight:
     description: >-
       the line's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:874-875`), data prep. A line outside it, or one
+      (`global_constraints.py:882-883`), data prep. A line outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, line]
     missing: absent
@@ -174,7 +174,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:897-906`)
+      (`components.py:1201-1219`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Line_tech_capacity_weight:

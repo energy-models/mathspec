@@ -355,7 +355,7 @@ expressions:
       one at the last snapshot a row counts where a store is active, and zero
       elsewhere. A store that retires before the last counted snapshot closes
       on its last active level. PyPSA forward-fills the level over the counted
-      snapshots (`global_constraints.py:528-531`)
+      snapshots (`global_constraints.py:530-533`)
     dims: [scenario, global_constraint, snapshot, store]
     cases:
       last:
@@ -569,22 +569,6 @@ assumptions:
       a store that opens past the first snapshot of the horizon opens on its
       initial level, or its last level where it is cyclic. This holds only
       where `Store_opens_late` is true at the snapshot
-  Store_primary_energy_per_period_without_scenarios:
-    holds: "NOT Store_e_initial_per_period"
-    where: "Store_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      PyPSA reads the closing energy of a store that reopens per period by
-      snapshot alone, and fails on a network with scenarios
-      (`global_constraints.py:542`, PyPSA/PyPSA#2113). It fails with or without
-      an `investment_period`. A tool refuses the store only where there is
-      more than one scenario, since the spec cannot tell one scenario from
-      none
-  Store_operational_limit_per_period_without_scenarios:
-    holds: "NOT Store_e_initial_per_period"
-    where: "Store_operational_limit_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      the same for an `operational_limit` row, which fails the same way
-      (`global_constraints.py:741`, PyPSA/PyPSA#2113)
   Store_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "Store_primary_energy_weight AND NOT Store_e_initial_per_period"
@@ -592,13 +576,13 @@ assumptions:
       a store that carries its energy from one period to the next closes once,
       at the last counted snapshot. No period's years weighs that level. PyPSA
       refuses it where any period's years is not one
-      (`global_constraints.py:516`)
+      (`global_constraints.py:518`)
   Store_operational_limit_carried_over_has_unit_years:
     holds: "at(period_weight_years == 1, by=snapshot_period[period])"
     where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:718`)
+      PyPSA refuses it (`global_constraints.py:724`)
   Store_marginal_cost_quadratic_without_risk_preference:
     holds: "Store_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
@@ -711,7 +695,7 @@ assumptions:
 | $`\widetilde{\mathrm{e}}^{\mathrm{nom}}`$ | `Store_e_nom_effective` over $`\Xi \times \mathcal{V}`$ — the build a store's limits are taken against: the chosen one where it is extendable, the given one otherwise |
 | $`\overleftarrow{e}`$ | `Store_energy_carried_in` over $`\Xi \times \mathcal{T} \times \mathcal{V}`$ — the energy a store opens a snapshot with. At the first snapshot it is active in, it is its last such snapshot's less standing loss where it is cyclic. Where it is not, it is the given initial energy, which no standing loss has touched yet. Otherwise it is the previous snapshot's less standing loss. A store built in a later period opens in that period, and a cyclic one that retires closes on its own last snapshot. Per period, the same holds with each investment period as the horizon |
 | $`\mathit{Store\_injection}`$ | `Store_injection` over $`\mathcal{N} \times \Xi \times \mathcal{T}`$ |
-| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store is active, and zero elsewhere. A store that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:528-531`) |
+| $`\mathit{last}^{e}`$ | `Store_last_counted_active` over $`\mathcal{G} \times \Xi \times \mathcal{T} \times \mathcal{V}`$ — one at the last snapshot a row counts where a store is active, and zero elsewhere. A store that retires before the last counted snapshot closes on its last active level. PyPSA forward-fills the level over the counted snapshots (`global_constraints.py:530-533`) |
 | $`\mathit{Store\_operational\_limit}`$ | `Store_operational_limit` over $`\mathcal{G} \times \Xi`$ |
 | $`\mathit{Store\_opex}`$ | `Store_opex` over $`\Xi`$ |
 | $`\mathit{Store\_primary\_energy}`$ | `Store_primary_energy` over $`\mathcal{G} \times \Xi`$ |
@@ -1005,22 +989,10 @@ q_{\xi,t,v} = \mathrm{q}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
-**`Store_operational_limit_per_period_without_scenarios`**
-
-```math
-\neg \mathrm{reset}^{e}_{\xi,v} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{g,\xi,v} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
-```
-
 **`Store_primary_energy_carried_over_has_unit_years`**
 
 ```math
 \mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, g \in \mathcal{G},\ y \in \mathcal{Y},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v}
-```
-
-**`Store_primary_energy_per_period_without_scenarios`**
-
-```math
-\neg \mathrm{reset}^{e}_{\xi,v} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ v \in \mathcal{V} \,:\, \mathrm{a}^{e}_{g,\xi,v} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
 ```
 
 **`Store_stands_in_one_run`**
