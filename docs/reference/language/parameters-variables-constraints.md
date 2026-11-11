@@ -425,9 +425,9 @@ does not list. For `by: component_of`, it prints:
 Parameter 'sign': missing: by: component_of names the relation and none of its columns. Write by: component_of[<column>], with a value column of 'component_of': ['component'].
 ```
 
-The relation may be one that the parameter names under
-[`confined_by:`](#confined_by). Every coordinate then has a row in it, so
-`otherwise` reads only at a label that `fill:` does not name.
+The relation may be one that the parameter names under [`in:`](#in). Every
+coordinate then has a row in it, so `otherwise` reads only at a label that
+`fill:` does not name.
 
 mathspec refuses a NaN, a quoted number and `missing: null` at load, and in
 each message mathspec suggests what to write. For `missing: null` it prints:

@@ -19,7 +19,7 @@ from mathspec._typesetting import FORMATS, to_markdown, typeset, typeset_line
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
-from mathspec.program import DimensionPosition, MissingBy
+from mathspec.program import BooleanLiteral, DimensionPosition, MissingBy
 from mathspec.spec import DimensionSpec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
@@ -3252,11 +3252,38 @@ def test_a_parameter_reads_a_missing_row_by_one_of_several_value_columns():
     assert to_spec(spec.to_yaml()) == spec, 'the column survives a round trip through YAML'
 
 
-def test_a_parameter_reads_a_missing_row_by_the_relation_it_is_confined_by():
-    """Confinement leaves no coordinate without a row in `by`, so the two name one relation without contradiction."""
-    spec = _spec(**{'relations.lk.missing': 'absent', 'parameters.c.confined_by': ['lk'], 'parameters.c.missing': _BY})
+@pytest.mark.parametrize(
+    ('patch', 'in_'),
+    [
+        pytest.param({'parameters.c.in': ['lk']}, ('lk',), id='by-the-relation-of-its-in'),
+        pytest.param({'parameters.c.in': ['lk'], 'parameters.c.where': 'flag'}, ('lk',), id='beside-a-where'),
+        pytest.param(
+            {
+                'relations.pair': {'key': ['g', 'h'], 'missing': 'absent'},
+                'parameters.c.dims': ['g', 'h'],
+                'parameters.c.in': ['pair'],
+            },
+            ('pair',),
+            id='by-another-relation-than-its-in',
+        ),
+    ],
+)
+def test_a_parameter_reads_a_missing_row_by_a_relation_inside_its_in(patch, in_):
+    """`in:` leaves no coordinate without a row in its relation, so `by:` may name that relation or another.
+
+    The program's `where` holds the key of the `in:` relation and the file's `where:`, and the `missing:` reading
+    applies where both hold.
+    """
+    written = {'relations.lk.missing': 'absent', 'parameters.c.missing': _BY, **patch}
+    spec = _spec(**written)
     c = spec.program.parameters['c']
-    assert (c.confined_by, c.missing) == (('lk',), MissingBy('lk', 'h', {'north': 0, 'south': -1}, 1))
+    assert (c.in_, c.missing) == (in_, MissingBy('lk', 'h', {'north': 0, 'south': -1}, 1))
+    assert c.where is not None and c.where.names_read >= set(in_), 'the index set is part of where `c` exists'
+    unindexed = _spec(**{**written, 'parameters.c.in': []}).program.parameters['c'].where
+    assert c.where.within(c.in_).root == (BooleanLiteral(value=True) if unindexed is None else unindexed.root), (
+        "inside the index set, only the file's `where:` is left"
+    )
+    assert to_spec(spec.to_yaml()) == spec, '`in:` and `missing: {by: ...}` survive a round trip together'
 
 
 @pytest.mark.parametrize(
