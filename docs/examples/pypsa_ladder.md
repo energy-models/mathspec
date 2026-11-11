@@ -6687,6 +6687,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\omega`$ | `CVaR_omega` (scalar), $`0`$ where the data has no row — PyPSA's `risk_preference['omega']` — the share of operating cost priced at the tail rather than in expectation. `CVaR_omega` has a value only where a risk preference is set. Without a risk preference, the file has no CVaR variables or rows. With `omega = 0`, PyPSA builds them, and the optimum is the risk-neutral one |
 | $`\overline{\Delta}`$ | `Carrier_max_growth` over $`\mathcal{I}`$, `absent` where the data has no row — most capacity of a carrier that may be added in a period. No value means no limit. It is the least over the scenarios, as PyPSA takes it (`global_constraints.py:239-243`), data prep. PyPSA reads it only under `multi_investment_periods` (`global_constraints.py:232-233`). Otherwise you feed no value in data prep |
 | $`\mathrm{r}`$ | `Carrier_max_relative_growth` over $`\mathcal{I}`$ — share of the previous period's additions that may be added on top: the least over the scenarios, as PyPSA takes it, data prep |
+| $`\mathrm{Cycle\_in\_basis}`$ | `Cycle_in_basis` over $`\mathcal{C} \times \mathcal{Y}`$ — whether a period's cycle basis reaches the cycle label, data prep. A label beyond the basis of the period has no Kirchhoff voltage law row |
 | $`\mathrm{on}`$ | `Generator_active` over $`\mathcal{G} \times \mathcal{T}`$ — whether a generator is active in a snapshot's period. It is PyPSA's `active`, from build year and lifetime, data prep |
 | $`\mathrm{act}`$ | `Generator_active_asset` over $`\mathcal{G}`$ — whether a generator is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1082-1152`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
@@ -11160,14 +11161,12 @@ Kirchhoff_Voltage_Law:
     that are active in it (`constraints.py:1710-1729`). A cycle label that
     period's basis does not reach has no row
   dims: [scenario, snapshot, cycle]
-  where: >-
-    count(at(Line_cycle_weight, by=snapshot_period[period]), over=line) > 0
-    OR count(at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer) > 0
+  where: at(Cycle_in_basis, by=snapshot_period[period])
   expression: Cycle_angle_sum == 0
 ```
 
 ```math
-\sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} + \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{snapshot\_period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{snapshot\_period}(t),\xi,m} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \lvert \{ k \in \mathcal{K} \,:\, \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} \text{ is defined} \} \rvert > 0 \vee \lvert \{ m \in \mathcal{M} \,:\, \mathrm{x}^{\sigma}_{c,\mathrm{snapshot\_period}(t),m} \text{ is defined} \} \rvert > 0
+\sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} + \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{snapshot\_period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{snapshot\_period}(t),\xi,m} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Cycle\_in\_basis}_{c,\mathrm{snapshot\_period}(t)}
 ```
 
 ### `Line-ext-s-lower`

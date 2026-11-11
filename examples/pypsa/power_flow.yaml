@@ -3,9 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 given:
-  parameters:
-    Line_cycle_weight: { dims: [period, line, cycle] }
-    Transformer_cycle_weight: { dims: [period, transformer, cycle] }
   expressions:
     Cycle_angle_sum:
       dims: [cycle, scenario, snapshot]
@@ -20,10 +17,6 @@ dimensions:
     description: dispatch periods
     dtype: datetime
     ordered: true
-  line:
-    description: passive branches, each between two buses, their flow set by impedance
-  transformer:
-    description: passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised
   cycle:
     description: >-
       independent cycles of the passive network graph, the cycle basis, data
@@ -41,6 +34,14 @@ relations:
     key: snapshot
     values: period
 
+parameters:
+  Cycle_in_basis:
+    description: >-
+      whether a period's cycle basis reaches the cycle label, data prep. A
+      label beyond the basis of the period has no Kirchhoff voltage law row
+    dims: [period, cycle]
+    dtype: bool
+
 constraints:
   Kirchhoff_Voltage_Law:
     description: >-
@@ -54,7 +55,5 @@ constraints:
       that are active in it (`constraints.py:1710-1729`). A cycle label that
       period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
-    where: >-
-      count(at(Line_cycle_weight, by=snapshot_period[period]), over=line) > 0
-      OR count(at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer) > 0
+    where: at(Cycle_in_basis, by=snapshot_period[period])
     expression: Cycle_angle_sum == 0
