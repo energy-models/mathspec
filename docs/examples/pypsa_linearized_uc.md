@@ -43,7 +43,7 @@ with the additions of the rung script. Rung 74 builds a network of its own.
 | [`Generator-com-partly-shut-down`](#generator-com-partly-shut-down) | done | |
 
 <!-- reference:rung_12_linearized_uc:begin -->
-> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `7775.0`, 131 rows.
+> ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `7775.0`, 131 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -153,7 +153,7 @@ tight at the optimum. PyPSA solves the rung and its variants to these objectives
 | [`Generator-com-p-lower`](pypsa_ladder.md#generator-com-p-lower), [`-upper`](pypsa_ladder.md#generator-com-p-upper), [`Generator-fix-p-lower`](pypsa_ladder.md#generator-fix-p-lower), [`-upper`](pypsa_ladder.md#generator-fix-p-upper) in maintenance | done | |
 
 <!-- reference:rung_44_linearized_commitment:begin -->
-> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `7400.0`, 190 rows.
+> ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `7400.0`, 190 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -269,7 +269,7 @@ the optimum, and PyPSA solves the rung and its variants to these objectives
 | [`Bus-nodal_balance`](pypsa_ladder.md#bus-nodal_balance) with `sign` | done | `Generator_sign` and `Load_sign` |
 
 <!-- reference:rung_47_linearized_ramps:begin -->
-> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `12862.5`, 183 rows.
+> ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `12862.5`, 183 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -372,7 +372,7 @@ it solves to `54013.13`.
 | [`Link-com-ext-p-*`](pypsa_ladder.md#link-com-ext-p-upper-cap) under the keyword | done | no tightening for an extendable build |
 
 <!-- reference:rung_67_linearized_link_process:begin -->
-> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `47777.33333333333`, 194 rows.
+> ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `47777.33333333333`, 194 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -477,7 +477,7 @@ the unit, and it solves to `23226.3333` (#977).
 | [`Generator-com-p-before`](#generator-com-p-before), [`-partly-start-up`](#generator-com-partly-start-up), [`-partly-shut-down`](#generator-com-partly-shut-down) at a unit's first snapshot past the horizon's first | done | `Generator_previous_p` and `Generator_previous_status` are zero there |
 
 <!-- reference:rung_74_linearized_late_opening:begin -->
-> ✔ `pypsa 1.4.0.post1.dev54+g72a124187` solves this rung's network at objective `24825.277777777777`, 74 rows.
+> ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `24825.277777777777`, 74 rows.
 
 <details markdown="1">
 <summary>The network, as PyPSA code</summary>
@@ -1006,7 +1006,7 @@ Generator_marginal_cost_curve_is_not_committable:
   description: >-
     a generator with a piecewise `marginal_cost` curve is not committable.
     PyPSA gates such a curve by the status share (`optimize.py:314-318`,
-    `piecewise.py:193-203`), and a curve gate is binary or integer
+    `piecewise.py:200-210`), and a curve gate is binary or integer
 ```
 
 ```math

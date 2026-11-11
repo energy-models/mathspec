@@ -7,7 +7,7 @@
     "global_constraints": {},
     "objective": 7182.222222222223,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 12,
@@ -33,7 +33,7 @@
     "global_constraints": {},
     "objective": 4456.659315422356,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -110,7 +110,7 @@
     },
     "objective": 7633.908502024292,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-e_sum_max": 1,
@@ -183,7 +183,7 @@
     "global_constraints": {},
     "objective": 8785.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -235,7 +235,7 @@
     },
     "objective": 10282.833333333334,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 20,
@@ -295,7 +295,7 @@
     },
     "objective": 23962.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -329,7 +329,7 @@
     "global_constraints": {},
     "objective": 7775.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-down-time": 8,
@@ -362,7 +362,7 @@
     "global_constraints": {},
     "objective": 15915.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 8,
@@ -402,7 +402,7 @@
     "global_constraints": {},
     "objective": 11714.4,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 28,
       "Generator-fix-p-lower": 24,
@@ -419,7 +419,7 @@
     "global_constraints": {},
     "objective": 12587.437500000098,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 16,
@@ -446,7 +446,7 @@
     },
     "objective": -3474256.0405499237,
     "objective_constant": 21915277.518279143,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 90,
       "Generator-ext-p-lower": 60,
@@ -473,7 +473,7 @@
     "global_constraints": {},
     "objective": 7775.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-down-time": 8,
@@ -509,7 +509,7 @@
     "global_constraints": {},
     "objective": 10645.295879552297,
     "objective_constant": 160.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -542,7 +542,7 @@
     "global_constraints": {},
     "objective": 9267.386666666665,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "CVaR-def": 1,
@@ -567,7 +567,7 @@
     "global_constraints": {},
     "objective": 12747.19109626398,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Carrier-growth_limit": 2,
@@ -589,7 +589,7 @@
     "global_constraints": {},
     "objective": 5262.5,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -608,7 +608,7 @@
     "global_constraints": {},
     "objective": 9730.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -639,7 +639,7 @@
     "global_constraints": {},
     "objective": 12274.401472395122,
     "objective_constant": 1080.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -671,7 +671,7 @@
     "global_constraints": {},
     "objective": 10840.926895402912,
     "objective_constant": 160.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -701,7 +701,7 @@
     "global_constraints": {},
     "objective": 16455.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -730,7 +730,7 @@
     "global_constraints": {},
     "objective": 8452.5,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -770,7 +770,7 @@
     "global_constraints": {},
     "objective": 10643.477135410736,
     "objective_constant": 160.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -816,7 +816,7 @@
     "global_constraints": {},
     "objective": 10821.999155213578,
     "objective_constant": 160.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 16,
@@ -851,7 +851,7 @@
     "global_constraints": {},
     "objective": 9007.5,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-down-time": 4,
@@ -881,7 +881,7 @@
     "global_constraints": {},
     "objective": 13982.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -931,7 +931,7 @@
     "global_constraints": {},
     "objective": 15865.124999999998,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -991,7 +991,7 @@
     "global_constraints": {},
     "objective": 45469.49999999998,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-mod-p-lower": 4,
@@ -1054,7 +1054,7 @@
     "global_constraints": {},
     "objective": 83282.99999999983,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-p-lower": 4,
@@ -1103,7 +1103,7 @@
     "global_constraints": {},
     "objective": 7438.461538461539,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 16,
@@ -1138,7 +1138,7 @@
     "global_constraints": {},
     "objective": 22113.333333333332,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 20,
@@ -1189,7 +1189,7 @@
     "global_constraints": {},
     "objective": 7230.4866975671375,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 16,
@@ -1231,7 +1231,7 @@
     "global_constraints": {},
     "objective": 7367.560185185185,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-ext-p-lower": 4,
@@ -1311,7 +1311,7 @@
     "global_constraints": {},
     "objective": 6420.048611111111,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 4,
@@ -1442,7 +1442,7 @@
     },
     "objective": 4886.764705882353,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 32,
@@ -1481,7 +1481,7 @@
     "global_constraints": {},
     "objective": 19185.241281403858,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -1520,7 +1520,7 @@
     "global_constraints": {},
     "objective": 6395.833333333333,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -1555,7 +1555,7 @@
     "global_constraints": {},
     "objective": 12918.75,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 24,
       "Generator-fix-p-lower": 24,
@@ -1577,7 +1577,7 @@
     "global_constraints": {},
     "objective": 8600.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -1621,7 +1621,7 @@
     },
     "objective": 15106.666666666666,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -1643,7 +1643,7 @@
     "global_constraints": {},
     "objective": 17964.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 24,
@@ -1661,7 +1661,7 @@
     "global_constraints": {},
     "objective": 5049.999999999999,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-ext-p-lower": 8,
@@ -1688,7 +1688,7 @@
     "global_constraints": {},
     "objective": 2125.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 12,
@@ -1725,7 +1725,7 @@
     "global_constraints": {},
     "objective": 7400.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-down-time": 4,
@@ -1758,7 +1758,7 @@
     "global_constraints": {},
     "objective": 10996.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 16,
@@ -1788,7 +1788,7 @@
     "global_constraints": {},
     "objective": 101294.125,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-ext-p-lower": 4,
@@ -1835,7 +1835,7 @@
     "global_constraints": {},
     "objective": 12862.5,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-p-before": 4,
@@ -1867,7 +1867,7 @@
     "global_constraints": {},
     "objective": 7125.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 6,
       "Generator-com-p-lower": 6,
@@ -1890,7 +1890,7 @@
     "global_constraints": {},
     "objective": 335.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-ext-p-lower": 4,
@@ -1911,7 +1911,7 @@
     "global_constraints": {},
     "objective": 7380.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -1928,7 +1928,7 @@
     "global_constraints": {},
     "objective": 3432.5,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 4,
       "Carrier-growth_limit": 2,
@@ -1958,7 +1958,7 @@
     },
     "objective": 15630.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -1990,7 +1990,7 @@
     },
     "objective": 15005.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-fix-p-lower": 16,
@@ -2011,7 +2011,7 @@
     "global_constraints": {},
     "objective": 13105.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 32,
@@ -2032,7 +2032,7 @@
     "global_constraints": {},
     "objective": 18205.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 32,
@@ -2055,7 +2055,7 @@
     "global_constraints": {},
     "objective": 4800.000000000001,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-ext-p-lower": 8,
@@ -2080,7 +2080,7 @@
     "global_constraints": {},
     "objective": 7430.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-com-p-lower": 8,
@@ -2116,7 +2116,7 @@
     },
     "objective": 130562.09418409193,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 20,
       "Generator-fix-p-lower": 20,
@@ -2151,7 +2151,7 @@
     "global_constraints": {},
     "objective": 121834.62083205313,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 32,
       "Generator-fix-p-lower": 24,
@@ -2181,7 +2181,7 @@
     "global_constraints": {},
     "objective": 6850.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 5,
       "Generator-com-p-lower": 5,
@@ -2220,7 +2220,7 @@
     "global_constraints": {},
     "objective": 13927.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -2274,7 +2274,7 @@
     "global_constraints": {},
     "objective": 9140.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-com-ext-p-lower": 8,
@@ -2315,7 +2315,7 @@
     "global_constraints": {},
     "objective": 16000.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 8,
@@ -2343,7 +2343,7 @@
     "global_constraints": {},
     "objective": 47777.33333333333,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-fix-p-lower": 12,
@@ -2398,7 +2398,7 @@
     "global_constraints": {},
     "objective": 13000.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -2428,7 +2428,7 @@
     },
     "objective": 350.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 4,
       "Generator-fix-p-lower": 4,
@@ -2462,7 +2462,7 @@
     "global_constraints": {},
     "objective": 7946.733333333334,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "CVaR-def": 1,
@@ -2489,7 +2489,7 @@
     "global_constraints": {},
     "objective": 4836.111111111111,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-p-lower": 4,
@@ -2520,7 +2520,7 @@
     "global_constraints": {},
     "objective": 17190.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-down-time": 8,
@@ -2554,7 +2554,7 @@
     "global_constraints": {},
     "objective": 12300.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-mod-p-lower": 4,
@@ -2582,7 +2582,7 @@
     "global_constraints": {},
     "objective": 24825.277777777777,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-p-before": 4,
@@ -2620,7 +2620,7 @@
     },
     "objective": 12900.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 16,
@@ -2655,7 +2655,7 @@
     "global_constraints": {},
     "objective": 11362.944444444443,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -2691,7 +2691,7 @@
     "global_constraints": {},
     "objective": 11618.75,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 16,
       "Generator-e_sum_max": 1,
@@ -2728,7 +2728,7 @@
     "global_constraints": {},
     "objective": 15004.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 8,
@@ -2770,7 +2770,7 @@
     },
     "objective": 17005.31914893617,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "FlowBased-balance": 4,
@@ -2808,7 +2808,7 @@
     "global_constraints": {},
     "objective": 16026.25,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 12,
       "Generator-com-mod-p-lower": 4,
@@ -2862,7 +2862,7 @@
     "global_constraints": {},
     "objective": 30890.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-fix-p-lower": 12,
@@ -2888,7 +2888,7 @@
     "global_constraints": {},
     "objective": 26135.0,
     "objective_constant": 0.0,
-    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
     "rows": {
       "Bus-nodal_balance": 8,
       "Generator-com-p-lower": 4,
@@ -2908,6 +2908,77 @@
       "Generator-status-p-fixed-upper": 4,
       "Link-fix-p-lower": 4,
       "Link-fix-p-upper": 4
+    }
+  },
+  "rung_85_scenario_period_storage": {
+    "columns": {
+      "Generator-p": 32,
+      "StorageUnit-p_dispatch": 16,
+      "StorageUnit-p_store": 16,
+      "StorageUnit-state_of_charge": 16,
+      "Store-e": 16,
+      "Store-p": 16,
+      "Store-p_store": 16
+    },
+    "global_constraints": {
+      "('calm', 'co2_2030')": {
+        "sense": "<=",
+        "type": "primary_energy"
+      },
+      "('calm', 'gas_2030')": {
+        "sense": "<=",
+        "type": "operational_limit"
+      },
+      "('stormy', 'co2_2030')": {
+        "sense": "<=",
+        "type": "primary_energy"
+      },
+      "('stormy', 'gas_2030')": {
+        "sense": "<=",
+        "type": "operational_limit"
+      }
+    },
+    "objective": 14670.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
+    "rows": {
+      "Bus-nodal_balance": 16,
+      "Generator-fix-p-lower": 32,
+      "Generator-fix-p-upper": 32,
+      "GlobalConstraint-co2_2030": 2,
+      "GlobalConstraint-gas_2030": 2,
+      "StorageUnit-energy_balance": 16,
+      "StorageUnit-fix-p_dispatch-lower": 16,
+      "StorageUnit-fix-p_dispatch-upper": 16,
+      "StorageUnit-fix-p_store-lower": 16,
+      "StorageUnit-fix-p_store-upper": 16,
+      "StorageUnit-fix-state_of_charge-lower": 16,
+      "StorageUnit-fix-state_of_charge-upper": 16,
+      "Store-energy_balance": 16,
+      "Store-fix-e-lower": 16,
+      "Store-fix-e-upper": 16,
+      "Store-fix-p-lower": 0,
+      "Store-fix-p-upper": 0,
+      "Store-fix-p_store-lower": 16,
+      "Store-fix-p_store-upper": 16
+    }
+  },
+  "rung_86_piecewise_marginal_cost_periods": {
+    "columns": {
+      "Generator-marginal_cost_piecewise": 4,
+      "Generator-p": 8
+    },
+    "global_constraints": {},
+    "objective": 4245.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev62+g3625c8168",
+    "rows": {
+      "Bus-nodal_balance": 4,
+      "Generator-fix-p-lower": 8,
+      "Generator-fix-p-upper": 8,
+      "Generator-marginal_cost_piecewise_chord": 12,
+      "Generator-marginal_cost_piecewise_domain_hi": 4,
+      "Generator-marginal_cost_piecewise_domain_lo": 4
     }
   }
 }

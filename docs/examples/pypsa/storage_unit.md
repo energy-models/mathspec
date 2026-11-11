@@ -507,22 +507,6 @@ assumptions:
       a storage unit that opens past the first snapshot of the horizon opens
       on its initial level, or its last level where it is cyclic. This holds
       only where `StorageUnit_opens_late` is true at the snapshot
-  StorageUnit_primary_energy_per_period_without_scenarios:
-    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
-    where: "StorageUnit_primary_energy_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      PyPSA reads the closing charge of a unit that reopens per period by
-      snapshot alone, and fails on a network with scenarios
-      (`global_constraints.py:490`, PyPSA/PyPSA#2113). It fails with or without
-      an `investment_period`. A tool refuses the unit only where there is
-      more than one scenario, since the spec cannot tell one scenario from
-      none
-  StorageUnit_operational_limit_per_period_without_scenarios:
-    holds: "NOT StorageUnit_state_of_charge_initial_per_period"
-    where: "StorageUnit_operational_limit_weight AND count(scenario_weight, over=scenario) > 1"
-    description: >-
-      the same for an `operational_limit` row, which fails the same way
-      (`global_constraints.py:696`, PyPSA/PyPSA#2113)
   StorageUnit_primary_energy_carried_over_has_unit_years:
     holds: "period_weight_years == 1"
     where: "StorageUnit_primary_energy_weight AND NOT StorageUnit_state_of_charge_initial_per_period"
@@ -536,7 +520,7 @@ assumptions:
     where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
     description: >-
       the same for an `operational_limit` row, over the periods it counts.
-      PyPSA refuses it (`global_constraints.py:670`)
+      PyPSA refuses it (`global_constraints.py:674`)
   StorageUnit_marginal_cost_quadratic_without_risk_preference:
     holds: "StorageUnit_marginal_cost_quadratic == 0"
     where: "CVaR_omega"
@@ -930,22 +914,10 @@ h^{-}_{\xi,t,s} = \mathrm{h}^{-,\mathrm{set}}_{\xi,t,s} \qquad \forall\, \xi \in
 \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{b}^{h}_{g,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{g,\xi,t}
 ```
 
-**`StorageUnit_operational_limit_per_period_without_scenarios`**
-
-```math
-\neg \mathrm{reset}_{\xi,s} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{b}^{h}_{g,\xi,s} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
-```
-
 **`StorageUnit_primary_energy_carried_over_has_unit_years`**
 
 ```math
 \mathrm{w}^{\mathrm{yr}}_{y} = 1 \qquad \forall\, g \in \mathcal{G},\ y \in \mathcal{Y},\ \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{a}^{h}_{g,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s}
-```
-
-**`StorageUnit_primary_energy_per_period_without_scenarios`**
-
-```math
-\neg \mathrm{reset}_{\xi,s} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ s \in \mathcal{S} \,:\, \mathrm{a}^{h}_{g,\xi,s} \text{ is defined} \wedge \lvert \{ \xi' \in \Xi \,:\, \pi_{\xi'} \text{ is defined} \} \rvert > 1
 ```
 
 **`StorageUnit_stands_in_one_run`**
