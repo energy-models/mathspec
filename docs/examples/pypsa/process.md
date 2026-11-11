@@ -143,7 +143,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1176-1197`, `costs.py:102-203`)
+      (`components.py:1157-1178`, `costs.py:102-203`)
     dims: [scenario, process]
   Process_p_nom_set:
     description: a given nominal power for an extendable process. One without a value has no row here
@@ -397,7 +397,7 @@ assumptions:
 |---|---|
 | $`\mathrm{on}^{z}`$ | `Process_active` over $`\mathcal{J} \times \mathcal{T}`$ — whether a process is active in a snapshot's period. It is PyPSA's `active`, data prep |
 | $`\mathrm{act}^{z}`$ | `Process_active_asset` over $`\mathcal{J}`$ — whether a process is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
-| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\mathcal{J} \times \Xi`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`) |
+| $`\mathrm{c}^{\mathrm{cap},z}`$ | `Process_capital_cost` over $`\mathcal{J} \times \Xi`$ — cost of one unit of nominal power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1157-1178`, `costs.py:102-203`) |
 | $`\mathrm{W}^{z}`$ | `Process_capital_weight` over $`\mathcal{J}`$ — the sum of period weights a process is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\overline{\mathrm{E}}^{z}`$ | `Process_e_sum_max` over $`\mathcal{J} \times \Xi`$ — most energy of its internal power over the horizon. It is infinity where no cap is meant |
 | $`\underline{\mathrm{E}}^{z}`$ | `Process_e_sum_min` over $`\mathcal{J} \times \Xi`$ — least energy of its internal power over the horizon. It is minus infinity where no floor is meant |
