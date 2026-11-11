@@ -66,7 +66,8 @@ def test_the_fragments_are_what_the_splitter_writes(model):
 
 
 #: What a model may leave out, as the fragment names or name prefixes it
-#: drops. A component comes as a family; security reads the branches. The
+#: drops. A component comes as a family; security reads the branches, and the
+#: Kirchhoff voltage law row of power flow reads the cycles of both. The
 #: reader of a sum no model goes without is not listed: leaving it out leaves
 #: its terms with nothing else reading them, which the test below holds.
 OPTIONAL = [
@@ -84,8 +85,6 @@ OPTIONAL = [
     'generator_ramping',
     'link_ramping',
     'process_ramping',
-    'line security',
-    'transformer security',
     'line transformer security power_flow',
 ]
 

@@ -85,13 +85,13 @@ compares them with it, so the two always agree.
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
-| [network](network.md) | 0 | 0 | 1 | 1 |  |
-| [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
+| [network](network.md) | 1 | 0 | 1 | 1 |  |
+| [power_flow](power_flow.md) | 0 | 0 | 1 | 3 |  |
 | [process](process.md) | 24 | 3 | 11 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 15 |  |
-| [security](security.md) | 2 | 0 | 8 | 10 |  |
+| [security](security.md) | 2 | 0 | 8 | 12 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
 | [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
 | [store](store.md) | 42 | 6 | 22 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
@@ -102,9 +102,11 @@ compares them with it, so the two always agree.
 
 A spec may leave out a component family, the cost, the carriers, the global
 constraints or security. What remains is a whole spec, with nothing left
-under `given:`. Lines and transformers leave only together with security,
-because security lists `Line_s_nom` and four more line names, and the same for
-transformers, under `given:`. While a component is in, a spec may not leave
+under `given:`. Lines and transformers leave only together, with security
+and power flow. Security lists `Line_s_nom` and four more line names under
+`given:`, and the same for transformers. Power flow lists `Line_cycle_weight`
+and `Transformer_cycle_weight`, because the Kirchhoff voltage law has a row
+only for a cycle with a branch. While a component is in, a spec may not leave
 out the network, power flow or settings. The terms of the component would then
 add to a sum that no fragment lists, and `merge` refuses the files.
 
