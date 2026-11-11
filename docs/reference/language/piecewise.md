@@ -216,14 +216,14 @@ A link that [walks a relation](#a-link-that-walks-a-relation) is a mapping
 instead, with the keys `expression`, `values`, `by` and, where it has one,
 `sign`.
 
-| Key        | Required | Default     | What it does                                                                                                                                        |
-| ---------- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                                                      |
-| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                                                     |
-| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                                                                            |
-| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                                             |
-| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                                                       |
-| `activity` | no       | `null`      | Sets the binary variable that switches the curve on and off, by its name or as `at(<variable>, by=<relation>[<column>])` ([`activity`](#activity)). |
+| Key        | Required | Default     | What it does                                                                                                                                                                                      |
+| ---------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                                                                                                    |
+| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                                                                                                   |
+| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                                                                                                                          |
+| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                                                                                           |
+| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                                                                                                     |
+| `activity` | no       | `null`      | Sets the variable that switches the curve on and off: a binary, or an integer under `incremental`. Written as its name or as `at(<variable>, by=<relation>[<column>])` ([`activity`](#activity)). |
 
 The breakpoints follow the order of the `along` dimension, so that dimension
 must be declared [ordered](dimensions.md#ordered). Without `ordered: true`,
@@ -715,16 +715,18 @@ an entry `e` along `bp`:
 | `e_<link>`         | the expression of the link against its value at the first breakpoint, times the gate, plus each filled rise |
 | `e_<link>_ungated` | the same row without the gate, written only where the gate is absent                                        |
 
-`incremental` takes two or more links, a walked link and `activity:`. The
+`incremental` takes two or more links, a walked link and `activity:`, and it
+is the only method that takes an [integer gate](#an-integer-gate). The
 [incremental example](../../examples/piecewise_incremental.md) is a spec with
 curves of unequal length and a gate that only some generators have.
 
 ### `activity`
 
-`activity:` sets the binary on-off switch of the curve (the gate). The
-weights then sum to the gate instead of to one, and under `incremental` the
-gate bounds each filled fraction. Where the gate is `0`, the curve is switched
-off. The gate is an ordinary variable entry, and it may have a
+`activity:` sets the variable that switches the curve on and off (the gate).
+The gate is a binary variable, or an [integer](#an-integer-gate) one under
+`incremental`. The weights then sum to the gate instead of to one, and under
+`incremental` the gate bounds each filled fraction. Where the gate is `0`, the
+curve is switched off. The gate is an ordinary variable entry, and it may have a
 [`where:`](absence.md#where):
 
 ```yaml
@@ -836,6 +838,67 @@ After the lookup, the gate must be over dimensions of `dims:` only. With
 ```text
 piecewise 'fuel_use': activity 'running' is over ['period'] after the lookup, which is not in dims: ['snapshot', 'generator']. The gate switches the curve of one coordinate of dims:. Look it up through a relation that leaves it over dims:, or add ['period'] to dims:.
 ```
+
+#### An integer gate
+
+Under `method: incremental`, the gate may be an integer variable, such as the
+number of modules of a unit that run. The expansion writes the same rows as
+for a binary gate. Where the gate is `0`, the curve is switched off. Where the
+gate `g` is 1 or more, the curve moves by `g - 1` times its first point, the
+point at its first breakpoint. The gate does not scale the curve:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int, ordered: true }
+  generator: { dtype: str }
+  bp: { dtype: int, ordered: true }
+parameters:
+  power_bp: { dims: [generator, bp] }
+  fuel_bp: { dims: [generator, bp] }
+variables:
+  power: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  fuel: { dims: [snapshot, generator], bounds: { lower: 0 } }
+  modules:
+    dims: [snapshot, generator]
+    domain: integer
+    bounds: { lower: 0, upper: 4 }
+piecewise:
+  fuel_use:
+    along: bp
+    dims: [snapshot, generator]
+    method: incremental
+    links:
+      power: [power, power_bp]
+      fuel: [fuel, fuel_bp]
+    activity: modules
+objective:
+  sense: minimize
+  expression: sum(fuel)
+```
+
+```math
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \mathit{modules}_{g,t} \cdot \left( \mathrm{power}^{\mathrm{bp}}_{\min \mathcal{B},g},\ \mathrm{fuel}^{\mathrm{bp}}_{\min \mathcal{B},g} \right) + \min(\mathit{modules}_{g,t},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) - \left( \mathrm{power}^{\mathrm{bp}}_{\min \mathcal{B},g},\ \mathrm{fuel}^{\mathrm{bp}}_{\min \mathcal{B},g} \right) \right) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
+In the math, the breakpoint tables at $`\min \mathcal{B}`$ are the first
+point of the curve. The factor $`\min(\mathit{modules}_{g,t},\ 1)`$ is `0`
+where no module runs and `1` elsewhere. With `power_bp` at 20, 50 and 100
+for a generator, two running modules give a power from 40 to 120, not from
+40 to 200. A curve whose first breakpoint is `0` in every link is the same
+curve for every value of the gate from 1 up.
+
+On a [curve of unequal length](#curves-of-unequal-length), the first
+breakpoint is the first one that the curve runs through. The typesetter
+prints it as the least breakpoint that the `where:` admits.
+
+Under every other method, mathspec refuses an integer gate at load. With
+`method: sos2`, mathspec prints:
+
+```text
+piecewise 'fuel_use': activity variable 'modules' is integer, and method: sos2 takes a binary gate only. Write method: incremental, or declare 'modules' domain: binary.
+```
+
+mathspec suggests the rewrite: `method: incremental`, or a binary gate.
 
 !!! info "See also"
 

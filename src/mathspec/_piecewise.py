@@ -442,15 +442,15 @@ def leaves_ungated(gate: VariableSpec | Variable, relation: Relation | None = No
     ``missing: refused`` every curve has a row.
     """
     absent = relation is not None and relation.missing == 'absent'
-    return absent or (gate.where is not None and gate.missing != 0)
+    return absent or ((gate.where is not None or bool(gate.in_)) and gate.missing != 0)
 
 
 def gate_of(text: str) -> str | None:
     """The variable an ``activity:`` names, or ``None`` where it is neither a bare name nor ``at(<name>, by=...)``.
 
-    The weights sum to the gate, so it is a binary as written, or read
-    through a relation as ``at`` reads it. What the ``by=`` names is
-    resolution's to refuse, with the refusals ``at`` gives.
+    The gate is a variable as written, or one read through a relation as
+    ``at`` reads it. What the ``by=`` names is resolution's to refuse, with
+    the refusals ``at`` gives.
     """
     try:
         node = parse_expression(text)

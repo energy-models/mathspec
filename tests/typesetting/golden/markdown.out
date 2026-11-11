@@ -18,6 +18,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{area\_weight}`$ | `area_weight` over $`u \in \mathrm{area\_of}`$ |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
@@ -35,7 +36,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
-| $`\mathrm{zone\_share}`$ | `zone_share` over $`\mathcal{U} \times \mathcal{Z}`$, a row of data refused unless $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
+| $`\mathrm{zone\_share}`$ | `zone_share` over $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
 
 #### Conditions
 
@@ -48,6 +49,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{flow}`$ | `flow` over $`\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -101,6 +103,12 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 ```
 
 #### Variable domains
+
+**`flow`**
+
+```math
+\mathit{flow}_{u,g,t} \ge 0 \qquad \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0
+```
 
 **`fuel`**
 
@@ -574,6 +582,12 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 \mathit{fuel}_{g,t} \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`module_curve`**
+
+```math
+\mathit{fuel}_{g,t} \ge \left( \mathit{units}_{g} \cdot \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) + \min(\mathit{units}_{g},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) - \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) \right) \right)(p_{g,t}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 **`ramp_curve`**
 
 ```math
@@ -712,6 +726,18 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 
 ```math
 \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0
+```
+
+**`module_curve_complete`**
+
+```math
+\mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_run}_{b,g}
+```
+
+**`module_curve_contiguous`**
+
+```math
+\lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert = 1 \qquad \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \} \rvert > 0
 ```
 
 **`ramp_curve_complete`**

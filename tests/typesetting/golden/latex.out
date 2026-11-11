@@ -20,6 +20,7 @@
 
 \paragraph{Parameters}
 \begin{description}
+\item[{$\mathrm{area\_weight}$}] \texttt{area\_weight} over $u \in \mathrm{area\_of}$
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
@@ -37,7 +38,7 @@
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{U} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
-\item[{$\mathrm{zone\_share}$}] \texttt{zone\_share} over $\mathcal{U} \times \mathcal{Z}$, a row of data refused unless $\left( u,\ z \right) \in \mathrm{bus\_zone}$, $1$ where the data has no row
+\item[{$\mathrm{zone\_share}$}] \texttt{zone\_share} over $\left( u,\ z \right) \in \mathrm{bus\_zone}$, $1$ where the data has no row
 \end{description}
 
 \paragraph{Conditions}
@@ -48,6 +49,7 @@
 
 \paragraph{Variables}
 \begin{description}
+\item[{$\mathit{flow}$}] \texttt{flow} over $\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), $0$ where the mask leaves it out
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{G} \times \mathcal{T}$
@@ -93,6 +95,7 @@
 
 \paragraph{Variable domains}
 \begin{align}
+\text{flow} && \mathit{flow}_{u,g,t} & \ge 0 && \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \\
 \text{fuel} && \mathit{fuel}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{headroom} && \mathit{headroom} & \ge 0 && \text{where } \mathrm{budget} \text{ is defined} \\
 \text{heat} && \mathit{heat}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
@@ -183,6 +186,7 @@
 \text{fuel\_curve} && \left( p_{g,t},\ \mathit{fuel}_{g,t},\ \mathit{heat}_{g,t} \right) & \in \mathit{on}_{g,t} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g},\ \mathrm{bp\_heat}_{b,g}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{hull\_curve} && \left( p_{g,t},\ \mathit{fuel}_{g,t} \right) & \in \mathrm{conv}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{lp\_curve} && \mathit{fuel}_{g,t} & \ge \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
+\text{module\_curve} && \mathit{fuel}_{g,t} & \ge \left( \mathit{units}_{g} \cdot \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) + \min(\mathit{units}_{g},\ 1) \cdot \left( \mathrm{pwl}_{b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_y}_{b,g}) - \left( \mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g},\ \mathrm{bp\_y}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \},g} \right) \right) \right)(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{ramp\_curve} && \mathit{heat}_{g,t} & \le \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{bp\_x}_{b,g},\ \mathrm{bp\_heat}_{b,g})(p_{g,t}) && \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 \end{align}
 
@@ -210,6 +214,8 @@
 \text{lp\_curve\_curvature} && \left( \mathrm{bp\_y}_{b,g} - \mathrm{bp\_y}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) & \le \left( \mathrm{bp\_y}_{b \boxplus_{0} 1,g} - \mathrm{bp\_y}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \wedge \mathrm{bp\_x}_{b + 1,g} \text{ is defined} \\
 \text{lp\_curve\_breakpoints} && \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert & \ge 2 && \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0 \\
 \text{lp\_curve\_contiguous} && \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \neg \left( \mathrm{bp\_x}_{b - 1,g} \text{ is defined} \right) \} \rvert & = 1 && \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_x}_{b,g} \text{ is defined} \} \rvert > 0 \\
+\text{module\_curve\_complete} && \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_y}_{b,g} \text{ is defined} &  && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{bp\_run}_{b,g} \\
+\text{module\_curve\_contiguous} && \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \wedge \neg \mathrm{bp\_run}_{b - 1,g} \} \rvert & = 1 && \forall\, g \in \mathcal{G} \,:\, \lvert \{ b \in \mathcal{B} \,:\, \mathrm{bp\_run}_{b,g} \} \rvert > 0 \\
 \text{ramp\_curve\_complete} && \mathrm{bp\_x}_{b,g} \text{ is defined} \wedge \mathrm{bp\_heat}_{b,g} \text{ is defined} &  && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \\
 \text{ramp\_curve\_increasing} && \mathrm{bp\_x}_{b \boxminus_{0} 1,g} & < \mathrm{bp\_x}_{b,g} && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \\
 \text{ramp\_curve\_curvature} && \left( \mathrm{bp\_heat}_{b,g} - \mathrm{bp\_heat}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathrm{bp\_x}_{b \boxplus_{0} 1,g} - \mathrm{bp\_x}_{b,g} \right) & \ge \left( \mathrm{bp\_heat}_{b \boxplus_{0} 1,g} - \mathrm{bp\_heat}_{b,g} \right) \cdot \left( \mathrm{bp\_x}_{b,g} - \mathrm{bp\_x}_{b \boxminus_{0} 1,g} \right) && \forall\, b \in \mathcal{B},\ g \in \mathcal{G} \,:\, \mathrm{pos}(b) > 0 \wedge \mathrm{pos}(b) \neq \lvert \mathcal{B} \rvert - 1 \\

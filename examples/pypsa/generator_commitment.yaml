@@ -17,6 +17,7 @@ given:
     Generator_active: { dims: [snapshot, generator], dtype: bool }
   variables:
     Generator_p: { dims: [scenario, snapshot, generator] }
+    Generator_marginal_cost_piecewise: { dims: [scenario, snapshot, generator] }
     Generator_n_mod: { dims: [generator], domain: integer }
     Generator_maintenance_capacity: { dims: [scenario, snapshot, generator] }
     Generator_maintenance_status: { dims: [scenario, snapshot, generator] }
@@ -25,6 +26,8 @@ given:
     Generator_modules: { dims: [generator, scenario] }
     scenario_opex: { dims: [scenario] }
   conditions:
+    Generator_marginal_cost_curve: { dims: [generator] }
+    Generator_marginal_cost_as_lp: { dims: [] }
     Generator_committed: { dims: [generator, snapshot] }
 
 dimensions:
@@ -40,6 +43,12 @@ dimensions:
     description: investment periods. It is PyPSA's `investment_periods`
     dtype: int
     ordered: true
+  breakpoint:
+    description: >-
+      the corners of a piecewise-linear curve, in order. A curve runs over the
+      breakpoints its data has rows for, so curves may differ in length
+    dtype: int
+    ordered: true
 
 relations:
   snapshot_period:
@@ -48,6 +57,21 @@ relations:
     values: period
 
 parameters:
+  Generator_marginal_cost_curve_p:
+    description: >-
+      the output at each breakpoint of a generator's piecewise `marginal_cost`
+      curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator
+      with no curve has no rows
+    dims: [generator, breakpoint]
+    missing: absent
+  Generator_marginal_cost_curve_cost:
+    description: >-
+      the running cost at each breakpoint of a generator's piecewise
+      `marginal_cost` curve: zero at the first, then each segment's width in
+      output times the `marginal_cost` at its upper breakpoint, summed, data
+      prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:303-305`)
+    dims: [generator, breakpoint]
+    missing: absent
   Generator_committable:
     description: whether output is gated by an on/off status decision
     dims: [generator]
@@ -169,6 +193,34 @@ conditions:
       AND Generator_p_nom_extendable
       AND NOT (Generator_p_nom_mod > 0)
       AND Generator_active
+
+piecewise:
+  Generator_marginal_cost_lp:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated as the line of
+      each segment, where linopy chooses the segment lines
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: lp
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
+  Generator_marginal_cost_incremental:
+    description: >-
+      `Generator-marginal_cost_piecewise` — the running cost of a generator
+      with a curve is at least the curve at its output, stated by segments
+      filled in order and switched by the status of a committable generator,
+      where linopy chooses the incremental rows
+    along: breakpoint
+    dims: [scenario, snapshot, generator]
+    where: NOT Generator_marginal_cost_as_lp AND Generator_marginal_cost_curve AND Generator_active AND Generator_marginal_cost_curve_p
+    method: incremental
+    activity: Generator_status
+    links:
+      p: [Generator_p, Generator_marginal_cost_curve_p]
+      cost: [Generator_marginal_cost_piecewise, Generator_marginal_cost_curve_cost, ">="]
 
 constraints:
   Generator_com_p_lower:

@@ -2852,5 +2852,62 @@
       "Process-start_up-p-fixed-upper": 4,
       "Process-status-p-fixed-upper": 4
     }
+  },
+  "rung_81_piecewise_marginal_cost": {
+    "columns": {
+      "Generator-marginal_cost_piecewise": 4,
+      "Generator-p": 12,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 30890.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-marginal_cost_piecewise_chord": 12,
+      "Generator-marginal_cost_piecewise_domain_hi": 4,
+      "Generator-marginal_cost_piecewise_domain_lo": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
+  },
+  "rung_82_piecewise_marginal_cost_committable": {
+    "columns": {
+      "Generator-marginal_cost_piecewise": 8,
+      "Generator-marginal_cost_piecewise_delta": 20,
+      "Generator-marginal_cost_piecewise_order_binary": 20,
+      "Generator-p": 16,
+      "Generator-shut_down": 4,
+      "Generator-start_up": 4,
+      "Generator-status": 4,
+      "Link-p": 4
+    },
+    "global_constraints": {},
+    "objective": 26135.0,
+    "objective_constant": 0.0,
+    "pypsa": "1.4.0.post1.dev54+g72a124187",
+    "rows": {
+      "Bus-nodal_balance": 8,
+      "Generator-com-p-lower": 4,
+      "Generator-com-p-upper": 4,
+      "Generator-com-transition-shut-down": 4,
+      "Generator-com-transition-start-up": 4,
+      "Generator-fix-p-lower": 12,
+      "Generator-fix-p-upper": 12,
+      "Generator-marginal_cost_piecewise_active_bound": 24,
+      "Generator-marginal_cost_piecewise_binary_order": 16,
+      "Generator-marginal_cost_piecewise_delta_bound": 24,
+      "Generator-marginal_cost_piecewise_fill_order": 16,
+      "Generator-marginal_cost_piecewise_link": 8,
+      "Generator-marginal_cost_piecewise_output_link": 8,
+      "Generator-shut_down-p-fixed-upper": 4,
+      "Generator-start_up-p-fixed-upper": 4,
+      "Generator-status-p-fixed-upper": 4,
+      "Link-fix-p-lower": 4,
+      "Link-fix-p-upper": 4
+    }
   }
 }
