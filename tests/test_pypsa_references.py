@@ -20,11 +20,13 @@ import pytest
 
 from mathspec import override, to_spec
 from mathspec._exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
+from mathspec._piecewise import _UNGATED, Emitted
 from tools import gallery
 from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
 
 if TYPE_CHECKING:
     from mathspec.program import Mask
+    from mathspec.spec import Spec
 
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
@@ -36,11 +38,50 @@ SPECS = {
 }
 MODELS = list(SPECS.values())
 BASE = SPECS['pypsa_ladder.md']
+#: The linopy suffix of each row and column a `piecewise:` entry expands to, by the field of `Emitted` that names it.
+LINOPY_SUFFIX = {
+    'chord': 'chord',
+    'domain_lo': 'domain_lo',
+    'domain_hi': 'domain_hi',
+    'delta': 'delta',
+    'order': 'order_binary',
+    'delta_bound': 'delta_bound',
+    'fill_order': 'fill_order',
+    'binary_order': 'binary_order',
+    'active_bound': 'active_bound',
+}
+
+
+def _piecewise_names(model: Spec) -> tuple[set[str], set[str]]:
+    """The rows and the columns the expansion of *model*'s `piecewise:` entries writes, by the names linopy gives them.
+
+    linopy names them after PyPSA's auxiliary variable, the backticked opening
+    of the entry's description. A pinned link's row is its `_link` and a
+    bounded one's its `_output_link`, whether or not a gate reads the curve.
+    """
+    names = {}
+    for name, entry in model.piecewise.items():
+        aux = _stands_for(name, entry.description)
+        curve = model.program.piecewise[name]
+        emitted = Emitted.of(name, curve)
+        names |= {getattr(emitted, field): f'{aux}_{suffix}' for field, suffix in LINOPY_SUFFIX.items()}
+        for row, link in zip(emitted.links, curve.links, strict=True):
+            names[row] = names[row + _UNGATED] = f'{aux}_{"link" if link.sign == "==" else "output_link"}'
+    expanded = model.expand('piecewise')
+    return (
+        {linopy for name, linopy in names.items() if name in expanded.constraints},
+        {linopy for name, linopy in names.items() if name in expanded.variables},
+    )
+
+
+PIECEWISE = [_piecewise_names(m) for m in MODELS]
 ROWS_DECLARED = {
-    n for m in MODELS for name, entry in m.constraints.items() for n in _names_for(name, entry.description)
+    *(n for m in MODELS for name, entry in m.constraints.items() for n in _names_for(name, entry.description)),
+    *(n for rows, _ in PIECEWISE for n in rows),
 }
 COLUMNS_DECLARED = {
-    n for m in MODELS for name, entry in m.variables.items() for n in _names_for(name, entry.description)
+    *(n for m in MODELS for name, entry in m.variables.items() for n in _names_for(name, entry.description)),
+    *(n for _, columns in PIECEWISE for n in columns),
 }
 #: The five GlobalConstraint formulas open with their *type* — PyPSA names
 #: those rows after each row's own label, so they are matched through the

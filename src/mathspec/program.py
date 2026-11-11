@@ -753,14 +753,14 @@ class Parameter:
     """
     description: str | None = None
     where: Mask | None = None
-    """The condition that limits the coordinates of the parameter, or ``None`` when it has every coordinate of its
-    ``dims`` inside [`confined_by`][mathspec.program.Parameter.confined_by]. Where the condition is false, the parameter
-    is absent and a tool drops its rows of data there. ``missing`` applies where the condition is true.
+    """Where the parameter has coordinates, or ``None`` when it has every coordinate of its ``dims``. It holds each
+    relation in [`in_`][mathspec.program.Parameter.in_] and the file's ``where:``. Where it is false, the parameter is
+    absent and a tool drops its rows of data there. ``missing`` applies where it is true.
     """
-    confined_by: tuple[str, ...] = ()
-    """The relations the parameter names under ``confined_by:``, sorted by name. A tool
-    attaching the data refuses a row at a key combination one of them has no row for, and reads the parameter as absent
-    there, before ``where`` drops anything and before ``missing`` fills anything.
+    in_: tuple[str, ...] = ()
+    """The relations of the parameter's index set, written ``in:``, sorted by name. A tool attaching the data refuses a
+    row at a key combination one of them has no row for, before ``where`` drops anything and before ``missing`` fills
+    anything. A value column of the relation plays no part.
     """
 
     @property
@@ -773,6 +773,9 @@ class Parameter:
 class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
+    """Where the variable exists, or ``None`` when it exists at every coordinate of its ``dims``. It holds each relation
+    in [`in_`][mathspec.program.Variable.in_] and the file's ``where:``.
+    """
     lower: Expression | None = None
     """A number, a parameter, or ``None`` when that side is open. An engine decides how an open side enters the model.
     """
@@ -781,6 +784,8 @@ class Variable:
     domain: VariableDomain = 'continuous'
     missing: VariableMissing = 'absent'
     description: str | None = None
+    in_: tuple[str, ...] = ()
+    """The relations of the variable's index set, written ``in:``, sorted by name."""
 
 
 @dataclass(frozen=True)
@@ -953,17 +958,20 @@ class Link:
 
 @dataclass(frozen=True)
 class Gate:
-    """The binary a ``piecewise:`` entry's weights sum to, as each curve reads it.
+    """The variable that switches a ``piecewise:`` entry's curves on, as each curve reads it.
 
-    ``variable`` is the binary the file named, and ``read`` the gate at one
-    curve: the variable on the entry's own frame, or the variable read through
-    a relation, as ``at(..., by=)`` reads it. ``exists`` is where a curve reads
-    the gate, and the curve is ungated elsewhere, its weights summing to 1; it
-    is ``None`` where every curve reads it. A masked variable exists only on
-    its mask, and a relation declared ``missing: absent`` may have no row for
-    a curve, so both leave curves ungated; ``missing: 0`` reads the variable
-    as 0 off its mask instead, which pins those curves off. Under the
-    relation's ``missing: refused`` every curve has a row.
+    ``variable`` is the variable the file named: a binary, or an integer under
+    ``method: incremental``, which turns the curve off at 0 and, from 1 up,
+    moves it by its point at the first breakpoint once per unit above 1.
+    ``read`` is the gate at one curve: the variable on the entry's own frame,
+    or the variable read through a relation, as ``at(..., by=)`` reads it.
+    ``exists`` is where a curve reads the gate, and the curve is ungated
+    elsewhere, its weights summing to 1; it is ``None`` where every curve
+    reads it. A masked variable exists only on its mask, and a relation
+    declared ``missing: absent`` may have no row for a curve, so both leave
+    curves ungated; ``missing: 0`` reads the variable as 0 off its mask
+    instead, which pins those curves off. Under the relation's
+    ``missing: refused`` every curve has a row.
     """
 
     variable: str
@@ -1782,6 +1790,23 @@ def _fold(node: Condition) -> Condition:
     return node
 
 
+def _within(node: Condition, relations: frozenset[str]) -> Condition:
+    """*node* with each bare read of *relations* true, and a named condition left whole where nothing in it changes."""
+    match node:
+        case RelationDefined(name=name) if name in relations:
+            return BooleanLiteral(value=True)
+        case Not(operand=operand):
+            return Not(_within(operand, relations))
+        case And(left=left, right=right):
+            return And(_within(left, relations), _within(right, relations))
+        case Or(left=left, right=right):
+            return Or(_within(left, relations), _within(right, relations))
+        case ConditionReference(body=body):
+            return node if (inside := _within(body, relations)) == body else inside
+        case _:
+            return node
+
+
 @dataclass(frozen=True)
 class Mask:
     """A resolved ``where`` and the questions the language answers about it.
@@ -1830,6 +1855,13 @@ class Mask:
         """
         return tuple(sorted({dim for atom in self.atoms for dim in _atom_dims(atom)}))
 
+    def within(self, relations: Iterable[str]) -> Mask:
+        """The mask read inside the rows of *relations*, where each of them, read at the mask's own coordinates, is true.
+
+        A relation read anywhere else, as through ``shift`` or ``at``, is left as it is.
+        """
+        return Mask(_within(self.root, frozenset(relations)))
+
     def __invert__(self) -> Mask:
         """The mask admitting exactly the rows this one refuses — construction folds a double negation or a literal flip."""
         return Mask(Not(self.root))
@@ -1848,7 +1880,7 @@ class Mask:
 # --------------------------------------------------------------------------
 
 
-AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+AdviceKind = Literal['never-an-axis', 'given', 'index-set', 'unbounded']
 """The checks that an [`Advice`][] comes from. The set is closed, so a tool that filters on it can list every value."""
 
 

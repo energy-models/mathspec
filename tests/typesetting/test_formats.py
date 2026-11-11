@@ -117,7 +117,7 @@ def test_the_model_description_opens_the_document(name: FormatName, fmt: Format,
     described = varied(DISPATCH_MODEL, description='least-cost dispatch of a generator fleet')
     out = typeset(described, name, **options)
     assert 'least-cost dispatch of a generator fleet' in out
-    assert out.index('least-cost dispatch') < out.index(fmt.operators['minimize']), 'it opens the document'
+    assert out.index('least-cost dispatch') < out.index(fmt.operators['min']), 'it opens the document'
     assert 'least-cost dispatch' not in typeset(DISPATCH_MODEL, name), 'a model without one prints no empty paragraph'
 
 

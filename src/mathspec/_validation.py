@@ -111,7 +111,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
-        *_confinements(spec),
+        *_index_sets(spec),
         *_missing_by(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
@@ -233,34 +233,58 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
             )
 
 
-def _confinements(spec: Spec) -> Iterator[str]:
-    """Each relation a parameter is confined by leaves a key combination out, and is keyed by its dimensions, once each."""
-    for pname, p in spec.parameters.items():
-        head = f"Parameter '{pname}': confined_by: names"
-        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(p.confined_by).items() if count > 1)
-        for rname in dict.fromkeys(p.confined_by):
+def _index_sets(spec: Spec) -> Iterator[str]:
+    """Each entry of an ``in:`` is a relation keyed by dimensions of the entry, leaves a key out, and is named once.
+
+    The entry is over no dimension of a value column outside the key, since the
+    index set is the key alone and would give the entry every label of that
+    dimension, not only the one the row lists.
+    """
+    entries = [
+        *((f"Parameter '{name}'", name, p.dims, p.in_) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", name, v.dims, v.in_) for name, v in spec.variables.items()),
+    ]
+    for context, name, dims, in_ in entries:
+        head = f'{context}: in: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(in_).items() if count > 1)
+        for rname in dict.fromkeys(in_):
             if (lk := spec.relations.get(rname)) is None:
-                yield (
-                    f"{head} '{rname}', which is not a relation. "
-                    f'{did_you_mean(rname, spec.relations, label="Relations")}'
-                )
+                yield _not_a_relation(head, rname, spec)
                 continue
             if lk.missing == 'refused':
                 yield (
                     f"{head} '{rname}', which under missing: refused has a row at every key combination, so it "
-                    f"confines nothing. Write missing: absent on '{rname}', or delete it from confined_by:."
+                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from in:."
                 )
             key = Counter(dict(lk.pairs)[k] for k in lk.key_roles)
             if twice := [d for d, count in key.items() if count > 1]:
                 yield (
-                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{pname}' has "
-                    f"'{twice[0]}' once. Confine it by a relation keyed by one column over each dimension."
+                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{name}' has "
+                    f"'{twice[0]}' once. Name a relation keyed by one column over each dimension."
                 )
-            elif outside := [d for d in key if d not in p.dims]:
+            elif outside := [d for d in key if d not in dims]:
                 yield (
-                    f"{head} '{rname}', keyed by {sorted(key)}, and '{pname}' is not over {outside}. Add "
-                    f"{outside} to its dims:, or delete '{rname}' from confined_by:."
+                    f"{head} '{rname}', keyed by {sorted(key)}, and '{name}' is not over {outside}. Add "
+                    f"{outside} to its dims:, or delete '{rname}' from in:."
                 )
+            elif widened := [(r, d) for r, d in side_columns(lk.values) if d in dims and d not in key]:
+                role, dim = widened[0]
+                yield (
+                    f"{head} '{rname}', whose value column '{role}' is over '{dim}', and '{name}' is over '{dim}' "
+                    f"too, so '{name}' would have a coordinate at every '{dim}', not only at the one in the row of "
+                    f"'{rname}'. Delete '{dim}' from its dims: and read it as {rname}[{role}], or name a relation "
+                    f'keyed by {sorted([*key, dim])} with no values: in in:.'
+                )
+
+
+def _not_a_relation(head: str, written: str, spec: Spec) -> str:
+    """The refusal for an ``in:`` entry that names no relation, a column of one, ``relation[column]``, apart."""
+    if (column := re.fullmatch(r'(\w+)\[(.+)\]', written)) is not None and column[1] in spec.relations:
+        return (
+            f"{head} '{written}', a column of '{column[1]}', and an index set is the key of a relation. Write "
+            f"in: [{column[1]}], and test '{column[2]}' in a `where:` if that was meant."
+        )
+    return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
 
 
 def _missing_by(spec: Spec) -> Iterator[str]:
@@ -442,8 +466,8 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             continue
         if (activity := gate_of(pw.activity)) is None:
             yield (
-                f'{context}: activity: {pw.activity!r} is neither a binary variable nor one read through a '
-                f'relation. Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
+                f'{context}: activity: {pw.activity!r} is neither a variable nor one read through a relation. '
+                f'Write activity: <variable>, or activity: at(<variable>, by=<relation>[<column>]).'
             )
             continue
         if activity not in spec.variables:
@@ -451,10 +475,12 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
                 f"{context}: activity '{activity}' is not a declared variable. Declare it as a binary "
                 f'variable, or delete activity:.'
             )
-        elif spec.variables[activity].domain != 'binary':
+        elif (domain := spec.variables[activity].domain) == 'continuous':
+            yield f"{context}: activity variable '{activity}' is continuous. Declare it domain: binary."
+        elif domain == 'integer' and pw.method != 'incremental':
             yield (
-                f"{context}: activity variable '{activity}' is {spec.variables[activity].domain}. "
-                f'Declare it domain: binary.'
+                f"{context}: activity variable '{activity}' is integer, and method: {pw.method} takes a binary "
+                f"gate only. Write method: incremental, or declare '{activity}' domain: binary."
             )
 
 

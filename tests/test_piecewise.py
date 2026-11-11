@@ -12,7 +12,7 @@ methods exist, and which gates an entry will accept.
 from __future__ import annotations
 
 import re
-from typing import get_args
+from typing import Any, get_args
 
 import pytest
 
@@ -269,6 +269,16 @@ def test_any_affine_expression_is_a_legal_link(link):
             "activity variable 'u' is continuous. Declare it domain: binary.",
             id='activity-must-be-binary',
         ),
+        *(
+            pytest.param(
+                GATED,
+                {'variables.u': {'dims': ['snapshot'], 'domain': 'integer'}, 'piecewise.cost_curve.method': method},
+                f"activity variable 'u' is integer, and method: {method} takes a binary gate only. Write "
+                "method: incremental, or declare 'u' domain: binary.",
+                id=f'an-integer-gate-under-{method}',
+            )
+            for method in ('adjacency', 'sos2')
+        ),
         pytest.param(
             NONCONVEX_YAML,
             {'piecewise.cost_curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'nope']}},
@@ -507,10 +517,8 @@ def test_a_link_reading_a_dual_entry_is_refused():
     ('activity', 'match'),
     [
         pytest.param('at(u_unit, by=unit_of[unit])', 'is not a declared variable', id='a-lookup-through-a-relation'),
-        pytest.param(
-            'shift(u, along=snapshot, offset=1)', 'is neither a binary variable nor one read', id='a-shifted-gate'
-        ),
-        pytest.param('u * 2', 'is neither a binary variable nor one read', id='an-arithmetic-gate'),
+        pytest.param('shift(u, along=snapshot, offset=1)', 'is neither a variable nor one read', id='a-shifted-gate'),
+        pytest.param('u * 2', 'is neither a variable nor one read', id='an-arithmetic-gate'),
     ],
 )
 def test_a_gate_that_is_not_a_variable_is_refused(activity, match):
@@ -772,13 +780,21 @@ def test_a_ragged_where_reaches_the_weights_as_written_and_the_frame_rows_as_a_c
     assert expanded.constraints['cost_curve_p'].where == 'count(has_curve AND bp_x, over=bp) > 0'
 
 
-def test_a_where_joins_both_gate_rows():
+@pytest.mark.parametrize(
+    'gate',
+    [
+        pytest.param({'where': 'committable'}, id='a-gate-with-a-where'),
+        pytest.param({'in': ['running']}, id='a-gate-in-a-relation'),
+    ],
+)
+def test_a_where_joins_both_gate_rows(gate: dict[str, Any]):
     """`activity:` splits the convexity row across the gate's own mask, and the block's where holds over both halves."""
     spec = spec_of(
         MASKED,
         **{
-            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', 'where': 'committable'},
+            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', **gate},
             'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+            'relations.running': {'key': ['generator', 'snapshot'], 'missing': 'absent'},
             'piecewise.cost_curve.activity': 'u',
         },
     )
@@ -1403,8 +1419,7 @@ SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<relation
         ),
         pytest.param(
             {'piecewise.curve.activity': f'{RUNNING} * 2'},
-            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a binary variable nor one read through a relation\. "
-            + SHAPES,
+            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a variable nor one read through a relation\. " + SHAPES,
             id='a-product',
         ),
         pytest.param({'piecewise.curve.activity': '1 - running'}, SHAPES, id='a-complement'),
@@ -1910,6 +1925,27 @@ def test_an_incremental_link_is_its_first_breakpoint_plus_each_filled_segment(ro
 )
 def test_an_incremental_curve_orders_its_segments_as_linopy_does(row, expression):
     assert expand_piecewise(spec_of(INCREMENTAL)).constraints[row].expression == expression
+
+
+@pytest.mark.parametrize(
+    ('model', 'gate'),
+    [
+        pytest.param(varied(GATED, **{'piecewise.cost_curve.method': 'incremental'}), 'u', id='a-gate-on-the-frame'),
+        pytest.param(INCREMENTAL, 'status', id='a-masked-gate-on-a-walked-curve'),
+    ],
+)
+def test_an_integer_gate_under_incremental_writes_the_rows_a_binary_one_does(model: dict, gate: str):
+    """PyPSA gates a curve of a modular committable unit with its integer status, which the loader refused.
+
+    linopy passes that status to the incremental form as it is, and the rows
+    hold for any value of it: at 0 the curve is off, and from 1 up it moves
+    by its first breakpoint per module above one.
+    """
+    integer = varied(model, **{f'variables.{gate}.domain': 'integer', f'variables.{gate}.bounds': {'lower': 0}})
+    rows = {name: row.expression for name, row in expand_piecewise(spec_of(integer)).constraints.items()}
+    assert rows == {name: row.expression for name, row in expand_piecewise(spec_of(model)).constraints.items()}, (
+        'an integer gate writes every row a binary gate writes, and no other'
+    )
 
 
 #: PyPSA's committable link: one efficiency curve per output port, switched by the status of the link it belongs to.

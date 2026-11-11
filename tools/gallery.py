@@ -328,6 +328,7 @@ def patched_block(base: Path, patch: Path) -> str:
         'constraints': {
             name: _stands_for(name, constraint.description) for name, constraint in model.constraints.items()
         },
+        'piecewise': {name: name for name in model.piecewise},
         'assumptions': {name: name for name in model.assumptions},
     }
     parts = [model.description]

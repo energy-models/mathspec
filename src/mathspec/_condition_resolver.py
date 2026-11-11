@@ -173,7 +173,7 @@ class ConditionResolver:
                     and set(declared.readings) == {'refused'}
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
-                    and not declared.confined_by
+                    and not declared.in_
                 ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'

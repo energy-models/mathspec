@@ -12,7 +12,6 @@ of it is about syntax, so none is duplicated per format.
 
 from __future__ import annotations
 
-import functools
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, assert_never
 
@@ -68,7 +67,7 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import BinaryOperator
     from mathspec._typesetting.format import Format
     from mathspec._typesetting.symbols import Symbols
-    from mathspec.program import Link, Piecewise, Program
+    from mathspec.program import Link, Parameter, Piecewise, Program, Variable
 
 _PRECEDENCE: dict[BinaryOperator, int] = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3}
 _ATOM = 5
@@ -206,6 +205,14 @@ def _unsigned(node: Expression) -> Expression | None:
                 else Divide(head, second, dims=node.dims)
             )
     return None
+
+
+def _inside_on(entry: Parameter | Variable) -> Mask | None:
+    """*entry*'s mask with its ``in:`` read as true, since the domain states it: ``None`` where nothing is left."""
+    if entry.where is None:
+        return None
+    inside = entry.where.within(entry.in_)
+    return None if isinstance(inside.root, BooleanLiteral) else inside
 
 
 class Walk:
@@ -643,10 +650,10 @@ class Walk:
         """
         return '' if mask is None else self._condition(mask.root, ctx)
 
-    def _quantifier(self, dims: list[str], condition: str) -> str:
+    def _quantifier(self, dims: list[str], condition: str, *, memberships: list[str] | None = None) -> str:
         if not dims and not condition:
             return ''
-        over = self.format.joined([self._membership(d) for d in dims], '')
+        over = self.format.joined(memberships or [self._membership(d) for d in dims], '')
         if not condition:
             return f'{self._op("forall")} {over}'
         if not over:
@@ -676,7 +683,7 @@ class Walk:
         objective = self.program.objective
         if objective is None:
             return []
-        sense = self._op('minimize' if objective.sense == 'minimize' else 'maximize')
+        sense = self._op('min' if objective.sense == 'minimize' else 'max')
         return [Line(label='', left=sense, right=self._expression(objective.expression, self._context()))]
 
     def _constraints(self) -> list[Line]:
@@ -715,34 +722,41 @@ class Walk:
         return [self.definition(name) for name in self.defined()]
 
     def parameter_masks(self) -> dict[str, str]:
-        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
+        """Each masked parameter's ``where:``, inside its ``in:``, printed over the parameter's own indices for its legend row."""
         return {
-            name: self._condition(entry.where.root, self._context(entry.dims))
+            name: self._condition(mask.root, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
-            if entry.where is not None
+            if (mask := _inside_on(entry)) is not None
         }
 
-    def parameter_confinements(self) -> dict[str, str]:
-        """Each confined parameter's relation rows, printed over its own indices for its legend row.
+    def index_sets(self) -> dict[str, str]:
+        """Each parameter's and variable's ``in:``, printed as the domain its legend row is over."""
+        entries = {**self.program.parameters, **self.program.variables}
+        return {
+            name: self.format.joined(self._index_set(entry.dims, entry.in_, self._context(entry.dims)), '')
+            for name, entry in entries.items()
+            if entry.in_
+        }
 
-        They print apart from the mask, because a tool refuses a row of data
-        outside a relation and drops one outside the mask.
+    def _index_set(self, dims: tuple[str, ...], in_: tuple[str, ...], ctx: _Context) -> list[str]:
+        """The key of each relation in *in_* as the rows it ranges over, then each other dimension of *dims*, as its set.
+
+        A relation with value columns prints by its key too, ``g ∈ gen_bus``:
+        its values play no part in the index set.
         """
         relations = self.program.relations
-        return {
-            name: self._condition(
-                functools.reduce(
-                    And,
-                    [
-                        RelationDefined(r, tuple(relations[r].dim(role) for role in relations[r].key))
-                        for r in entry.confined_by
-                    ],
-                ),
-                self._context(entry.dims),
-            )
-            for name, entry in self.program.parameters.items()
-            if entry.confined_by
-        }
+        keyed = {relations[r].dim(k) for r in in_ for k in relations[r].key}
+        return [
+            *(self._key_in(r, ctx) for r in in_),
+            *(self._membership(d) for d in dims if d not in keyed),
+        ]
+
+    def _key_in(self, name: str, ctx: _Context) -> str:
+        """The key of relation *name* at the frame's own indices, as a member of the relation: ``(b, g) ∈ connection``."""
+        at = self._frame_key(name, ctx)
+        key = [at[k] for k in self.program.relations[name].key]
+        member = key[0] if len(key) == 1 else self.format.parenthesise(self.format.joined(key, ''))
+        return f'{member} {self._op("in")} {self.format.upright(name)}'
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
@@ -848,7 +862,11 @@ class Walk:
         entry = self.program.variables[name]
         ctx = self._context(frame=entry.dims)
         symbol = ctx.indexed(self.symbols.name[name], list(entry.dims))
-        condition = self._quantifier(list(entry.dims), self._mask_condition(ctx, entry.where))
+        condition = self._quantifier(
+            list(entry.dims),
+            self._mask_condition(ctx, _inside_on(entry)),
+            memberships=self._index_set(entry.dims, entry.in_, ctx),
+        )
         lower, upper = entry.lower, entry.upper
 
         if entry.domain == 'binary':
@@ -928,7 +946,8 @@ class Walk:
         elif len(entry.links) == 2:
             (i,) = bounded
             left = points[i]
-            right = f'{self._op(_COMPARISONS[entry.links[i].sign])} {self.format.apply(locus, points[1 - i])}'
+            function = self.format.parenthesise(locus) if self._counts(entry) else locus
+            right = f'{self._op(_COMPARISONS[entry.links[i].sign])} {self.format.apply(function, points[1 - i])}'
         else:
             cone = self.format.joined([self._op(_HALF_LINES[link.sign]) for link in entry.links], self._op('times'))
             left, right = self._tuple(list(points)), f'{self._op("in")} {locus} {self._op("plus")} {cone}'
@@ -976,15 +995,43 @@ class Walk:
     def _locus(self, entry: Piecewise, values: list[str], admitted: Mask | None, ctx: _Context) -> str:
         """The set the links lie on: the curve through the breakpoints, or the hull ``convex`` relaxes it onto.
 
-        A gate multiplies it, which is what gating a curve does — the weights
-        sum to the gate, so the locus is the origin where the gate is 0 and the
-        curve where it is 1.
+        A binary gate multiplies it, which is what gating a curve does — the
+        weights sum to the gate, so the locus is the origin where the gate is 0
+        and the curve where it is 1. Under an integer gate the expansion writes
+        the same incremental rows, which start each link at the first
+        breakpoint times the gate and bound every fill by it. The product is
+        then not the locus, which is ``g·v₀ + min(g, 1)·(curve - v₀)``: the origin at 0, and
+        the curve moved by ``(g - 1)·v₀`` from 1 up.
         """
         operator = self._op('hull' if entry.method == 'convex' else 'curve')
         through = self.format.subscript(operator, [self._breakpoints(entry, admitted, ctx)])
         locus = self.format.apply(through, self.format.joined(values, ''))
         gate = self._gate(entry, ctx)
-        return f'{gate} {self._op("cdot")} {locus}' if gate else locus
+        if not gate:
+            return locus
+        cdot = self._op('cdot')
+        if not self._counts(entry):
+            return f'{gate} {cdot} {locus}'
+        start = self._first_point(entry, admitted, ctx)
+        clipped = self.format.apply(self._op('min'), self.format.joined([gate, '1'], ''))
+        moved = self.format.parenthesise(f'{locus} {self._op("minus")} {start}')
+        return f'{gate} {cdot} {start} {self._op("plus")} {clipped} {cdot} {moved}'
+
+    def _counts(self, entry: Piecewise) -> bool:
+        """Whether the entry's gate is an integer, whose locus is not the gate times the curve."""
+        return entry.activity is not None and self.program.variables[entry.activity.variable].domain == 'integer'
+
+    def _first_point(self, entry: Piecewise, admitted: Mask | None, ctx: _Context) -> str:
+        """The links' values at the first breakpoint each curve runs through, the least one a ragged ``where:`` admits.
+
+        The incremental rows stand there, so it is the point an integer gate
+        moves the curve by.
+        """
+        over = self.symbols.set[entry.along]
+        if admitted is not None:
+            over = self.format.set_of(self._membership(entry.along), self._condition(admitted.root, ctx))
+        first = ctx.looked_up(entry.along, f'{self._op("min")} {over}')
+        return self._tuple([self._link(link, first)[1] for link in entry.links])
 
     def _breakpoints(self, entry: Piecewise, admitted: Mask | None, ctx: _Context) -> str:
         """Which breakpoints the curve runs through: every one of the dimension, or the ones a ragged ``where:`` admits.

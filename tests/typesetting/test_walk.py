@@ -1048,6 +1048,93 @@ def test_a_gate_that_does_not_exist_everywhere_prints_the_two_arms_the_expansion
     ) in typeset_line(spec, 'curve', 'latex'), 'and the factor on the curve carries the same two arms'
 
 
+#: The curve stated incrementally, switched by how many of its modules run.
+_MODULAR = varied(
+    _CURVE,
+    **{
+        'variables.modules': {'dims': ['snapshot'], 'domain': 'integer', 'bounds': {'lower': 0}},
+        'piecewise.curve.method': 'incremental',
+        'piecewise.curve.activity': 'modules',
+    },
+)
+#: Where the integer-gated curve starts in LaTeX, which Markdown sets its math in too.
+_START = r'\left( \mathrm{bp\_x}_{\min \mathcal{B}},\ \mathrm{bp\_y}_{\min \mathcal{B}} \right)'
+
+
+@pytest.mark.parametrize(
+    ('name', 'expected'),
+    [
+        *(
+            pytest.param(
+                name,
+                rf'\left( p_{{t}},\ \mathit{{op\_cost}}_{{t}} \right) \in \mathit{{modules}}_{{t}} \cdot {_START} + '
+                rf'\min(\mathit{{modules}}_{{t}},\ 1) \cdot \left( \mathrm{{pwl}}_{{b \in \mathcal{{B}}}}'
+                rf'(\mathrm{{bp\_x}}_{{b}},\ \mathrm{{bp\_y}}_{{b}}) - {_START} \right) \qquad \forall\, t \in '
+                r'\mathcal{T}',
+                id=name,
+            )
+            for name in ('latex', 'markdown')
+        ),
+        pytest.param(
+            'typst',
+            '(p_(t), italic("op_cost")_(t)) in italic("modules")_(t) dot (upright("bp_x")_(min cal(B)), '
+            'upright("bp_y")_(min cal(B))) + min(italic("modules")_(t), 1) dot (upright("pwl")_(b in cal(B))'
+            '(upright("bp_x")_(b), upright("bp_y")_(b)) - (upright("bp_x")_(min cal(B)), '
+            'upright("bp_y")_(min cal(B)))) quad forall t in cal(T)',
+            id='typst',
+        ),
+    ],
+)
+def test_an_integer_gate_prints_the_curve_it_moves_off_its_first_breakpoint(name: FormatName, expected: str):
+    """The gate printed as a factor on the curve, which is exact only for a binary.
+
+    The incremental rows start each link at its first breakpoint times the
+    gate, and bound every fill by the gate. So 0 turns the curve off, and each
+    unit above 1 moves the curve by its point at the first breakpoint.
+    """
+    assert typeset_line(_MODULAR, 'curve', name) == expected
+
+
+@pytest.mark.parametrize(
+    ('patch', 'expected'),
+    [
+        pytest.param(
+            {'piecewise.curve.where': 'reaches', 'parameters.bp_x.missing': 0, 'parameters.bp_y.missing': 0},
+            r'\mathrm{bp\_x}_{\min \{ b \in \mathcal{B} \,:\, \mathrm{reaches}_{b} \}}',
+            id='a-ragged-curve-starts-at-the-first-breakpoint-it-runs-through',
+        ),
+        pytest.param(
+            {'piecewise.curve.links': {'p': ['p', 'bp_x'], 'op_cost': ['op_cost', 'bp_y', '>=']}},
+            r'\mathit{op\_cost}_{t} \ge \left( \mathit{modules}_{t} \cdot ' + _START,
+            id='a-bounded-link-reads-the-whole-moved-curve-as-a-function',
+        ),
+        pytest.param(
+            {
+                'piecewise.curve.links': {
+                    'p': ['p', 'bp_x'],
+                    'op_cost': ['op_cost', 'bp_y', '>='],
+                    'twice': ['p * 2', 'bp_x', '<='],
+                },
+            },
+            r' \right) + \{0\} \times \mathbb{R}_{\ge 0} \times \mathbb{R}_{\le 0}',
+            id='bounded-links-add-their-cone-to-the-moved-curve',
+        ),
+        pytest.param(
+            {
+                'parameters.committable': {'dims': ['snapshot'], 'dtype': 'bool'},
+                'variables.modules.where': 'committable',
+            },
+            r'\min(\begin{cases} \mathit{modules}_{t} & \text{if } \mathrm{committable}_{t} \\ 1 '
+            r'& \text{otherwise} \end{cases},\ 1)',
+            id='a-masked-gate-is-1-where-it-does-not-exist',
+        ),
+    ],
+)
+def test_an_integer_gate_moves_the_curve_in_every_form_a_curve_prints_in(patch: dict[str, Any], expected: str):
+    """A ragged curve, a bounded link, a cone and a gate that leaves some curves ungated each print the moved curve."""
+    assert expected in typeset_line(varied(_MODULAR, **patch), 'curve', 'latex')
+
+
 def test_a_curve_prints_over_the_frame_its_expansion_builds_one_per_coordinate_of():
     """The quantifier is the block's `dims:`, as the rows the expansion emits are."""
     model = varied(
