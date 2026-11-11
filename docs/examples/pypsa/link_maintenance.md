@@ -50,7 +50,7 @@ parameters:
     description: >-
       whether a link must be taken off for maintenance within the horizon: in
       any scenario, as PyPSA takes the union over them
-      (`components.py:1018-1021`)
+      (`components.py:1000-1003`)
     dims: [link]
     dtype: bool
   Link_maintenance_pu:
@@ -275,7 +275,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1018-1021`) |
+| $`\mathrm{mnt}^{f}`$ | `Link_maintainable` over $`\mathcal{L}`$ — whether a link must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1000-1003`) |
 | $`\tau^{f,\mathrm{mnt}}`$ | `Link_maintenance_duration` over $`\mathcal{L} \times \Xi`$, `absent` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the link is not maintainable. No row contains it. In data prep you turn it into `Link_maintenance_cover` and `Link_maintenance_start_blocked`. The assumptions state that it fits the horizon |
 | $`\mathrm{n}^{f,\mathrm{mnt}}`$ | `Link_maintenance_events` over $`\mathcal{L} \times \Xi`$ — how many maintenance events occur within the horizon |
 | $`\gamma^{f}`$ | `Link_maintenance_pu` over $`\mathcal{L} \times \Xi`$ — the share of the build a maintenance event takes off |

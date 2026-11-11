@@ -106,7 +106,7 @@ parameters:
       data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`,
       where the cap is finite and positive. Elsewhere it is
       `committable_big_m` times the highest `p_max_pu`
-      (`components.py:1100-1171`). Without that keyword, it is ten times the
+      (`components.py:1082-1152`). Without that keyword, it is ten times the
       largest of the peak total load and the component's largest finite
       `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below
       the internal power a solve wants, it caps that internal power
@@ -354,7 +354,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1100-1171`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
+| $`\mathrm{M}^{z}`$ | `Process_big_m` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable process's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1082-1152`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the internal power a solve wants, it caps that internal power |
 | $`\mathrm{com}^{z}`$ | `Process_committable` over $`\mathcal{J}`$ — whether internal power is gated by an on/off status decision |
 | $`\mathrm{rest}^{z}`$ | `Process_down_time_brought_in` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — one while the down time a process brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
 | $`\mathrm{DT}^{z}`$ | `Process_min_down_time` over $`\mathcal{J} \times \Xi`$ — least snapshots a process stays off once stopped |

@@ -119,7 +119,7 @@ parameters:
       (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an
       annuity over `lifetime` at `discount_rate`, times `nyears`, where
       `overnight_cost` is given, and `capital_cost` where it is not. Both add
-      `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`)
+      `fom_cost` (`components.py:1157-1178`, `costs.py:102-203`)
     dims: [scenario, line]
   Line_s_nom_set:
     description: a given nominal apparent power for an extendable line. One without a value has no row here
@@ -181,7 +181,7 @@ parameters:
       periods the line is active in. A line outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Line_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:905-914`)
+      (`components.py:1182-1200`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, line]
     missing: absent
   Line_tech_capacity_weight:
@@ -385,10 +385,10 @@ constraints:
 |---|---|
 | $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{K} \times \mathcal{T}`$ — whether a line is active in a snapshot's period. It is PyPSA's `active`, data prep |
 | $`\mathrm{act}^{s}`$ | `Line_active_asset` over $`\mathcal{K}`$ — whether a line is one of PyPSA's `active_assets`, by its `active` flag alone, without build year and lifetime. A unit that is active in no snapshot of the horizon still counts. PyPSA refuses one that differs by scenario (`constants.py:54`) |
-| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\mathcal{K} \times \Xi`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1176-1197`, `costs.py:102-203`) |
+| $`\mathrm{c}^{\mathrm{cap},s}`$ | `Line_capital_cost` over $`\mathcal{K} \times \Xi`$ — cost of one unit of nominal apparent power for the modelled horizon (PyPSA's `periodized_cost`), data prep. It is `overnight_cost` as an annuity over `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is given, and `capital_cost` where it is not. Both add `fom_cost` (`components.py:1157-1178`, `costs.py:102-203`) |
 | $`\mathrm{W}^{s}`$ | `Line_capital_weight` over $`\mathcal{K}`$ — the sum of period weights a line is active in. It is PyPSA's `active * period_weighting`, summed, data prep |
 | $`\mathrm{x}`$ | `Line_cycle_weight` over $`\mathcal{C} \times \mathcal{K} \times \mathcal{Y}`$, `absent` where the data has no row — the line's series impedance, signed by its orientation in the cycle: the cycle basis, data prep. A line in no cycle has no row. PyPSA builds the cycle basis from the first scenario (`networks.py:1430-1437`), and refuses a `v_nom`, `x_pu_eff` or `r_pu_eff` that differs by scenario (`constants.py:33-35`). So the weight is the same in every scenario |
-| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\mathcal{G} \times \mathcal{K} \times \Xi`$, `absent` where the data has no row — the line's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the line is active in. A line outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1201-1219`, `global_constraints.py:905-914`) |
+| $`\mathrm{cc}`$ | `Line_expansion_cost_weight` over $`\mathcal{G} \times \mathcal{K} \times \Xi`$, `absent` where the data has no row — the line's capital cost where its carrier is in the row's set, data prep. Where the row states no `investment_period` under `multi_investment_periods`, it is times the objective weights of the periods the line is active in. A line outside the set, or one that is not active in the row's period, has no row. The capital cost is PyPSA's `capital_cost` property, which is `Line_capital_cost` without `fom_cost` (`components.py:1182-1200`, `global_constraints.py:905-914`) |
 | $`\mathrm{new}^{s}`$ | `Line_first_active` over $`\mathcal{K} \times \mathcal{Y}`$ — one in the first period a line is active in, zero elsewhere, data prep. PyPSA takes `active & (active.cumsum() == 1)` (`global_constraints.py:278`) |
 | $`\overline{\ell}`$ | `Line_loss_max` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$ — the loss at a line's rating. It is PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`, data prep |
 | $`\mathrm{b}`$ | `Line_loss_offset` over $`\mathcal{K} \times \Xi \times \mathcal{E} \times \mathcal{T}`$ — where that cut meets the loss axis: a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
