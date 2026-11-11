@@ -8,7 +8,8 @@ SPDX-License-Identifier: CC-BY-4.0
 A **dimension** is a set of labels that entries are indexed over, such as the
 hours in `snapshot` or the units in `generator`.
 This page lists the keys a dimension accepts, the closed label lists of
-`one_of`, and the rule for the order of a dimension.
+`one_of`, the rule for the order of a dimension, and the dimensions that
+combine others under `over`.
 
 ## `dimensions`
 
@@ -43,6 +44,7 @@ $`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` first.
 | `dtype`       | the type of a label: `float`, `int`, `str` or `datetime`                    | `str`   |
 | `one_of`      | [the labels a `str` dimension allows](#one_of)                              | `null`  |
 | `ordered`     | whether the order of the labels is part of the spec ([`ordered`](#ordered)) | `false` |
+| `over`        | [the dimensions whose labels each label combines](#over)                    | `[]`    |
 | `description` | free text, which the typeset legend lists                                   | `null`  |
 
 The file does not list the labels themselves. They arrive with the data, in
@@ -157,7 +159,97 @@ An `sos` entry of `type: 1` uses no order, so it needs no `ordered: true`.
 label steps back to the last. `edge='wrap'` does not change the dimension, and
 the dimension still needs `ordered: true`.
 
+## `over`
+
+`over` declares a **multi-dimension**: each label is one combination of labels
+of the dimensions it lists, its **members**. Only the combinations that the data
+lists exist, so an entry over a multi-dimension has a row only at those
+combinations.
+
+```yaml
+dimensions:
+  unit: {}
+  bus: {}
+  snapshot: { dtype: int, ordered: true }
+  connection: { over: [unit, bus] }
+parameters:
+  capacity: { dims: [unit] }
+  load: { dims: [bus, snapshot] }
+variables:
+  flow: { dims: [connection, snapshot], bounds: { lower: 0, upper: capacity } }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(flow, over=unit) == load
+  total:
+    dims: [snapshot, unit]
+    expression: sum(flow, over=bus) <= capacity
+```
+
+`flow` has one row per listed pair of unit and bus, at each snapshot. The data
+of `connection` is a table with one column per member, `unit` and `bus`. Each
+row is one combination, each value is a label of its member, and no
+combination repeats. The typeset spec writes `connection` as a subset of the
+product of its members:
+
+```math
+\mathit{flow}_{b,u,t} \ge 0 \qquad \forall\, \left( b,\ u \right) \in \mathrm{connection},\ t \in \mathcal{T}
+```
+
+A multi-dimension means the same as an entry over its members that has rows
+only at the listed combinations. So `flow` above means the same as
+`flow: { dims: [bus, snapshot, unit] }` with the rows confined to a bare
+[relation](relations.md) `connection: { key: [unit, bus], missing: absent }`.
+The multi-dimension states the confinement once, in the dimension, and every
+entry over it inherits the confinement.
+
+### How a multi-dimension meets its members
+
+A multi-dimension stands for its members wherever two frames meet:
+
+| You write                                   | mathspec reads                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `flow <= capacity`, `capacity` over `unit`  | `capacity` at the unit of each listed pair                                           |
+| `sum(flow, over=unit)`                      | the sum over the listed units of each bus; a bus with no listed unit gets `0`        |
+| `sum(flow, over=connection)`                | the sum over every listed pair                                                       |
+| `sum(x, over=connection)`, `x` over members | the sum of `x` over the listed pairs only                                            |
+| a constraint over `[bus, snapshot, unit]`   | `flow` only at the listed pairs; the constraint has no row at any other pair         |
+| `where: connection`, over the members       | true at the listed pairs                                                             |
+| `where: output`, `output` over `connection` | `output` at each listed pair; false at any other pair, so `NOT output` is true there |
+
+`shift` and `sum_back` along a member keep the multi-dimension. A lookup or a
+sum through a [relation](relations.md) on a member reads the operand over the
+members first.
+
+### What mathspec refuses
+
+A multi-dimension has no order and holds no member twice. So mathspec refuses,
+at load:
+
+- a member listed twice, or fewer than two members;
+- `dtype`, `one_of` or `ordered` on the multi-dimension, which belong on a
+  member;
+- a multi-dimension as a member of another one;
+- a `dims:` list with a multi-dimension beside one of its members;
+- two multi-dimensions that share a member in one frame, in `dims:` or in
+  arithmetic;
+- `shift`, `sum_back`, `position`, `piecewise:` and `sos:` along a
+  multi-dimension;
+- a comparison of a multi-dimension against a label;
+- a [relation](relations.md) column over a multi-dimension. To give each
+  combination a value, declare a parameter over the multi-dimension.
+
+For two multi-dimensions that share `unit`, `connection: { over: [unit, bus] }`
+and `active: { over: [unit, period] }` in `sum(on + flow, over=unit)`, mathspec
+prints:
+
+```text
+Constraint 'c': 'active' and 'connection' both combine 'unit', so no frame holds both. Index 'connection' by its members ['bus', 'unit'] and confine it with where: connection, or declare one dimension over ['bus', 'period', 'unit'].
+```
+
 !!! info "See also"
 
     - [choose between a dimension, a relation and a parameter](../../howto/declare-a-column.md)
       for a column of data.
+    - [limits](../../about/limits.md#multi-dimensions) for what a
+      multi-dimension cannot state.

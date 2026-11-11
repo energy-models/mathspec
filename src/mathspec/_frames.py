@@ -139,8 +139,8 @@ def overlap(context: str, a: str, b: str, member: str, over: Mapping[str, tuple[
     """The refusal for two multi-dimensions that share *member* meeting in one frame."""
     members = sorted({*over[a], *over[b]})
     return (
-        f"{context}: '{a}' and '{b}' both combine '{member}', so no frame holds both. Index one of them by its "
-        f'members and confine it with where: {b}, or declare one dimension over {members}.'
+        f"{context}: '{a}' and '{b}' both combine '{member}', so no frame holds both. Index '{b}' by its "
+        f'members {list(over[b])} and confine it with where: {b}, or declare one dimension over {members}.'
     )
 
 
