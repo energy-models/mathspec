@@ -668,6 +668,10 @@ class Dimension:
     """Whether the order of the labels is part of the spec. When it is, a tool keeps the labels in the order the data gives
     them.
     """
+    over: tuple[str, ...] = ()
+    """The dimensions a label combines, sorted by name, or empty for a dimension of plain labels. A label of a
+    multi-dimension is one combination of their labels, and the data lists each combination that exists.
+    """
     description: str | None = None
 
 
