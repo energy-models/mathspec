@@ -60,7 +60,7 @@ Nine constructs make a coordinate absent:
 | `where:` on a constraint                          | the row ([`where`](#where))                                                                                                    |
 | `shift(x, along=d, offset=n)` without `edge=`     | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
 | a key with no row in a `missing: absent` relation | the relation, at that key ([relations](relations.md#missing))                                                                  |
-| a key with no row in a relation in `on:`          | the parameter or variable, at that key ([`on`](parameters-variables-constraints.md#on))                                        |
+| a key with no row in a relation in `in:`          | the parameter or variable, at that key ([`in`](parameters-variables-constraints.md#in))                                        |
 | a missing row of a `missing: absent` parameter    | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
 | `within=` at a coordinate in no group             | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
 | a quotient whose divisor is zero                  | the quotient, at that coordinate ([reported values](#reported-values))                                                         |
@@ -228,7 +228,7 @@ as [missing rows](../reading.md#missing-rows) describes.
 
 ### `missing` on a variable
 
-Outside its `where:` and its [`on:`](parameters-variables-constraints.md#on-on-a-variable),
+Outside its `where:` and its [`in:`](parameters-variables-constraints.md#in-on-a-variable),
 a variable is absent by default. Its `missing:` key can set a number there
 instead, such as `0`. Under `absent`, a row that needs that
 coordinate is absent. A file declares `missing: 0` for a quantity that is zero

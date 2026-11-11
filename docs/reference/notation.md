@@ -55,7 +55,8 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
-  zone_share: { dims: [bus, zone], on: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
+  zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
+  area_weight: { dims: [bus], in: [area_of] } # indexed by the key of a relation with a value column: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -83,6 +84,7 @@ parameters:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{area\_weight}`$ | `area_weight` over $`u \in \mathrm{area\_of}`$ |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
@@ -294,7 +296,7 @@ a domain of the pairs `connection` lists, at every snapshot, and a `where:` insi
 variables:
   flow:
     dims: [snapshot, generator, bus]
-    on: [connection]
+    in: [connection]
     where: "p_max > 0"
     bounds: { lower: 0 }
 ```

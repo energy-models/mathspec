@@ -784,7 +784,7 @@ def test_a_ragged_where_reaches_the_weights_as_written_and_the_frame_rows_as_a_c
     'gate',
     [
         pytest.param({'where': 'committable'}, id='a-gate-with-a-where'),
-        pytest.param({'on': ['running']}, id='a-gate-on-a-relation'),
+        pytest.param({'in': ['running']}, id='a-gate-in-a-relation'),
     ],
 )
 def test_a_where_joins_both_gate_rows(gate: dict[str, Any]):

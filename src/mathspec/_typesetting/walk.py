@@ -207,10 +207,10 @@ def _unsigned(node: Expression) -> Expression | None:
 
 
 def _inside_on(entry: Parameter | Variable) -> Mask | None:
-    """*entry*'s mask with its ``on:`` read as true, since the domain states it: ``None`` where nothing is left."""
+    """*entry*'s mask with its ``in:`` read as true, since the domain states it: ``None`` where nothing is left."""
     if entry.where is None:
         return None
-    inside = entry.where.within(entry.on)
+    inside = entry.where.within(entry.in_)
     return None if isinstance(inside.root, BooleanLiteral) else inside
 
 
@@ -715,7 +715,7 @@ class Walk:
         return [self.definition(name) for name in self.defined()]
 
     def parameter_masks(self) -> dict[str, str]:
-        """Each masked parameter's ``where:``, inside its ``on:``, printed over the parameter's own indices for its legend row."""
+        """Each masked parameter's ``where:``, inside its ``in:``, printed over the parameter's own indices for its legend row."""
         return {
             name: self._condition(mask.root, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
@@ -723,22 +723,33 @@ class Walk:
         }
 
     def index_sets(self) -> dict[str, str]:
-        """Each parameter's and variable's ``on:``, printed as the domain its legend row is over."""
+        """Each parameter's and variable's ``in:``, printed as the domain its legend row is over."""
         entries = {**self.program.parameters, **self.program.variables}
         return {
-            name: self.format.joined(self._index_set(entry.dims, entry.on, self._context(entry.dims)), '')
+            name: self.format.joined(self._index_set(entry.dims, entry.in_, self._context(entry.dims)), '')
             for name, entry in entries.items()
-            if entry.on
+            if entry.in_
         }
 
-    def _index_set(self, dims: tuple[str, ...], on: tuple[str, ...], ctx: _Context) -> list[str]:
-        """The rows of each relation in *on*, then each dimension of *dims* no relation is keyed by, as its set."""
+    def _index_set(self, dims: tuple[str, ...], in_: tuple[str, ...], ctx: _Context) -> list[str]:
+        """The key of each relation in *in_* as the rows it ranges over, then each other dimension of *dims*, as its set.
+
+        A relation with value columns prints by its key too, ``g ∈ gen_bus``:
+        its values play no part in the index set.
+        """
         relations = self.program.relations
-        keyed = {relations[r].dim(k) for r in on for k in relations[r].key}
+        keyed = {relations[r].dim(k) for r in in_ for k in relations[r].key}
         return [
-            *(self._relation_row(r, self._frame_key(r, ctx)) for r in on),
+            *(self._key_in(r, ctx) for r in in_),
             *(self._membership(d) for d in dims if d not in keyed),
         ]
+
+    def _key_in(self, name: str, ctx: _Context) -> str:
+        """The key of relation *name* at the frame's own indices, as a member of the relation: ``(b, g) ∈ connection``."""
+        at = self._frame_key(name, ctx)
+        key = [at[k] for k in self.program.relations[name].key]
+        member = key[0] if len(key) == 1 else self.format.parenthesise(self.format.joined(key, ''))
+        return f'{member} {self._op("in")} {self.format.upright(name)}'
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
@@ -847,7 +858,7 @@ class Walk:
         condition = self._quantifier(
             list(entry.dims),
             self._mask_condition(ctx, _inside_on(entry)),
-            memberships=self._index_set(entry.dims, entry.on, ctx),
+            memberships=self._index_set(entry.dims, entry.in_, ctx),
         )
         lower, upper = entry.lower, entry.upper
 

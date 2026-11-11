@@ -13,6 +13,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("area_of"): cal(U) arrow.r cal(Z), upright("bus_zone") subset.eq cal(U) times cal(Z), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row, `bus_zone` is `absent` where the data has no row
 
 == Parameters
+/ $upright("area_weight")$: `area_weight` over $u in upright("area_of")$
 / $upright("bp_heat")$: `bp_heat` over $cal(B) times cal(G)$
 / $upright("bp_run")$: `bp_run` over $cal(B) times cal(G)$
 / $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, $0$ where the data has no row

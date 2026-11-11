@@ -36,7 +36,7 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
     Returns:
         The never-an-axis advice sorted by dimension name, then one note per
         entry the program reads and does not build, then one per variable
-        whose ``where:`` names a relation ``on:`` could name, then the
+        whose ``where:`` names a relation ``in:`` could name, then the
         unboundedness advice; ``str()`` of each is its sentence.
 
     Raises:
@@ -48,39 +48,38 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
 
 
 def _index_sets(program: Program) -> list[Advice]:
-    """One note per variable whose ``where:`` requires a row of a relation that ``on:`` could name.
+    """One note per variable whose ``where:`` requires a row of a relation that ``in:`` could name.
 
     A note rather than a refusal: the two say the same for a variable. A
     parameter gets none, because there a ``where:`` drops a stray row of data
-    and ``on:`` refuses it.
+    and ``in:`` refuses it.
     """
     notes: list[Advice] = []
     for name, variable in program.variables.items():
         if variable.where is None:
             continue
-        conjuncts = variable.where.within(variable.on).conjuncts
+        conjuncts = variable.where.within(variable.in_).conjuncts
         rows = sorted({c.name for c in conjuncts if isinstance(c, RelationDefined) and _lists_rows(program, c.name)})
         if not rows:
             continue
-        quoted, on = ' and '.join(f"'{r}'" for r in rows), ', '.join(sorted({*variable.on, *rows}))
+        quoted, in_ = ' and '.join(f"'{r}'" for r in rows), ', '.join(sorted({*variable.in_, *rows}))
         if any(not isinstance(c, RelationDefined) or c.name not in rows for c in conjuncts):
             text = (
                 f"Variable '{name}': its `where:` requires a row of {quoted}, which belongs in its index set. "
-                f'Write `on: [{on}]`, and keep the rest in the `where:`.'
+                f'Write `in: [{in_}]`, and keep the rest in the `where:`.'
             )
         else:
             text = (
                 f"Variable '{name}': its `where:` names only {quoted}, so it states the index set. "
-                f'Write `on: [{on}]` in place of the `where:`.'
+                f'Write `in: [{in_}]` in place of the `where:`.'
             )
         notes.append(Advice('index-set', name, text))
     return notes
 
 
 def _lists_rows(program: Program, relation: str) -> bool:
-    """Whether ``on:`` takes *relation*: it has no value columns, and leaves a key combination out."""
-    declared = program.relations[relation]
-    return not declared.values and declared.missing == 'absent'
+    """Whether ``in:`` takes *relation*: it leaves a key combination out."""
+    return program.relations[relation].missing == 'absent'
 
 
 def _given(program: Program) -> list[Advice]:

@@ -155,10 +155,11 @@ column. `within=<relation>[<column>]` makes `shift`, `sum_back` or
 
 ## Index set
 
-The index set of a parameter or a variable is the coordinates its `on:` lists:
-the key combinations where each of its relations has a row. A tool refuses a
-row of the data of a parameter outside its index set
-([`on`](language/parameters-variables-constraints.md#on)).
+The index set of a parameter or a variable is the coordinates its `in:` lists:
+the key combinations where each of its relations has a row. The value columns
+of a relation play no part. A tool refuses a row of the data of a parameter
+outside its index set
+([`in`](language/parameters-variables-constraints.md#in)).
 
 ## Label
 

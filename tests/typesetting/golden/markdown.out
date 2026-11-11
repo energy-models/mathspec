@@ -18,6 +18,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{area\_weight}`$ | `area_weight` over $`u \in \mathrm{area\_of}`$ |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |

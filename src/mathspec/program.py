@@ -724,12 +724,13 @@ class Parameter:
     description: str | None = None
     where: Mask | None = None
     """Where the parameter has coordinates, or ``None`` when it has every coordinate of its ``dims``. It holds each
-    relation in [`on`][mathspec.program.Parameter.on] and the file's ``where:``. Where it is false, the parameter is
+    relation in [`in_`][mathspec.program.Parameter.in_] and the file's ``where:``. Where it is false, the parameter is
     absent and a tool drops its rows of data there. ``missing`` applies where it is true.
     """
-    on: tuple[str, ...] = ()
-    """The relations of the parameter's index set, sorted by name. A tool attaching the data refuses a row at a key
-    combination one of them has no row for, before ``where`` drops anything and before ``missing`` fills anything.
+    in_: tuple[str, ...] = ()
+    """The relations of the parameter's index set, written ``in:``, sorted by name. A tool attaching the data refuses a
+    row at a key combination one of them has no row for, before ``where`` drops anything and before ``missing`` fills
+    anything. A value column of the relation plays no part.
     """
 
 
@@ -738,7 +739,7 @@ class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
     """Where the variable exists, or ``None`` when it exists at every coordinate of its ``dims``. It holds each relation
-    in [`on`][mathspec.program.Variable.on] and the file's ``where:``.
+    in [`in_`][mathspec.program.Variable.in_] and the file's ``where:``.
     """
     lower: Expression | None = None
     """A number, a parameter, or ``None`` when that side is open. An engine decides how an open side enters the model.
@@ -748,8 +749,8 @@ class Variable:
     domain: VariableDomain = 'continuous'
     missing: VariableMissing = 'absent'
     description: str | None = None
-    on: tuple[str, ...] = ()
-    """The relations of the variable's index set, sorted by name."""
+    in_: tuple[str, ...] = ()
+    """The relations of the variable's index set, written ``in:``, sorted by name."""
 
 
 @dataclass(frozen=True)

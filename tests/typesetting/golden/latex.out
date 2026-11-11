@@ -20,6 +20,7 @@
 
 \paragraph{Parameters}
 \begin{description}
+\item[{$\mathrm{area\_weight}$}] \texttt{area\_weight} over $u \in \mathrm{area\_of}$
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row

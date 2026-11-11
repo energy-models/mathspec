@@ -162,13 +162,13 @@ def lower(spec: Spec) -> Program:
             lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
         variables[vname] = Variable(
             vdef.dims,
-            where=_on_mask(vname, vdef.on, vdef.where, where, ns, context, errors),
+            where=_index_mask(vname, vdef.in_, vdef.where, where, ns, context, errors),
             lower=lower_bound,
             upper=upper_bound,
             domain=vdef.domain,
             missing=vdef.missing,
             description=vdef.description,
-            on=vdef.on,
+            in_=vdef.in_,
         )
 
     constraints: dict[str, Constraint] = {}
@@ -234,7 +234,7 @@ def lower(spec: Spec) -> Program:
                 pdef.missing,
                 pdef.description,
                 parameter_masks.get(name),
-                pdef.on,
+                pdef.in_,
             )
             for name, pdef in spec.parameters.items()
         },
@@ -396,19 +396,19 @@ def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterRefe
 
 
 def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, Mask | None]:
-    """Each parameter's ``on:`` and ``where:`` as one mask, a refusal appended for each ``where:`` that reads what it may not.
+    """Each parameter's ``in:`` and ``where:`` as one mask, a refusal appended for each ``where:`` that reads what it may not.
 
     A tool evaluates a parameter's mask from the data alone, before any
     variable has a value and before any mask has been applied. So a mask reads
-    dimensions, relations and parameters with neither ``on:`` nor ``where:``,
+    dimensions, relations and parameters with neither ``in:`` nor ``where:``,
     and no masks can wait on one another.
     """
-    masked = {name for name, pdef in spec.parameters.items() if pdef.where is not None or pdef.on}
+    masked = {name for name, pdef in spec.parameters.items() if pdef.where is not None or pdef.in_}
     masks: dict[str, Mask | None] = {}
     for pname in sorted(masked):
         pdef, context = spec.parameters[pname], f"Parameter '{pname}'"
         where = resolve_condition_text(pdef.where, ns, context, errors)
-        masks[pname] = _on_mask(pname, pdef.on, pdef.where, where, ns, context, errors)
+        masks[pname] = _index_mask(pname, pdef.in_, pdef.where, where, ns, context, errors)
         if (mask := mask_of(where)) is None:
             continue
         errors.extend(
@@ -429,8 +429,8 @@ def _masked_read(context: str, pname: str, read: str, spec: Spec) -> str:
         )
     if spec.parameters[read].where is None:
         return (
-            f"{context}: its `where:` contains '{read}', which has an `on:` of its own. Test a relation in the "
-            f"`on:` of '{read}' instead."
+            f"{context}: its `where:` contains '{read}', which has an `in:` of its own. Test a relation that the "
+            f"`in:` of '{read}' names instead."
         )
     return (
         f"{context}: its `where:` contains '{read}', which has a `where:` of its own. Test the condition in the "
@@ -438,35 +438,37 @@ def _masked_read(context: str, pname: str, read: str, spec: Spec) -> str:
     )
 
 
-def _on_mask(
+def _index_mask(
     name: str,
-    on: tuple[str, ...],
+    in_: tuple[str, ...],
     text: str | None,
     where: Condition | None,
     ns: Namespace,
     context: str,
     errors: list[str],
 ) -> Mask | None:
-    """The rows of each relation in *on* and the resolved *where* as one mask, or ``None`` where neither limits anything.
+    """The key of each relation in *in_* and the resolved *where* as one mask, or ``None`` where neither limits anything.
 
     A refusal is appended where the relations already decide some of the
-    ``where:``: inside them each is true, so reading one there says nothing.
+    ``where:``: inside them each bare relation name is true, so reading one
+    there says nothing. A value column read as ``relation[column]`` is a test,
+    and stays.
     """
-    if where is not None and on and (written := Mask(where)).within(on) != written:
-        errors.append(_decided_by_on(context, name, text, on, written.within(on).root))
+    if where is not None and in_ and (written := Mask(where)).within(in_) != written:
+        errors.append(_decided_by_index_set(context, name, text, in_, written.within(in_).root))
     rows: list[Condition] = [
-        RelationDefined(r, tuple(sorted(ns.relations[r].dim(k) for k in ns.relations[r].key))) for r in on
+        RelationDefined(r, tuple(sorted(ns.relations[r].dim(k) for k in ns.relations[r].key))) for r in in_
     ]
     conjuncts = [*rows, *(() if where is None else (where,))]
     return mask_of(functools.reduce(And, conjuncts)) if conjuncts else None
 
 
-def _decided_by_on(context: str, name: str, text: str | None, on: tuple[str, ...], inside: Condition) -> str:
-    """The refusal for a ``where:`` that reads a relation of the entry's own ``on:``, by what is left of it inside."""
-    named = ' and '.join(f"'{r}'" for r in on)
+def _decided_by_index_set(context: str, name: str, text: str | None, in_: tuple[str, ...], inside: Condition) -> str:
+    """The refusal for a ``where:`` that reads a relation of the entry's own ``in:``, by what is left of it inside."""
+    named = ' and '.join(f"'{r}'" for r in in_)
     head = (
-        f"{context}: on: gives '{name}' coordinates only where {named} "
-        f'{"has" if len(on) == 1 else "have"} a row, so `where: {text}`'
+        f"{context}: in: gives '{name}' coordinates only where {named} "
+        f'{"has" if len(in_) == 1 else "have"} a row, so `where: {text}`'
     )
     match inside:
         case BooleanLiteral(value=True):

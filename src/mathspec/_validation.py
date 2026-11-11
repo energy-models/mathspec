@@ -18,6 +18,7 @@ a macro formal against a dimension, a curve's links, and every dim rule.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
@@ -230,31 +231,22 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
 
 
 def _index_sets(spec: Spec) -> Iterator[str]:
-    """Each relation in an entry's ``on:`` lists coordinates of the entry, leaves one out, and is named once."""
+    """Each entry of an ``in:`` is a relation keyed by dimensions of the entry, leaves a key out, and is named once."""
     entries = [
-        *((f"Parameter '{name}'", name, p.dims, p.on) for name, p in spec.parameters.items()),
-        *((f"Variable '{name}'", name, v.dims, v.on) for name, v in spec.variables.items()),
+        *((f"Parameter '{name}'", name, p.dims, p.in_) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", name, v.dims, v.in_) for name, v in spec.variables.items()),
     ]
-    for context, name, dims, on in entries:
-        head = f'{context}: on: names'
-        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(on).items() if count > 1)
-        for rname in dict.fromkeys(on):
+    for context, name, dims, in_ in entries:
+        head = f'{context}: in: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(in_).items() if count > 1)
+        for rname in dict.fromkeys(in_):
             if (lk := spec.relations.get(rname)) is None:
-                yield (
-                    f"{head} '{rname}', which is not a relation. "
-                    f'{did_you_mean(rname, spec.relations, label="Relations")}'
-                )
+                yield _not_a_relation(head, rname, spec)
                 continue
-            if values := [role for role, _ in lk.pairs if role not in lk.key_roles]:
-                yield (
-                    f"{head} '{rname}', which has the value column{'s' if len(values) > 1 else ''} {values}. A row "
-                    f"of a relation in `on:` is a coordinate of '{name}', so the relation has no values:. Key "
-                    f"'{rname}' by all its columns, or test it in a `where:`."
-                )
             if lk.missing == 'refused':
                 yield (
                     f"{head} '{rname}', which under missing: refused has a row at every key combination, so it "
-                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from on:."
+                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from in:."
                 )
             key = Counter(dict(lk.pairs)[k] for k in lk.key_roles)
             if twice := [d for d, count in key.items() if count > 1]:
@@ -265,8 +257,18 @@ def _index_sets(spec: Spec) -> Iterator[str]:
             elif outside := [d for d in key if d not in dims]:
                 yield (
                     f"{head} '{rname}', keyed by {sorted(key)}, and '{name}' is not over {outside}. Add "
-                    f"{outside} to its dims:, or delete '{rname}' from on:."
+                    f"{outside} to its dims:, or delete '{rname}' from in:."
                 )
+
+
+def _not_a_relation(head: str, written: str, spec: Spec) -> str:
+    """The refusal for an ``in:`` entry that names no relation, a column of one, ``relation[column]``, apart."""
+    if (column := re.fullmatch(r'(\w+)\[(.+)\]', written)) is not None and column[1] in spec.relations:
+        return (
+            f"{head} '{written}', a column of '{column[1]}', and an index set is the key of a relation. Write "
+            f"in: [{column[1]}], and test '{column[2]}' in a `where:` if that was meant."
+        )
+    return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:
