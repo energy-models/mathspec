@@ -2829,6 +2829,11 @@ def _in(kind: str, *relations: str, **entry: Any) -> dict[str, Any]:
             id='a-key-whose-columns-are-named-apart-from-their-dimensions',
         ),
         pytest.param({**_LINK, 'w.in': ['pair', 'link']}, {'w': ('link', 'pair')}, id='two-relations-sorted-by-name'),
+        pytest.param(
+            {'relations.next': {'key': {'at': 'g'}, 'values': {'to': 'g'}, 'missing': 'absent'}, 'w.in': ['next']},
+            {'w': ('next',)},
+            id='a-value-column-over-a-dimension-of-the-key',
+        ),
     ],
 )
 def test_an_entry_has_the_index_set_it_names(kind: str, patch: dict[str, Any], in_: dict[str, tuple[str, ...]]):
@@ -2863,13 +2868,6 @@ def test_a_relation_with_value_columns_is_an_index_set_by_its_key(path: str, ent
     assert indexed.where.within(indexed.in_) == to_spec(raw).program.parameters['efficiency'].where, (
         'inside the index set, the `where:` on the role is what the file wrote'
     )
-
-
-def test_an_entry_over_the_dimension_of_a_value_column_is_indexed_by_the_key_alone():
-    """`gen_h` gives each `g` one `h`; an entry over both is still indexed by `g`, at every `h` (relation rows = key)."""
-    spec = _spec(**_in('parameters', 'gen_h'), **{'relations.gen_h': {'key': 'g', 'values': 'h', 'missing': 'absent'}})
-    where = spec.program.parameters['w'].where
-    assert where is not None and where.dims == ('g',), 'the value column plays no part in the index set'
 
 
 def test_a_parameter_mask_is_part_of_the_program():
@@ -2992,6 +2990,13 @@ def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
             "{entry} 'w': in: names 'lk[h]', a column of 'lk', and an index set is the key of a relation. Write "
             "in: [lk], and test 'h' in a `where:` if that was meant.",
             id='a-value-column-in-place-of-its-relation',
+        ),
+        pytest.param(
+            {'in': ['home'], 'relations.home': {'key': 'g', 'values': {'at': 'h'}, 'missing': 'absent'}},
+            "{entry} 'w': in: names 'home', whose value column 'at' is over 'h', and 'w' is over 'h' too, so 'w' "
+            "would have a coordinate at every 'h', not only at the one in the row of 'home'. Delete 'h' from its dims: "
+            "and read it as home[at], or name a relation keyed by ['g', 'h'] with no values: in in:.",
+            id='a-dimension-a-value-column-is-over',
         ),
     ],
 )

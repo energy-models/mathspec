@@ -231,7 +231,12 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
 
 
 def _index_sets(spec: Spec) -> Iterator[str]:
-    """Each entry of an ``in:`` is a relation keyed by dimensions of the entry, leaves a key out, and is named once."""
+    """Each entry of an ``in:`` is a relation keyed by dimensions of the entry, leaves a key out, and is named once.
+
+    The entry is over no dimension of a value column outside the key, since the
+    index set is the key alone and would give the entry every label of that
+    dimension, not only the one the row lists.
+    """
     entries = [
         *((f"Parameter '{name}'", name, p.dims, p.in_) for name, p in spec.parameters.items()),
         *((f"Variable '{name}'", name, v.dims, v.in_) for name, v in spec.variables.items()),
@@ -258,6 +263,14 @@ def _index_sets(spec: Spec) -> Iterator[str]:
                 yield (
                     f"{head} '{rname}', keyed by {sorted(key)}, and '{name}' is not over {outside}. Add "
                     f"{outside} to its dims:, or delete '{rname}' from in:."
+                )
+            elif widened := [(r, d) for r, d in side_columns(lk.values) if d in dims and d not in key]:
+                role, dim = widened[0]
+                yield (
+                    f"{head} '{rname}', whose value column '{role}' is over '{dim}', and '{name}' is over '{dim}' "
+                    f"too, so '{name}' would have a coordinate at every '{dim}', not only at the one in the row of "
+                    f"'{rname}'. Delete '{dim}' from its dims: and read it as {rname}[{role}], or name a relation "
+                    f'keyed by {sorted([*key, dim])} with no values: in in:.'
                 )
 
 

@@ -547,12 +547,12 @@ constraints:
 
 `efficiency` has coordinates at each port that `connection` lists, and a tool
 refuses a data row for a port that `connection` does not list. The `where:`
-then drops the input ports. An entry over the dimension of a value column is
-indexed by the key alone. `x: { dims: [generator, bus], in: [gen_bus] }`,
-with `gen_bus: { key: generator, values: bus, missing: absent }`, has
-coordinates at every bus for each generator that `gen_bus` lists.
+then drops the input ports. `efficiency` is not over `bus` or `role`, the
+dimensions of the value columns. An entry over one of them would have a
+coordinate at every label of that dimension, not only at the label in the row
+of `connection`, so mathspec refuses it.
 
-mathspec refuses six index sets at load:
+mathspec refuses seven index sets at load:
 
 - a name that is not a relation, or a relation named twice
 - a value column, written as `relation[column]`, in place of its relation
@@ -560,6 +560,8 @@ mathspec refuses six index sets at load:
   combination and so leaves nothing out
 - a relation whose key has two columns over one dimension
 - a relation keyed by a dimension that the parameter does not have
+- a relation with a value column over a dimension that the parameter has and
+  the key does not
 - a `where:` that reads the bare name of a relation of the `in:`
 
 For `p_nom_max: { dims: [entity], in: [connection] }`, the message is:
@@ -573,6 +575,13 @@ mathspec suggests both rewrites. For `in: ["connection[bus]"]` on
 
 ```text
 Parameter 'efficiency': in: names 'connection[bus]', a column of 'connection', and an index set is the key of a relation. Write in: [connection], and test 'bus' in a `where:` if that was meant.
+```
+
+For `x: { dims: [generator, bus], in: [gen_bus] }`, with
+`gen_bus: { key: generator, values: bus, missing: absent }`, the message is:
+
+```text
+Parameter 'x': in: names 'gen_bus', whose value column 'bus' is over 'bus', and 'x' is over 'bus' too, so 'x' would have a coordinate at every 'bus', not only at the one in the row of 'gen_bus'. Delete 'bus' from its dims: and read it as gen_bus[bus], or name a relation keyed by ['bus', 'generator'] with no values: in in:.
 ```
 
 A `where:` on a parameter with an `in:` narrows the coordinates inside the
