@@ -50,7 +50,7 @@ parameters:
     description: >-
       whether a process must be taken off for maintenance within the horizon:
       in any scenario, as PyPSA takes the union over them
-      (`components.py:1018-1021`)
+      (`components.py:1000-1003`)
     dims: [process]
     dtype: bool
   Process_maintenance_pu:
@@ -278,7 +278,7 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1018-1021`) |
+| $`\mathrm{mnt}^{z}`$ | `Process_maintainable` over $`\mathcal{J}`$ — whether a process must be taken off for maintenance within the horizon: in any scenario, as PyPSA takes the union over them (`components.py:1000-1003`) |
 | $`\tau^{z,\mathrm{mnt}}`$ | `Process_maintenance_duration` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — the hours of generator weightings one maintenance event covers, PyPSA's `maintenance_duration`. It has no value where the process is not maintainable. No row contains it. In data prep you turn it into `Process_maintenance_cover` and `Process_maintenance_start_blocked`. The assumptions state that it fits the horizon |
 | $`\mathrm{n}^{z,\mathrm{mnt}}`$ | `Process_maintenance_events` over $`\mathcal{J} \times \Xi`$ — how many maintenance events occur within the horizon |
 | $`\gamma^{z}`$ | `Process_maintenance_pu` over $`\mathcal{J} \times \Xi`$ — the share of the build a maintenance event takes off |

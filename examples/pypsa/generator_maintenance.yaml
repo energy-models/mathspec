@@ -43,7 +43,7 @@ parameters:
     description: >-
       whether a generator must be taken off for maintenance within the
       horizon: in any scenario, as PyPSA takes the union over them
-      (`components.py:1018-1021`)
+      (`components.py:1000-1003`)
     dims: [generator]
     dtype: bool
   Generator_maintenance_pu:
