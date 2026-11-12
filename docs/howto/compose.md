@@ -278,9 +278,9 @@ spec = ms.rename('generator.yaml', {'Generator_p_nom': 'Generator_capacity'})
 
 `Generator_capacity` is then the name of the parameter and the upper bound of
 `Generator_p`. `rename` replaces a name everywhere it occurs in the spec, and
-keeps each `description` as written. The
-[API reference](../reference/api.md#mathspec.rename) lists what else `rename`
-keeps, and each map that it refuses.
+keeps each `description` as written.
+[What a rename changes](../reference/composition.md#what-a-rename-changes)
+lists what else `rename` keeps.
 
 ## Write part of the sum in the network file
 
@@ -452,8 +452,8 @@ in the spec as a named expression that no sum includes.
       for why a term is added with `merge` and not with a patch
     - [refusals](../reference/composition.md#refusals), for each message that
       `merge` and `override` give
-    - [`rename`](../reference/api.md#mathspec.rename), for what a rename changes
-      and keeps
+    - [`rename`](../reference/composition.md#rename), for what a rename changes
+      and keeps, and each map that it refuses
     - [a spec in several files](../tutorials/several-files.md), for a lesson in which
       you build a library step by step
     - [a component library](../examples/library/index.md), for a larger library

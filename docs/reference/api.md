@@ -53,9 +53,9 @@ Every public function keeps three guarantees:
 
 ## `merge`, `override` and `rename`
 
-[Composing specs](composition.md) describes what `merge` and `override` do
-with their files, and [compose a spec from several files](../howto/compose.md)
-lists the steps for all three functions.
+[Composing specs](composition.md) describes what each of the three functions
+does with its files, and [compose a spec from several files](../howto/compose.md)
+lists the steps.
 
 ::: mathspec.merge
     options:
