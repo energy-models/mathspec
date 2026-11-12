@@ -54,6 +54,13 @@ dimension, and a map or a condition states that. With
 Relation 'r' has one column under 'dims:', and a relation needs at least two. To give each generator a label, declare a map under maps: generator:. To mark some of them, declare a bool parameter or a condition.
 ```
 
+A relation is not a dimension, so its name does not go in `dims:`, `over=` or
+`along=`. With `flow: { dims: [connection] }`, mathspec prints:
+
+```text
+Variable 'flow' names the relation 'connection', and a relation is not a dimension. Name its dimensions, ['bus', 'generator'], under dims:, and confine the entry with in: [connection].
+```
+
 The order of the columns under `dims:` changes nothing. The typesetter sorts
 the columns by name, so `connection` above prints as
 $`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.

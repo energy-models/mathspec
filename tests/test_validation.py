@@ -2009,6 +2009,43 @@ _NARROWED = {
 }
 
 
+_LINKED = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'message'),
+    [
+        pytest.param(
+            {'variables.x': {'dims': ['link']}},
+            "Variable 'x' names the relation 'link', and a relation is not a dimension. Name its dimensions, "
+            "['g', 'h'], under dims:, and confine the entry with in: [link].",
+            id='dims-of-a-variable',
+        ),
+        pytest.param(
+            {'constraints.c': {'dims': ['link'], 'expression': 'k >= 0'}},
+            "Constraint 'c' names the relation 'link', and a relation is not a dimension. Name its dimensions, "
+            "['g', 'h'].",
+            id='dims-of-a-constraint',
+        ),
+        pytest.param(
+            {'constraints.c': {'dims': [], 'expression': 'sum(q, over=link) >= 0'}},
+            "Constraint 'c': sum(over=link) names the relation 'link', and a relation is not a dimension. Name its "
+            "dimensions, ['g', 'h'].",
+            id='over',
+        ),
+        pytest.param(
+            {'constraints.c': {'dims': ['g'], 'expression': 'p <= shift(p, along=link, offset=1)'}},
+            "Constraint 'c': shift(along=link) names the relation 'link', and a relation is not a dimension. Name "
+            "one of its dimensions, ['g', 'h'].",
+            id='along',
+        ),
+    ],
+)
+def test_a_relation_named_where_a_dimension_belongs_is_refused(patch: dict[str, Any], message: str):
+    """mathspec told the writer to declare the relation under `dimensions:`, which makes a second, unrelated name."""
+    assert message in _refusal(**_LINKED, **patch)
+
+
 class TestAssumptions:
     """What an ``assumptions:`` entry may state, and what the load refuses.
 

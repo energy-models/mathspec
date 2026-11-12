@@ -734,6 +734,13 @@ def not_a_number(name: str, dtype: str, context: str) -> str:
 
 
 def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Namespace, formals: frozenset[str]) -> str:
+    if name in ns.relations and name not in ns.dimensions:
+        dims = list(ns.relations[name].dims)
+        which = 'its dimensions' if call.startswith('over=') else 'one of its dimensions'
+        return (
+            f"{context}: {operator}({call}) names the relation '{name}', and a relation is not a dimension. "
+            f'Name {which}, {dims}.'
+        )
     return (
         f'{context}: {operator}({call}) does not name a declared dimension{_or_a_formal(formals)}. '
         f'{did_you_mean(name, ns.dimensions, label="Dimensions")}\n'

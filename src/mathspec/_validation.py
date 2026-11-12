@@ -122,9 +122,18 @@ def reference_errors(spec: Spec) -> list[str]:
     ]
 
 
-def undeclared_dimension(kind: str, name: str, dimension: str) -> str:
-    """The one wording for an entry naming a dimension the file does not declare."""
-    return f"{kind} '{name}' references undeclared dimension '{dimension}'. Declare it under 'dimensions:'."
+def undeclared_dimension(kind: str, name: str, dimension: str, spec: Spec, *, along: bool = False) -> str:
+    """The one wording for an entry naming a dimension the file does not declare, or naming a relation as one."""
+    if (relation := spec.relations.get(dimension)) is None:
+        return f"{kind} '{name}' references undeclared dimension '{dimension}'. Declare it under 'dimensions:'."
+    dims = sorted({d for _, d in relation.pairs})
+    if along:
+        rewrite = f'Name one of its dimensions, {dims}.'
+    elif kind in ('Parameter', 'Variable'):
+        rewrite = f'Name its dimensions, {dims}, under dims:, and confine the entry with in: [{dimension}].'
+    else:
+        rewrite = f'Name its dimensions, {dims}.'
+    return f"{kind} '{name}' names the relation '{dimension}', and a relation is not a dimension. {rewrite}"
 
 
 def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
@@ -184,7 +193,7 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
     for kind, name, dims in frames:
-        yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
+        yield from (undeclared_dimension(kind, name, d, spec) for d in dims if d not in spec.dimensions)
         yield from (
             f"{kind} '{name}' names dimension '{d}' twice. Delete one."
             for d, count in Counter(dims).items()
@@ -210,7 +219,7 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 if count > 1
             )
         yield from (
-            undeclared_dimension('Relation', lname, d)
+            undeclared_dimension('Relation', lname, d, spec)
             for d in dict.fromkeys(d for _, d in lk.pairs)
             if d not in spec.dimensions
         )
@@ -403,7 +412,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
     for sname, entry in spec.sos.items():
         context = f"Sos '{sname}'"
         if entry.along not in spec.dimensions:
-            yield (undeclared_dimension('Sos', sname, entry.along))
+            yield undeclared_dimension('Sos', sname, entry.along, spec, along=True)
         elif entry.variable not in spec.variables:
             yield (
                 f"{context}: '{entry.variable}' is not a declared variable.\n"
@@ -468,13 +477,13 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
     for name, pw in spec.piecewise.items():
         context = f"piecewise '{name}'"
         if pw.along not in spec.dimensions:
-            yield undeclared_dimension('piecewise', name, pw.along)
+            yield undeclared_dimension('piecewise', name, pw.along, spec, along=True)
             continue
         if not spec.dimensions[pw.along].ordered:
             yield unordered(context, f'along: {pw.along}', pw.along)
         for d in pw.dims:
             if d not in spec.dimensions:
-                yield undeclared_dimension('piecewise', name, d)
+                yield undeclared_dimension('piecewise', name, d, spec)
             elif d == pw.along:
                 yield (
                     f"{context}: dims: lists '{pw.along}', the breakpoint dimension. Every curve runs along it, so drop "
