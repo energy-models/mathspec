@@ -201,9 +201,9 @@ To state two components with the same math, write the fragment once and give
 it other names with [`rename`](../reference/api.md#mathspec.rename).
 
 <!-- prettier-ignore -->
-1. Write the fragment with placeholder names. In `unit.yaml`, the dimension is
-    `unit` and the name of each entry starts with `Unit_`. The file is a spec
-    that mathspec loads on its own.
+1. Write the fragment with names that stand for any component. In
+    `unit.yaml`, the dimension is `unit` and the name of each entry starts
+    with `Unit_`. mathspec loads the file on its own.
 
     ```yaml title="unit.yaml"
     given:
@@ -276,8 +276,9 @@ To change only a few names, pass a map from each old name to its new name:
 spec = ms.rename('generator.yaml', {'Generator_p_nom': 'Generator_capacity'})
 ```
 
-`rename` changes a name everywhere the spec writes it, and keeps each
-`description` as written. The
+`Generator_capacity` is then the name of the parameter and the upper bound of
+`Generator_p`. `rename` replaces a name everywhere it occurs in the spec, and
+keeps each `description` as written. The
 [API reference](../reference/api.md#mathspec.rename) lists what else `rename`
 keeps, and each map that it refuses.
 

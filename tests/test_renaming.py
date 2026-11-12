@@ -263,14 +263,14 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
     [
         pytest.param(
             {'unit_pmax': 'Generator_p_max'},
-            r"rename names 'unit_pmax', which the spec neither declares nor reads under 'given:'\. "
+            r"rename cannot change 'unit_pmax', which the spec neither declares nor lists under 'given:'\. "
             r"Did you mean 'unit_p_max'\?",
             id='a-name-the-spec-lacks',
         ),
         pytest.param(
             {'unit_cost': 'unit_p_max'},
-            r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the spec keeps for its "
-            r"parameter 'unit_p_max'\. Rename that one too",
+            r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the parameter 'unit_p_max' "
+            r'already has\. Rename that one too',
             id='a-name-the-spec-keeps',
         ),
         pytest.param(
@@ -281,7 +281,7 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
         pytest.param({'unit_p': 'sum'}, r'sum', id='a-name-the-language-keeps'),
         pytest.param(
             {'unit_cost': 'unit_p_max'}.get,
-            r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the spec keeps",
+            r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the parameter 'unit_p_max' already",
             id='a-function-onto-a-name-the-spec-keeps',
         ),
         pytest.param(

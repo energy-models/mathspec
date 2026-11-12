@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""One spec under other names, so a fragment written once serves several sets of names."""
+"""One spec under other names, so that a fragment written once states several components."""
 
 from __future__ import annotations
 
@@ -35,40 +35,42 @@ _LABELLED = frozenset({'cases', 'links'})
 
 
 def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None]) -> Spec:
-    """*source* with each name in *names* replaced by its new name.
+    """*source* with each name that *names* changes replaced by its new name.
 
-    A name is replaced everywhere the spec writes it: as the key of its entry,
-    in ``dims:``, on a relation's sides, in ``adds_to:``, and in every
-    expression, ``where:``, bound, case and assumption that reads it,
-    ``given:`` included. Only whole names are replaced, and the text around
-    each keeps its layout. A relation column spelt like a renamed name is
-    renamed with it, since the column is how a call reads the relation.
-    Prose and labels are kept as written: a description, the labels of
-    ``one_of:``, the name of a case or of a piecewise link, and a macro's
-    formals and the template text that reads them.
+    A name is replaced everywhere it occurs in the spec: as the key of its
+    entry, in ``dims:``, on the sides of a relation, in ``adds_to:``, under
+    ``given:``, and in the text of every expression, ``where:``, bound, case
+    and assumption. Only whole names are replaced, and the text around each
+    name keeps its layout. A relation column with the spelling of a replaced
+    name is renamed with it, because an expression refers to a relation by its
+    columns.
 
-    The result composes as any spec does, so one fragment written over
-    placeholder names serves several classes:
+    Prose and labels stay as written: a description, the labels of
+    ``one_of:``, the name of a case or of a piecewise link, and the arguments
+    of a macro with the template text that uses them.
+
+    The result is a spec like any other. So one fragment written with
+    placeholder names can state several components in one merge:
     ``merge([..., rename('unit.yaml', {'unit': 'generator', ...}), ...])``.
 
     Args:
         source: The spec to rename: a YAML path, YAML text, a mapping, or a
             loaded [`Spec`][mathspec.spec.Spec].
-        names: Each name to its new name. All of them are replaced at once,
-            so two names may swap. A function is called once with each name
-            *source* declares or reads under ``given:``, and returns the new
-            name, or ``None`` or the same name to keep it.
+        names: A map from each name to its new name, or a function. All
+            names are replaced at once, so two names may swap. A function is
+            called once with each name that *source* declares or lists under
+            ``given:``. It returns the new name, or ``None`` to keep the name.
 
     Returns:
-        The renamed spec, loaded. An empty *names* returns *source* loaded,
-        and renaming back with the inverse map returns a spec with the
-        canonical form of *source*.
+        The renamed spec, loaded. An empty *names* returns *source* loaded.
+        A second call with the inverse map returns a spec with the canonical
+        form of *source*.
 
     Raises:
-        LanguageError: *source* does not load; a key of *names* is one
-            *source* neither declares nor reads under ``given:``; a new name
-            is one *source* keeps for an entry that is not renamed; two names
-            take one new name; or the renamed spec does not load.
+        LanguageError: *source* does not load; a key of *names* is a name
+            that *source* neither declares nor lists under ``given:``; a new
+            name is the name of an entry that is not renamed; two names get
+            the same new name; or the renamed spec does not load.
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
     spec = to_spec(source)
@@ -80,7 +82,7 @@ def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None
 
 
 def _declared(spec: Spec) -> dict[str, str]:
-    """Every name *spec* declares or reads under ``given:``, with what it is, which a refusal says."""
+    """Every name that *spec* declares or lists under ``given:``, with the kind of its entry for a refusal."""
     declared = {name: GIVEN_KINDS[kind] for kind in GIVEN_KINDS for name in getattr(spec.given, kind)}
     for section in (*SHARED_SECTIONS, *OWNED_SECTIONS):
         declared |= dict.fromkeys(getattr(spec, section), _singular(section))
@@ -88,19 +90,19 @@ def _declared(spec: Spec) -> dict[str, str]:
 
 
 def _checked(names: Mapping[str, str], declared: Mapping[str, str]) -> None:
-    """Refuse a map that renames nothing the spec has, or lands two names on one."""
+    """Refuse a map with a name the spec lacks, a new name already in use, or one new name for two names."""
     for old in names:
         if old not in declared:
             msg = (
-                f"rename names '{old}', which the spec neither declares nor reads under 'given:'. "
+                f"rename cannot change '{old}', which the spec neither declares nor lists under 'given:'. "
                 f'{did_you_mean(old, declared)}'
             )
             raise LanguageError(msg)
     for old, new in names.items():
         if new in declared and new not in names:
             msg = (
-                f"rename gives the {declared[old]} '{old}' the name '{new}', which the spec keeps for its "
-                f"{declared[new]} '{new}'. Rename that one too, or choose another name."
+                f"rename gives the {declared[old]} '{old}' the name '{new}', which the {declared[new]} '{new}' "
+                f'already has. Rename that one too, or choose another name.'
             )
             raise LanguageError(msg)
     for new, count in Counter(names.values()).items():
@@ -113,15 +115,15 @@ def _checked(names: Mapping[str, str], declared: Mapping[str, str]) -> None:
 
 
 def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> object:
-    """*entry*, as *cls* is written, with *names* replaced wherever the schema holds a name or an expression.
+    """*entry*, as *cls* is written, with *names* replaced wherever the schema has a name or an expression.
 
-    The schema decides what each field holds, so a field added to it is
-    renamed without a change here. A description, the labels of ``one_of:``
-    and a fixed choice (a ``Literal``, such as a dtype) are kept. A field of
-    entries has its keys renamed, except ``cases:`` and ``links:``, whose keys
-    label rows. Every other string is text that names stand in. An entry that
-    is not a mapping is a short form of one: an expression on one line, or a
-    piecewise link written as a list.
+    The annotation of a field sets what the field contains, so a field added
+    to the schema is renamed without a change here. A description, the labels
+    of ``one_of:`` and a fixed choice (a ``Literal``, such as a dtype) are
+    kept. A field of entries has its keys renamed, except ``cases:`` and
+    ``links:``, whose keys are labels of rows. Every other string is text that
+    may contain names. An entry that is not a mapping is a short form of one:
+    an expression on one line, or a piecewise link written as a list.
     """
     if not isinstance(entry, Mapping):
         return _in_text(entry, names)
@@ -148,14 +150,14 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
 
 
 def _macro(entry: Mapping[str, object], names: Mapping[str, str]) -> dict[str, object]:
-    """A macro renamed around its formals, which are the template's own names and nothing the spec declares."""
+    """A macro renamed except for its arguments, which are names of the template and not names the spec declares."""
     formals = {*cast('list[str]', entry.get('args', [])), *cast('list[str]', entry.get('kwargs', []))}
     outside = {old: new for old, new in names.items() if old not in formals}
     return {field: _in_text(value, outside) if field == 'template' else value for field, value in entry.items()}
 
 
 def _in_text(value: object, names: Mapping[str, str]) -> object:
-    """*value* with every name token in *names* replaced: a string, or the lists and mappings strings sit in."""
+    """*value* with every name token in *names* replaced: a string, or a list or mapping of strings."""
     if isinstance(value, str):
         return _TOKEN.sub(partial(_token, text=value, names=names), value)
     if isinstance(value, list):
@@ -180,12 +182,12 @@ def _entries_of(annotation: object) -> type[BaseModel] | None:
 
 
 def _model_in(annotation: object) -> type[BaseModel] | None:
-    """The schema class an annotation holds, alone, in a list or beside ``None``; ``None`` where it holds none."""
+    """The schema class in an annotation, alone, in a list or beside ``None``, or ``None`` where it has none."""
     if isinstance(annotation, type) and issubclass(annotation, BaseModel):
         return annotation
     return next((model for arg in get_args(annotation) if (model := _model_in(arg)) is not None), None)
 
 
 def _is_choice(annotation: object) -> bool:
-    """Whether a field holds one of a fixed set of words, which no name can stand in."""
+    """Whether the value of a field is one of a fixed set of words, none of which is a name."""
     return get_origin(annotation) is Literal or any(_is_choice(arg) for arg in get_args(annotation))
