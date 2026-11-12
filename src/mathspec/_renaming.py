@@ -34,7 +34,7 @@ _KEPT = frozenset({'description', 'one_of'})
 _LABELLED = frozenset({'cases', 'links'})
 
 
-def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None]) -> Spec:
+def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str | None]) -> Spec:
     """*source* with each name that *names* changes replaced by its new name.
 
     A name is replaced everywhere it occurs in the spec: as the key of its
@@ -80,12 +80,14 @@ def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None
     """
     spec = to_spec(source)
     declared = _declared(spec)
-    if not isinstance(names, Mapping):
-        if not callable(names):
-            msg = f'rename takes a mapping or a function as names, not {type(names).__name__}.'
-            raise TypeError(msg)
-        names = {old: names(old) for old in declared}
-    changed = _checked(names, declared, spec)
+    if isinstance(names, Mapping):
+        asked = names
+    elif callable(names):
+        asked = {old: names(old) for old in declared}
+    else:
+        msg = f'rename takes a mapping or a function as names, not {type(names).__name__}.'
+        raise TypeError(msg)
+    changed = _checked(asked, declared, spec)
     return to_spec(cast('dict[str, object]', _renamed(Spec, spec.to_dict(), changed)))
 
 
