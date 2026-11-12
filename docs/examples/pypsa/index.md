@@ -85,13 +85,13 @@ compares them with it, so the two always agree.
 | [link_maintenance](link_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [link_ramping](link_ramping.md) | 5 | 0 | 6 | 15 |  |
 | [load](load.md) | 3 | 0 | 0 | 1 | `Bus_injection` |
-| [network](network.md) | 0 | 0 | 1 | 1 |  |
-| [power_flow](power_flow.md) | 0 | 0 | 1 | 1 |  |
+| [network](network.md) | 1 | 0 | 1 | 1 |  |
+| [power_flow](power_flow.md) | 1 | 0 | 1 | 1 |  |
 | [process](process.md) | 24 | 3 | 11 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `scenario_opex`, `tech_capacity_expansion` |
 | [process_commitment](process_commitment.md) | 10 | 3 | 18 | 18 | `scenario_opex` |
 | [process_maintenance](process_maintenance.md) | 5 | 4 | 13 | 10 |  |
 | [process_ramping](process_ramping.md) | 5 | 0 | 6 | 15 |  |
-| [security](security.md) | 2 | 0 | 8 | 10 |  |
+| [security](security.md) | 2 | 0 | 8 | 12 |  |
 | [settings](settings.md) | 9 | 0 | 0 | 8 |  |
 | [storage_unit](storage_unit.md) | 36 | 6 | 21 | 14 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
 | [store](store.md) | 42 | 6 | 22 | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
