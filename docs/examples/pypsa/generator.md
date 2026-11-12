@@ -345,14 +345,14 @@ constraints:
     where: Generator_p_nom_extendable AND Generator_active_asset AND Generator_p_nom_set
     expression: Generator_p_nom_ext == Generator_p_nom_set
   Generator_e_sum_min:
-    description: "`Generator-e_sum_min` — energy over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    description: "`Generator-e_sum_min` — energy over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row, and so is a generator active in no snapshot"
     dims: [scenario, generator]
-    where: Generator_e_sum_min
+    where: Generator_e_sum_min AND count(Generator_active, over=snapshot) > 0
     expression: sum(Generator_p * energy_limit_weight, over=snapshot) >= Generator_e_sum_min
   Generator_e_sum_max:
-    description: "`Generator-e_sum_max` — energy over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    description: "`Generator-e_sum_max` — energy over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row, and so is a generator active in no snapshot"
     dims: [scenario, generator]
-    where: Generator_e_sum_max
+    where: Generator_e_sum_max AND count(Generator_active, over=snapshot) > 0
     expression: sum(Generator_p * energy_limit_weight, over=snapshot) <= Generator_e_sum_max
   Generator_p_nom_modularity:
     description: "`Generator-p_nom_modularity` — the chosen build is a whole number of modules"
@@ -615,13 +615,13 @@ C^{\mathrm{run}}_{g,\xi,t} = \begin{cases} C^{\mathrm{curve}}_{g,\xi,t} & \text{
 **`Generator_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}_{g,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}_{g,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}_{g,t} \} \rvert > 0
 ```
 
 **`Generator_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}_{g,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} p_{g,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}_{g,\xi} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}_{g,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}_{g,t} \} \rvert > 0
 ```
 
 **`Generator_ext_p_lower`**
