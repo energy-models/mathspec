@@ -531,7 +531,7 @@ exists per coordinate of `dims:`. With a boolean parameter `active` over
 `[flow]` as the `where:`, mathspec prints:
 
 ```text
-piecewise 'operating_point': where 'active' tests ['flow'], which link 'rate' adds through its relation. A where: sets which curves exist, one per coordinate of dims: ['converter', 'snapshot'], and only the rows of the link are over ['flow']. Test ['converter', 'snapshot'] in the where:, or declare a where: over ['flow'] on the variable of the link, so that its rows are absent.
+piecewise 'operating_point': where 'active' tests ['flow'], which link 'rate' adds through the map it walks. A where: sets which curves exist, one per coordinate of dims: ['converter', 'snapshot'], and only the rows of the link are over ['flow']. Test ['converter', 'snapshot'] in the where:, or declare a where: over ['flow'] on the variable of the link, so that its rows are absent.
 ```
 
 mathspec suggests two rewrites: a condition over `dims:`, or a `where:` on

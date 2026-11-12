@@ -333,7 +333,7 @@ class Sum:
     """Sum ``operand`` over the axes in ``over``, removing them from the result.
 
     An axis in ``over`` is a dimension's own, or one a [`Join`][] under it
-    opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=relation[b])``
+    opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=subject[b])``
     lowers to a ``Sum`` over a ``Join``, over the axis of each column the join
     does not group by. This node is the group-by that follows the join.
     """
@@ -353,10 +353,10 @@ class Join:
     stands for the relation's column and runs over its dimension. So a column
     dropped and a column added over one dimension stay two axes. A [`Sum`][] over
     those axes is the group-by that follows the join, which is how
-    ``sum(x, over=a, by=relation[b])`` lowers. Where the grouped columns
+    ``sum(x, over=a, by=subject[b])`` lowers. Where the grouped columns
     hold the relation's whole key, they determine every other column, the
     join opens no axis, and the bare ``Join`` is ``at(x,
-    by=relation[a])``: one value per row of the result, fanned out where
+    by=subject[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
 
     An axis is never a dim: a join that opens axes states the ``dims`` of the
@@ -940,7 +940,7 @@ class Link:
     ``name`` is the link's key in the entry, and ``<entry>_<name>`` is the row
     the expansion writes for it. ``sign`` is ``'=='`` where the link is pinned
     to the curve, and one side of it where the link is bounded by the curve
-    instead. A link that walks a relation reads the curve's weights through
+    instead. A link that walks a map reads the curve's weights through
     it, as ``at(..., by=)`` reads an array: ``by`` is the ``subject[map]``
     the file wrote, and ``walk`` the join it resolves to. ``dims`` is the row
     the link builds: the entry's frame, or, for a walked link, that frame with
@@ -1473,10 +1473,10 @@ class DimensionPosition:
 
 @dataclass(frozen=True)
 class RelationComparison:
-    """Compare one value column of a keyed relation against a literal — ``period_of == 2030``.
+    """Compare one map of a subject against a literal — ``snapshot[period] == 2030``.
 
-    ``column`` is the role read, and ``dims`` the dimensions of the key
-    columns: the leaf is read at them, one value per coordinate.
+    ``column`` is the map read, and ``dims`` the dimensions of the subject's
+    own columns: the leaf is read at them, one label per coordinate.
     """
 
     name: str
@@ -1488,9 +1488,9 @@ class RelationComparison:
 
 @dataclass(frozen=True)
 class RelationPairComparison:
-    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus`` — row by row on the key.
+    """Compare a map of one subject with a map of another, or of the same — ``line[bus0] != line[bus1]`` — row by row.
 
-    Both keys are over the same ``dims``, and the two columns are over one
+    Both subjects are over the same ``dims``, and the two maps refer to one
     dimension, so a match is possible at all.
     """
 

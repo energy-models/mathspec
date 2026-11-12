@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  One of two columns: where a relation has two columns over one dimension,
-  `at(array, by=relation[c])` takes the value at column `c`. Here `c` is `bus0`,
-  the sending end of a line.
+  One of two maps: where a subject has two maps into one dimension,
+  `at(array, by=subject[m])` takes the value at the label of map `m`. Here `m`
+  is `bus0`, the sending end of a line.
 
 dimensions:
   line: { dtype: str }

@@ -779,7 +779,7 @@ def _where_fits(ctx: str, entry: PiecewiseSpec, where: Mask | None, walks: dict[
     for key, walk in walks.items():
         if into := [d for d in stray if d in walk.added_dims]:
             raise DimensionError(
-                f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through its relation. A "
+                f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through the map it walks. A "
                 f'where: sets which curves exist, one per coordinate of dims: {list(entry.dims)}, and only the rows of '
                 f'the link are over {into}. Test {list(entry.dims)} in the where:, or declare a where: over {into} on '
                 f'the variable of the link, so that its rows are absent.'

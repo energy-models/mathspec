@@ -577,7 +577,7 @@ class ExpressionResolver:
         )
 
     def _grouping(self, columns: ColumnsNode, over: tuple[str, ...]) -> tuple[JoinColumns, tuple[str, ...]] | None:
-        """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
+        """How ``sum(x, over=..., by=subject[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
         dimension otherwise, summed away after the group-by. The entry

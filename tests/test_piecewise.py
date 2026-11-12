@@ -846,7 +846,7 @@ def test_a_where_the_block_cannot_read_is_refused(patch, match):
 
 def test_a_where_over_a_dim_a_link_walks_into_is_not_sent_to_dims():
     """The refusal said to add `flow` to `dims:`, and the walk into `flow` was then refused for that very edit."""
-    with pytest.raises(LanguageError, match=r"which link 'power' adds through its relation") as refused:
+    with pytest.raises(LanguageError, match=r"which link 'power' adds through the map it walks") as refused:
         spec_of(
             WALKED,
             **{'parameters.on_flow': {'dims': ['flow'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'on_flow'},

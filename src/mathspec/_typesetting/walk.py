@@ -952,7 +952,7 @@ class Walk:
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, condition))
 
     def _link(self, link: Link, ctx: _Context) -> tuple[str, str]:
-        """One link's point coordinate and its breakpoints, each a family where the link walks a relation.
+        """One link's point coordinate and its breakpoints, each a family where the link walks a map.
 
         A walked link is one coordinate per fine index that maps to the curve's
         own, so it prints as the family over those, which is what ties them to

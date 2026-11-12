@@ -186,7 +186,7 @@ objective:
 Both commands print the same two messages of advice:
 
 ```text
-dimension 'region' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
+dimension 'region' is never used: nothing is indexed by it, nothing sums into it, and no relation or map is over it. Remove it, or keep it if the entries that use it are still to be written.
 Variable 'slack' makes this spec unbounded: no constraint names it, and bounds.lower is open, and the +slack term in the minimize objective improves toward it.
 Give it a finite bounds.lower, or the constraint that was meant to define it.
 ```

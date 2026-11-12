@@ -157,7 +157,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
             'never-an-axis',
             name,
             f"dimension '{name}' is never used: nothing is indexed by it, nothing "
-            f'sums into it, and no relation has a column over it. Remove it, or keep it '
+            f'sums into it, and no relation or map is over it. Remove it, or keep it '
             f'if the entries that use it are still to be written.',
         )
         for name in program.dimensions

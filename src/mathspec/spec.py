@@ -1126,7 +1126,7 @@ class PiecewiseSpec(_StrictSpec):
     weights per coordinate of it. ``where:`` says which of those coordinates
     have a curve, and how far each runs along ``along`` where it reads that
     dim too; ``activity:`` whether a curve that exists is switched on. A link
-    that walks a relation builds a row per fine coordinate, each reading the
+    that walks a map builds a row per fine coordinate, each reading the
     one curve its coarse coordinate has, so how many expressions a curve ties
     is data.
     """
@@ -1189,7 +1189,7 @@ class PiecewiseSpec(_StrictSpec):
         walked = [key for key, link in self.links.items() if link.walks]
         if walked and self.method in ('convex', 'lp'):
             msg = (
-                f"method: {self.method} does not take a link that walks a relation (link '{walked[0]}'). "
+                f"method: {self.method} does not take a link that walks a map (link '{walked[0]}'). "
                 f'{_NO_WALK[self.method]} Use method: adjacency, sos2 or incremental.'
             )
             raise ValueError(msg)
