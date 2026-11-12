@@ -51,21 +51,21 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   process:
     carrier:
       description: the carrier a process converts from
-      refers: carrier
+      refers_to: carrier
   process_output:
     process:
       description: the process a port belongs to
-      refers: process
+      refers_to: process
     bus:
       description: >-
         the bus a port draws from or delivers to. It is PyPSA's `bus0`, `bus1`,
         … columns. A process of three ports is three labels here rather than a
         third relation, so the file states any number of them
-      refers: bus
+      refers_to: bus
 
 parameters:
   Process_p_nom:

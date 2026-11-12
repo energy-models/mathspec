@@ -52,14 +52,14 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   store:
     carrier:
       description: the carrier a store holds
-      refers: carrier
+      refers_to: carrier
     bus:
       description: the bus a store sits on
-      refers: bus
+      refers_to: bus
 
 parameters:
   Store_active:

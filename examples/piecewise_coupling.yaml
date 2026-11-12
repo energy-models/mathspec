@@ -32,10 +32,10 @@ maps:
   flow:
     converter:
       description: which converter each flow belongs to
-      refers: converter
+      refers_to: converter
     carrier:
       description: what each flow carries
-      refers: carrier
+      refers_to: carrier
 
 parameters:
   demand:

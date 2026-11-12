@@ -967,16 +967,16 @@ def test_every_dims_of_the_program_is_sorted_by_name(path):
 
 
 @pytest.mark.parametrize(
-    'condition',
+    'entry',
     [
-        pytest.param('zone_of', id='the-bare-relation'),
-        pytest.param("zone_of[zone] == 'north'", id='a-column-against-a-label'),
-        pytest.param('zone_of[zone] == home_of[zone]', id='a-column-against-another-relation'),
+        pytest.param({'in': ['zone_of']}, id='the-rows-of-the-relation'),
+        pytest.param({'where': "zone_of[zone] == 'north'"}, id='a-column-against-a-label'),
+        pytest.param({'where': 'zone_of[zone] == home_of[zone]'}, id='a-column-against-another-relation'),
     ],
 )
-def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(condition):
+def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(entry):
     """A condition on a relation stated the dims in the order the relation lists its key."""
-    keyed_backwards = {'dims': ['snapshot', 'generator']}
+    keyed_backwards = {'dims': ['snapshot', 'generator'], 'missing': 'absent'}
     spec = _spec(
         **{
             'relations.zone_of': keyed_backwards,
@@ -985,7 +985,8 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(condition)
             'maps.home_of': {'zone': 'zone'},
         }
     )
-    where = to_spec(varied(spec.to_dict(), **{'variables.p.where': condition})).program.variables['p'].where
+    patch = {f'variables.p.{key}': value for key, value in entry.items()}
+    where = to_spec(varied(spec.to_dict(), **patch)).program.variables['p'].where
     assert where is not None
     assert [dims for _, dims in _dims_tuples(where.root)] == [('generator', 'snapshot')], (
         'the condition states the relation key dims, sorted by name'

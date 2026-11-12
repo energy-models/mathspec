@@ -301,14 +301,14 @@ class RelationSpec(_StrictSpec):
 
 
 class MapSpec(_StrictSpec):
-    """A map: one label per row of its subject, a dimension or a relation, from the dimension it ``refers:`` to.
+    """A map: one label per row of its subject, a dimension or a relation, from the dimension that ``refers_to:`` names.
 
     Written in YAML under its subject, as the dimension it refers to, or as a
     mapping once it carries ``missing:`` or a ``description:``::
 
         maps:
           unit:
-            carrier: {refers: carrier, missing: absent}
+            carrier: {refers_to: carrier, missing: absent}
           connection:
             bus: bus
           line:
@@ -324,7 +324,7 @@ class MapSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a map entry'
 
-    refers: str
+    refers_to: str
     """The dimension whose label the map gives each row of its subject."""
     missing: RelationMissing = 'refused'
     """Whether every row of the subject has a label. Under ``refused``, a tool refuses data that leaves one out. Under
@@ -335,7 +335,7 @@ class MapSpec(_StrictSpec):
     @model_validator(mode='before')
     @classmethod
     def _from_string(cls, data: object) -> object:
-        return {'refers': data} if isinstance(data, str) else data
+        return {'refers_to': data} if isinstance(data, str) else data
 
     @field_validator('missing', mode='before')
     @classmethod
@@ -352,8 +352,8 @@ class MapSpec(_StrictSpec):
     @model_serializer
     def _as_written(self) -> str | dict[str, object]:
         if self.missing == 'refused' and self.description is None:
-            return self.refers
-        written: dict[str, object] = {'refers': self.refers}
+            return self.refers_to
+        written: dict[str, object] = {'refers_to': self.refers_to}
         if self.missing != 'refused':
             written['missing'] = self.missing
         if self.description is not None:
@@ -1517,7 +1517,7 @@ def subject_tables(spec: Spec) -> dict[str, Relation]:
             key, missing, description = ((name, name),), cast('RelationMissing', 'refused'), None
         else:
             continue
-        values = tuple((role, m.refers) for role, m in maps.items())
+        values = tuple((role, m.refers_to) for role, m in maps.items())
         partial = tuple(role for role, m in maps.items() if m.missing == 'absent')
         tables[name] = Relation((*key, *values), tuple(r for r, _ in key), missing, description, partial)
     return tables

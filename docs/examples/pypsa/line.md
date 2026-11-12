@@ -58,17 +58,17 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   line:
     carrier:
       description: the carrier a line carries
-      refers: carrier
+      refers_to: carrier
     bus0:
       description: the bus a line's flow is measured at
-      refers: bus
+      refers_to: bus
     bus1:
       description: the bus at a line's other end
-      refers: bus
+      refers_to: bus
 
 parameters:
   Line_active:

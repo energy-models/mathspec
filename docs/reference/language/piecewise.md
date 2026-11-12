@@ -798,7 +798,7 @@ dimensions:
   bp: { dtype: int, ordered: true }
 maps:
   generator:
-    unit: { refers: unit, missing: absent }
+    unit: { refers_to: unit, missing: absent }
 parameters:
   power_bp: { dims: [generator, bp] }
   fuel_bp: { dims: [generator, bp] }

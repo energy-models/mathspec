@@ -101,7 +101,7 @@ DEFAULTED = varied(
     DISPATCH_MODEL,
     **{
         'dimensions.bus': {'dtype': 'str'},
-        'maps.generator': {'bus': {'refers': 'bus', 'missing': 'absent'}},
+        'maps.generator': {'bus': {'refers_to': 'bus', 'missing': 'absent'}},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
         'parameters.load.missing': 0,

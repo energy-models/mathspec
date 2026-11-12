@@ -22,7 +22,7 @@ SPDX-License-Identifier: CC-BY-4.0
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
       <text x="16" y="28">maps:</text>
-      <text x="31" y="46">line: { bus1: { refers: bus, <tspan font-weight="bold">missing: absent</tspan> } }</text>
+      <text x="31" y="46">line: { bus1: { refers_to: bus, <tspan font-weight="bold">missing: absent</tspan> } }</text>
     </g>
     <text x="16" y="86" font-weight="bold">line</text>
     <text x="50" y="86" fill-opacity="0.7">a dimension</text>

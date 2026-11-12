@@ -1611,96 +1611,96 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   bus:
     flow_based_domain:
       description: >-
         the flow-based domain a zone bus belongs to: the domain whose rows set
         the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
         row
-      refers: flow_based_domain
+      refers_to: flow_based_domain
       missing: absent
   generator:
     carrier:
       description: the carrier a generator converts from
-      refers: carrier
+      refers_to: carrier
     bus:
       description: the bus a generator sits on
-      refers: bus
+      refers_to: bus
   link:
     carrier:
       description: the carrier a link converts from
-      refers: carrier
+      refers_to: carrier
     bus0:
       description: the bus a link leaves
-      refers: bus
+      refers_to: bus
   link_output:
     link:
       description: the link an output port belongs to
-      refers: link
+      refers_to: link
     bus:
       description: >-
         the bus an output port delivers to. It is PyPSA's `bus1`, `bus2`, …
         columns. A link of three output ports is three labels here rather than a
         third relation, so the file states any number of them
-      refers: bus
+      refers_to: bus
   process:
     carrier:
       description: the carrier a process converts from
-      refers: carrier
+      refers_to: carrier
   process_output:
     process:
       description: the process a port belongs to
-      refers: process
+      refers_to: process
     bus:
       description: >-
         the bus a port draws from or delivers to. It is PyPSA's `bus0`, `bus1`,
         … columns. A process of three ports is three labels here rather than a
         third relation, so the file states any number of them
-      refers: bus
+      refers_to: bus
   load:
     bus:
       description: the bus a load sits on
-      refers: bus
+      refers_to: bus
   storage_unit:
     carrier:
       description: the carrier a storage unit converts from
-      refers: carrier
+      refers_to: carrier
     bus:
       description: the bus a storage unit sits on
-      refers: bus
+      refers_to: bus
   line:
     carrier:
       description: the carrier a line carries
-      refers: carrier
+      refers_to: carrier
     bus0:
       description: the bus a line's flow is measured at
-      refers: bus
+      refers_to: bus
     bus1:
       description: the bus at a line's other end
-      refers: bus
+      refers_to: bus
   store:
     carrier:
       description: the carrier a store holds
-      refers: carrier
+      refers_to: carrier
     bus:
       description: the bus a store sits on
-      refers: bus
+      refers_to: bus
   transformer:
     bus0:
       description: the bus a transformer's flow is measured at
-      refers: bus
+      refers_to: bus
     bus1:
       description: the bus at a transformer's other end
-      refers: bus
+      refers_to: bus
   outage:
     line:
       description: the line an outage takes out. An outage of a transformer has no row
-      refers: line
+      refers_to: line
       missing: absent
     transformer:
       description: the transformer an outage takes out. An outage of a line has no row
-      refers: transformer
+      refers_to: transformer
       missing: absent
 
 variables:

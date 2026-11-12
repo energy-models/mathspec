@@ -61,7 +61,7 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
 
 parameters:
   Generator_marginal_cost_curve_p:

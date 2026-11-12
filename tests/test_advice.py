@@ -99,86 +99,8 @@ def test_a_column_read_and_not_built_is_advised():
     assert 'merge()' in str(note), 'and names the verb that folds the reading away where a sibling builds it'
 
 
-#: `p` exists only at the pairs that `pair` lists, said with a `where:` where `in:` says it.
-ON_A_RELATION = varied(
-    READS_A_COLUMN,
-    dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}},
-    relations={'pair': {'dims': ['g', 'h'], 'missing': 'absent'}, 'link': {'dims': ['g', 'h'], 'missing': 'absent'}},
-    parameters={'flag': {'dims': ['g', 'h'], 'dtype': 'bool'}},
-    given={'variables': {'flow': {'dims': ['g', 'h']}}},
-    variables={'p': {'dims': ['g', 'h'], 'where': 'pair', 'bounds': {'lower': 0, 'upper': 1}}},
-    constraints={'tie': {'dims': ['g', 'h'], 'expression': 'p == flow'}},
-)
-
-
-@pytest.mark.parametrize(
-    ('patch', 'note'),
-    [
-        pytest.param(
-            {},
-            "Variable 'p': its `where:` names only 'pair', so it states the index set. Write `in: [pair]` in place "
-            'of the `where:`.',
-            id='a-relation',
-        ),
-        pytest.param(
-            {'variables.p.where': 'pair AND link'},
-            "Variable 'p': its `where:` names only 'link' and 'pair', so it states the index set. Write "
-            '`in: [link, pair]` in place of the `where:`.',
-            id='two-relations',
-        ),
-        pytest.param(
-            {'variables.p.where': 'pair AND flag'},
-            "Variable 'p': its `where:` requires a row of 'pair', which belongs in its index set. Write "
-            '`in: [pair]`, and keep the rest in the `where:`.',
-            id='a-relation-beside-a-test',
-        ),
-        pytest.param(
-            {'variables.p.in': ['link'], 'variables.p.where': 'pair AND flag'},
-            'Write `in: [link, pair]`, and keep the rest in the `where:`.',
-            id='a-relation-beside-an-index-set',
-        ),
-        pytest.param(
-            {'maps.pair': {'zone': 'h'}},
-            'Write `in: [pair]` in place of the `where:`.',
-            id='a-relation-with-a-map',
-        ),
-    ],
-)
-def test_a_variable_where_that_states_an_index_set_is_advised(patch, note):
-    """A variable's `where:` on a relation loads, and the advice names the `in:` that says it."""
-    notes = [n for n in advice(varied(ON_A_RELATION, **patch)) if n.kind == 'index-set']
-    assert [n.subject for n in notes] == ['p'], 'one note, about the variable'
-    assert note in str(notes[0])
-
-
-@pytest.mark.parametrize(
-    'patch',
-    [
-        pytest.param({'variables.p': {'dims': ['g', 'h'], 'in': ['pair']}}, id='already-on-the-relation'),
-        pytest.param({'variables.p.where': 'flag'}, id='a-test-of-a-value'),
-        pytest.param({'variables.p.where': 'pair OR flag'}, id='a-relation-inside-an-or'),
-        pytest.param({'variables.p.where': 'NOT pair'}, id='a-negated-relation'),
-        pytest.param({'relations.pair.missing': 'refused'}, id='a-relation-with-a-row-everywhere'),
-        pytest.param(
-            {'maps.g.zone': {'refers': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
-            id='a-label-of-a-map-of-a-dimension',
-        ),
-        pytest.param(
-            {'maps.pair.zone': {'refers': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
-            id='a-label-of-a-map-of-the-relation',
-        ),
-        pytest.param(
-            {'variables.p.where': None, 'parameters.cap': {'dims': ['g', 'h'], 'where': 'pair'}},
-            id='a-parameter-where-drops-what-in-refuses',
-        ),
-    ],
-)
-def test_a_where_that_on_cannot_state_is_not_advised(patch):
-    assert not [n for n in advice(varied(ON_A_RELATION, **patch)) if n.kind == 'index-set']
-
-
 def test_every_kind_a_consumer_can_pin_against_is_produced_here():
-    kinds = {note.kind for note in (*advice(BOTH_KINDS), *advice(READS_A_COLUMN), *advice(ON_A_RELATION))}
+    kinds = {note.kind for note in (*advice(BOTH_KINDS), *advice(READS_A_COLUMN))}
     assert kinds == set(get_args(AdviceKind)), 'every kind a consumer can pin against is one these fixtures produce'
 
 

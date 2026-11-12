@@ -69,7 +69,7 @@ $`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
 
 Each key under `maps:` names a **subject**, which is a dimension or a relation.
 Each key under the subject declares one map, which gives every row of the
-subject one label of the dimension that `refers:` names.
+subject one label of the dimension that `refers_to:` names.
 
 ```yaml
 dimensions:
@@ -81,17 +81,17 @@ maps:
     bus: bus # each generator is on one bus
   line:
     bus0: bus
-    bus1: { refers: bus, missing: absent } # a line may have an open end
+    bus1: { refers_to: bus, missing: absent } # a line may have an open end
 ```
 
-`bus: bus` is the short form of `bus: { refers: bus }`, and mathspec writes a
-map back in the short form when `refers:` is its only key. A condition or an
+`bus: bus` is the short form of `bus: { refers_to: bus }`, and mathspec writes a
+map back in the short form when `refers_to:` is its only key. A condition or an
 operator reads a map as `subject[map]`, so `generator[bus]` is the bus of a
 generator.
 
 | Key           | What it sets                                                                      | Default   |
 | ------------- | --------------------------------------------------------------------------------- | --------- |
-| `refers`      | required. The dimension whose labels the map gives                                |           |
+| `refers_to`   | required. The dimension whose labels the map gives                                |           |
 | `missing`     | [`refused` or `absent`](#missing): whether every row of the subject needs a label | `refused` |
 | `description` | free text                                                                         | `null`    |
 
@@ -101,7 +101,7 @@ typesetter prints a map as a function from its subject into that dimension, so
 mathspec refuses a map at load in four cases:
 
 - The subject is neither a dimension nor a relation.
-- `refers:` names a relation, or names no dimension.
+- `refers_to:` names a relation, or names no dimension.
 - The map is named after a dimension that it does not refer to.
 - The map has the name of a column of its subject.
 
@@ -147,7 +147,7 @@ maps:
     bus: bus # refused: every generator is on a bus
   line:
     bus0: bus
-    bus1: { refers: bus, missing: absent } # an open end is meant
+    bus1: { refers_to: bus, missing: absent } # an open end is meant
 ```
 
 <figure class="diagram">
@@ -391,8 +391,9 @@ Expected end of text, found '['  (at char 8), (line:1, col:9)
 
 A map alone in a condition, such as `line[bus1]`, is true where the map gives
 the row a label. A relation name alone is true where the relation has a row.
-On a variable, the condition leaves the variable absent at every pair that the
-relation does not list:
+On a parameter or a variable, [`in:`](parameters-variables-constraints.md#in)
+states those rows, so mathspec refuses the name in its `where:`. With `in:`, a
+variable is absent at every pair that the relation does not list:
 
 ```yaml title="flow.yaml"
 dimensions:
@@ -406,7 +407,7 @@ parameters:
 variables:
   flow:
     dims: [generator, bus, snapshot]
-    where: connection
+    in: [connection]
     bounds: { lower: 0 }
 constraints:
   balance:
@@ -420,24 +421,25 @@ constraints:
 
 `flow` exists at the pairs that `connection` lists and is
 [absent](absence.md) at every other pair, so `balance` adds up the generators
-wired to each bus. `in: [connection]` in place of the `where:` gives `flow` the
-same coordinates, and mathspec gives advice to write it so
-([`in` on a variable](parameters-variables-constraints.md#in-on-a-variable)).
+wired to each bus. `where: connection` in place of the `in:` is refused:
+
+```text
+Variable 'flow': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
+```
 
 `python -m mathspec markdown flow.yaml` prints the domain of `flow` and the
 constraint:
 
 ```math
-\mathit{flow}_{b,g,t} \ge 0 \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \left( b,\ g \right) \in \mathrm{connection}
+\mathit{flow}_{b,g,t} \ge 0 \qquad \forall\, \left( b,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}
 ```
 
 ```math
 \sum_{g \in \mathcal{G}} \mathit{flow}_{b,g,t} = \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
-The domain of `flow` ends in the condition that `(b, g)` is in `connection`.
-The columns are sorted to `(bus, generator)`, and the condition is over those
-two columns, so it is the same at every snapshot. A map test prints as
+The domain of `flow` is the pairs `(b, g)` in `connection`, at every snapshot.
+The columns are sorted to `(bus, generator)`. A map test prints as
 $`\mathrm{bus1}(l) \text{ is defined}`$.
 
 !!! info "See also"

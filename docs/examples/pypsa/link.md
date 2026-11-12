@@ -60,24 +60,24 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   link:
     carrier:
       description: the carrier a link converts from
-      refers: carrier
+      refers_to: carrier
     bus0:
       description: the bus a link leaves
-      refers: bus
+      refers_to: bus
   link_output:
     link:
       description: the link an output port belongs to
-      refers: link
+      refers_to: link
     bus:
       description: >-
         the bus an output port delivers to. It is PyPSA's `bus1`, `bus2`, …
         columns. A link of three output ports is three labels here rather than a
         third relation, so the file states any number of them
-      refers: bus
+      refers_to: bus
 
 parameters:
   Link_p_nom:

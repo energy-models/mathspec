@@ -266,18 +266,18 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                     f"{head}: map '{role}' has the name of a column of '{subject}', which holds the row, not a "
                     f'label of it. Rename the map after what it holds.'
                 )
-            if m.refers in spec.relations:
+            if m.refers_to in spec.relations:
                 yield (
-                    f"{head}: map '{role}' refers to the relation '{m.refers}', and a map gives a label of one "
+                    f"{head}: map '{role}' refers to the relation '{m.refers_to}', and a map gives a label of one "
                     f"dimension. Refer to one of its dimensions, or declare '{role}' on the relation instead."
                 )
-            elif m.refers not in spec.dimensions:
+            elif m.refers_to not in spec.dimensions:
                 yield (
-                    f"{head}: map '{role}' refers to undeclared dimension '{m.refers}'. Declare it under 'dimensions:'."
+                    f"{head}: map '{role}' refers to undeclared dimension '{m.refers_to}'. Declare it under 'dimensions:'."
                 )
-            elif role in spec.dimensions and role != m.refers:
+            elif role in spec.dimensions and role != m.refers_to:
                 yield (
-                    f"{head}: map '{role}' is named after dimension '{role}', but refers to '{m.refers}'. Rename the "
+                    f"{head}: map '{role}' is named after dimension '{role}', but refers to '{m.refers_to}'. Rename the "
                     f'map after what it holds.'
                 )
 
@@ -336,7 +336,7 @@ def _missing_by(spec: Spec) -> Iterator[str]:
         if isinstance(selected, str):
             yield selected
             continue
-        dimension = spec.dimensions.get(spec.maps[selected.relation][selected.columns[0]].refers)
+        dimension = spec.dimensions.get(spec.maps[selected.relation][selected.columns[0]].refers_to)
         if dimension is None or dimension.one_of is None:
             continue
         yield from (

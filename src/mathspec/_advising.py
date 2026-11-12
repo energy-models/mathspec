@@ -9,11 +9,11 @@ One door, [`advice`][], over every pass of that kind.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypeGuard
+from typing import TYPE_CHECKING
 
 from mathspec._boundedness import unbounded_notes
 from mathspec._validation import to_spec
-from mathspec.program import Advice, Condition, Join, Program, RelationDefined, walk
+from mathspec.program import Advice, Join, Program, walk
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -44,47 +44,7 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
         FileNotFoundError: A ``str`` with no newline that names no file.
     """
     program = spec if isinstance(spec, Program) else to_spec(spec).program
-    return tuple(_never_an_axis(program) + _given(program) + _index_sets(program) + unbounded_notes(program))
-
-
-def _index_sets(program: Program) -> list[Advice]:
-    """One note per variable whose ``where:`` requires a row of a relation that ``in:`` could name.
-
-    A note rather than a refusal: the two say the same for a variable. A
-    parameter gets none, because there a ``where:`` drops a stray row of data
-    and ``in:`` refuses it.
-    """
-    notes: list[Advice] = []
-    for name, variable in program.variables.items():
-        if variable.where is None:
-            continue
-        conjuncts = variable.where.within(variable.in_).conjuncts
-        rows = sorted({c.name for c in conjuncts if _row_of(c) and _lists_rows(program, c.name)})
-        if not rows:
-            continue
-        quoted, in_ = ' and '.join(f"'{r}'" for r in rows), ', '.join(sorted({*variable.in_, *rows}))
-        if any(not _row_of(c) or c.name not in rows for c in conjuncts):
-            text = (
-                f"Variable '{name}': its `where:` requires a row of {quoted}, which belongs in its index set. "
-                f'Write `in: [{in_}]`, and keep the rest in the `where:`.'
-            )
-        else:
-            text = (
-                f"Variable '{name}': its `where:` names only {quoted}, so it states the index set. "
-                f'Write `in: [{in_}]` in place of the `where:`.'
-            )
-        notes.append(Advice('index-set', name, text))
-    return notes
-
-
-def _row_of(condition: Condition) -> TypeGuard[RelationDefined]:
-    """Whether *condition* asks for a row of a relation, which ``in:`` could state, rather than a label of a map."""
-    return isinstance(condition, RelationDefined) and condition.column is None
-
-
-def _lists_rows(program: Program, relation: str) -> bool:
-    """Whether ``in:`` takes *relation*: it leaves a combination out."""
-    return program.relations[relation].missing == 'absent'
+    return tuple(_never_an_axis(program) + _given(program) + unbounded_notes(program))
 
 
 def _given(program: Program) -> list[Advice]:

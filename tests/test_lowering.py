@@ -720,11 +720,11 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     program = to_spec(
         {
             'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'ordered': True}, 'zone': {}},
-            'relations': {'zone_of': {'dims': ['generator', 'snapshot']}},
+            'relations': {'zone_of': {'dims': ['generator', 'snapshot'], 'missing': 'absent'}},
             'maps': {'zone_of': {'zone': 'zone'}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
-                'p': {'dims': ['snapshot', 'generator'], 'where': "zone_of[zone] == 'A' AND zone_of"},
+                'p': {'dims': ['snapshot', 'generator'], 'in': ['zone_of'], 'where': "zone_of[zone] == 'A'"},
                 'first': {
                     'dims': ['snapshot', 'generator'],
                     'where': 'position(generator, within=zone_of[zone]) == 0',
@@ -748,7 +748,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     ).program
 
     columns = (('generator', 'generator'), ('snapshot', 'snapshot'), ('zone', 'zone'))
-    declared = Relation(columns, ('generator', 'snapshot'))
+    declared = Relation(columns, ('generator', 'snapshot'), missing='absent')
     assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('snapshot', 'zone'))
@@ -794,27 +794,27 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     p_where = program.variables['p'].where
     assert p_where is not None
     assert [(type(a).__name__, a.dims) for a in p_where.atoms] == [
-        ('RelationComparison', ('generator', 'snapshot')),
         ('RelationDefined', ('generator', 'snapshot')),
-    ], 'a comparison and an existence are both read at the key of a keyed relation'
+        ('RelationComparison', ('generator', 'snapshot')),
+    ], 'the rows `in:` names and a comparison are both read at the key of a keyed relation'
     first_where = program.variables['first'].where
     assert first_where is not None
     assert first_where.dims == ('generator', 'snapshot'), 'a position within a group is read at every key column'
 
 
 @pytest.mark.parametrize(
-    ('variable', 'where', 'atom'),
+    ('variable', 'entry', 'atom'),
     [
-        pytest.param('q', 'link', RelationDefined('link', ('g', 'h')), id='a-relation-alone-tests-a-row'),
-        pytest.param('p', 'g[h]', RelationDefined('g', ('g',), 'h'), id='a-map-alone-tests-a-label'),
+        pytest.param('q', {'in': ['link']}, RelationDefined('link', ('g', 'h')), id='in-tests-a-row'),
+        pytest.param('p', {'where': 'g[h]'}, RelationDefined('g', ('g',), 'h'), id='a-map-alone-tests-a-label'),
     ],
 )
-def test_a_condition_tests_a_row_or_a_label_by_how_it_is_written(variable, where, atom):
+def test_a_condition_tests_a_row_or_a_label_by_how_it_is_written(variable, entry, atom):
     """A relation's bare name asks for a row, and `subject[map]` alone asks whether the map gives the row a label."""
     patch = {
         'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
-        'maps.g.h': {'refers': 'h', 'missing': 'absent'},
-        f'variables.{variable}.where': where,
+        'maps.g.h': {'refers_to': 'h', 'missing': 'absent'},
+        **{f'variables.{variable}.{key}': value for key, value in entry.items()},
     }
     assert to_spec(varied(SMALL_MODEL, **patch)).program.variables[variable].where == Mask(atom)
 
@@ -898,7 +898,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
             TINY,
             dimensions={'g': {}, 'bus': {}, 'season': {}},
             relations={'link': {'dims': ['g', 'bus'], 'missing': 'absent'}},
-            maps={'g': {'season': 'season', 'bus': {'refers': 'bus', 'missing': 'absent'}}},
+            maps={'g': {'season': 'season', 'bus': {'refers_to': 'bus', 'missing': 'absent'}}},
         )
     ).program
 

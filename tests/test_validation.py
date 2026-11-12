@@ -1500,8 +1500,8 @@ class TestRulesDecidedWithoutData:
                 id='map-on-a-relation-with-two-columns-over-one-dimension',
             ),
             pytest.param(
-                {'maps.g.h': {'refers': 'h', 'value': 'x'}},
-                ("unknown key 'value' in a map entry. Valid keys: description, missing, refers.",),
+                {'maps.g.h': {'refers_to': 'h', 'value': 'x'}},
+                ("unknown key 'value' in a map entry. Valid keys: description, missing, refers_to.",),
                 id='map-with-an-unknown-key',
             ),
             pytest.param(
@@ -2044,6 +2044,90 @@ _LINKED = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
 def test_a_relation_named_where_a_dimension_belongs_is_refused(patch: dict[str, Any], message: str):
     """mathspec told the writer to declare the relation under `dimensions:`, which makes a second, unrelated name."""
     assert message in _refusal(**_LINKED, **patch)
+
+
+#: `p` over the pairs of `g` and `h`, with two relations that list some of them.
+ON_A_RELATION: dict[str, Any] = {
+    'dimensions': {'g': {}, 'h': {}},
+    'relations': {'pair': {'dims': ['g', 'h'], 'missing': 'absent'}, 'link': {'dims': ['g', 'h'], 'missing': 'absent'}},
+    'parameters': {'flag': {'dims': ['g', 'h'], 'dtype': 'bool'}},
+    'variables': {'p': {'dims': ['g', 'h'], 'where': 'pair'}},
+}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'message'),
+    [
+        pytest.param(
+            {},
+            "Variable 'p': `where: pair` tests the rows of 'pair', which `in:` states. Write `in: [pair]` in place "
+            'of the `where:`.',
+            id='a-relation',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND link'},
+            "tests the rows of 'link' and 'pair', which `in:` states. Write `in: [link, pair]` in place of the "
+            '`where:`.',
+            id='two-relations',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND flag'},
+            'Write `in: [pair]`, and keep the rest in the `where:`.',
+            id='a-relation-beside-a-test',
+        ),
+        pytest.param(
+            {'variables.p.in': ['link'], 'variables.p.where': 'pair AND flag'},
+            'Write `in: [link, pair]`, and keep the rest in the `where:`.',
+            id='a-relation-beside-an-index-set',
+        ),
+        pytest.param(
+            {'variables.p': {'dims': ['g', 'h']}, 'parameters.cap': {'dims': ['g', 'h'], 'where': 'pair'}},
+            "Parameter 'cap': `where: pair` tests the rows of 'pair', which `in:` states.",
+            id='a-parameter',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair OR flag'},
+            "tests the rows of 'pair' under OR or NOT, which `in:` cannot state. Declare those rows as a bool "
+            'parameter, and test that in its place.',
+            id='under-an-or',
+        ),
+        pytest.param({'variables.p.where': 'NOT pair'}, "rows of 'pair' under OR or NOT", id='under-a-not'),
+        pytest.param(
+            {'relations.pair.missing': 'refused'},
+            "under missing: refused 'pair' has a row everywhere. Delete it from the `where:`.",
+            id='a-relation-with-a-row-everywhere',
+        ),
+    ],
+)
+def test_a_where_that_tests_the_rows_of_a_relation_is_refused(patch: dict[str, Any], message: str):
+    """`where: pair` and `in: [pair]` said one thing twice, and a parameter's `where:` dropped what `in:` refuses."""
+    assert message in _refusal(ON_A_RELATION, **patch)
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param({'variables.p': {'dims': ['g', 'h'], 'in': ['pair']}}, id='the-rows-under-in'),
+        pytest.param({'variables.p.where': 'flag'}, id='a-test-of-a-value'),
+        pytest.param(
+            {'maps.g.zone': {'refers_to': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
+            id='a-label-of-a-map-of-a-dimension',
+        ),
+        pytest.param(
+            {'maps.pair.zone': {'refers_to': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
+            id='a-label-of-a-map-of-the-relation',
+        ),
+        pytest.param(
+            {
+                'variables.p': {'dims': ['g', 'h']},
+                'constraints.c': {'dims': ['g', 'h'], 'where': 'pair', 'expression': 'p >= 0'},
+            },
+            id='a-constraint-has-no-in',
+        ),
+    ],
+)
+def test_a_where_that_in_cannot_state_loads(patch: dict[str, Any]):
+    to_spec(varied(ON_A_RELATION, **patch))
 
 
 class TestAssumptions:
@@ -3003,7 +3087,8 @@ def test_a_bare_parameter_refused_at_every_label_is_refused(dtype: str):
 #: A parameter over the pairs of `g` and `h` that a relation lists, with a fill.
 _MASKED = {
     'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
-    'parameters.w': {'dims': ['g', 'h'], 'where': 'pair', 'missing': 1},
+    'maps.pair.kind': {'refers_to': 'h', 'missing': 'absent'},
+    'parameters.w': {'dims': ['g', 'h'], 'where': 'pair[kind]', 'missing': 1},
 }
 
 
@@ -3252,7 +3337,7 @@ def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
         'expressions.level': {'dims': ['g', 'h'], 'cases': cases, 'otherwise': 0},
     }
     assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
-    masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair'}}
+    masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair[kind]'}}
     assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**masked)
     indexed = {
         **patch,
@@ -3269,7 +3354,7 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName):
     """The mask decides which rows of the data count, so a reader of the legend sees it beside the dims."""
     spec = _spec(**_MASKED, **{'variables.q.bounds': {'upper': 'w'}})
     row = next(line for line in typeset(spec, fmt).splitlines() if 'only where' in line)
-    assert 'pair' in row, 'the legend row names the relation the mask reads'
+    assert 'kind' in row, 'the legend row names the map the mask reads'
     assert row.index('only where') < row.index('where the data has no row'), 'the mask comes before the fill'
 
 
@@ -3486,8 +3571,8 @@ def test_a_relation_says_whether_every_combination_needs_a_row(declared, read):
     ('declared', 'partial'),
     [
         pytest.param('h', (), id='left-out-is-refused'),
-        pytest.param({'refers': 'h', 'missing': 'refused'}, (), id='refused'),
-        pytest.param({'refers': 'h', 'missing': 'absent'}, ('h',), id='absent'),
+        pytest.param({'refers_to': 'h', 'missing': 'refused'}, (), id='refused'),
+        pytest.param({'refers_to': 'h', 'missing': 'absent'}, ('h',), id='absent'),
     ],
 )
 def test_a_map_says_whether_every_row_needs_a_label(declared, partial):
@@ -3521,13 +3606,13 @@ def test_a_map_says_whether_every_row_needs_a_label(declared, partial):
             id='null-on-a-relation',
         ),
         pytest.param(
-            {'maps.g.h': {'refers': 'h', 'missing': 0}},
+            {'maps.g.h': {'refers_to': 'h', 'missing': 0}},
             'maps.g.h.missing: missing: 0 on a map, which takes refused or absent',
             id='a-number-on-a-map',
         ),
-        pytest.param({'maps.g.h': {'refers': 'h', 'missing': 'h1'}}, 'missing: h1 on a map', id='a-label-on-a-map'),
+        pytest.param({'maps.g.h': {'refers_to': 'h', 'missing': 'h1'}}, 'missing: h1 on a map', id='a-label-on-a-map'),
         pytest.param(
-            {'maps.g.h': {'refers': 'h', 'missing': None}},
+            {'maps.g.h': {'refers_to': 'h', 'missing': None}},
             'missing: null on a map says nothing',
             id='null-on-a-map',
         ),

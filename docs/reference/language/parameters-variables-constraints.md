@@ -452,17 +452,24 @@ reading per label, it lists each reading with its labels, then `otherwise`.
 `where:` limits a parameter to the coordinates where a
 [condition](expressions.md#conditions) is true. The dimensions keep every
 label, and only the parameter loses coordinates. In this example, `efficiency`
-has a value only at the pairs of an entity and a bus that are wired:
+has a value only at the pairs of an entity and a bus that are wired as an
+output:
 
 ```yaml
 dimensions:
   entity: { dtype: str }
   bus: { dtype: str }
+  role: { dtype: str }
   snapshot: { dtype: int }
 relations:
   connection: { dims: [entity, bus], missing: absent }
+maps:
+  connection: { role: role }
 parameters:
-  efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
+  efficiency:
+    dims: [entity, bus, snapshot]
+    where: "connection[role] == 'output'"
+    missing: 1
 variables:
   p: { dims: [entity, snapshot] }
 constraints:
@@ -478,8 +485,9 @@ $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad 
 </figure>
 
 With the data in the figure, `efficiency` has rows only at the pairs that
-`connection` lists. A tool drops the data row for `boiler` at `el`, and
-`missing: 1` gives `chp` at `heat` the value `1`. In `balance`,
+`connection` lists as an output. `connection` does not list `boiler` at `el`,
+so that pair has no role, and a tool drops its data row. `missing: 1` gives
+`chp` at `heat` the value `1`. In `balance`,
 `efficiency * p` is absent at an entity that is not wired to the bus, so the
 sum adds only the wired entities.
 
@@ -493,14 +501,19 @@ steps:
    A missing row there is refused, absent or a value, as
    [`missing:`](#missing) sets.
 
-Under `missing: refused`, a tool requires a row at each wired pair and
+Under `missing: refused`, a tool requires a row at each output pair and
 snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
 either, because the parameter has no row there. To have a tool refuse a row at
-a pair that is not wired, write [`in: [connection]`](#in) instead, and no
-`where:`.
+a pair that is not wired, write [`in: [connection]`](#in). A relation name
+alone in the `where:` would state the same rows a second time, so mathspec
+refuses it. For `where: connection` on `efficiency`, the message is:
+
+```text
+Parameter 'efficiency': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
+```
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
@@ -518,14 +531,14 @@ For a `where:` on `efficiency` that contains the variable `p`, the message
 is:
 
 ```text
-Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a relation instead.
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a map instead.
 ```
 
-mathspec suggests a parameter or a relation as the rewrite.
+mathspec suggests a parameter or a map as the rewrite.
 
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
-`only where` $(e, b) \in \mathrm{connection}$.
+`only where` $\mathrm{role}(b,\ e) = \text{'}\mathrm{output}\text{'}$.
 
 ### `in`
 
@@ -744,18 +757,19 @@ the same index sets at load as on a parameter, and a `where:` on the variable
 narrows inside the index set. A `missing:` number stands for the variable
 outside its `in:`, as outside a `where:`.
 
-A `where:` that requires a row of a relation loads, and mathspec gives
-[advice](errors.md#what-advice-warns-about) to write the relation under `in:`.
-For `where: connection` on `flow`, the advice is:
+mathspec refuses a `where:` that tests the rows of a relation, as on a
+parameter, because `in:` states them. For `where: connection` on `flow`, the
+message is:
 
 ```text
-Variable 'flow': its `where:` names only 'connection', so it states the index set. Write `in: [connection]` in place of the `where:`.
+Variable 'flow': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
 ```
 
-For a `where:` that also tests a value, such as
-`where: "connection AND active"`, the advice is to write `in: [connection]`
-and keep the rest in the `where:`. A parameter gets no such advice, because
-its `where:` drops a stray row of the data and its `in:` refuses it.
+For `where: "connection AND active"`, the rewrite is `in: [connection]`, with
+`active` kept in the `where:`. Under `OR` or `NOT`, `in:` cannot state the
+rows, and mathspec suggests a `bool` parameter in their place. A
+[map](relations.md#maps) tested alone, such as `connection[bus]`, asks for a
+label rather than a row, so it loads.
 
 ## `objective`
 

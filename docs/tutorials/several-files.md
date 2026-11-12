@@ -98,7 +98,7 @@ dimensions:
 
 maps:
   generator:
-    bus: { refers: bus, description: the bus a generator sits on }
+    bus: { refers_to: bus, description: the bus a generator sits on }
 
 parameters:
   capacity: { dims: [generator], description: installed capacity }

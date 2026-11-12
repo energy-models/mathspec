@@ -49,7 +49,7 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
 
 parameters:
   Link_ramp_limit_up:

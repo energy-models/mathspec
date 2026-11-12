@@ -1260,7 +1260,7 @@ COMMITTED = {
         'snapshot': {'dtype': 'int'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'converter': {'status_entity': {'refers': 'status_entity', 'missing': 'absent'}}},
+    'maps': {'converter': {'status_entity': {'refers_to': 'status_entity', 'missing': 'absent'}}},
     'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
     'variables': {
         'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
@@ -1491,7 +1491,7 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
 
 
 #: The map of the walk, which may give a flow no generator.
-PARTIAL = {'maps.flow.generator': {'refers': 'generator', 'missing': 'absent'}}
+PARTIAL = {'maps.flow.generator': {'refers_to': 'generator', 'missing': 'absent'}}
 
 
 @pytest.mark.parametrize(
@@ -2016,7 +2016,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.generator.unit': {'refers': 'unit', 'missing': 'absent'}},
+            UNITS | {'maps.generator.unit': {'refers_to': 'unit', 'missing': 'absent'}},
             'coupling_power',
             f'({FIRST}) AND ({UNIT_STATUS})',
             f'bp_power * ({UNIT_STATUS})',
@@ -2024,7 +2024,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.flow.generator': {'refers': 'generator', 'missing': 'absent'}},
+            UNITS | {'maps.flow.generator': {'refers_to': 'generator', 'missing': 'absent'}},
             'coupling_power',
             f'(flow[generator]) AND ({FIRST})',
             f'bp_power * ({UNIT_STATUS})',

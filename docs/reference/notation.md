@@ -44,7 +44,7 @@ maps:
   generator: { bus: bus, technology: technology } # two maps of one subject, read to both at once
   bus:
     zone: zone
-    area: { refers: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
+    area: { refers_to: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
   snapshot:
     season: season
     rep: snapshot # a map into its own dimension: the representative snapshot
@@ -58,7 +58,7 @@ parameters:
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
-  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  link_eff: { dims: [generator, bus], in: [connection], missing: 1 } # over the pairs a relation lists; a `where:` may not test them
   zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
   area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
@@ -99,7 +99,7 @@ parameters:
 | $`\mathrm{growth}`$ | `growth` (scalar) |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
-| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{U} \times \mathcal{G}`$, only where $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$, where the data has no row: $`0`$ where `bus[zone]` is `north`, `absent` where `bus[zone]` is `south`, `refused` otherwise |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |

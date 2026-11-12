@@ -44,14 +44,14 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers: period
+      refers_to: period
   storage_unit:
     carrier:
       description: the carrier a storage unit converts from
-      refers: carrier
+      refers_to: carrier
     bus:
       description: the bus a storage unit sits on
-      refers: bus
+      refers_to: bus
 
 parameters:
   StorageUnit_active:

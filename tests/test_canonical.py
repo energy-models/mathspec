@@ -137,9 +137,9 @@ def test_the_entries_of_a_section_are_sorted_by_name():
 @pytest.mark.parametrize(
     ('declared', 'written'),
     [
-        pytest.param({'refers': 'h'}, 'h', id='only-its-dimension-is-the-short-form'),
+        pytest.param({'refers_to': 'h'}, 'h', id='only-its-dimension-is-the-short-form'),
         pytest.param(
-            {'refers': 'h', 'missing': 'absent'}, {'refers': 'h', 'missing': 'absent'}, id='more-is-a-mapping'
+            {'refers_to': 'h', 'missing': 'absent'}, {'refers_to': 'h', 'missing': 'absent'}, id='more-is-a-mapping'
         ),
     ],
 )

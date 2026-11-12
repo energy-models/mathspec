@@ -604,7 +604,7 @@
       "anyOf": [
         {
           "additionalProperties": false,
-          "description": "A map: one label per row of its subject, a dimension or a relation, from the dimension it ``refers:`` to.\n\nWritten in YAML under its subject, as the dimension it refers to, or as a\nmapping once it carries ``missing:`` or a ``description:``::\n\n    maps:\n      unit:\n        carrier: {refers: carrier, missing: absent}\n      connection:\n        bus: bus\n      line:\n        bus0: bus\n        bus1: bus\n\nThe map's name is a column of its subject's table, beside the subject's\nown columns. A call reads it as ``subject[map]``: ``sum(by=)`` totals\nalong it, ``at(by=)`` reads through it, ``within=`` works in each group\nof rows it sends to one label, and a condition compares it or tests that\na row has a label.",
+          "description": "A map: one label per row of its subject, a dimension or a relation, from the dimension that ``refers_to:`` names.\n\nWritten in YAML under its subject, as the dimension it refers to, or as a\nmapping once it carries ``missing:`` or a ``description:``::\n\n    maps:\n      unit:\n        carrier: {refers_to: carrier, missing: absent}\n      connection:\n        bus: bus\n      line:\n        bus0: bus\n        bus1: bus\n\nThe map's name is a column of its subject's table, beside the subject's\nown columns. A call reads it as ``subject[map]``: ``sum(by=)`` totals\nalong it, ``at(by=)`` reads through it, ``within=`` works in each group\nof rows it sends to one label, and a condition compares it or tests that\na row has a label.",
           "properties": {
             "description": {
               "anyOf": [
@@ -627,13 +627,13 @@
               "title": "Missing",
               "type": "string"
             },
-            "refers": {
-              "title": "Refers",
+            "refers_to": {
+              "title": "Refers To",
               "type": "string"
             }
           },
           "required": [
-            "refers"
+            "refers_to"
           ],
           "title": "MapSpec",
           "type": "object"

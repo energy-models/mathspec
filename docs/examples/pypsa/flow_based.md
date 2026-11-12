@@ -45,7 +45,7 @@ maps:
         the flow-based domain a zone bus belongs to: the domain whose rows set
         the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
         row
-      refers: flow_based_domain
+      refers_to: flow_based_domain
       missing: absent
 
 parameters:
