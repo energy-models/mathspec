@@ -12,6 +12,9 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language)!: maps give labels, relations give rows ([#1001](https://github.com/energy-models/mathspec/pull/1001))
+  - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, and is read as `subject[map]`, such as `generator[bus]`.
+  - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, and `Reach.name` names `subject[map]`.
 - feat(language): a missing row reads per relation label ([#984](https://github.com/energy-models/mathspec/pull/984))
 - feat(language): assumptions may require a row to exist ([#982](https://github.com/energy-models/mathspec/pull/982))
 - feat(language): relation rows may index an entry ([#980](https://github.com/energy-models/mathspec/pull/980))
