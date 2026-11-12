@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): relation rows may index an entry ([#980](https://github.com/energy-models/mathspec/pull/980))
+- docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
 - docs(pypsa): component cites point at PyPSA 3625c816 ([#997](https://github.com/energy-models/mathspec/pull/997))
 - docs(pypsa): the reference pins PyPSA at 3625c816 ([#996](https://github.com/energy-models/mathspec/pull/996))
 - docs(pypsa): the file states a piecewise marginal cost ([#988](https://github.com/energy-models/mathspec/pull/988))

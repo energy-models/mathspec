@@ -13,7 +13,7 @@ given:
   parameters:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_status_initial: { dims: [scenario, generator] }
     Generator_p_nom_mod: { dims: [generator] }
     Generator_modules_installed: { dims: [scenario, generator] }
     Generator_big_m: { dims: [scenario, generator] }
@@ -70,9 +70,11 @@ parameters:
     missing: absent
   Generator_p_init:
     description: >-
-      the output a unit brought into the horizon (PyPSA's `p_init`), read only
-      where the unit came in running. No value means it is unknown, and the
-      unit then has no ramp row at the first snapshot
+      the output a unit brought into the horizon, data prep. It is PyPSA's
+      `p_init` where the unit came in running, and zero where it came in off.
+      Under a rolling horizon, it is the output the previous window solved. No
+      value means it is unknown, and the unit then has no ramp row at the
+      first snapshot
     dims: [scenario, generator]
     missing: 0
 
@@ -90,11 +92,11 @@ expressions:
   Generator_p_carried_over:
     description: >-
       the output a generator carries over into a snapshot. At the first, it is
-      the `p_init` it brought in where it came in running, and nothing where
-      it came in off. After that, it is the previous snapshot's
+      the `p_init` it brought in, which is zero where it came in off. After
+      that, it is the previous snapshot's
     dims: [scenario, snapshot, generator]
     cases:
-      opening: { when: "position(snapshot) == 0", expression: Generator_status_initial * Generator_p_init }
+      opening: { when: "position(snapshot) == 0", expression: Generator_p_init }
     otherwise: shift(Generator_p, along=snapshot, offset=1)
   Generator_ramp_up_rate:
     description: >-
@@ -222,9 +224,9 @@ constraints:
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
       AND Generator_ramps_from_previous
     expression: >-
-      Generator_previous_p - Generator_p <=
-      Generator_ramp_down_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_status
+      Generator_p - Generator_previous_p >=
+      -Generator_ramp_down_rate * Generator_p_nom_ext
+      - Generator_big_m + Generator_big_m * Generator_status
   Generator_p_ramp_limit_down_shut_big_m:
     description: >-
       `Generator-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off,
@@ -305,7 +307,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G} \times \Xi`$, $`0`$ where the data has no row — the output a unit brought into the horizon (PyPSA's `p_init`), read only where the unit came in running. No value means it is unknown, and the unit then has no ramp row at the first snapshot |
+| $`\mathrm{p}^{0}`$ | `Generator_p_init` over $`\mathcal{G} \times \Xi`$, $`0`$ where the data has no row — the output a unit brought into the horizon, data prep. It is PyPSA's `p_init` where the unit came in running, and zero where it came in off. Under a rolling horizon, it is the output the previous window solved. No value means it is unknown, and the unit then has no ramp row at the first snapshot |
 | $`\mathrm{rd}`$ | `Generator_ramp_limit_down` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — most a generator may lower its output between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
 | $`\mathrm{rd}^{\mathrm{dn}}`$ | `Generator_ramp_limit_shut_down` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — most output in the snapshot before a unit stops, per unit of nominal power. No value means no limit |
 | $`\mathrm{ru}^{\mathrm{up}}`$ | `Generator_ramp_limit_start_up` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — most output in the snapshot a unit starts, per unit of nominal power. No value means no limit |
@@ -321,7 +323,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{p}^{\circ}`$ | `Generator_p_carried_over` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the output a generator carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\overleftarrow{p}^{\circ}`$ | `Generator_p_carried_over` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the output a generator carries over into a snapshot. At the first, it is the `p_init` it brought in, which is zero where it came in off. After that, it is the previous snapshot's |
 | $`\overleftarrow{p}`$ | `Generator_previous_p` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the output a generator carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:716`). It is the output carried over otherwise |
 | $`\Delta^{-}`$ | `Generator_ramp_down_allowance` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — how far a generator may lower output between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\widetilde{\mathrm{rd}}`$ | `Generator_ramp_down_rate` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — the ramp limit in a unit's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
@@ -351,7 +353,7 @@ constraints:
 **`Generator_p_carried_over`**
 
 ```math
-\overleftarrow{p}^{\circ}_{g,\xi,t} = \begin{cases} \mathrm{u}^{0}_{g,\xi} \cdot \mathrm{p}^{0}_{g,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ p_{g,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overleftarrow{p}^{\circ}_{g,\xi,t} = \begin{cases} \mathrm{p}^{0}_{g,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ p_{g,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Generator_previous_p`**
@@ -413,7 +415,7 @@ constraints:
 **`Generator_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{p}_{g,\xi,t} - p_{g,\xi,t} \le \widetilde{\mathrm{rd}}_{g,\xi,t} \cdot P_{g} + \mathrm{M}_{g,\xi} - \mathrm{M}_{g,\xi} \cdot u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t} \wedge \left( \mathrm{rd}_{g,\xi,t} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{g,\xi} \text{ is defined} \right) \wedge \mathrm{prev}_{g,\xi,t}
+p_{g,\xi,t} - \overleftarrow{p}_{g,\xi,t} \ge -\widetilde{\mathrm{rd}}_{g,\xi,t} \cdot P_{g} - \mathrm{M}_{g,\xi} + \mathrm{M}_{g,\xi} \cdot u_{g,\xi,t} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{\mathrm{com,ext}}_{g,t} \wedge \left( \mathrm{rd}_{g,\xi,t} \text{ is defined} \vee \mathrm{rd}^{\mathrm{dn}}_{g,\xi} \text{ is defined} \right) \wedge \mathrm{prev}_{g,\xi,t}
 ```
 
 **`Generator_p_ramp_limit_down_shut_big_m`**
