@@ -60,8 +60,8 @@ functions.
       snapshot: { dtype: int }
       bus: { dtype: str }
       generator: { dtype: str }
-    relations:
-      Generator_bus: { key: generator, values: bus }
+    maps:
+      generator: { bus: bus }
     parameters:
       Generator_p_nom: { dims: [generator] }
       Generator_marginal_cost: { dims: [generator] }
@@ -69,7 +69,7 @@ functions.
       Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
     expressions:
       Generator_injection:
-        expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+        expression: sum(Generator_p, over=generator, by=generator[bus])
         adds_to: Bus_injection
       Generator_cost:
         expression: sum(Generator_p * Generator_marginal_cost)
@@ -84,13 +84,13 @@ functions.
       snapshot: { dtype: int }
       bus: { dtype: str }
       load: { dtype: str }
-    relations:
-      Load_bus: { key: load, values: bus }
+    maps:
+      load: { bus: bus }
     parameters:
       Load_p_set: { dims: [snapshot, load] }
     expressions:
       Load_injection:
-        expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+        expression: -sum(Load_p_set, over=load, by=load[bus])
         adds_to: Bus_injection
     ```
 
@@ -157,8 +157,8 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
       snapshot: { dtype: int, ordered: true }
       bus: { dtype: str }
       store: { dtype: str }
-    relations:
-      Store_bus: { key: store, values: bus }
+    maps:
+      store: { bus: bus }
     parameters:
       Store_e_nom: { dims: [store] }
     variables:
@@ -170,7 +170,7 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
         expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
     expressions:
       Store_injection:
-        expression: sum(Store_p, over=store, by=Store_bus[bus])
+        expression: sum(Store_p, over=store, by=store[bus])
         adds_to: Bus_injection
     ```
 

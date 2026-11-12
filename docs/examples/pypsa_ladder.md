@@ -6115,8 +6115,8 @@ whose flow enters the row. PyPSA builds:
   zero per snapshot (`flow_based.py:289-293`)
 
 The file reads the PTDF columns long, as `GlobalConstraint_zonal_ptdf` and
-`GlobalConstraint_link_ptdf`, and the domains as the relation
-`Bus_flow_based_domain`, from data prep. `FlowBased_injection` is the zone's
+`GlobalConstraint_link_ptdf`, and the domain of each zone bus as the map
+`bus[flow_based_domain]`, from data prep. `FlowBased_injection` is the zone's
 term in `Bus_injection`. On a run without flow-based rows, no bus is a zone and
 the balance is the standard one.
 

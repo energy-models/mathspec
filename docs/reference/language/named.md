@@ -377,14 +377,14 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   generator: { dtype: str }
-relations:
-  gen_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 expressions:
   generation:
     description: what the fleet puts into a bus
-    expression: sum(gen_p, over=generator, by=gen_bus[bus])
+    expression: sum(gen_p, over=generator, by=generator[bus])
     adds_to: injection
 ```
 

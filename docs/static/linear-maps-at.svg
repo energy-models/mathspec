@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 420" width="820" height="420" style="max-width: 100%; height: auto" role="img" aria-labelledby="lma-t lma-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="lma-t">A lookup through a relation is a join with one row per key</title>
-  <desc id="lma-d">The parameter zone_cap has a value at each snapshot, 0 and 1, and each zone, north and south: 5 and 2 at snapshot 0, 6 and 3 at snapshot 1. The relation gen_zone, keyed by generator and snapshot, puts wind in zone north at both snapshots, and gas in zone north at snapshot 0 and in zone south at snapshot 1. The lookup joins each row of gen_zone with the row of zone_cap that has the same snapshot and zone. The result has one row per row of gen_zone: at snapshot 0, wind and gas both take 5, the value at north. At snapshot 1, wind takes 6, the value at north, and gas takes 3, the value at south. No row of the result takes the value 2 at snapshot 0 and zone south.</desc>
+  <title id="lma-t">A lookup through a map is a join with one row per key</title>
+  <desc id="lma-d">The parameter zone_cap has a value at each snapshot, 0 and 1, and each zone, north and south: 5 and 2 at snapshot 0, 6 and 3 at snapshot 1. The map zone_of[zone], of the relation zone_of over generator and snapshot, puts wind in zone north at both snapshots, and gas in zone north at snapshot 0 and in zone south at snapshot 1. The lookup joins each row of zone_of with the row of zone_cap that has the same snapshot and zone. The result has one row per row of zone_of: at snapshot 0, wind and gas both take 5, the value at north. At snapshot 1, wind takes 6, the value at north, and gas takes 3, the value at south. No row of the result takes the value 2 at snapshot 0 and zone south.</desc>
   <defs>
     <marker id="lma-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -20,16 +20,16 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-      <text x="16" y="28">relations:</text>
-      <text x="31" y="46">gen_zone: { key: [generator, snapshot], values: zone, missing: absent }</text>
+      <text x="16" y="28">relations: { zone_of: { dims: [generator, snapshot], missing: absent } }</text>
+      <text x="16" y="46">maps: { zone_of: { zone: zone } }</text>
       <text x="16" y="64">parameters:</text>
       <text x="31" y="82">zone_cap: { dims: [snapshot, zone] }</text>
-      <text x="16" y="106" font-weight="bold">at(zone_cap, by=gen_zone[zone])</text>
+      <text x="16" y="106" font-weight="bold">at(zone_cap, by=zone_of[zone])</text>
     </g>
     <text x="16" y="146" font-weight="bold">zone_cap</text>
     <text x="84" y="146" fill-opacity="0.7">a parameter</text>
-    <text x="16" y="286" font-weight="bold">gen_zone</text>
-    <text x="84" y="286" fill-opacity="0.7">a relation</text>
+    <text x="16" y="286" font-weight="bold">zone_of[zone]</text>
+    <text x="114" y="286" fill-opacity="0.7">a map</text>
     <text x="330" y="230" font-weight="bold">the result</text>
     <text x="404" y="230" fill-opacity="0.7">an expression</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
@@ -73,6 +73,6 @@ SPDX-License-Identifier: CC-BY-4.0
     <text x="246" y="182">join on snapshot</text>
     <text x="246" y="197">and zone</text>
     <text x="246" y="372">one row per</text>
-    <text x="246" y="387">row of gen_zone</text>
+    <text x="246" y="387">row of zone_of</text>
   </g>
 </svg>

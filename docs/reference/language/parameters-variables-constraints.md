@@ -142,14 +142,14 @@ dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
   generator: { dtype: str }
-relations:
-  gen_port: { key: generator, values: port }
+maps:
+  generator: { port: port }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 constraints:
   gen_injects:
     dims: [snapshot, generator]
-    expression: at(flow, by=gen_port[port]) == gen_p
+    expression: at(flow, by=generator[port]) == gen_p
 ```
 
 `gen_injects` states that the flow at the port of each generator equals the
@@ -378,7 +378,7 @@ A value has the `dtype` of the parameter:
 #### A reading per label
 
 `missing:` also takes a mapping that reads a missing row by the label that a
-column of a relation gives its coordinate:
+[map](relations.md#maps) gives its coordinate:
 
 ```yaml
 dimensions:
@@ -387,15 +387,14 @@ dimensions:
     one_of: [Generator, Link, Load, ShuntImpedance, StorageUnit]
   entity:
     dtype: str
-relations:
-  component_of:
-    key: entity
-    values: component
+maps:
+  entity:
+    component: component
 parameters:
   sign:
     dims: [entity]
     missing:
-      by: component_of[component]
+      by: entity[component]
       fill:
         Load: -1
         ShuntImpedance: -1
@@ -405,29 +404,29 @@ parameters:
 A missing row of `sign` reads `-1` at a load or a shunt impedance, and `1` at
 every other entity.
 
-| Key         | Value                                                                                   | Default   |
-| ----------- | --------------------------------------------------------------------------------------- | --------- |
-| `by`        | `relation[column]`: one value column of a relation keyed by dimensions of the parameter | required  |
-| `fill`      | a reading for each of one or more labels of that column                                 | required  |
-| `otherwise` | the reading at every other label, and at a key with no row in the relation              | `refused` |
+| Key         | Value                                                                             | Default   |
+| ----------- | --------------------------------------------------------------------------------- | --------- |
+| `by`        | `subject[map]`: one map of a subject over dimensions of the parameter             | required  |
+| `fill`      | a reading for each of one or more labels of that map                              | required  |
+| `otherwise` | the reading at every other label, and where the map gives the coordinate no label | `refused` |
 
 Each reading is one that a plain `missing:` takes. As in
-[`at(x, by=)`](relations.md), `by:` names the column, so the relation may have
-other value columns. In a flow mapping, quote it:
-`missing: { by: "component_of[component]", fill: { Load: -1 } }`.
+[`at(x, by=)`](relations.md#lookups), `by:` names the map, so the subject may
+have other maps. In a flow mapping, quote it:
+`missing: { by: "entity[component]", fill: { Load: -1 } }`.
 
-mathspec refuses at load a `by:` that names a relation and no column, a key
-column, more than one column, or a column the relation does not have. It also
-refuses a `fill:` label that the [`one_of`](dimensions.md#one_of) of the column
-does not list. For `by: component_of`, it prints:
+mathspec refuses at load a `by:` that names a subject and no map, a key
+column, more than one map, or a map the subject does not have. It also
+refuses a `fill:` label that the [`one_of`](dimensions.md#one_of) of the
+dimension the map refers to does not list. For `by: entity`, it prints:
 
 ```text
-Parameter 'sign': missing: by: component_of names the relation and none of its columns. Write by: component_of[<column>], with a value column of 'component_of': ['component'].
+Parameter 'sign': missing: by: entity names the subject and none of its maps. Write by: entity[<map>], with a map of 'entity': ['component'].
 ```
 
-The relation may be one that the parameter names under [`in:`](#in). Every
-coordinate then has a row in it, so `otherwise` reads only at a label that
-`fill:` does not name.
+The subject may be a relation that the parameter names under [`in:`](#in).
+Every coordinate then has a row in it, so `otherwise` reads only at a label
+that `fill:` does not name, or where the map gives no label.
 
 mathspec refuses a NaN, a quoted number and `missing: null` at load, and in
 each message mathspec suggests what to write. For `missing: null` it prints:
@@ -461,7 +460,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent }
+  connection: { dims: [entity, bus], missing: absent }
 parameters:
   efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
 variables:
@@ -531,7 +530,7 @@ The typeset legend lists the condition beside the dimensions, after
 ### `in`
 
 `in:` lists the relations that make up the index set of the parameter. The
-parameter has coordinates only where the key of each relation has a row, and a tool
+parameter has coordinates only where each relation has a row, and a tool
 refuses a row of the data anywhere else. A [`where:`](#where) drops that row
 instead. In this example, `efficiency` and `p_nom_max` have values only at the
 pairs that `connection` lists:
@@ -542,7 +541,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent }
+  connection: { dims: [entity, bus], missing: absent }
 parameters:
   efficiency: { dims: [entity, bus, snapshot], in: [connection], missing: 1 }
   p_nom_max: { dims: [entity, bus], in: [connection], missing: .inf }
@@ -573,10 +572,10 @@ bus it is not wired to is refused.
 A parameter in several relations has coordinates only where each of them has
 a row.
 
-A relation in `in:` gives its key, and its value columns play no part in the
-index set. They stay readable as `relation[column]` in a `where:` and in a
-call. In this example, `connection` has a row per port of a unit, and its
-`bus` and `role` columns are properties of that port:
+A relation in `in:` gives its rows, and its [maps](relations.md#maps) play no
+part in the index set. They stay readable as `connection[bus]` in a `where:`
+and in a call. In this example, `connection` has a row per port of a unit, and
+its maps `bus` and `role` give each port a bus and a role:
 
 ```yaml
 dimensions:
@@ -586,7 +585,9 @@ dimensions:
   role: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [unit, port], values: [bus, role], missing: absent }
+  connection: { dims: [unit, port], missing: absent }
+maps:
+  connection: { bus: bus, role: role }
 parameters:
   efficiency:
     dims: [unit, port, snapshot]
@@ -604,40 +605,32 @@ constraints:
 `efficiency` has coordinates at each port that `connection` lists, and a tool
 refuses a data row for a port that `connection` does not list. The `where:`
 then drops the input ports. `efficiency` is not over `bus` or `role`, the
-dimensions of the value columns. An entry over one of them would have a
-coordinate at every label of that dimension, not only at the label in the row
-of `connection`, so mathspec refuses it.
+dimensions that the maps refer to. An entry over one of them has a coordinate
+at every label of that dimension, not only at the label that the map gives the
+port.
 
 mathspec refuses seven index sets at load:
 
-- a name that is not a relation, or a relation named twice
-- a value column, written as `relation[column]`, in place of its relation
-- a relation under `missing: refused`, which has a row at every key
-  combination and so leaves nothing out
-- a relation whose key has two columns over one dimension
-- a relation keyed by a dimension that the parameter does not have
-- a relation with a value column over a dimension that the parameter has and
-  the key does not
+- a name that is not a relation, such as a dimension
+- a relation named twice
+- a map, written as `subject[map]`, in place of a relation
+- a relation under `missing: refused`, which has a row at every combination
+  and so leaves nothing out
+- a relation with two columns over one dimension
+- a relation over a dimension that the parameter does not have
 - a `where:` that reads the bare name of a relation of the `in:`
 
 For `p_nom_max: { dims: [entity], in: [connection] }`, the message is:
 
 ```text
-Parameter 'p_nom_max': in: names 'connection', keyed by ['bus', 'entity'], and 'p_nom_max' is not over ['bus']. Add ['bus'] to its dims:, or delete 'connection' from in:.
+Parameter 'p_nom_max': in: names 'connection', over ['bus', 'entity'], and 'p_nom_max' is not over ['bus']. Add ['bus'] to its dims:, or delete 'connection' from in:.
 ```
 
 mathspec suggests both rewrites. For `in: ["connection[bus]"]` on
 `efficiency` in the second example, the message is:
 
 ```text
-Parameter 'efficiency': in: names 'connection[bus]', a column of 'connection', and an index set is the key of a relation. Write in: [connection], and test 'bus' in a `where:` if that was meant.
-```
-
-For `x: { dims: [generator, bus], in: [gen_bus] }`, with
-`gen_bus: { key: generator, values: bus, missing: absent }`, the message is:
-
-```text
-Parameter 'x': in: names 'gen_bus', whose value column 'bus' is over 'bus', and 'x' is over 'bus' too, so 'x' would have a coordinate at every 'bus', not only at the one in the row of 'gen_bus'. Delete 'bus' from its dims: and read it as gen_bus[bus], or name a relation keyed by ['bus', 'generator'] with no values: in in:.
+Parameter 'efficiency': in: names 'connection[bus]', a map of 'connection', and an index set is a relation. To keep the rows the map gives a label, write where: connection[bus].
 ```
 
 A `where:` on a parameter with an `in:` narrows the coordinates inside the
@@ -655,14 +648,14 @@ parameter no coordinate, and mathspec suggests a `where:` that holds somewhere
 inside the relation. For `where: "connection AND active"`, where `active` is a
 `bool` parameter, the message ends in
 `` `where: connection AND active` repeats the relation. Delete the relation from it. ``
-A test of a value column, such as `connection[role] == 'output'`, is not the
-bare name, so it loads.
+A test of a map, such as `connection[role] == 'output'`, is not the bare name
+of the relation, so it loads.
 
 The typeset legend prints the index set as the domain of the parameter, after
 `over`. For `efficiency` in the first example, the legend entry starts with
 `efficiency` over $(b, e) \in \mathrm{connection},\ t \in \mathcal{T}$. In
 the second example, it starts with `efficiency` over
-$(p, u) \in \mathrm{connection},\ t \in \mathcal{T}$, the key alone.
+$(p, u) \in \mathrm{connection},\ t \in \mathcal{T}$, without the maps.
 
 ## `variables`
 
@@ -719,8 +712,8 @@ still a variable.
 
 ### `in` on a variable
 
-A variable takes [`in:`](#in) as a parameter does: it exists only where the
-key of each relation has a row. In this example, `flow` exists at the pairs that
+A variable takes [`in:`](#in) as a parameter does: it exists only where each
+relation has a row. In this example, `flow` exists at the pairs that
 `connection` lists, at every snapshot:
 
 ```yaml
@@ -729,7 +722,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [generator, bus], missing: absent }
+  connection: { dims: [generator, bus], missing: absent }
 parameters:
   load: { dims: [bus, snapshot] }
 variables:
