@@ -447,9 +447,9 @@ patched `dispatch` has no row at `old`.
 
 `rename(source, names)` loads a spec with [`to_spec`](api.md#mathspec.to_spec),
 replaces the names that `names` changes, and returns the renamed spec loaded.
-Only names change. Each entry keeps its fields, and each expression keeps its
-terms. `merge` refuses two fragments that declare the same name, so `rename`
-lets one fragment state several components in one
+Only names change, and every entry and expression has the same meaning as
+before. Because `merge` refuses two fragments that declare the same name, you
+use `rename` to state several components with one fragment in one
 [merge](../howto/compose.md#use-one-fragment-for-several-components).
 
 `source` is one item of the kinds that `merge` takes: a path, YAML text, a
@@ -508,26 +508,28 @@ description of `Generator_p_nom` still has the old name `Unit_p`.
   `source` loaded.
 - A function sets the new names by a rule. `rename` calls it once with each
   name that `source` declares or lists under
-  [`given:`](language/parameters-variables-constraints.md#given). A return
-  value of `None`, or of the same name, keeps that name.
+  [`given:`](language/parameters-variables-constraints.md#given).
+
+In both forms, a new name of `None`, or of the same name, keeps that name.
 
 A second call with the inverse map returns a spec with the
 [canonical form](glossary.md#canonical-form) of `source`.
 
 ### What a rename changes
 
-| The spec has                                                                                        | What `rename` does                                                             |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| a name as the key of an entry, in `dims:`, on the sides of a relation, in `adds_to:` or in `given:` | replaces the name                                                              |
-| a name in an expression, `where:`, bound, case or assumption                                        | replaces the name, and keeps the spaces and line breaks around it              |
-| a relation column with the spelling of a renamed dimension, such as `bus` in `Unit_bus[bus]`        | replaces the column, because an expression refers to a relation by its columns |
-| a longer name that contains a renamed name, such as `Unit_p_nom` for `Unit_p`                       | keeps the longer name                                                          |
-| a keyword of an operator, such as `over=`                                                           | keeps the keyword                                                              |
-| a quoted label, a label under `one_of:`, or a number such as `1e6`                                  | keeps the label or the number                                                  |
-| the name of a case or of a piecewise link                                                           | keeps the name, because it is a label of rows                                  |
-| an argument of a macro, and the template text that uses it                                          | keeps the argument                                                             |
-| a fixed value of a field, such as `domain: integer`                                                 | keeps the value                                                                |
-| a `description`                                                                                     | keeps the text as written                                                      |
+| The spec has                                                                                        | What `rename` does                                                    |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| a name as the key of an entry, in `dims:`, on the sides of a relation, in `adds_to:` or in `given:` | replaces the name                                                     |
+| a name in an expression, `where:`, bound, case or assumption                                        | replaces the name, and keeps the spaces and line breaks around it     |
+| a relation column named after its dimension, such as `bus` in `Unit_bus[bus]`                       | replaces the column with the dimension                                |
+| a relation column named after something else, such as `bus0` in `{bus0: bus}`                       | keeps the column, and refuses a map that changes a name to or from it |
+| a longer name that contains a renamed name, such as `Unit_p_nom` for `Unit_p`                       | keeps the longer name                                                 |
+| a keyword of an operator, such as `over=`                                                           | keeps the keyword                                                     |
+| a quoted label, a label under `one_of:`, or a number such as `1e6`                                  | keeps the label or the number                                         |
+| the name of a case or of a piecewise link                                                           | keeps the name, because it is a label of rows                         |
+| an argument of a macro, and the template text that uses it                                          | keeps the argument                                                    |
+| a fixed value of a field, such as `domain: integer`                                                 | keeps the value                                                       |
+| a `description`                                                                                     | keeps the text as written                                             |
 
 ## Refusals
 
@@ -677,6 +679,29 @@ gives `Unit_p` and `Unit_p_nom` the new name `Generator_p`:
 
 ```text
 rename gives 'Unit_p' and 'Unit_p_nom' the one name 'Generator_p'. Give each a name of its own.
+```
+
+### A new name that a macro uses as an argument
+
+`rename` refuses a new name that is an argument of a macro whose template uses
+the old name. The template would otherwise use the argument in place of the
+entry. Here the macro `scaled` has the argument `x` and the template
+`x * Unit_marginal_cost`, and the map is `{'Unit_marginal_cost': 'x'}`:
+
+```text
+rename gives the parameter 'Unit_marginal_cost' the name 'x', which is an argument of the macro 'scaled', whose template uses 'Unit_marginal_cost'. Choose another name.
+```
+
+### A name that is also a relation column
+
+`rename` refuses a map that changes a name to or from the name of a relation
+column that is not named after its dimension. An expression such as
+`ends[bus0]` uses the column by its name, so the rename would change the
+column too. Here the relation `ends` has the columns `{bus0: bus, bus1: bus}`,
+and the map is `{'bus0': 'price'}`:
+
+```text
+rename changes 'bus0' to 'price', and 'bus0' is also a column of the relation 'ends'. Give the column another name in the file, or choose another name.
 ```
 
 ### A renamed spec that does not load

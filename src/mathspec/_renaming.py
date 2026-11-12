@@ -41,8 +41,8 @@ def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None
     entry, in ``dims:``, on the sides of a relation, in ``adds_to:``, under
     ``given:``, and in the text of every expression, ``where:``, bound, case
     and assumption. Only whole names are replaced, and the text around each
-    name keeps its layout. A relation column with the spelling of a replaced
-    name is renamed with it, because an expression refers to a relation by its
+    name is unchanged. A relation column named after its dimension is renamed
+    with the dimension, because an expression refers to a relation by its
     columns.
 
     Prose and labels stay as written: a description, the labels of
@@ -60,6 +60,7 @@ def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None
             names are replaced at once, so two names may swap. A function is
             called once with each name that *source* declares or lists under
             ``given:``. It returns the new name, or ``None`` to keep the name.
+            In a map too, ``None`` or the same name keeps the name.
 
     Returns:
         The renamed spec, loaded. An empty *names* returns *source* loaded.
@@ -67,18 +68,25 @@ def rename(source: Source, names: Mapping[str, str] | Callable[[str], str | None
         form of *source*.
 
     Raises:
-        LanguageError: *source* does not load; a key of *names* is a name
-            that *source* neither declares nor lists under ``given:``; a new
-            name is the name of an entry that is not renamed; two names get
-            the same new name; or the renamed spec does not load.
+        LanguageError: *source* does not load, or the renamed spec does not
+            load. Also when a key of *names* is not a name that *source*
+            declares or lists under ``given:``. Also when a new name is the
+            name of an entry that is not renamed, or an argument of a macro
+            whose template uses the old name.
+            Also when two names get the same new name, or when an old or a new
+            name is a relation column that is not named after its dimension.
         FileNotFoundError: A ``str`` with no newline that names no file.
+        TypeError: *names* is neither a mapping nor a function.
     """
     spec = to_spec(source)
     declared = _declared(spec)
     if not isinstance(names, Mapping):
-        names = {old: new for old in declared if (new := names(old)) is not None}
-    _checked(names, declared)
-    return to_spec(cast('dict[str, object]', _renamed(Spec, spec.to_dict(), names)))
+        if not callable(names):
+            msg = f'rename takes a mapping or a function as names, not {type(names).__name__}.'
+            raise TypeError(msg)
+        names = {old: names(old) for old in declared}
+    changed = _checked(names, declared, spec)
+    return to_spec(cast('dict[str, object]', _renamed(Spec, spec.to_dict(), changed)))
 
 
 def _declared(spec: Spec) -> dict[str, str]:
@@ -89,36 +97,67 @@ def _declared(spec: Spec) -> dict[str, str]:
     return declared
 
 
-def _checked(names: Mapping[str, str], declared: Mapping[str, str]) -> None:
-    """Refuse a map with a name the spec lacks, a new name already in use, or one new name for two names."""
+def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec: Spec) -> dict[str, str]:
+    """The names that change, after refusing a map that would change the meaning of *spec* or not load.
+
+    A token in text is renamed wherever it has the spelling, so a new name that
+    is the argument of a macro whose template uses the old name, or a name that
+    is a relation column named after something else, would change an
+    expression without a refusal.
+    """
     for old in names:
         if old not in declared:
             msg = (
                 f"rename cannot change '{old}', which the spec neither declares nor lists under 'given:'. "
-                f'{did_you_mean(old, declared)}'
+                f'{did_you_mean(old, declared, label="Names")}'
             )
             raise LanguageError(msg)
-    for old, new in names.items():
-        if new in declared and new not in names:
+    changed = {old: new for old, new in names.items() if new is not None and new != old}
+    columns = {
+        column: relation
+        for relation, entry in spec.relations.items()
+        for side in (entry.key, entry.values)
+        if isinstance(side, Mapping)
+        for column, dimension in side.items()
+        if column != dimension
+    }
+    for old, new in changed.items():
+        for macro, entry in spec.macros.items():
+            if new in (*entry.args, *entry.kwargs) and old in _names_in(entry.template):
+                msg = (
+                    f"rename gives the {declared[old]} '{old}' the name '{new}', which is an argument of the macro "
+                    f"'{macro}', whose template uses '{old}'. Choose another name."
+                )
+                raise LanguageError(msg)
+        if (column := old if old in columns else new) in columns:
+            msg = (
+                f"rename changes '{old}' to '{new}', and '{column}' is also a column of the relation "
+                f"'{columns[column]}'. Give the column another name in the file, or choose another name."
+            )
+            raise LanguageError(msg)
+    for old, new in changed.items():
+        if new in declared and new not in changed:
             msg = (
                 f"rename gives the {declared[old]} '{old}' the name '{new}', which the {declared[new]} '{new}' "
                 f'already has. Rename that one too, or choose another name.'
             )
             raise LanguageError(msg)
-    for new, count in Counter(names.values()).items():
+    for new, count in Counter(changed.values()).items():
         if count > 1:
-            olds = [f"'{old}'" for old, to in names.items() if to == new]
+            olds = [f"'{old}'" for old, to in changed.items() if to == new]
             msg = (
                 f"rename gives {', '.join(olds[:-1])} and {olds[-1]} the one name '{new}'. Give each a name of its own."
             )
             raise LanguageError(msg)
+    return changed
 
 
 def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> object:
     """*entry*, as *cls* is written, with *names* replaced wherever the schema has a name or an expression.
 
-    The annotation of a field sets what the field contains, so a field added
-    to the schema is renamed without a change here. A description, the labels
+    The annotation of a field sets what the field contains, so a new field
+    with a name or an expression is renamed without a change here. A new field
+    with prose or labels needs a place in ``_KEPT`` or ``_LABELLED``. A description, the labels
     of ``one_of:`` and a fixed choice (a ``Literal``, such as a dtype) are
     kept. A field of entries has its keys renamed, except ``cases:`` and
     ``links:``, whose keys are labels of rows. Every other string is text that
@@ -165,6 +204,11 @@ def _in_text(value: object, names: Mapping[str, str]) -> object:
     if isinstance(value, Mapping):
         return {_in_text(key, names): _in_text(item, names) for key, item in value.items()}
     return value
+
+
+def _names_in(text: str) -> set[str]:
+    """The name tokens of *text*, as the rename reads them."""
+    return {match['name'] for match in _TOKEN.finditer(text) if match['name']}
 
 
 def _token(match: re.Match[str], text: str, names: Mapping[str, str]) -> str:

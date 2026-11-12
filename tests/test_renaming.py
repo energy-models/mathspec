@@ -53,7 +53,10 @@ UNIT = {
         },
     },
     'assumptions': {'unit_bounded': {'holds': 'unit_p_max < 1000', 'where': 'unit_on'}},
-    'macros': {'unit_twice': {'args': ['unit_p'], 'template': '2 * unit_p'}},
+    'macros': {
+        'unit_twice': {'args': ['unit_p'], 'template': '2 * unit_p'},
+        'unit_scaled': {'args': ['x'], 'template': 'x * unit_cost'},
+    },
 }
 
 #: The placeholder names, as a class takes them.
@@ -66,6 +69,7 @@ PLACEHOLDERS = (
     'unit_ramp',
     'unit_bounded',
     'unit_twice',
+    'unit_scaled',
 )
 
 
@@ -97,7 +101,8 @@ COST = {
         pytest.param(lambda s: s['parameters']['Generator_cost']['dims'], ['generator', 'snapshot'], id='dims'),
         pytest.param(lambda s: s['variables']['Generator_p']['where'], 'Generator_on', id='where'),
         pytest.param(lambda s: s['variables']['Generator_p']['bounds']['upper'], 'Generator_p_max', id='bound'),
-        pytest.param(lambda s: s['expressions']['Generator_spend']['adds_to'], 'total_cost', id='adds-to'),
+        pytest.param(lambda s: s['expressions']['Generator_spend']['adds_to'], 'total_cost', id='kept-adds-to'),
+        pytest.param(lambda s: s['macros']['Generator_scaled']['template'], 'x * Generator_cost', id='macro-template'),
         pytest.param(
             lambda s: s['expressions']['Generator_previous']['otherwise'],
             'shift(Generator_p, along=snapshot, offset=1)',
@@ -221,6 +226,17 @@ def test_renaming_back_returns_the_canonical_form():
     assert rename(rename(UNIT, GENERATOR), inverse).to_yaml(canonical=True) == to_spec(UNIT).to_yaml(canonical=True)
 
 
+@pytest.mark.parametrize(
+    'where',
+    [
+        pytest.param(lambda s: s['expressions']['unit_spend']['adds_to'], id='adds-to'),
+        pytest.param(lambda s: next(iter(s['given']['expressions'])), id='given'),
+    ],
+)
+def test_a_sum_read_under_given_is_renamed(where):
+    assert where(rename(UNIT, {'total_cost': 'system_cost'}).to_dict()) == 'system_cost'
+
+
 def test_two_names_may_swap():
     renamed = rename(UNIT, {'unit_p_max': 'unit_cost', 'unit_cost': 'unit_p_max'})
     assert renamed.variables['unit_p'].bounds.upper == 'unit_cost'
@@ -248,6 +264,16 @@ SWAP = {'unit_p_max': 'unit_cost', 'unit_cost': 'unit_p_max'}
 )
 def test_a_function_renames_as_the_map_of_its_results_does(rule, names):
     assert rename(UNIT, rule) == rename(UNIT, names)
+
+
+@pytest.mark.parametrize('names', [{'unit_p': None}, {'unit_p': 'unit_p'}], ids=['none', 'the-same-name'])
+def test_a_map_keeps_a_name_it_maps_to_none_or_to_itself(names):
+    assert rename(UNIT, names) == to_spec(UNIT)
+
+
+def test_names_that_are_neither_a_map_nor_a_function_are_refused():
+    with pytest.raises(TypeError, match='rename takes a mapping or a function as names, not str'):
+        rename(UNIT, 'unit_p')
 
 
 def test_a_function_is_asked_once_for_each_name_the_spec_has():
@@ -280,9 +306,26 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
         ),
         pytest.param({'unit_p': 'sum'}, r'sum', id='a-name-the-language-keeps'),
         pytest.param(
+            {'unit_cost': 'x'},
+            r"rename gives the parameter 'unit_cost' the name 'x', which is an argument of the macro 'unit_scaled', "
+            r"whose template uses 'unit_cost'\. Choose another name\.",
+            id='an-argument-of-a-macro-that-uses-the-name',
+        ),
+        pytest.param(
+            {'unit_cost': 'bus0'},
+            r"rename changes 'unit_cost' to 'bus0', and 'bus0' is also a column of the relation 'unit_ends'\. "
+            r'Give the column another name in the file, or choose another name\.',
+            id='a-new-name-that-is-a-column',
+        ),
+        pytest.param(
             {'unit_cost': 'unit_p_max'}.get,
             r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the parameter 'unit_p_max' already",
             id='a-function-onto-a-name-the-spec-keeps',
+        ),
+        pytest.param(
+            lambda name: 'unit_p_max' if name in ('unit_cost', 'unit_p_max') else None,
+            r"rename gives the parameter 'unit_cost' the name 'unit_p_max', which the parameter 'unit_p_max' already",
+            id='a-function-that-keeps-the-name-it-gives',
         ),
         pytest.param(
             lambda name: 'Generator_cost' if name in SWAP else None,
@@ -294,3 +337,16 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
 def test_a_map_the_spec_cannot_take_is_refused(names, message):
     with pytest.raises(LanguageError, match=message):
         rename(UNIT, names)
+
+
+def test_a_name_that_is_also_a_column_of_a_relation_is_refused():
+    """`ends[bus0]` selects a column, and a rename of the parameter `bus0` would change it too."""
+    spec = {
+        'dimensions': {'line': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
+        'relations': {'ends': {'key': 'line', 'values': {'bus0': 'bus', 'bus1': 'bus'}}},
+        'parameters': {'bus0': {'dims': ['bus']}},
+        'variables': {'flow': {'dims': ['line']}},
+        'expressions': {'sent': 'sum(flow, over=line, by=ends[bus0])'},
+    }
+    with pytest.raises(LanguageError, match=r"'bus0' is also a column of the relation 'ends'"):
+        rename(spec, {'bus0': 'price'})
