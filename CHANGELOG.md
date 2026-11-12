@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
 - docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
 - docs(pypsa): component cites point at PyPSA 3625c816 ([#997](https://github.com/energy-models/mathspec/pull/997))
 - docs(pypsa): the reference pins PyPSA at 3625c816 ([#996](https://github.com/energy-models/mathspec/pull/996))

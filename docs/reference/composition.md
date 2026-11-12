@@ -8,8 +8,9 @@ SPDX-License-Identifier: CC-BY-4.0
 mathspec builds one specification of an optimisation model
 ([a spec](glossary.md#spec)) from several files with two functions,
 [`merge`](api.md#mathspec.merge) and [`override`](api.md#mathspec.override).
-This page describes what each function does with its files, what it carries
-into the result, and every refusal it can give.
+A third function, [`rename`](api.md#mathspec.rename), gives one spec other
+names. This page describes what each function does with its files, what it
+carries into the result, and every refusal it can give.
 
 `merge` joins whole specs as peers ([fragments](glossary.md#fragment)), such
 as the files of a [component library](../examples/library/index.md).
@@ -27,8 +28,8 @@ project = ms.override('base.yaml', ['carbon.yaml'])
 `merge` joins three fragments into `library`, and `override` lays the patch
 `carbon.yaml` over `base.yaml` to give `project`.
 
-Each function takes its files as a list, and raises `TypeError` for one path
-in place of a list. An item of the list is a path to a YAML file, YAML text, a
+`merge` and `override` take their files as a list, and raise `TypeError` for
+one path in place of a list. An item of the list is a path to a YAML file, YAML text, a
 mapping or a loaded [`Spec`](spec.md#mathspec.spec.Spec). So the result of one
 call can be an item of the next, as in `override(merge([…]), […])`.
 
@@ -442,6 +443,94 @@ patched `dispatch` has no row at `old`.
 | the body of a merged sum without one term                            | replaces the body, and keeps the left-out term as a named expression that no sum uses ([remove a term from a merged sum](../howto/compose.md#remove-a-term-from-a-merged-sum)) |
 | `adds_to: null` on a term                                            | keeps the entry as a named expression that adds to nothing                                                                                                                     |
 
+## `rename`
+
+`rename(source, names)` loads a spec with [`to_spec`](api.md#mathspec.to_spec),
+replaces the names that `names` changes, and returns the renamed spec loaded.
+Only names change, and every entry and expression has the same meaning as
+before. Because `merge` refuses two fragments that declare the same name, you
+use `rename` to state several components with one fragment in one
+[merge](../howto/compose.md#use-one-fragment-for-several-components).
+
+`source` is one item of the kinds that `merge` takes: a path, YAML text, a
+mapping or a loaded `Spec`. Here the fragment states one kind of unit:
+
+```yaml title="unit.yaml"
+dimensions:
+  snapshot: { dtype: int }
+  unit: { dtype: str }
+parameters:
+  Unit_p_nom: { dims: [unit], description: the most that Unit_p reaches }
+  Unit_marginal_cost: { dims: [unit] }
+variables:
+  Unit_p: { dims: [snapshot, unit], bounds: { lower: 0, upper: Unit_p_nom } }
+objective:
+  sense: minimize
+  expression: sum(Unit_p * Unit_marginal_cost, over=[snapshot, unit])
+```
+
+```python
+names = {
+    'unit': 'generator',
+    'Unit_p_nom': 'Generator_p_nom',
+    'Unit_marginal_cost': 'Generator_marginal_cost',
+    'Unit_p': 'Generator_p',
+}
+print(ms.rename('unit.yaml', names).to_yaml())
+```
+
+```text
+version: 0
+dimensions:
+  generator: {dtype: str}
+  snapshot: {dtype: int}
+parameters:
+  Generator_marginal_cost: {dims: [generator]}
+  Generator_p_nom:
+    dims: [generator]
+    description: the most that Unit_p reaches
+variables:
+  Generator_p:
+    dims: [generator, snapshot]
+    bounds: {lower: 0.0, upper: Generator_p_nom}
+objective:
+  sense: minimize
+  expression: sum(Generator_p * Generator_marginal_cost, over=[snapshot, generator])
+```
+
+Every key, `dims:` list, bound and expression has the new names, and the
+description of `Generator_p_nom` still has the old name `Unit_p`.
+
+### The `names` argument
+
+- In a map, each key is a name and its value is the new name. `rename` replaces all
+  names at the same time, so two names can swap. An empty map returns
+  `source` loaded.
+- A function sets the new names by a rule. `rename` calls it once with each
+  name that `source` declares or lists under
+  [`given:`](language/parameters-variables-constraints.md#given).
+
+In both forms, a new name of `None`, or of the same name, keeps that name.
+
+A second call with the inverse map returns a spec with the
+[canonical form](glossary.md#canonical-form) of `source`.
+
+### What a rename changes
+
+| The spec has                                                                                        | What `rename` does                                                    |
+| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| a name as the key of an entry, in `dims:`, on the sides of a relation, in `adds_to:` or in `given:` | replaces the name                                                     |
+| a name in an expression, `where:`, bound, case or assumption                                        | replaces the name, and keeps the spaces and line breaks around it     |
+| a relation column named after its dimension, such as `bus` in `Unit_bus[bus]`                       | replaces the column with the dimension                                |
+| a relation column named after something else, such as `bus0` in `{bus0: bus}`                       | keeps the column, and refuses a map that changes a name to or from it |
+| a longer name that contains a renamed name, such as `Unit_p_nom` for `Unit_p`                       | keeps the longer name                                                 |
+| a keyword of an operator, such as `over=`                                                           | keeps the keyword                                                     |
+| a quoted label, a label under `one_of:`, or a number such as `1e6`                                  | keeps the label or the number                                         |
+| the name of a case or of a piecewise link                                                           | keeps the name, because it is a label of rows                         |
+| an argument of a macro, and the template text that uses it                                          | keeps the argument                                                    |
+| a fixed value of a field, such as `domain: integer`                                                 | keeps the value                                                       |
+| a `description`                                                                                     | keeps the text as written                                             |
+
 ## Refusals
 
 In each message, mathspec names the entry and suggests the change that
@@ -565,12 +654,72 @@ the merged library. mathspec refuses the term because the base defines
 Named expression 'Store_injection': it adds to 'Bus_injection', which this file defines. Write the term into the body of 'Bus_injection', or read 'Bus_injection' under 'given: expressions:' and add its body as a term.
 ```
 
+### A rename of a name the spec lacks
+
+`rename` refuses a key of the map that `source` neither declares nor lists
+under `given:`. Here the map has `Unit_pnom` in place of `Unit_p_nom`:
+
+```text
+rename cannot change 'Unit_pnom', which the spec neither declares nor lists under 'given:'. Did you mean 'Unit_p_nom'?
+```
+
+### A new name that an entry already has
+
+`rename` refuses a new name that an entry outside the map already has, because
+the spec would then declare that name twice. Here the map is `{'Unit_p': 'Unit_p_nom'}`:
+
+```text
+rename gives the variable 'Unit_p' the name 'Unit_p_nom', which the parameter 'Unit_p_nom' already has. Rename that one too, or choose another name.
+```
+
+### One new name for two names
+
+`rename` refuses a map that gives two names the same new name. Here the map
+gives `Unit_p` and `Unit_p_nom` the new name `Generator_p`:
+
+```text
+rename gives 'Unit_p' and 'Unit_p_nom' the one name 'Generator_p'. Give each a name of its own.
+```
+
+### A new name that a macro uses as an argument
+
+`rename` refuses a new name that is an argument of a macro whose template uses
+the old name. The template would otherwise use the argument in place of the
+entry. Here the macro `scaled` has the argument `x` and the template
+`x * Unit_marginal_cost`, and the map is `{'Unit_marginal_cost': 'x'}`:
+
+```text
+rename gives the parameter 'Unit_marginal_cost' the name 'x', which is an argument of the macro 'scaled', whose template uses 'Unit_marginal_cost'. Choose another name.
+```
+
+### A name that is also a relation column
+
+`rename` refuses a map that changes a name to or from the name of a relation
+column that is not named after its dimension. An expression such as
+`ends[bus0]` uses the column by its name, so the rename would change the
+column too. Here the relation `ends` has the columns `{bus0: bus, bus1: bus}`,
+and the map is `{'bus0': 'price'}`:
+
+```text
+rename changes 'bus0' to 'price', and 'bus0' is also a column of the relation 'ends'. Give the column another name in the file, or choose another name.
+```
+
+### A renamed spec that does not load
+
+`rename` loads the renamed spec with `to_spec`, so a new name that is a built-in
+operator gets the refusal of `to_spec`. Here the map is
+`{'Unit_p': 'sum'}`:
+
+```text
+Variable 'sum' collides with the built-in operator 'sum'. Rename the variable.
+```
+
 !!! info "See also"
 
     - [Compose a spec from several files](../howto/compose.md), for the order of
       the calls and the store fragment
-    - [`merge`](api.md#mathspec.merge) and [`override`](api.md#mathspec.override),
-      for the signatures
+    - [`merge`](api.md#mathspec.merge), [`override`](api.md#mathspec.override)
+      and [`rename`](api.md#mathspec.rename), for the signatures
     - [`adds_to`](language/named.md#adds_to), for what mathspec refuses in a term
     - [A component library](../examples/library/index.md), for a library written
       with both functions
