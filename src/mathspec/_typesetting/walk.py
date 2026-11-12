@@ -260,37 +260,34 @@ class Walk:
         return self.format.superscript(operator, step.within)
 
     def _relation_read(self, name: str, at: Mapping[str, str], read: str) -> str:
-        """Relation *name*'s column *read* as a function at the columns *at* fixes: ``bus(g)``, ``zone_of(g, p)`` or ``ends.bus0(l)``.
+        """Subject *name*'s map *read* as a function at the columns *at* fixes: ``bus(g)`` or ``bus(p, u)``.
 
         *at* maps each key role to the index it is read at. The function is
-        named after the relation alone where the key determines one column, and
-        after the column read otherwise.
+        named after the map alone, as the legend lists it.
         """
         lk = self.program.relations[name]
-        function = name if len(lk.values) == 1 else f'{name}.{read}'
-        return self.format.apply(self.format.upright(function), self.format.joined([at[k] for k in lk.key], ''))
+        return self.format.apply(self.format.upright(read), self.format.joined([at[k] for k in lk.key], ''))
 
-    def _relation_row(self, name: str, at: Mapping[str, str]) -> str:
-        """That relation *name* has a row at the key *at* fixes.
+    def _relation_row(self, name: str, at: Mapping[str, str], column: str | None = None) -> str:
+        """That relation *name* has a row at the key *at* fixes, or with *column*, that the map gives the row a label.
 
-        A keyed table is a function, so the claim is that it is defined there:
-        ``gen_zone(g, t) is defined``. A bare one is a set of rows, and every
-        column of it is a key column, so the row is written out:
-        ``(g, b) ∈ connection``.
+        A relation is a set of rows, so the row is written out:
+        ``(p, u) ∈ connection``. A map is a function, so the claim is that it
+        is defined there: ``line(o) is defined``.
         """
         lk = self.program.relations[name]
         key = self.format.joined([at[k] for k in lk.key], '')
-        if lk.values:
-            return f'{self.format.apply(self.format.upright(name), key)} {self.format.prose(" is defined")}'
+        if column is not None:
+            return f'{self.format.apply(self.format.upright(column), key)} {self.format.prose(" is defined")}'
         return f'{self.format.parenthesise(key)} {self._op("in")} {self.format.upright(name)}'
 
     def _frame_key(self, name: str, ctx: _Context) -> dict[str, str]:
-        """Relation *name*'s key roles at the frame's own indices of their dimensions."""
+        """Table *name*'s key roles at the frame's own indices of their dimensions."""
         lk = self.program.relations[name]
         return {k: ctx.subscript(lk.dim(k)) for k in lk.key}
 
     def _value_read(self, name: str, column: str, ctx: _Context) -> str:
-        """A keyed relation's value *column* read at the frame's own indices of its key: ``period_of(t)``."""
+        """Subject *name*'s map *column* read at the frame's own indices of its key: ``period(t)``."""
         return self._relation_read(name, self._frame_key(name, ctx), column)
 
     def _tuple(self, reads: list[str]) -> str:
@@ -567,7 +564,7 @@ class Walk:
             return self._boolean(node.operand.root, self._looked_up(node.columns, ctx))
 
         if isinstance(node, RelationDefined):
-            return self._relation_row(node.name, self._frame_key(node.name, ctx)), comparison
+            return self._relation_row(node.name, self._frame_key(node.name, ctx), node.column), comparison
 
         if isinstance(node, Not):
             return (
@@ -739,10 +736,10 @@ class Walk:
         }
 
     def _index_set(self, dims: tuple[str, ...], in_: tuple[str, ...], ctx: _Context) -> list[str]:
-        """The key of each relation in *in_* as the rows it ranges over, then each other dimension of *dims*, as its set.
+        """The rows of each relation in *in_*, then each other dimension of *dims*, as its set.
 
-        A relation with value columns prints by its key too, ``g ∈ gen_bus``:
-        its values play no part in the index set.
+        A relation with maps prints by its own columns too, ``(p, u) ∈ connection``:
+        its maps play no part in the index set.
         """
         relations = self.program.relations
         keyed = {relations[r].dim(k) for r in in_ for k in relations[r].key}

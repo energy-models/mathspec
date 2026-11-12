@@ -28,15 +28,14 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  converter_of:
-    description: which converter each flow belongs to
-    key: flow
-    values: converter
-  carrier_of:
-    description: what each flow carries
-    key: flow
-    values: carrier
+maps:
+  flow:
+    converter:
+      description: which converter each flow belongs to
+      refers: converter
+    carrier:
+      description: what each flow carries
+      refers: carrier
 
 parameters:
   demand:
@@ -88,19 +87,19 @@ piecewise:
       rate:
         expression: rate
         values: bp_rate
-        by: converter_of[converter]
+        by: flow[converter]
     method: sos2
 
 constraints:
   fixed_ratio:
     description: every flow of a converter with no curve runs in proportion to that converter's level
     dims: [flow, snapshot]
-    where: NOT at(has_curve, by=converter_of[converter])
-    expression: rate == ratio * at(level, by=converter_of[converter])
+    where: NOT at(has_curve, by=flow[converter])
+    expression: rate == ratio * at(level, by=flow[converter])
   balance:
     description: every carrier is delivered by the converters, or bought
     dims: [carrier, snapshot]
-    expression: sum(rate, over=flow, by=carrier_of[carrier]) + bought == demand
+    expression: sum(rate, over=flow, by=flow[carrier]) + bought == demand
 
 objective:
   sense: minimize

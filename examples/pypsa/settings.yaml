@@ -70,11 +70,11 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers: period
 
 parameters:
   snapshot_weightings_objective:
@@ -139,7 +139,7 @@ expressions:
       generator weighting times the years of the snapshot's period, as in an
       `operational_limit` row (`constraints.py:2935-2937`)
     dims: [snapshot]
-    expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+    expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row. Where the row
@@ -149,7 +149,7 @@ expressions:
     cases:
       counted:
         when: GlobalConstraint_counts_snapshot
-        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
     otherwise: 0
 
 objective:

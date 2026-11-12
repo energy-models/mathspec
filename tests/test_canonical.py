@@ -35,7 +35,7 @@ from mathspec._expression_parser import (
     parse_expression,
 )
 from mathspec.program import And, BooleanLiteral, Not, Or
-from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, sets_reversed, varied
+from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SMALL_MODEL, SPECS, raw_of, sets_reversed, varied
 
 if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
@@ -134,6 +134,20 @@ def test_the_entries_of_a_section_are_sorted_by_name():
     assert dumped.index('a_cap:') < dumped.index('balance:'), 'a section reads in name order, not file order'
 
 
+@pytest.mark.parametrize(
+    ('declared', 'written'),
+    [
+        pytest.param({'refers': 'h'}, 'h', id='only-its-dimension-is-the-short-form'),
+        pytest.param(
+            {'refers': 'h', 'missing': 'absent'}, {'refers': 'h', 'missing': 'absent'}, id='more-is-a-mapping'
+        ),
+    ],
+)
+def test_a_map_is_written_in_its_short_form_where_it_says_nothing_else(declared, written):
+    dumped = yaml.safe_load(ms.to_spec(varied(SMALL_MODEL, **{'maps.g.h': declared})).to_yaml(canonical=True))
+    assert dumped['maps'] == {'g': {'h': written}}, 'a map that says only what it refers to is written as that name'
+
+
 #: The order the form writes the sections in, whatever order the file wrote
 #: them in. It is the order of the fields on `Spec`, pinned here so that a
 #: reordered field is a failing test rather than a quiet change to every diff.
@@ -143,6 +157,7 @@ SECTIONS = [
     'given',
     'dimensions',
     'relations',
+    'maps',
     'parameters',
     'conditions',
     'variables',
@@ -192,6 +207,8 @@ def test_every_section_is_sorted_by_name(path):
     for section, entries in data.items():
         if isinstance(entries, dict) and section != 'objective':
             assert list(entries) == sorted(entries), f'{path.name}: `{section}` reads in name order'
+    for subject, maps in data.get('maps', {}).items():
+        assert list(maps) == sorted(maps), f'{path.name}: the maps of `{subject}` read in name order'
 
 
 def _commitment_with_its_cases_reversed() -> dict[str, object]:
@@ -295,8 +312,8 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
         pytest.param(
             raw_of(GOLDEN_MODEL),
             'parameters.load.missing',
-            {'by': 'zone_of[zone]', 'fill': {'south': 'absent', 'north': 0}, 'otherwise': 2},
-            {'by': 'zone_of[zone]', 'fill': {'north': 0.0, 'south': 'absent'}, 'otherwise': 2.0},
+            {'by': 'bus[zone]', 'fill': {'south': 'absent', 'north': 0}, 'otherwise': 2},
+            {'by': 'bus[zone]', 'fill': {'north': 0.0, 'south': 'absent'}, 'otherwise': 2.0},
             id='a-reading-per-label-of-a-float-parameter',
         ),
         pytest.param(
@@ -337,7 +354,7 @@ def test_two_spellings_of_one_spec_write_one_canonical_text(source, key, written
         pytest.param('not (not a)', 'NOT (NOT a)', id='and-another-not'),
         pytest.param('true or a', 'True OR a', id='a-literal'),
         pytest.param("tag == 'it\\'s'", "tag == 'it\\'s'", id='a-quoted-label-keeps-its-escape'),
-        pytest.param('lk[h] == h', 'lk[h] == h', id='a-column-of-a-relation'),
+        pytest.param('g[h] == h', 'g[h] == h', id='a-label-a-map-gives'),
         pytest.param('count(b or a, over=t) >= 2', 'count(a OR b, over=t) >= 2', id='a-count'),
         pytest.param('count(a, over=t, by=g) >= 1', 'count(a, by=g, over=t) >= 1', id='a-calls-kwargs-are-sorted'),
     ],

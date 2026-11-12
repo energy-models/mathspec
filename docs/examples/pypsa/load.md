@@ -25,11 +25,11 @@ dimensions:
   load:
     description: demands, each on one bus
 
-relations:
-  Load_bus:
-    description: the bus a load sits on
-    key: load
-    values: bus
+maps:
+  load:
+    bus:
+      description: the bus a load sits on
+      refers: bus
 
 parameters:
   Load_p_set:
@@ -60,7 +60,7 @@ expressions:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
     otherwise: 0
   Load_injection:
-    expression: sum(Load_demand, over=load, by=Load_bus[bus])
+    expression: sum(Load_demand, over=load, by=load[bus])
     adds_to: Bus_injection
 ```
 
@@ -74,8 +74,8 @@ expressions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus}: \mathcal{D} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
@@ -105,7 +105,7 @@ expressions:
 **`Load_injection`**
 
 ```math
-\mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
 

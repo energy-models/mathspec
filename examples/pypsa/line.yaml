@@ -47,23 +47,21 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-  Line_carrier:
-    description: the carrier a line carries
-    key: line
-    values: carrier
-  Line_bus0:
-    description: the bus a line's flow is measured at
-    key: line
-    values: bus
-  Line_bus1:
-    description: the bus at a line's other end
-    key: line
-    values: bus
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers: period
+  line:
+    carrier:
+      description: the carrier a line carries
+      refers: carrier
+    bus0:
+      description: the bus a line's flow is measured at
+      refers: bus
+    bus1:
+      description: the bus at a line's other end
+      refers: bus
 
 parameters:
   Line_active:
@@ -188,8 +186,8 @@ parameters:
 variables:
   Line_s:
     description: >-
-      `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a
-      positive value withdraws there and injects at `Line_bus1`, lossless
+      `Line-s` — PyPSA's `p0`, the flow measured at the `line[bus0]` end: a
+      positive value withdraws there and injects at `line[bus1]`, lossless
     dims: [scenario, snapshot, line]
     where: Line_active
   Line_loss:
@@ -231,7 +229,7 @@ expressions:
     adds_to: total_cost
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=line[carrier])
     adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
@@ -244,13 +242,13 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, over=line, by=Line_bus0[bus])
-      + sum(Line_s, over=line, by=Line_bus1[bus])
-      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
-      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
+      -sum(Line_s, over=line, by=line[bus0])
+      + sum(Line_s, over=line, by=line[bus1])
+      - (0.5 * sum(Line_loss, over=line, by=line[bus0]))
+      - (0.5 * sum(Line_loss, over=line, by=line[bus1]))
     adds_to: Bus_injection
   Line_angle_sum:
-    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot[period]), over=line)
     adds_to: Cycle_angle_sum
 
 conditions:
@@ -312,14 +310,14 @@ constraints:
       voltage angle difference across it is the negative of its limit. That
       difference is `x_pu_eff` times the flow in radians
     dims: [scenario, snapshot, line]
-    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
     expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_v_ang_upper:
     description: >-
       `Line-v_ang-upper` — an AC line carries at most the flow at which the
       voltage angle difference across it reaches its limit
     dims: [scenario, snapshot, line]
-    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
     expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"

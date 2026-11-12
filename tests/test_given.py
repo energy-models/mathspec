@@ -26,14 +26,14 @@ from tests.fixtures import BALANCE, section
 SUPPLY = {
     'description': 'A fleet of generators, each on one port.',
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'relations': {'gen_port': {'key': 'generator', 'values': 'port'}},
+    'maps': {'generator': {'port': 'port'}},
     'given': {'variables': {'flow': {'dims': ['snapshot', 'port'], 'description': 'what a port puts into its bus'}}},
     'parameters': {'gen_cost': {'dims': ['generator']}, 'gen_p_max': {'dims': ['generator']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0, 'upper': 'gen_p_max'}}},
     'constraints': {
         'gen_injects': {
             'dims': ['snapshot', 'generator'],
-            'expression': 'at(flow, by=gen_port[port]) == gen_p',
+            'expression': 'at(flow, by=generator[port]) == gen_p',
         }
     },
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p * gen_cost)'},
@@ -42,11 +42,9 @@ SUPPLY = {
 #: The fragment that introduces `flow`, with the bounds and the balance that go with it.
 SURFACE = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
+    'maps': {'port': {'bus': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port'], 'bounds': {'lower': -1000, 'upper': 1000}}},
-    'constraints': {
-        'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port_bus[bus]) == 0'}
-    },
+    'constraints': {'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port[bus]) == 0'}},
 }
 
 
@@ -482,10 +480,10 @@ def test_the_advice_names_a_given_parameter_as_data_a_consumer_binds():
 #: A component file that defines the injection.
 INJECTOR = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
+    'maps': {'generator': {'bus': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot', 'bus']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus]) - load'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=generator[bus]) - load'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -547,9 +545,9 @@ def test_a_definition_over_a_dimension_the_reader_does_not_state_is_refused():
 #: An injector whose output does not vary by snapshot: its injection is over `bus` alone.
 FLAT_INJECTOR = {
     'dimensions': {'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
+    'maps': {'generator': {'bus': 'bus'}},
     'variables': {'gen_p': {'dims': ['generator'], 'bounds': {'lower': 0}}},
-    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])'}},
+    'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=generator[bus])'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},
 }
 
@@ -592,7 +590,7 @@ def test_the_composed_model_holds_a_definition_to_the_rules_of_where_it_is_read(
     }
     squared = {
         **INJECTOR,
-        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, over=generator, by=gen_bus[bus])'}},
+        'expressions': {'injection': {'expression': 'sum(gen_p * gen_p, over=generator, by=generator[bus])'}},
     }
     assert to_spec(squares) and to_spec(squared), 'each file loads on its own'
     with pytest.raises(LanguageError, match='degree'):

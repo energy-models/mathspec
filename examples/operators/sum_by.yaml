@@ -12,8 +12,8 @@ dimensions:
   generator: { dtype: str }
   bus: { dtype: str }
 
-relations:
-  gen_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 
 parameters:
   limit: { dims: [snapshot, bus] }
@@ -26,6 +26,6 @@ variables:
 constraints:
   bus_total:
     dims: [snapshot, bus]
-    expression: sum(p, over=generator, by=gen_bus[bus]) <= limit
+    expression: sum(p, over=generator, by=generator[bus]) <= limit
 
 objective: { sense: minimize, expression: sum(p) }

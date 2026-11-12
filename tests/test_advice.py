@@ -23,15 +23,15 @@ from tests.fixtures import SMALL_MODEL, raw_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
 
-#: ``h`` is the target of ``lk`` and nothing else reaches it; ``g`` is an axis.
+#: ``h`` is what the map ``g[h]`` refers to, and nothing else reaches it; ``g`` is an axis.
 TARGET_ONLY = varied(
     SMALL_MODEL,
     variables={'p': {'dims': ['g']}},
     objective={'sense': 'minimize', 'expression': 'sum(p * c)'},
 )
 
-#: The same with the relation gone, so nothing reaches ``h`` at all.
-UNREACHED = varied(TARGET_ONLY, relations={})
+#: The same with the map gone, so nothing reaches ``h`` at all.
+UNREACHED = varied(TARGET_ONLY, maps={})
 
 #: A curve on ``p``, so the program of the file as written carries a piecewise entry and
 #: the program of its expansion carries the rows. The objective drives ``p``
@@ -55,9 +55,9 @@ def test_a_dimension_nothing_reaches_is_named():
 @pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({}, id='targeted-by-a-relation'),
+        pytest.param({}, id='referred-to-by-a-map'),
         pytest.param(
-            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=lk[h]) <= k'}}},
+            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=g[h]) <= k'}}},
             id='grouping-into-it',
         ),
         pytest.param({'variables.r': {'dims': ['h']}}, id='indexing-by-it'),
@@ -65,7 +65,7 @@ def test_a_dimension_nothing_reaches_is_named():
 )
 def test_a_dimension_something_reaches_is_in_use(patch):
     assert not advice(varied(TARGET_ONLY, **patch)), (
-        'a dimension a relation targets, an entry indexes or a grouping groups by is in use'
+        'a dimension a map refers to, an entry indexes or a grouping groups by is in use'
     )
 
 
@@ -103,7 +103,7 @@ def test_a_column_read_and_not_built_is_advised():
 ON_A_RELATION = varied(
     READS_A_COLUMN,
     dimensions={'g': {'dtype': 'str'}, 'h': {'dtype': 'str'}},
-    relations={'pair': {'key': ['g', 'h'], 'missing': 'absent'}, 'link': {'key': ['g', 'h'], 'missing': 'absent'}},
+    relations={'pair': {'dims': ['g', 'h'], 'missing': 'absent'}, 'link': {'dims': ['g', 'h'], 'missing': 'absent'}},
     parameters={'flag': {'dims': ['g', 'h'], 'dtype': 'bool'}},
     given={'variables': {'flow': {'dims': ['g', 'h']}}},
     variables={'p': {'dims': ['g', 'h'], 'where': 'pair', 'bounds': {'lower': 0, 'upper': 1}}},
@@ -118,13 +118,13 @@ ON_A_RELATION = varied(
             {},
             "Variable 'p': its `where:` names only 'pair', so it states the index set. Write `in: [pair]` in place "
             'of the `where:`.',
-            id='a-bare-relation',
+            id='a-relation',
         ),
         pytest.param(
             {'variables.p.where': 'pair AND link'},
             "Variable 'p': its `where:` names only 'link' and 'pair', so it states the index set. Write "
             '`in: [link, pair]` in place of the `where:`.',
-            id='two-bare-relations',
+            id='two-relations',
         ),
         pytest.param(
             {'variables.p.where': 'pair AND flag'},
@@ -138,9 +138,9 @@ ON_A_RELATION = varied(
             id='a-relation-beside-an-index-set',
         ),
         pytest.param(
-            {'relations.pair': {'key': 'g', 'values': 'h', 'missing': 'absent'}},
+            {'maps.pair': {'zone': 'h'}},
             'Write `in: [pair]` in place of the `where:`.',
-            id='a-relation-with-a-value-column',
+            id='a-relation-with-a-map',
         ),
     ],
 )
@@ -159,6 +159,14 @@ def test_a_variable_where_that_states_an_index_set_is_advised(patch, note):
         pytest.param({'variables.p.where': 'pair OR flag'}, id='a-relation-inside-an-or'),
         pytest.param({'variables.p.where': 'NOT pair'}, id='a-negated-relation'),
         pytest.param({'relations.pair.missing': 'refused'}, id='a-relation-with-a-row-everywhere'),
+        pytest.param(
+            {'maps.g.zone': {'refers': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
+            id='a-label-of-a-map-of-a-dimension',
+        ),
+        pytest.param(
+            {'maps.pair.zone': {'refers': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
+            id='a-label-of-a-map-of-the-relation',
+        ),
         pytest.param(
             {'variables.p.where': None, 'parameters.cap': {'dims': ['g', 'h'], 'where': 'pair'}},
             id='a-parameter-where-drops-what-in-refuses',

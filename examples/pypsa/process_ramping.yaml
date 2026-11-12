@@ -38,11 +38,11 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers: period
 
 parameters:
   Process_ramp_limit_up:
@@ -173,7 +173,7 @@ conditions:
       period's first, and the horizon's first where the process comes in off
       or carries an initial output
     condition: >-
-      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      position(snapshot, within=snapshot[period]) > 0 OR (position(snapshot) == 0 AND
       (Process_status_initial == 0 OR Process_p_init))
 
 constraints:

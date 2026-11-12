@@ -39,19 +39,18 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-  Transformer_bus0:
-    description: the bus a transformer's flow is measured at
-    key: transformer
-    values: bus
-  Transformer_bus1:
-    description: the bus at a transformer's other end
-    key: transformer
-    values: bus
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers: period
+  transformer:
+    bus0:
+      description: the bus a transformer's flow is measured at
+      refers: bus
+    bus1:
+      description: the bus at a transformer's other end
+      refers: bus
 
 parameters:
   Transformer_active:
@@ -192,8 +191,8 @@ variables:
   Transformer_s:
     description: >-
       `Transformer-s` — PyPSA's `p0`, the flow measured at the
-      `Transformer_bus0` end: a positive value withdraws there and injects at
-      `Transformer_bus1`, lossless
+      `transformer[bus0]` end: a positive value withdraws there and injects at
+      `transformer[bus1]`, lossless
     dims: [scenario, snapshot, transformer]
     where: Transformer_active
   Transformer_loss:
@@ -245,16 +244,16 @@ expressions:
     otherwise: 0
   Transformer_injection:
     expression: >-
-      -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
-      + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
-      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
-      - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
+      -sum(Transformer_s, over=transformer, by=transformer[bus0])
+      + sum(Transformer_s, over=transformer, by=transformer[bus1])
+      - (0.5 * sum(Transformer_loss, over=transformer, by=transformer[bus0]))
+      - (0.5 * sum(Transformer_loss, over=transformer, by=transformer[bus1]))
     adds_to: Bus_injection
   Transformer_angle_sum:
     expression: >-
-      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer)
+      sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot[period]), over=transformer)
       + sum(Transformer_phase_shift_weight, over=transformer)
-      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
+      + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot[period]), over=transformer)
     adds_to: Cycle_angle_sum
 
 conditions:

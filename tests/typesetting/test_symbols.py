@@ -101,7 +101,7 @@ DEFAULTED = varied(
     DISPATCH_MODEL,
     **{
         'dimensions.bus': {'dtype': 'str'},
-        'relations.gen_bus': {'key': 'generator', 'values': 'bus', 'missing': 'absent'},
+        'maps.generator': {'bus': {'refers': 'bus', 'missing': 'absent'}},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
         'parameters.load.missing': 0,
@@ -124,12 +124,13 @@ def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Forma
         fmt.mono('true'),
         fmt.math(number(0, fmt)),
         fmt.mono('absent'),
-        f'{fmt.mono("gen_bus")} is {fmt.mono("absent")}',
     ):
         assert f'{shown} where the data has no row' in out
-    assert out.count('where the data has no row') == 8, (
-        'six parameters and the map in each of its two sets say what a missing row means; '
-        '`ramp` keeps the default, refused, and says nothing'
+    assert out.count(f'{fmt.mono("generator[bus]")} is {fmt.mono("absent")} where the data gives no label') == 2, (
+        'the map says what a missing label means in each of its two sets'
+    )
+    assert out.count('where the data has no row') == 6, (
+        'six parameters say what a missing row means; `ramp` keeps the default, refused, and says nothing'
     )
 
 

@@ -459,7 +459,7 @@ def _index_mask(
 
     A refusal is appended where the relations already decide some of the
     ``where:``: inside them each bare relation name is true, so reading one
-    there says nothing. A value column read as ``relation[column]`` is a test,
+    there says nothing. A map read as ``subject[map]`` is a test,
     and stays.
     """
     if where is not None and in_ and (written := Mask(where)).within(in_) != written:

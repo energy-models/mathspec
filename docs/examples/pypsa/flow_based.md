@@ -38,15 +38,15 @@ dimensions:
       positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose
       flow-based rows name no domain has one. A run without them has none
 
-relations:
-  Bus_flow_based_domain:
-    description: >-
-      the flow-based domain a zone bus belongs to: the domain whose rows set
-      the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
-      row
-    key: bus
-    values: flow_based_domain
-    missing: absent
+maps:
+  bus:
+    flow_based_domain:
+      description: >-
+        the flow-based domain a zone bus belongs to: the domain whose rows set
+        the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
+        row
+      refers: flow_based_domain
+      missing: absent
 
 parameters:
   GlobalConstraint_ram:
@@ -112,7 +112,7 @@ constraints:
   FlowBased_balance:
     description: "`FlowBased-balance` — the net positions of each domain's zones sum to zero"
     dims: [scenario, snapshot, flow_based_domain]
-    expression: sum(FlowBased_net_position, over=bus, by=Bus_flow_based_domain[flow_based_domain]) == 0
+    expression: sum(FlowBased_net_position, over=bus, by=bus[flow_based_domain]) == 0
 
 assumptions:
   GlobalConstraint_flow_based_sense_is_le:
@@ -137,8 +137,8 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `Bus_flow_based_domain` is `absent` where the data has no row — network nodes |
-| $`\mathcal{L}`$ | index $`l`$ — `flow_based_domain` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `Bus_flow_based_domain` is `absent` where the data has no row — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `bus[flow_based_domain]` is `absent` where the data gives no label — network nodes |
+| $`\mathcal{L}`$ | index $`l`$ — `flow_based_domain` with $`\mathrm{flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `bus[flow_based_domain]` is `absent` where the data gives no label — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
 | $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
@@ -186,7 +186,7 @@ assumptions:
 **`FlowBased_balance`**
 
 ```math
-\sum_{n \in \mathcal{N} \,:\, \mathrm{Bus\_flow\_based\_domain}(n) = l} \mathit{NP}_{n,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\sum_{n \in \mathcal{N} \,:\, \mathrm{flow\_based\_domain}(n) = l} \mathit{NP}_{n,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`GlobalConstraint_flow_based_ub`**

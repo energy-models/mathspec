@@ -30,8 +30,8 @@ dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   bus: { dtype: str, description: network nodes }
   port: { dtype: str, description: "the connections components make, one label per connection" }
-relations:
-  Port_bus: { key: port, values: bus }
+maps:
+  port: { bus: bus }
 variables:
   Port_p:
     dims: [snapshot, port]
@@ -40,7 +40,7 @@ constraints:
   Bus_nodal_balance:
     description: "`Bus-nodal_balance` — what the ports on a bus put in sums to zero"
     dims: [snapshot, bus]
-    expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
+    expression: sum(Port_p, over=port, by=port[bus]) == 0
 objective:
   sense: minimize
   expression: total_cost
@@ -58,8 +58,8 @@ The coupling surface every component in this library is written against: one flo
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Variables
@@ -87,7 +87,7 @@ f_{j,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 **`Bus_nodal_balance`**
 
 ```math
-\sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
+\sum_{j \in \mathcal{J} \,:\, \mathrm{bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
 

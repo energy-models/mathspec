@@ -9,11 +9,11 @@ One door, [`advice`][], over every pass of that kind.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeGuard
 
 from mathspec._boundedness import unbounded_notes
 from mathspec._validation import to_spec
-from mathspec.program import Advice, Join, Program, RelationDefined, walk
+from mathspec.program import Advice, Condition, Join, Program, RelationDefined, walk
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -59,11 +59,11 @@ def _index_sets(program: Program) -> list[Advice]:
         if variable.where is None:
             continue
         conjuncts = variable.where.within(variable.in_).conjuncts
-        rows = sorted({c.name for c in conjuncts if isinstance(c, RelationDefined) and _lists_rows(program, c.name)})
+        rows = sorted({c.name for c in conjuncts if _row_of(c) and _lists_rows(program, c.name)})
         if not rows:
             continue
         quoted, in_ = ' and '.join(f"'{r}'" for r in rows), ', '.join(sorted({*variable.in_, *rows}))
-        if any(not isinstance(c, RelationDefined) or c.name not in rows for c in conjuncts):
+        if any(not _row_of(c) or c.name not in rows for c in conjuncts):
             text = (
                 f"Variable '{name}': its `where:` requires a row of {quoted}, which belongs in its index set. "
                 f'Write `in: [{in_}]`, and keep the rest in the `where:`.'
@@ -77,8 +77,13 @@ def _index_sets(program: Program) -> list[Advice]:
     return notes
 
 
+def _row_of(condition: Condition) -> TypeGuard[RelationDefined]:
+    """Whether *condition* asks for a row of a relation, which ``in:`` could state, rather than a label of a map."""
+    return isinstance(condition, RelationDefined) and condition.column is None
+
+
 def _lists_rows(program: Program, relation: str) -> bool:
-    """Whether ``in:`` takes *relation*: it leaves a key combination out."""
+    """Whether ``in:`` takes *relation*: it leaves a combination out."""
     return program.relations[relation].missing == 'absent'
 
 

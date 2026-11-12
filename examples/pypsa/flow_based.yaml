@@ -31,15 +31,15 @@ dimensions:
       positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose
       flow-based rows name no domain has one. A run without them has none
 
-relations:
-  Bus_flow_based_domain:
-    description: >-
-      the flow-based domain a zone bus belongs to: the domain whose rows set
-      the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
-      row
-    key: bus
-    values: flow_based_domain
-    missing: absent
+maps:
+  bus:
+    flow_based_domain:
+      description: >-
+        the flow-based domain a zone bus belongs to: the domain whose rows set
+        the bus's `ptdf_<bus>` column, data prep. A bus that is no zone has no
+        row
+      refers: flow_based_domain
+      missing: absent
 
 parameters:
   GlobalConstraint_ram:
@@ -105,7 +105,7 @@ constraints:
   FlowBased_balance:
     description: "`FlowBased-balance` — the net positions of each domain's zones sum to zero"
     dims: [scenario, snapshot, flow_based_domain]
-    expression: sum(FlowBased_net_position, over=bus, by=Bus_flow_based_domain[flow_based_domain]) == 0
+    expression: sum(FlowBased_net_position, over=bus, by=bus[flow_based_domain]) == 0
 
 assumptions:
   GlobalConstraint_flow_based_sense_is_le:

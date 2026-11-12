@@ -36,7 +36,7 @@ STORAGE: dict[str, Any] = {
         'storage': {'ordered': True},
         'period': {'dtype': 'int'},
     },
-    'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
+    'maps': {'snapshot': {'period': 'period'}},
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
@@ -50,16 +50,16 @@ STORAGE: dict[str, Any] = {
 }
 
 
-#: A line has one row in `ends`, or none, and each comparison on `ends` reads that one row.
+#: A line has one label in each map, or none, and each comparison on `line[...]` reads that one row.
 NETWORK: dict[str, Any] = {
     'dimensions': {'line': {}, 'bus': {}},
-    'relations': {'ends': {'key': 'line', 'values': {'bus0': 'bus', 'bus1': 'bus'}}},
+    'maps': {'line': {'bus0': 'bus', 'bus1': 'bus'}},
     'variables': {'flow': {'dims': ['line']}},
     'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
 }
 
 #: The same network with a third end, so two pairs of columns can share one.
-THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'relations.ends.values': {'bus0': 'bus', 'bus1': 'bus', 'bus2': 'bus'}})
+THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'maps.line.bus2': 'bus'})
 
 
 @pytest.fixture(scope='module')
@@ -206,11 +206,11 @@ class TestWillNotDecide:
     def test_a_group_is_named_as_the_group_it_is(self, spec: Spec):
         """`within=` counts within each group, and the refusal says which."""
         cases = {
-            'first': 'position(snapshot, within=period_of[period]) == 0',
-            'last': 'position(snapshot, within=period_of[period]) == -1',
+            'first': 'position(snapshot, within=snapshot[period]) == 0',
+            'last': 'position(snapshot, within=snapshot[period]) == -1',
         }
         [refusal] = refusals(spec, cases)
-        assert 'within each period_of group' in refusal
+        assert 'within each snapshot[period] group' in refusal
 
     def test_a_literal_written_first_is_named_as_the_order_it_is(self, spec: Spec):
         """The advice was to do what the author had already done.
@@ -350,14 +350,14 @@ class TestSoundness:
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
 
     RELATION_ATOMS: ClassVar[tuple[str, ...]] = (
-        'ends',
-        "ends[bus0] == 'north'",
-        "ends[bus0] != 'north'",
-        "ends[bus1] == 'south'",
-        'ends[bus0] == ends[bus1]',
-        'ends[bus0] != ends[bus1]',
-        'ends[bus0] != ends[bus2]',
-        'ends[bus2] == ends[bus1]',
+        'line[bus0]',
+        "line[bus0] == 'north'",
+        "line[bus0] != 'north'",
+        "line[bus1] == 'south'",
+        'line[bus0] == line[bus1]',
+        'line[bus0] != line[bus1]',
+        'line[bus0] != line[bus2]',
+        'line[bus2] == line[bus1]',
     )
 
     @pytest.mark.parametrize('seed', [1, 7])
@@ -369,10 +369,10 @@ class TestSoundness:
         pairs = list(itertools.combinations(columns, 2))
         grid = [
             {
-                Subject('relation', 'ends'): row,
-                **{Subject('relation', 'ends', column): label for column, label in zip(columns, labels, strict=True)},
+                Subject('relation', 'line'): row,
+                **{Subject('relation', 'line', column): label for column, label in zip(columns, labels, strict=True)},
                 **{
-                    Subject('relation_pair', 'ends', 'ends', pair): labels[columns.index(pair[0])]
+                    Subject('relation_pair', 'line', 'line', pair): labels[columns.index(pair[0])]
                     == labels[columns.index(pair[1])]
                     for pair in pairs
                 },
@@ -417,63 +417,80 @@ class TestAMissingRow:
         assert refusals(spec, self.CASES) == [], 'a missing row with no value is in neither case'
 
 
-class TestARelationWithNoRow:
-    """A comparison on a relation is false where the relation has no row, whatever its operator."""
+class TestAMapWithNoLabel:
+    """A comparison on a map is false where the map gives the row no label, whatever its operator."""
 
-    @pytest.mark.parametrize(
-        'cases',
-        [
-            pytest.param(
-                {'same': 'not ends[bus0] == ends[bus1]', 'different': 'not ends[bus0] != ends[bus1]'},
-                id='two-columns',
-            ),
-            pytest.param(
-                {'north': "not ends[bus0] == 'north'", 'elsewhere': "not ends[bus0] != 'north'"},
-                id='a-column-and-a-label',
-            ),
-        ],
-    )
-    def test_the_negations_of_two_complements_both_claim_a_missing_row(self, cases: dict[str, str]):
-        """Both cases claim a line with no `ends` row: `==` and `!=` are both false there.
+    def test_a_map_of_a_numbered_dimension_compares_a_label(self):
+        """A map read the dtype of its subject, so a label of `snapshot[season]` reached the cells of an int.
 
-        The prover read `ends[bus0] == ends[bus1]` as true or false on every
-        line, so it proved the two negations apart, and a line `ends` leaves
-        out had two values.
+        The prover then asserted that a label or a date reached a magnitude,
+        and the file did not load.
         """
-        [refusal] = refusals(to_spec(NETWORK), cases)
-        assert 'ends has no row' in refusal, 'the witness is the missing row'
-        assert 'ends[bus0]' not in refusal, 'a column of a missing row holds no value to name'
-
-    @pytest.mark.parametrize(
-        ('cases', 'model'),
-        [
-            pytest.param({'kept': "ends[bus0] != 'north'", 'left_out': 'not ends'}, NETWORK, id='a-label'),
-            pytest.param({'kept': 'ends[bus0] != ends[bus1]', 'left_out': 'not ends'}, NETWORK, id='two-columns'),
-            pytest.param({'later': 'period_of != 2030', 'left_out': 'not period_of'}, STORAGE, id='a-number'),
-        ],
-    )
-    def test_a_comparison_and_the_missing_row_are_apart(self, cases: dict[str, str], model: dict[str, Any]):
-        """A comparison is true only where the relation has a row, so `not` of the bare name excludes it.
-
-        The prover read the row a comparison needs and the row the bare name
-        asks for as two facts, and refused the pair with a witness where the
-        relation has no row and its column still holds a value.
-        """
-        assert refusals(to_spec(model), cases) == [], 'no line both has a row and has none'
+        spec = to_spec(varied(STORAGE, **{'dimensions.season': {}, 'maps.snapshot.season': 'season'}))
+        cases = {'winter': "snapshot[season] == 'winter'", 'rest': "snapshot[season] != 'winter'"}
+        assert refusals(spec, cases) == [], 'a label is equal to winter or not, whatever dtype the subject has'
 
     @pytest.mark.parametrize(
         ('cases', 'witness'),
         [
             pytest.param(
-                {'loop': 'ends[bus0] == ends[bus1]', 'north': "ends[bus0] == 'north'"},
-                "where ends[bus0] vs ends[bus1] is equal, ends[bus0] is 'north'.",
-                id='a-column-value-says-the-row-exists',
+                {'same': 'not line[bus0] == line[bus1]', 'different': 'not line[bus0] != line[bus1]'},
+                'line[bus0] has a label, line[bus1] has no label',
+                id='two-maps',
             ),
-            pytest.param({'listed': 'ends', 'again': 'ends'}, 'where ends has a row.', id='the-bare-name-says-it'),
+            pytest.param(
+                {'north': "not line[bus0] == 'north'", 'elsewhere': "not line[bus0] != 'north'"},
+                'line[bus0] has no label',
+                id='a-map-and-a-label',
+            ),
         ],
     )
-    def test_a_row_both_cases_read_is_still_found(self, cases: dict[str, str], witness: str):
-        """The mirror: the row is there for both cases, and the witness says so once."""
+    def test_the_negations_of_two_complements_both_claim_a_missing_label(self, cases: dict[str, str], witness: str):
+        """Both cases claim a line with no label: `==` and `!=` are both false there.
+
+        The prover read `line[bus0] == line[bus1]` as true or false on every
+        line, so it proved the two negations apart, and a line the data leaves
+        out had two values. The witness names nothing a missing label lacks.
+        """
+        [refusal] = refusals(to_spec(NETWORK), cases)
+        assert f'both claim the value where {witness}.' in refusal
+
+    @pytest.mark.parametrize(
+        ('cases', 'model'),
+        [
+            pytest.param({'kept': "line[bus0] != 'north'", 'left_out': 'not line[bus0]'}, NETWORK, id='a-label'),
+            pytest.param({'kept': 'line[bus0] != line[bus1]', 'left_out': 'not line[bus0]'}, NETWORK, id='two-maps'),
+            pytest.param(
+                {'later': 'snapshot[period] != 2030', 'left_out': 'not snapshot[period]'}, STORAGE, id='a-number'
+            ),
+        ],
+    )
+    def test_a_comparison_and_the_missing_label_are_apart(self, cases: dict[str, str], model: dict[str, Any]):
+        """A comparison is true only where the map gives a label, so `not subject[map]` excludes it.
+
+        The prover read the label a comparison needs and the label the map
+        test asks for as two facts, and refused the pair with a witness where
+        the map gives no label and still holds a value.
+        """
+        assert refusals(to_spec(model), cases) == [], 'no row both has a label and has none'
+
+    @pytest.mark.parametrize(
+        ('cases', 'witness'),
+        [
+            pytest.param(
+                {'loop': 'line[bus0] == line[bus1]', 'north': "line[bus0] == 'north'"},
+                "where line[bus0] vs line[bus1] is equal, line[bus0] is 'north'.",
+                id='a-map-value-says-the-label-exists',
+            ),
+            pytest.param(
+                {'listed': 'line[bus0]', 'again': 'line[bus0]'},
+                'where line[bus0] has a label.',
+                id='the-map-test-says-it',
+            ),
+        ],
+    )
+    def test_a_label_both_cases_read_is_still_found(self, cases: dict[str, str], witness: str):
+        """The mirror: the label is there for both cases, and the witness says so once."""
         [refusal] = refusals(to_spec(NETWORK), cases)
         assert witness in refusal
 
@@ -481,26 +498,26 @@ class TestARelationWithNoRow:
 class TestTwoPairsOfColumns:
     """Each pair of columns is its own fact: a line can have `bus0 == bus1` and `bus0 != bus2` at once."""
 
-    def test_two_pairs_that_share_a_relation_both_claim_a_line(self):
+    def test_two_pairs_that_share_a_map_both_claim_a_line(self):
         """Both cases claim a line whose `bus0` is its `bus1` but not its `bus2`.
 
-        The prover keyed a comparison of two columns by the two relation names
-        and dropped the columns, so `ends[bus0] == ends[bus1]` and
-        `ends[bus0] != ends[bus2]` read one fact and were proved apart.
+        The prover keyed a comparison of two columns by the two subject names
+        and dropped the columns, so `line[bus0] == line[bus1]` and
+        `line[bus0] != line[bus2]` read one fact and were proved apart.
         """
-        [refusal] = refusals(to_spec(THREE_ENDS), {'a': 'ends[bus0] == ends[bus1]', 'b': 'ends[bus0] != ends[bus2]'})
-        assert 'ends[bus0] vs ends[bus1] is equal' in refusal, 'the witness names the columns of each pair'
-        assert 'ends[bus0] vs ends[bus2] is different' in refusal, 'the witness names the columns of each pair'
+        [refusal] = refusals(to_spec(THREE_ENDS), {'a': 'line[bus0] == line[bus1]', 'b': 'line[bus0] != line[bus2]'})
+        assert 'line[bus0] vs line[bus1] is equal' in refusal, 'the witness names the columns of each pair'
+        assert 'line[bus0] vs line[bus2] is different' in refusal, 'the witness names the columns of each pair'
 
     @pytest.mark.parametrize(
         'swapped',
         [
-            pytest.param('ends[bus1] != ends[bus0]', id='the-columns-swapped'),
-            pytest.param('not ends[bus1] == ends[bus0]', id='the-columns-swapped-and-negated'),
+            pytest.param('line[bus1] != line[bus0]', id='the-columns-swapped'),
+            pytest.param('not line[bus1] == line[bus0]', id='the-columns-swapped-and-negated'),
         ],
     )
     def test_one_pair_written_either_way_round_is_one_fact(self, swapped: str):
-        """`ends[bus1] != ends[bus0]` is the negation of `ends[bus0] == ends[bus1]`, so the two are apart."""
-        assert refusals(to_spec(THREE_ENDS), {'same': 'ends[bus0] == ends[bus1]', 'other': swapped}) == [], (
+        """`line[bus1] != line[bus0]` is the negation of `line[bus0] == line[bus1]`, so the two are apart."""
+        assert refusals(to_spec(THREE_ENDS), {'same': 'line[bus0] == line[bus1]', 'other': swapped}) == [], (
             'a line has its two columns equal or different, not both'
         )

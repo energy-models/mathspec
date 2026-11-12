@@ -10,8 +10,8 @@ dimensions:
   snapshot: { dtype: int }
   period: { dtype: int }
 
-relations:
-  period_of: { key: snapshot, values: period }
+maps:
+  snapshot: { period: period }
 
 parameters:
   cap: { dims: [period] }
@@ -24,6 +24,6 @@ variables:
 constraints:
   within_cap:
     dims: [snapshot]
-    expression: p <= at(cap, by=period_of[period])
+    expression: p <= at(cap, by=snapshot[period])
 
 objective: { sense: minimize, expression: sum(p) }

@@ -77,11 +77,11 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers: period
 
 parameters:
   snapshot_weightings_objective:
@@ -146,7 +146,7 @@ expressions:
       generator weighting times the years of the snapshot's period, as in an
       `operational_limit` row (`constraints.py:2935-2937`)
     dims: [snapshot]
-    expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+    expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
   GlobalConstraint_energy_weight:
     description: >-
       what one unit of power at a snapshot counts for in a row. Where the row
@@ -156,7 +156,7 @@ expressions:
     cases:
       counted:
         when: GlobalConstraint_counts_snapshot
-        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+        expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
     otherwise: 0
 
 objective:
@@ -183,9 +183,9 @@ objective:
 |---|---|
 | $`\mathcal{I}`$ | index $`i`$ — `carrier` — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
@@ -213,13 +213,13 @@ objective:
 **`GlobalConstraint_energy_weight`**
 
 ```math
-\mathit{w}^{\mathrm{gc}}_{g,\xi,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{g,\xi,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{w}^{\mathrm{gc}}_{g,\xi,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} & \text{if } \mathrm{in}_{g,\xi,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`energy_limit_weight`**
 
 ```math
-\mathit{w}^{E}_{t} = \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, t \in \mathcal{T}
+\mathit{w}^{E}_{t} = \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} \qquad \forall\, t \in \mathcal{T}
 ```
 
 #### Objective
