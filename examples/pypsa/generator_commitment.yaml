@@ -89,25 +89,28 @@ parameters:
       one where the unit was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable unit, and one for
       a unit that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:323`), data prep
+      (`constraints.py:323`), data prep. Under a rolling horizon, it is the
+      status the previous window solved, a fraction where unit commitment is
+      linearised
     dims: [scenario, generator]
-    dtype: int
   Generator_up_time_brought_in:
     description: >-
       one while the up time a unit brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      start the previous window solved
     dims: [scenario, snapshot, generator]
-    dtype: int
   Generator_down_time_brought_in:
     description: >-
       one while the down time a unit brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      stop the previous window solved
     dims: [scenario, snapshot, generator]
-    dtype: int
   Generator_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, generator]

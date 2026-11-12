@@ -133,16 +133,15 @@ parameters:
       decision instead. The constant and the variable term thus never both
       count a shift. A transformer with no shift or in no cycle of its
       snapshot's period has no row
-    dims: [snapshot, transformer, cycle]
+    dims: [scenario, snapshot, transformer, cycle]
     missing: absent
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision (PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep). False
-      is a fixed shift, set by `phase_shift`. The shift parameters have no
-      scenario, but PyPSA reads them per scenario (`variables.py:446-456`,
-      `constraints.py:1744`, `:1835`). The spec and PyPSA differ here (#783)
-    dims: [transformer]
+      is a fixed shift, set by `phase_shift`. It may differ by scenario, as
+      PyPSA reads it per scenario (`variables.py:446-456`)
+    dims: [scenario, transformer]
     dtype: bool
   Transformer_phase_shift_min:
     description: >-
@@ -150,25 +149,25 @@ parameters:
       is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the
       shift is a decision, otherwise the transformer keeps its fixed
       `phase_shift`
-    dims: [transformer]
+    dims: [scenario, transformer]
   Transformer_phase_shift_max:
     description: >-
       the most a varying transformer's phase shift may take, in degrees. It is
       PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed
       transformer
-    dims: [transformer]
+    dims: [scenario, transformer]
   Transformer_phase_shift_fixed:
     description: >-
       a fixed transformer's phase shift at each snapshot, in degrees. It is
       PyPSA's `phase_shift`, zero by default. A varying transformer's shift is
       a decision instead
-    dims: [snapshot, transformer]
+    dims: [scenario, snapshot, transformer]
   Transformer_phase_shift_cycle_weight:
     description: >-
       the cycle sign for a varying transformer's phase shift, times π/180 so a
       shift in degrees enters the cycle sum in radians, data prep. It is zero
       for a fixed transformer or one in no cycle
-    dims: [period, transformer, cycle]
+    dims: [scenario, period, transformer, cycle]
   Transformer_loss_max:
     description: >-
       the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu *

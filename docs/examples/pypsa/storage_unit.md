@@ -459,11 +459,11 @@ constraints:
     dims: [scenario, snapshot, storage_unit]
     where: StorageUnit_active
     expression: >-
-      StorageUnit_state_of_charge ==
       StorageUnit_charge_carried_in
       + StorageUnit_efficiency_store * StorageUnit_p_store * snapshot_weightings_stores
       - StorageUnit_p_dispatch * snapshot_weightings_stores / StorageUnit_efficiency_dispatch
       + (StorageUnit_inflow - StorageUnit_spill) * snapshot_weightings_stores
+      == StorageUnit_state_of_charge
   StorageUnit_p_set:
     description: "`StorageUnit-p_set` — net dispatch pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, storage_unit]
@@ -764,7 +764,7 @@ h^{-}_{\xi,t,s} \in \mathbb{R} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},
 **`StorageUnit_energy_balance`**
 
 ```math
-\mathit{soc}_{\xi,t,s} = \overleftarrow{\mathit{soc}}_{\xi,t,s} + \eta^{-}_{\xi,t,s} \cdot h^{-}_{\xi,t,s} \cdot \mathrm{w}^{\mathrm{sto}}_{t} - \frac{h^{+}_{\xi,t,s} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{+}_{\xi,t,s}} + \left( \mathrm{inflow}_{\xi,t,s} - \mathit{spill}_{\xi,t,s} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h}_{t,s}
+\overleftarrow{\mathit{soc}}_{\xi,t,s} + \eta^{-}_{\xi,t,s} \cdot h^{-}_{\xi,t,s} \cdot \mathrm{w}^{\mathrm{sto}}_{t} - \frac{h^{+}_{\xi,t,s} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{+}_{\xi,t,s}} + \left( \mathrm{inflow}_{\xi,t,s} - \mathit{spill}_{\xi,t,s} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} = \mathit{soc}_{\xi,t,s} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{on}^{h}_{t,s}
 ```
 
 **`StorageUnit_ext_p_dispatch_lower`**

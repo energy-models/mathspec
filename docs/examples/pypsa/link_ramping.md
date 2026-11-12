@@ -13,7 +13,7 @@ given:
   parameters:
     Link_p_nom_extendable: { dims: [link], dtype: bool }
     Link_committable: { dims: [link], dtype: bool }
-    Link_status_initial: { dims: [scenario, link], dtype: int }
+    Link_status_initial: { dims: [scenario, link] }
     Link_p_nom_mod: { dims: [link] }
     Link_modules_installed: { dims: [scenario, link] }
     Link_big_m: { dims: [scenario, link] }
@@ -70,9 +70,11 @@ parameters:
     missing: absent
   Link_p_init:
     description: >-
-      the flow a link brought into the horizon (PyPSA's `p_init`), read only
-      where the link came in running. No value means it is unknown, and the
-      link then has no ramp row at the first snapshot
+      the flow a link brought into the horizon, data prep. It is PyPSA's
+      `p_init` where the link came in running, and zero where it came in off.
+      Under a rolling horizon, it is the flow the previous window solved. No
+      value means it is unknown, and the link then has no ramp row at the
+      first snapshot
     dims: [scenario, link]
     missing: 0
 
@@ -90,11 +92,11 @@ expressions:
   Link_p_carried_over:
     description: >-
       the output a link carries over into a snapshot. At the first, it is the
-      `p_init` it brought in where it came in running, and nothing where it
-      came in off. After that, it is the previous snapshot's
+      `p_init` it brought in, which is zero where it came in off. After that,
+      it is the previous snapshot's
     dims: [scenario, snapshot, link]
     cases:
-      opening: { when: "position(snapshot) == 0", expression: Link_status_initial * Link_p_init }
+      opening: { when: "position(snapshot) == 0", expression: Link_p_init }
     otherwise: shift(Link_p, along=snapshot, offset=1)
   Link_ramp_up_rate:
     description: >-
@@ -213,9 +215,9 @@ constraints:
     dims: [scenario, snapshot, link]
     where: Link_com_ext AND (Link_ramp_limit_down OR Link_ramp_limit_shut_down) AND Link_ramps_from_previous
     expression: >-
-      Link_previous_p - Link_p <=
-      Link_ramp_down_rate * Link_p_nom_ext
-      + Link_big_m - Link_big_m * Link_status
+      Link_p - Link_previous_p >=
+      -Link_ramp_down_rate * Link_p_nom_ext
+      - Link_big_m + Link_big_m * Link_status
   Link_p_ramp_limit_down_shut_big_m:
     description: >-
       `Link-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a
@@ -293,7 +295,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\mathcal{L} \times \Xi`$, $`0`$ where the data has no row — the flow a link brought into the horizon (PyPSA's `p_init`), read only where the link came in running. No value means it is unknown, and the link then has no ramp row at the first snapshot |
+| $`\mathrm{f}^{0}`$ | `Link_p_init` over $`\mathcal{L} \times \Xi`$, $`0`$ where the data has no row — the flow a link brought into the horizon, data prep. It is PyPSA's `p_init` where the link came in running, and zero where it came in off. Under a rolling horizon, it is the flow the previous window solved. No value means it is unknown, and the link then has no ramp row at the first snapshot |
 | $`\mathrm{rd}^{f}`$ | `Link_ramp_limit_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — most a link may lower its flow between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
 | $`\mathrm{rd}^{f,\mathrm{dn}}`$ | `Link_ramp_limit_shut_down` over $`\mathcal{L} \times \Xi`$, `absent` where the data has no row — most flow in the snapshot before a link stops, per unit of nominal power. No value means no limit |
 | $`\mathrm{ru}^{f,\mathrm{up}}`$ | `Link_ramp_limit_start_up` over $`\mathcal{L} \times \Xi`$, `absent` where the data has no row — most flow in the snapshot a link starts, per unit of nominal power. No value means no limit |
@@ -309,7 +311,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{f}^{\circ}`$ | `Link_p_carried_over` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the output a link carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\overleftarrow{f}^{\circ}`$ | `Link_p_carried_over` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the output a link carries over into a snapshot. At the first, it is the `p_init` it brought in, which is zero where it came in off. After that, it is the previous snapshot's |
 | $`\overleftarrow{f}`$ | `Link_previous_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the output a link carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:716`). It is the output carried over otherwise |
 | $`\Delta^{f,-}`$ | `Link_ramp_down_allowance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — how far a link may lower flow between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\widetilde{\mathrm{rd}}^{f}`$ | `Link_ramp_down_rate` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — the ramp limit in a link's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
@@ -339,7 +341,7 @@ constraints:
 **`Link_p_carried_over`**
 
 ```math
-\overleftarrow{f}^{\circ}_{l,\xi,t} = \begin{cases} \mathrm{u}^{f,0}_{l,\xi} \cdot \mathrm{f}^{0}_{l,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ f_{l,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overleftarrow{f}^{\circ}_{l,\xi,t} = \begin{cases} \mathrm{f}^{0}_{l,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ f_{l,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Link_previous_p`**
@@ -401,7 +403,7 @@ constraints:
 **`Link_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{f}_{l,\xi,t} - f_{l,\xi,t} \le \widetilde{\mathrm{rd}}^{f}_{l,\xi,t} \cdot F_{l} + \mathrm{M}^{f}_{l,\xi} - \mathrm{M}^{f}_{l,\xi} \cdot u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
+f_{l,\xi,t} - \overleftarrow{f}_{l,\xi,t} \ge -\widetilde{\mathrm{rd}}^{f}_{l,\xi,t} \cdot F_{l} - \mathrm{M}^{f}_{l,\xi} + \mathrm{M}^{f}_{l,\xi} \cdot u^{f}_{l,\xi,t} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{f,\mathrm{com,ext}}_{l,t} \wedge \left( \mathrm{rd}^{f}_{l,\xi,t} \text{ is defined} \vee \mathrm{rd}^{f,\mathrm{dn}}_{l,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{f}_{l,\xi,t}
 ```
 
 **`Link_p_ramp_limit_down_shut_big_m`**

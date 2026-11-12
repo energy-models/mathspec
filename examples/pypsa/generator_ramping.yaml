@@ -6,7 +6,7 @@ given:
   parameters:
     Generator_p_nom_extendable: { dims: [generator], dtype: bool }
     Generator_committable: { dims: [generator], dtype: bool }
-    Generator_status_initial: { dims: [scenario, generator], dtype: int }
+    Generator_status_initial: { dims: [scenario, generator] }
     Generator_p_nom_mod: { dims: [generator] }
     Generator_modules_installed: { dims: [scenario, generator] }
     Generator_big_m: { dims: [scenario, generator] }
@@ -63,9 +63,11 @@ parameters:
     missing: absent
   Generator_p_init:
     description: >-
-      the output a unit brought into the horizon (PyPSA's `p_init`), read only
-      where the unit came in running. No value means it is unknown, and the
-      unit then has no ramp row at the first snapshot
+      the output a unit brought into the horizon, data prep. It is PyPSA's
+      `p_init` where the unit came in running, and zero where it came in off.
+      Under a rolling horizon, it is the output the previous window solved. No
+      value means it is unknown, and the unit then has no ramp row at the
+      first snapshot
     dims: [scenario, generator]
     missing: 0
 
@@ -83,11 +85,11 @@ expressions:
   Generator_p_carried_over:
     description: >-
       the output a generator carries over into a snapshot. At the first, it is
-      the `p_init` it brought in where it came in running, and nothing where
-      it came in off. After that, it is the previous snapshot's
+      the `p_init` it brought in, which is zero where it came in off. After
+      that, it is the previous snapshot's
     dims: [scenario, snapshot, generator]
     cases:
-      opening: { when: "position(snapshot) == 0", expression: Generator_status_initial * Generator_p_init }
+      opening: { when: "position(snapshot) == 0", expression: Generator_p_init }
     otherwise: shift(Generator_p, along=snapshot, offset=1)
   Generator_ramp_up_rate:
     description: >-
@@ -215,9 +217,9 @@ constraints:
       AND (Generator_ramp_limit_down OR Generator_ramp_limit_shut_down)
       AND Generator_ramps_from_previous
     expression: >-
-      Generator_previous_p - Generator_p <=
-      Generator_ramp_down_rate * Generator_p_nom_ext
-      + Generator_big_m - Generator_big_m * Generator_status
+      Generator_p - Generator_previous_p >=
+      -Generator_ramp_down_rate * Generator_p_nom_ext
+      - Generator_big_m + Generator_big_m * Generator_status
   Generator_p_ramp_limit_down_shut_big_m:
     description: >-
       `Generator-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off,

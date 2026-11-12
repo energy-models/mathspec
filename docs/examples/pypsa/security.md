@@ -11,6 +11,8 @@ This file states the security-constrained flows over the outages. It is one of t
 ```yaml
 given:
   parameters:
+    Line_active: { dims: [snapshot, line], dtype: bool }
+    Transformer_active: { dims: [snapshot, transformer], dtype: bool }
     Line_s_nom: { dims: [scenario, line] }
     Line_s_nom_extendable: { dims: [line], dtype: bool }
     Line_s_max_pu: { dims: [scenario, snapshot, line] }
@@ -100,9 +102,10 @@ constraints:
       rating. Its flow takes on its share of the outaged branch's flow. PyPSA
       names one row per outaged component `c` and sub-network `n`. Under
       `multi_investment_periods` it appends `-period-{p}` for each period `p`.
-      This entry states them all over the outage dimension
+      This entry states them all over the outage dimension. A line inactive in
+      the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period])
+    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
     expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
   Line_fix_s_upper_security:
     description: >-
@@ -111,9 +114,10 @@ constraints:
       on its share of the outaged branch's flow. PyPSA names one row per
       outaged component `c` and sub-network `n`. Under
       `multi_investment_periods` it appends `-period-{p}` for each period `p`.
-      This entry states them all over the outage dimension
+      This entry states them all over the outage dimension. A line inactive in
+      the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period])
+    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
     expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
   Line_ext_s_lower_security:
     description: >-
@@ -123,9 +127,9 @@ constraints:
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`. Under `multi_investment_periods` it appends
       `-period-{p}` for each period `p`. This entry states them all over the
-      outage dimension
+      outage dimension. A line inactive in the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period])
+    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
     expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
   Line_ext_s_upper_security:
     description: >-
@@ -134,9 +138,10 @@ constraints:
       chosen build. Its flow takes on its share of the outaged branch's flow.
       PyPSA names one row per outaged component `c` and sub-network `n`. Under
       `multi_investment_periods` it appends `-period-{p}` for each period `p`.
-      This entry states them all over the outage dimension
+      This entry states them all over the outage dimension. A line inactive in
+      the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period])
+    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
     expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
   Transformer_fix_s_lower_security:
     description: >-
@@ -145,9 +150,10 @@ constraints:
       of its rating. Its flow takes on its share of the outaged branch's flow.
       PyPSA names one row per outaged component `c` and sub-network `n`. Under
       `multi_investment_periods` it appends `-period-{p}` for each period `p`.
-      This entry states them all over the outage dimension
+      This entry states them all over the outage dimension. A transformer
+      inactive in the snapshot's period has no row
     dims: [scenario, snapshot, transformer, outage]
-    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period])
+    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
   Transformer_fix_s_upper_security:
     description: >-
@@ -156,9 +162,10 @@ constraints:
       Its flow takes on its share of the outaged branch's flow. PyPSA names
       one row per outaged component `c` and sub-network `n`. Under
       `multi_investment_periods` it appends `-period-{p}` for each period `p`.
-      This entry states them all over the outage dimension
+      This entry states them all over the outage dimension. A transformer
+      inactive in the snapshot's period has no row
     dims: [scenario, snapshot, transformer, outage]
-    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period])
+    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
   Transformer_ext_s_lower_security:
     description: >-
@@ -168,9 +175,10 @@ constraints:
       of the outaged branch's flow. PyPSA names one row per outaged component
       `c` and sub-network `n`. Under `multi_investment_periods` it appends
       `-period-{p}` for each period `p`. This entry states them all over the
-      outage dimension
+      outage dimension. A transformer inactive in the snapshot's period has no
+      row
     dims: [scenario, snapshot, transformer, outage]
-    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period])
+    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_upper_security:
     description: >-
@@ -180,9 +188,10 @@ constraints:
       branch's flow. PyPSA names one row per outaged component `c` and
       sub-network `n`. Under `multi_investment_periods` it appends
       `-period-{p}` for each period `p`. This entry states them all over the
-      outage dimension
+      outage dimension. A transformer inactive in the snapshot's period has no
+      row
     dims: [scenario, snapshot, transformer, outage]
-    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period])
+    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
     expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
@@ -190,9 +199,11 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{on}^{s}`$ | `Line_active` over $`\mathcal{K} \times \mathcal{T}`$, data another file declares |
 | $`\overline{\mathrm{s}}`$ | `Line_s_max_pu` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, data another file declares |
 | $`\mathrm{s}^{\mathrm{nom}}`$ | `Line_s_nom` over $`\mathcal{K} \times \Xi`$, data another file declares |
 | $`\mathrm{ext}^{s}`$ | `Line_s_nom_extendable` over $`\mathcal{K}`$, data another file declares |
+| $`\mathrm{on}^{\sigma}`$ | `Transformer_active` over $`\mathcal{T} \times \mathcal{M}`$, data another file declares |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, data another file declares |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$, data another file declares |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$, data another file declares |
@@ -238,49 +249,49 @@ constraints:
 **`Line_ext_s_lower_security`**
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 **`Line_ext_s_upper_security`**
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 **`Line_fix_s_lower_security`**
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 **`Line_fix_s_upper_security`**
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 **`Transformer_ext_s_lower_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_ext_s_upper_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_fix_s_lower_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_fix_s_upper_security`**
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 <!-- gallery:end -->
 

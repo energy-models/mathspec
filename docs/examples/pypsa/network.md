@@ -28,6 +28,15 @@ dimensions:
   bus:
     description: network nodes
 
+parameters:
+  Bus_attached:
+    description: >-
+      whether a load, a unit, a port or a branch that is active in the
+      snapshot's period is attached to the bus, data prep. A bus nothing is
+      attached to has no balance row
+    dims: [bus, snapshot]
+    dtype: bool
+
 constraints:
   Bus_nodal_balance:
     description: >-
@@ -43,6 +52,7 @@ constraints:
       A bus nothing is attached to has no row. PyPSA refuses one that carries
       load. The file states no assumption for it.
     dims: [scenario, snapshot, bus]
+    where: Bus_attached
     expression: Bus_injection == 0
 ```
 
@@ -60,12 +70,18 @@ constraints:
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
+#### Parameters
+
+| Symbol | Meaning |
+|---|---|
+| $`\mathrm{Bus\_attached}`$ | `Bus_attached` over $`\mathcal{N} \times \mathcal{T}`$ — whether a load, a unit, a port or a branch that is active in the snapshot's period is attached to the bus, data prep. A bus nothing is attached to has no balance row |
+
 #### Subject to
 
 **`Bus_nodal_balance`**
 
 ```math
-\mathit{Bus\_injection}_{n,\xi,t} = 0 \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Bus\_injection}_{n,\xi,t} = 0 \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Bus\_attached}_{n,t}
 ```
 <!-- gallery:end -->
 

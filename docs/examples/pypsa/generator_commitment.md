@@ -96,25 +96,28 @@ parameters:
       one where the unit was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable unit, and one for
       a unit that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:323`), data prep
+      (`constraints.py:323`), data prep. Under a rolling horizon, it is the
+      status the previous window solved, a fraction where unit commitment is
+      linearised
     dims: [scenario, generator]
-    dtype: int
   Generator_up_time_brought_in:
     description: >-
       one while the up time a unit brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      start the previous window solved
     dims: [scenario, snapshot, generator]
-    dtype: int
   Generator_down_time_brought_in:
     description: >-
       one while the down time a unit brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      stop the previous window solved
     dims: [scenario, snapshot, generator]
-    dtype: int
   Generator_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, generator]
@@ -412,7 +415,7 @@ assumptions:
 |---|---|
 | $`\mathrm{M}`$ | `Generator_big_m` over $`\mathcal{G} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable generator's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1082-1152`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the output a solve wants, it caps that output |
 | $`\mathrm{com}`$ | `Generator_committable` over $`\mathcal{G}`$ — whether output is gated by an on/off status decision |
-| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{rest}`$ | `Generator_down_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the down time a unit brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling horizon with linearised unit commitment, it is the fraction of the stop the previous window solved |
 | $`\mathrm{C}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_cost` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the running cost at each breakpoint of a generator's piecewise `marginal_cost` curve: zero at the first, then each segment's width in output times the `marginal_cost` at its upper breakpoint, summed, data prep. It is linopy's `Slopes(...).to_breakpoints` (`piecewise.py:310-312`) |
 | $`\mathrm{p}^{\mathrm{curve}}`$ | `Generator_marginal_cost_curve_p` over $`\mathcal{B} \times \mathcal{G}`$, `absent` where the data has no row — the output at each breakpoint of a generator's piecewise `marginal_cost` curve: PyPSA's `p_pu` breakpoints times `p_nom`, data prep. A generator with no curve has no rows |
 | $`\mathrm{DT}`$ | `Generator_min_down_time` over $`\mathcal{G} \times \Xi`$ — least snapshots a unit stays off once stopped |
@@ -420,8 +423,8 @@ assumptions:
 | $`\mathrm{c}^{\mathrm{dn}}`$ | `Generator_shut_down_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{\mathrm{on}}`$ | `Generator_stand_by_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
 | $`\mathrm{c}^{\mathrm{up}}`$ | `Generator_start_up_cost` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
-| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\mathcal{G} \times \Xi`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:323`), data prep |
-| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{u}^{0}`$ | `Generator_status_initial` over $`\mathcal{G} \times \Xi`$ — one where the unit was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable unit, and one for a unit that is not, whose ramp rows PyPSA starts from on (`constraints.py:323`), data prep. Under a rolling horizon, it is the status the previous window solved, a fraction where unit commitment is linearised |
+| $`\mathrm{hold}`$ | `Generator_up_time_brought_in` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — one while the up time a unit brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling horizon with linearised unit commitment, it is the fraction of the start the previous window solved |
 
 #### Conditions
 

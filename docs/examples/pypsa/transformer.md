@@ -140,16 +140,15 @@ parameters:
       decision instead. The constant and the variable term thus never both
       count a shift. A transformer with no shift or in no cycle of its
       snapshot's period has no row
-    dims: [snapshot, transformer, cycle]
+    dims: [scenario, snapshot, transformer, cycle]
     missing: absent
   Transformer_phase_shift_varying:
     description: >-
       whether a transformer's phase shift is a decision (PyPSA's
       `phase_shift_min < phase_shift_max`, read as a flag in data prep). False
-      is a fixed shift, set by `phase_shift`. The shift parameters have no
-      scenario, but PyPSA reads them per scenario (`variables.py:446-456`,
-      `constraints.py:1744`, `:1835`). The spec and PyPSA differ here (#783)
-    dims: [transformer]
+      is a fixed shift, set by `phase_shift`. It may differ by scenario, as
+      PyPSA reads it per scenario (`variables.py:446-456`)
+    dims: [scenario, transformer]
     dtype: bool
   Transformer_phase_shift_min:
     description: >-
@@ -157,25 +156,25 @@ parameters:
       is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the
       shift is a decision, otherwise the transformer keeps its fixed
       `phase_shift`
-    dims: [transformer]
+    dims: [scenario, transformer]
   Transformer_phase_shift_max:
     description: >-
       the most a varying transformer's phase shift may take, in degrees. It is
       PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed
       transformer
-    dims: [transformer]
+    dims: [scenario, transformer]
   Transformer_phase_shift_fixed:
     description: >-
       a fixed transformer's phase shift at each snapshot, in degrees. It is
       PyPSA's `phase_shift`, zero by default. A varying transformer's shift is
       a decision instead
-    dims: [snapshot, transformer]
+    dims: [scenario, snapshot, transformer]
   Transformer_phase_shift_cycle_weight:
     description: >-
       the cycle sign for a varying transformer's phase shift, times π/180 so a
       shift in degrees enters the cycle sum in radians, data prep. It is zero
       for a fixed transformer or one in no cycle
-    dims: [period, transformer, cycle]
+    dims: [scenario, period, transformer, cycle]
   Transformer_loss_max:
     description: >-
       the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu *
@@ -404,12 +403,12 @@ constraints:
 | $`\overline{\ell}^{\sigma}`$ | `Transformer_loss_max` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — the loss at a transformer's rating (PyPSA's `r_pu_eff * (s_max_pu * s_nom_max)**2`), data prep. Its `r_pu_eff` is the resistance over the given `s_nom` times the tap ratio |
 | $`\mathrm{b}^{\sigma}`$ | `Transformer_loss_offset` over $`\Xi \times \mathcal{S} \times \mathcal{T} \times \mathcal{M}`$ — where that cut meets the loss axis: a tangent's `loss_k - slope_k * p_k`, a secant's `-r_pu_eff * p_k * p_k+1`, negative, data prep |
 | $`\mathrm{a}^{\sigma}`$ | `Transformer_loss_slope` over $`\Xi \times \mathcal{S} \times \mathcal{T} \times \mathcal{M}`$ — the slope of a cut to a transformer's loss curve, data prep. It is a tangent's `2 * r_pu_eff * p_k` or a secant's `r_pu_eff * (p_k + p_k+1)`, as a line's. It uses the transformer's own `r_pu_eff` and rating |
-| $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{C} \times \mathcal{Y} \times \mathcal{M}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians, data prep. It is zero for a fixed transformer or one in no cycle |
-| $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees. It is PyPSA's `phase_shift`, zero by default. A varying transformer's shift is a decision instead |
-| $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed transformer |
-| $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
-| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. The shift parameters have no scenario, but PyPSA reads them per scenario (`variables.py:446-456`, `constraints.py:1744`, `:1835`). The spec and PyPSA differ here (\#783) |
-| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{C} \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
+| $`\mathrm{Transformer\_phase\_shift\_cycle\_weight}`$ | `Transformer_phase_shift_cycle_weight` over $`\mathcal{C} \times \mathcal{Y} \times \Xi \times \mathcal{M}`$ — the cycle sign for a varying transformer's phase shift, times π/180 so a shift in degrees enters the cycle sum in radians, data prep. It is zero for a fixed transformer or one in no cycle |
+| $`\varphi^{\sigma}`$ | `Transformer_phase_shift_fixed` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — a fixed transformer's phase shift at each snapshot, in degrees. It is PyPSA's `phase_shift`, zero by default. A varying transformer's shift is a decision instead |
+| $`\mathrm{Transformer\_phase\_shift\_max}`$ | `Transformer_phase_shift_max` over $`\Xi \times \mathcal{M}`$ — the most a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_max`. Equal to `phase_shift_min` for a fixed transformer |
+| $`\mathrm{Transformer\_phase\_shift\_min}`$ | `Transformer_phase_shift_min` over $`\Xi \times \mathcal{M}`$ — the least a varying transformer's phase shift may take, in degrees. It is PyPSA's `phase_shift_min`. Where it is below `phase_shift_max` the shift is a decision, otherwise the transformer keeps its fixed `phase_shift` |
+| $`\mathrm{Transformer\_phase\_shift\_varying}`$ | `Transformer_phase_shift_varying` over $`\Xi \times \mathcal{M}`$ — whether a transformer's phase shift is a decision (PyPSA's `phase_shift_min < phase_shift_max`, read as a flag in data prep). False is a fixed shift, set by `phase_shift`. It may differ by scenario, as PyPSA reads it per scenario (`variables.py:446-456`) |
+| $`\vartheta`$ | `Transformer_phase_shift_weight` over $`\mathcal{C} \times \Xi \times \mathcal{T} \times \mathcal{M}`$, `absent` where the data has no row — a fixed transformer's phase shift in radians at each snapshot, signed by its orientation in the cycle, data prep. It is a constant added to the cycle sum. It is zero for a varying transformer, whose shift is a decision instead. The constant and the variable term thus never both count a shift. A transformer with no shift or in no cycle of its snapshot's period has no row |
 | $`\overline{\sigma}`$ | `Transformer_s_max_pu` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — most flow either way, per unit of nominal apparent power |
 | $`\sigma^{\mathrm{nom}}`$ | `Transformer_s_nom` over $`\Xi \times \mathcal{M}`$ — nominal apparent power |
 | $`\mathrm{ext}^{\sigma}`$ | `Transformer_s_nom_extendable` over $`\mathcal{M}`$ — whether the nominal apparent power is a decision |
@@ -471,7 +470,7 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 **`Transformer_phase_shift`**
 
 ```math
-\mathrm{Transformer\_phase\_shift\_min}_{m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\mathrm{Transformer\_phase\_shift\_min}_{\xi,m} \le \mathit{Transformer\_phase\_shift}_{\xi,t,m} \le \mathrm{Transformer\_phase\_shift\_max}_{\xi,m} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{Transformer\_phase\_shift\_varying}_{\xi,m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_s`**
@@ -491,7 +490,7 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 **`Transformer_angle_sum`**
 
 ```math
-\mathit{Transformer\_angle\_sum}_{c,\xi,t} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{period}(t),m} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Transformer\_angle\_sum}_{c,\xi,t} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{period}(t),\xi,m} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Transformer_capex`**
@@ -589,25 +588,25 @@ N^{\sigma}_{m} \ge 0, N^{\sigma}_{m} \in \mathbb{Z} \qquad \forall\, m \in \math
 **`Transformer_v_ang_lower`**
 
 ```math
-\sigma_{\xi,t,m} \ge \frac{-\left( \overline{\delta}^{\sigma}_{\xi,m} + \varphi^{\sigma}_{t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} \ge \frac{-\left( \overline{\delta}^{\sigma}_{\xi,m} + \varphi^{\sigma}_{\xi,t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{\xi,m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_v_ang_upper`**
 
 ```math
-\sigma_{\xi,t,m} \le \frac{\left( \overline{\delta}^{\sigma}_{\xi,m} - \varphi^{\sigma}_{t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} \le \frac{\left( \overline{\delta}^{\sigma}_{\xi,m} - \varphi^{\sigma}_{\xi,t,m} \right) \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \neg \mathrm{Transformer\_phase\_shift\_varying}_{\xi,m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_v_ang_var_lower`**
 
 ```math
-\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \ge \frac{-\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \ge \frac{-\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{\xi,m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 **`Transformer_v_ang_var_upper`**
 
 ```math
-\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \le \frac{\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{m} \wedge \mathrm{on}^{\sigma}_{t,m}
+\sigma_{\xi,t,m} + \frac{\mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \le \frac{\overline{\delta}^{\sigma}_{\xi,m} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff},\sigma}_{\xi,m}} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \overline{\delta}^{\sigma}_{\xi,m} \text{ is defined} \wedge \mathrm{Transformer\_phase\_shift\_varying}_{\xi,m} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 <!-- gallery:end -->
 

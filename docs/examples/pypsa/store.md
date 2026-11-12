@@ -412,14 +412,14 @@ expressions:
 
 constraints:
   Store_e_sum_min:
-    description: "`Store-e_sum_min` — net energy delivered over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    description: "`Store-e_sum_min` — net energy delivered over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row, and so is a store active in no snapshot"
     dims: [scenario, store]
-    where: Store_e_sum_min
+    where: Store_e_sum_min AND count(Store_active, over=snapshot) > 0
     expression: sum(Store_p * energy_limit_weight, over=snapshot) >= Store_e_sum_min
   Store_e_sum_max:
-    description: "`Store-e_sum_max` — net energy delivered over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    description: "`Store-e_sum_max` — net energy delivered over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row, and so is a store active in no snapshot"
     dims: [scenario, store]
-    where: Store_e_sum_max
+    where: Store_e_sum_max AND count(Store_active, over=snapshot) > 0
     expression: sum(Store_p * energy_limit_weight, over=snapshot) <= Store_e_sum_max
   Store_fix_e_lower:
     description: "`Store-fix-e-lower` — a fixed store holds at least its floor"
@@ -522,11 +522,11 @@ constraints:
     dims: [scenario, snapshot, store]
     where: Store_active
     expression: >-
-      Store_e ==
       Store_energy_carried_in
       - Store_p * snapshot_weightings_stores / Store_efficiency_dispatch
       + (Store_efficiency_store - 1 / Store_efficiency_dispatch) * Store_p_store * snapshot_weightings_stores
       + (Store_inflow - Store_spill) * snapshot_weightings_stores
+      == Store_e
   Store_cycles_max:
     description: >-
       `Store-cycles_max` — the discharge over the horizon, `p + p_store`
@@ -857,19 +857,19 @@ e_{\xi,t,v} = \mathrm{e}^{\mathrm{set}}_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\
 **`Store_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \overline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined}
+\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \overline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \} \rvert > 0
 ```
 
 **`Store_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \underline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined}
+\sum_{t \in \mathcal{T}} q_{\xi,t,v} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{q}_{\xi,v} \qquad \forall\, \xi \in \Xi,\ v \in \mathcal{V} \,:\, \underline{\mathrm{E}}^{q}_{\xi,v} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{e}_{t,v} \} \rvert > 0
 ```
 
 **`Store_energy_balance`**
 
 ```math
-e_{\xi,t,v} = \overleftarrow{e}_{\xi,t,v} - \frac{q_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{e,+}_{\xi,t,v}} + \left( \eta^{e,-}_{\xi,t,v} - \frac{1}{\eta^{e,+}_{\xi,t,v}} \right) \cdot q^{-}_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t} + \left( \mathrm{inflow}^{e}_{\xi,t,v} - \mathit{spill}^{e}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v}
+\overleftarrow{e}_{\xi,t,v} - \frac{q_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t}}{\eta^{e,+}_{\xi,t,v}} + \left( \eta^{e,-}_{\xi,t,v} - \frac{1}{\eta^{e,+}_{\xi,t,v}} \right) \cdot q^{-}_{\xi,t,v} \cdot \mathrm{w}^{\mathrm{sto}}_{t} + \left( \mathrm{inflow}^{e}_{\xi,t,v} - \mathit{spill}^{e}_{\xi,t,v} \right) \cdot \mathrm{w}^{\mathrm{sto}}_{t} = e_{\xi,t,v} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{on}^{e}_{t,v}
 ```
 
 **`Store_ext_e_lower`**

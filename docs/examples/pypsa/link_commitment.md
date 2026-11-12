@@ -72,25 +72,28 @@ parameters:
       one where the link was on before the first snapshot, zero where off.
       It is PyPSA's `up_time_before > 0` for a committable link, and one for
       a link that is not, whose ramp rows PyPSA starts from on
-      (`constraints.py:323`), data prep
+      (`constraints.py:323`), data prep. Under a rolling horizon, it is the
+      status the previous window solved, a fraction where unit commitment is
+      linearised
     dims: [scenario, link]
-    dtype: int
   Link_up_time_brought_in:
     description: >-
       one while the up time a link brought into the horizon is still
       running, zero after. It is PyPSA's start `up_time_before` snapshots
       before the first, counted while `min_up_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      start the previous window solved
     dims: [scenario, snapshot, link]
-    dtype: int
   Link_down_time_brought_in:
     description: >-
       one while the down time a link brought into the horizon is still
       running, zero after. It is PyPSA's stop `down_time_before` snapshots
       before the first, counted while `min_down_time` has not passed since
-      (`constraints.py:302-323`, `:677-678`), data prep
+      (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling
+      horizon with linearised unit commitment, it is the fraction of the
+      stop the previous window solved
     dims: [scenario, snapshot, link]
-    dtype: int
   Link_start_up_cost:
     description: cost of one start in this snapshot
     dims: [scenario, snapshot, link]
@@ -353,14 +356,14 @@ assumptions:
 |---|---|
 | $`\mathrm{M}^{f}`$ | `Link_big_m` over $`\mathcal{L} \times \Xi`$, `absent` where the data has no row — the bound a committed extendable link's big-M rows release it by, data prep. It is the build cap `p_nom_max` times the highest `p_max_pu`, where the cap is finite and positive. Elsewhere it is `committable_big_m` times the highest `p_max_pu` (`components.py:1082-1152`). Without that keyword, it is ten times the largest of the peak total load and the component's largest finite `p_nom` and `p_nom_max`. Where there is none of them, it is 1e6. Below the flow a solve wants, it caps that flow |
 | $`\mathrm{com}^{f}`$ | `Link_committable` over $`\mathcal{L}`$ — whether flow is gated by an on/off status decision |
-| $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{rest}^{f}`$ | `Link_down_time_brought_in` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — one while the down time a link brought into the horizon is still running, zero after. It is PyPSA's stop `down_time_before` snapshots before the first, counted while `min_down_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling horizon with linearised unit commitment, it is the fraction of the stop the previous window solved |
 | $`\mathrm{DT}^{f}`$ | `Link_min_down_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays off once stopped |
 | $`\mathrm{UT}^{f}`$ | `Link_min_up_time` over $`\mathcal{L} \times \Xi`$ — least snapshots a link stays on once started |
 | $`\mathrm{c}^{f,\mathrm{dn}}`$ | `Link_shut_down_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one stop in this snapshot |
 | $`\mathrm{c}^{f,\mathrm{on}}`$ | `Link_stand_by_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one snapshot spent on |
 | $`\mathrm{c}^{f,\mathrm{up}}`$ | `Link_start_up_cost` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — cost of one start in this snapshot |
-| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\mathcal{L} \times \Xi`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable link, and one for a link that is not, whose ramp rows PyPSA starts from on (`constraints.py:323`), data prep |
-| $`\mathrm{hold}^{f}`$ | `Link_up_time_brought_in` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — one while the up time a link brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep |
+| $`\mathrm{u}^{f,0}`$ | `Link_status_initial` over $`\mathcal{L} \times \Xi`$ — one where the link was on before the first snapshot, zero where off. It is PyPSA's `up_time_before > 0` for a committable link, and one for a link that is not, whose ramp rows PyPSA starts from on (`constraints.py:323`), data prep. Under a rolling horizon, it is the status the previous window solved, a fraction where unit commitment is linearised |
+| $`\mathrm{hold}^{f}`$ | `Link_up_time_brought_in` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — one while the up time a link brought into the horizon is still running, zero after. It is PyPSA's start `up_time_before` snapshots before the first, counted while `min_up_time` has not passed since (`constraints.py:302-323`, `:677-678`), data prep. Under a rolling horizon with linearised unit commitment, it is the fraction of the start the previous window solved |
 
 #### Conditions
 

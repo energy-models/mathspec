@@ -324,14 +324,14 @@ constraints:
     where: not Link_p_nom_extendable AND not Link_committable AND Link_active
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
   Link_e_sum_min:
-    description: "`Link-e_sum_min` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    description: "`Link-e_sum_min` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row, and so is a link active in no snapshot"
     dims: [scenario, link]
-    where: Link_e_sum_min
+    where: Link_e_sum_min AND count(Link_active, over=snapshot) > 0
     expression: sum(Link_p * energy_limit_weight, over=snapshot) >= Link_e_sum_min
   Link_e_sum_max:
-    description: "`Link-e_sum_max` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    description: "`Link-e_sum_max` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row, and so is a link active in no snapshot"
     dims: [scenario, link]
-    where: Link_e_sum_max
+    where: Link_e_sum_max AND count(Link_active, over=snapshot) > 0
     expression: sum(Link_p * energy_limit_weight, over=snapshot) <= Link_e_sum_max
   Link_ext_p_lower:
     description: "`Link-ext-p-lower` — an extendable link carries at least its minimum of the chosen build, negative for the other way"
@@ -595,13 +595,13 @@ F_{l} \in \mathbb{R} \qquad \forall\, l \in \mathcal{L} \,:\, \mathrm{ext}^{f}_{
 **`Link_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} f_{l,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{f}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}^{f}_{l,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} f_{l,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{f}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}^{f}_{l,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{f}_{l,t} \} \rvert > 0
 ```
 
 **`Link_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} f_{l,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{f}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}^{f}_{l,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} f_{l,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{f}_{l,\xi} \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}^{f}_{l,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{f}_{l,t} \} \rvert > 0
 ```
 
 **`Link_ext_p_lower`**

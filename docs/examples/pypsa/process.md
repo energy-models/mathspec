@@ -286,14 +286,14 @@ conditions:
 
 constraints:
   Process_e_sum_min:
-    description: "`Process-e_sum_min` — energy of the internal power over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    description: "`Process-e_sum_min` — energy of the internal power over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row, and so is a process active in no snapshot"
     dims: [scenario, process]
-    where: Process_e_sum_min
+    where: Process_e_sum_min AND count(Process_active, over=snapshot) > 0
     expression: sum(Process_p * energy_limit_weight, over=snapshot) >= Process_e_sum_min
   Process_e_sum_max:
-    description: "`Process-e_sum_max` — energy of the internal power over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    description: "`Process-e_sum_max` — energy of the internal power over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row, and so is a process active in no snapshot"
     dims: [scenario, process]
-    where: Process_e_sum_max
+    where: Process_e_sum_max AND count(Process_active, over=snapshot) > 0
     expression: sum(Process_p * energy_limit_weight, over=snapshot) <= Process_e_sum_max
   Process_fix_p_lower:
     description: "`Process-fix-p-lower` — a fixed process runs at least its minimum, negative for the other way"
@@ -544,13 +544,13 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_e_sum_max`**
 
 ```math
-\sum_{t \in \mathcal{T}} z_{j,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{z}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}^{z}_{j,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} z_{j,\xi,t} \cdot \mathit{w}^{E}_{t} \le \overline{\mathrm{E}}^{z}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \overline{\mathrm{E}}^{z}_{j,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z}_{j,t} \} \rvert > 0
 ```
 
 **`Process_e_sum_min`**
 
 ```math
-\sum_{t \in \mathcal{T}} z_{j,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{z}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}^{z}_{j,\xi} \text{ is defined}
+\sum_{t \in \mathcal{T}} z_{j,\xi,t} \cdot \mathit{w}^{E}_{t} \ge \underline{\mathrm{E}}^{z}_{j,\xi} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi \,:\, \underline{\mathrm{E}}^{z}_{j,\xi} \text{ is defined} \wedge \lvert \{ t \in \mathcal{T} \,:\, \mathrm{on}^{z}_{j,t} \} \rvert > 0
 ```
 
 **`Process_ext_p_lower`**

@@ -13,7 +13,7 @@ given:
   parameters:
     Process_p_nom_extendable: { dims: [process], dtype: bool }
     Process_committable: { dims: [process], dtype: bool }
-    Process_status_initial: { dims: [scenario, process], dtype: int }
+    Process_status_initial: { dims: [scenario, process] }
     Process_p_nom_mod: { dims: [process] }
     Process_modules_installed: { dims: [scenario, process] }
     Process_big_m: { dims: [scenario, process] }
@@ -70,10 +70,11 @@ parameters:
     missing: absent
   Process_p_init:
     description: >-
-      the internal power a process brought into the horizon (PyPSA's
-      `p_init`), read only where the process came in running. No value means
-      it is unknown, and the process then has no ramp row at the first
-      snapshot
+      the internal power a process brought into the horizon, data prep. It is
+      PyPSA's `p_init` where the process came in running, and zero where it
+      came in off. Under a rolling horizon, it is the internal power the
+      previous window solved. No value means it is unknown, and the process
+      then has no ramp row at the first snapshot
     dims: [scenario, process]
     missing: 0
 
@@ -91,11 +92,11 @@ expressions:
   Process_p_carried_over:
     description: >-
       the output a process carries over into a snapshot. At the first, it is
-      the `p_init` it brought in where it came in running, and nothing where
-      it came in off. After that, it is the previous snapshot's
+      the `p_init` it brought in, which is zero where it came in off. After
+      that, it is the previous snapshot's
     dims: [scenario, snapshot, process]
     cases:
-      opening: { when: "position(snapshot) == 0", expression: Process_status_initial * Process_p_init }
+      opening: { when: "position(snapshot) == 0", expression: Process_p_init }
     otherwise: shift(Process_p, along=snapshot, offset=1)
   Process_ramp_up_rate:
     description: >-
@@ -217,9 +218,9 @@ constraints:
       AND (Process_ramp_limit_down OR Process_ramp_limit_shut_down)
       AND Process_ramps_from_previous
     expression: >-
-      Process_previous_p - Process_p <=
-      Process_ramp_down_rate * Process_p_nom_ext
-      + Process_big_m - Process_big_m * Process_status
+      Process_p - Process_previous_p >=
+      -Process_ramp_down_rate * Process_p_nom_ext
+      - Process_big_m + Process_big_m * Process_status
   Process_p_ramp_limit_down_shut_big_m:
     description: >-
       `Process-p-ramp_limit_down-shut-bigM` — in the snapshot it turns off, a
@@ -302,7 +303,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\mathcal{J} \times \Xi`$, $`0`$ where the data has no row — the internal power a process brought into the horizon (PyPSA's `p_init`), read only where the process came in running. No value means it is unknown, and the process then has no ramp row at the first snapshot |
+| $`\mathrm{z}^{0}`$ | `Process_p_init` over $`\mathcal{J} \times \Xi`$, $`0`$ where the data has no row — the internal power a process brought into the horizon, data prep. It is PyPSA's `p_init` where the process came in running, and zero where it came in off. Under a rolling horizon, it is the internal power the previous window solved. No value means it is unknown, and the process then has no ramp row at the first snapshot |
 | $`\mathrm{rd}^{z}`$ | `Process_ramp_limit_down` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$, `absent` where the data has no row — most a process may lower its internal power between snapshots, per unit of nominal power. No value means no limit. The value at the later of the two snapshots applies, so the limit may change over time |
 | $`\mathrm{rd}^{z,\mathrm{dn}}`$ | `Process_ramp_limit_shut_down` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — most internal power in the snapshot before a process stops, per unit of nominal power. No value means no limit |
 | $`\mathrm{ru}^{z,\mathrm{up}}`$ | `Process_ramp_limit_start_up` over $`\mathcal{J} \times \Xi`$, `absent` where the data has no row — most internal power in the snapshot a process starts, per unit of nominal power. No value means no limit |
@@ -318,7 +319,7 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\overleftarrow{z}^{\circ}`$ | `Process_p_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries over into a snapshot. At the first, it is the `p_init` it brought in where it came in running, and nothing where it came in off. After that, it is the previous snapshot's |
+| $`\overleftarrow{z}^{\circ}`$ | `Process_p_carried_over` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries over into a snapshot. At the first, it is the `p_init` it brought in, which is zero where it came in off. After that, it is the previous snapshot's |
 | $`\overleftarrow{z}`$ | `Process_previous_p` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the output a process carries into a snapshot. It is nothing at the first snapshot it is active in past the first of the horizon: PyPSA fills an output it did not build with zero (`constraints.py:716`). It is the output carried over otherwise |
 | $`\Delta^{z,-}`$ | `Process_ramp_down_allowance` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — how far a process may lower internal power between two snapshots. It is its ramp limit of the build while it stays on, plus its shut-down ramp in the snapshot it turns off |
 | $`\widetilde{\mathrm{rd}}^{z}`$ | `Process_ramp_down_rate` over $`\mathcal{J} \times \Xi \times \mathcal{T}`$ — the ramp limit in a process's down row, PyPSA's `ramp_limit_down`. It is the full build where PyPSA has none, since a shut-down ramp alone builds the row |
@@ -348,7 +349,7 @@ constraints:
 **`Process_p_carried_over`**
 
 ```math
-\overleftarrow{z}^{\circ}_{j,\xi,t} = \begin{cases} \mathrm{u}^{z,0}_{j,\xi} \cdot \mathrm{z}^{0}_{j,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ z_{j,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overleftarrow{z}^{\circ}_{j,\xi,t} = \begin{cases} \mathrm{z}^{0}_{j,\xi} & \text{if } \mathrm{pos}(t) = 0 \\ z_{j,\xi,t - 1} & \text{otherwise} \end{cases} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_previous_p`**
@@ -410,7 +411,7 @@ constraints:
 **`Process_p_ramp_limit_down_run_big_m`**
 
 ```math
-\overleftarrow{z}_{j,\xi,t} - z_{j,\xi,t} \le \widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot Z_{j} + \mathrm{M}^{z}_{j,\xi} - \mathrm{M}^{z}_{j,\xi} \cdot u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
+z_{j,\xi,t} - \overleftarrow{z}_{j,\xi,t} \ge -\widetilde{\mathrm{rd}}^{z}_{j,\xi,t} \cdot Z_{j} - \mathrm{M}^{z}_{j,\xi} + \mathrm{M}^{z}_{j,\xi} \cdot u^{z}_{j,\xi,t} \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{on}^{z,\mathrm{com,ext}}_{j,t} \wedge \left( \mathrm{rd}^{z}_{j,\xi,t} \text{ is defined} \vee \mathrm{rd}^{z,\mathrm{dn}}_{j,\xi} \text{ is defined} \right) \wedge \mathrm{prev}^{z}_{j,\xi,t}
 ```
 
 **`Process_p_ramp_limit_down_shut_big_m`**

@@ -452,11 +452,11 @@ constraints:
     dims: [scenario, snapshot, storage_unit]
     where: StorageUnit_active
     expression: >-
-      StorageUnit_state_of_charge ==
       StorageUnit_charge_carried_in
       + StorageUnit_efficiency_store * StorageUnit_p_store * snapshot_weightings_stores
       - StorageUnit_p_dispatch * snapshot_weightings_stores / StorageUnit_efficiency_dispatch
       + (StorageUnit_inflow - StorageUnit_spill) * snapshot_weightings_stores
+      == StorageUnit_state_of_charge
   StorageUnit_p_set:
     description: "`StorageUnit-p_set` — net dispatch pinned to the given schedule, wherever one is given"
     dims: [scenario, snapshot, storage_unit]
