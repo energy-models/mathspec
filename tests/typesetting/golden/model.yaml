@@ -40,7 +40,7 @@ parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
-  load: { dims: [snapshot, bus], missing: { by: "bus[zone]", fill: { north: 0, south: absent } } } # a reading per label of a map: the legend lists each, then otherwise
+  load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
@@ -395,9 +395,6 @@ assumptions: # what the data has to satisfy for the answer to mean anything
   northern_demand_is_real: # a map comparison as the where, over a frame two dims wide
     holds: "load >= 0"
     where: "bus[zone] == 'north'"
-  every_dispatch_has_a_start_row: # a constraint's row where a variable exists: decided at load from their `where:`, then checked on the data
-    holds: "starts"
-    where: "p"
 
 objective: # a sense, a product of two variables, a power over two parameters, a power of one of those, and the summations a scalar objective spells out beside two scalar terms
   sense: maximize

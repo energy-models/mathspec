@@ -91,14 +91,13 @@ with no row means.
 ### `missing` on a parameter
 
 The [`missing:`](parameters-variables-constraints.md#missing) key of a
-parameter takes one of four values:
+parameter takes one of three values:
 
-| `missing:`              | Result                                                                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refused`, by default   | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                                      |
-| `absent`                | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                                    |
-| a value                 | a missing row takes that value, wherever an expression uses the parameter                                                                                     |
-| `{by, fill, otherwise}` | a missing row takes the reading of the label that a map gives its coordinate ([a reading per label](parameters-variables-constraints.md#a-reading-per-label)) |
+| `missing:`            | Result                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| `refused`, by default | a tool refuses the parameter if any row of its data is missing, and names the coordinate   |
+| `absent`              | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out |
+| a value               | a missing row takes that value, wherever an expression uses the parameter                  |
 
 <figure class="diagram">
 --8<-- "docs/static/absence-missing-parameter.svg"

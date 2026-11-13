@@ -125,7 +125,7 @@ def _zero_in(e: Expression, parameters: Mapping[str, ParameterSpec], spared: fro
     match e:
         case ParameterReference(name=name):
             declared = parameters.get(name)
-            zero = declared is not None and 0 in declared.readings and name not in spared
+            zero = declared is not None and declared.missing == 0 and name not in spared
             return _missing_zero(name) if zero else None
         case Translate(along=along, fill=fill) if fill == 0:
             return _edge_zero(along)

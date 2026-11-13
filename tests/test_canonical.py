@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import ArithmeticNode, ParsedNode
 
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
-GOLDEN_MODEL = Path(__file__).resolve().parent / 'typesetting' / 'golden' / 'model.yaml'
 
 
 def _dumped(**patch: object) -> str:
@@ -309,13 +308,6 @@ def test_the_order_a_macro_lists_its_keywords_in_is_no_difference():
             id='the-when-of-a-case',
         ),
         pytest.param(DISPATCH_MODEL, 'parameters.cost.missing', 1, 1.0, id='a-missing-value-of-a-float-parameter'),
-        pytest.param(
-            raw_of(GOLDEN_MODEL),
-            'parameters.load.missing',
-            {'by': 'bus[zone]', 'fill': {'south': 'absent', 'north': 0}, 'otherwise': 2},
-            {'by': 'bus[zone]', 'fill': {'north': 0.0, 'south': 'absent'}, 'otherwise': 2.0},
-            id='a-reading-per-label-of-a-float-parameter',
-        ),
         pytest.param(
             DISPATCH_MODEL,
             'variables.p',

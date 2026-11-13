@@ -140,11 +140,7 @@ An `Assumption` has three fields:
 - `description` is the text that a refusal ends with.
 
 `holds` and `where` are both a [`Mask`](#nodes-and-conditions), the resolved
-form of a condition. An assumption may contain a `VariableDefined`, which is
-true where the variable exists, and a `ConstraintDefined`, which is true where
-the constraint has a row. A tool checks such an assumption once it knows the
-rows of the model, before it solves
-([rows of the model](language/assumptions.md#rows-of-the-model)). [`assumption_message`](program.md#mathspec.program.assumption_message)
+form of a condition. [`assumption_message`](program.md#mathspec.program.assumption_message)
 returns the message a tool prints for
 an assumption that the data does not meet:
 
@@ -167,11 +163,7 @@ the colon is the description that the file sets.
 
 `program.parameters[name].missing` is what the file sets under
 [`missing:`](language/absence.md#missing) for a missing row of that parameter.
-It is
-`'refused'`, `'absent'`, the value that a tool uses for the row, or a
-`MissingBy`. A `MissingBy` reads the label that the map `column` of the
-subject `by` gives the coordinate: the row takes `fill[label]` where `fill`
-names the label, and `otherwise` at every other coordinate.
+It is `'refused'`, `'absent'`, or the value that a tool uses for the row.
 `program.relations` has one table per relation and per subject with
 [maps](language/relations.md#the-data-contract), named after it, and each map
 is one of its `values`. `program.relations[name].missing` is `'refused'` or

@@ -30,7 +30,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{link\_eff}`$ | `link_eff` over $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$, where the data has no row: $`0`$ where `bus[zone]` is `north`, `absent` where `bus[zone]` is `south`, `refused` otherwise |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
@@ -612,12 +612,6 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{zone}(g,\ t)} \
 
 ```math
 \mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 \qquad \forall\, g \in \mathcal{G}
-```
-
-**`every_dispatch_has_a_start_row`**
-
-```math
-\mathrm{starts}_{g,t} \text{ has a row} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, p_{g,t} \text{ exists}
 ```
 
 **`flexible_units_have_headroom`**

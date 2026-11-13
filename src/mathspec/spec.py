@@ -42,7 +42,6 @@ from mathspec.program import (
     DimensionDtype,
     ObjectiveSense,
     ParameterDtype,
-    ParameterReading,
     PiecewiseMethod,
     Program,
     Relation,
@@ -76,7 +75,6 @@ __all__ = [
     'GivenVariableSpec',
     'MacroSpec',
     'MapSpec',
-    'MissingBySpec',
     'ObjectiveSpec',
     'ParameterSpec',
     'PiecewiseLinkSpec',
@@ -426,90 +424,6 @@ class DimensionSpec(_StrictSpec):
         return v
 
 
-def _a_reading(v: object) -> object:
-    """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number."""
-    if v is None:
-        raise _missing_null(
-            'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
-        )
-    if v in ('inf', '-inf'):
-        return float(cast('str', v))
-    if isinstance(v, str) and v not in get_args(RelationMissing):
-        msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
-        raise ValueError(msg)
-    if isinstance(v, float) and math.isnan(v):
-        msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
-        raise ValueError(msg)
-    return v
-
-
-def _on_dtype(v: object, dtype: object) -> object:
-    """*v* as a float where *dtype* is ``float`` and *v* an integer, so a spec holds one number for ``1`` and ``1.0``."""
-    return float(v) if dtype == 'float' and isinstance(v, int) and not isinstance(v, bool) else v
-
-
-def _misfit(v: ParameterReading, dtype: ParameterDtype) -> str | None:
-    """Why *v* cannot fill a row of a *dtype* column, or ``None`` where it can: a label has no value to fill."""
-    if dtype == 'str' and not isinstance(v, str):
-        return (
-            f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
-        )
-    if isinstance(v, str):
-        return None
-    if dtype == 'bool' and not isinstance(v, bool):
-        return f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
-    if dtype != 'bool' and isinstance(v, bool):
-        return f'missing: {_as_yaml(v)} on a {dtype} parameter, which takes a number. Write 1 or 0.'
-    if dtype == 'int' and isinstance(v, float):
-        return (
-            f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
-        )
-    return None
-
-
-_Reading = Annotated[RelationMissing | bool | int | float, BeforeValidator(_a_reading), WithJsonSchema(_MISSING_SCHEMA)]
-
-
-class MissingBySpec(_StrictSpec):
-    """A ``missing:`` that reads a missing row by the label a map gives its coordinate.
-
-    ``by:`` names one map of a subject over dimensions of the parameter, as
-    ``subject[map]``. ``fill:`` maps labels of that map to a reading each, and
-    ``otherwise:`` reads every other coordinate, ``refused`` where it is left
-    out. Each reading is one that a plain ``missing:`` takes::
-
-        maps:
-          entity:
-            component: component
-        parameters:
-          sign:
-            dims: [entity]
-            missing:
-              by: entity[component]
-              fill: {Load: -1, ShuntImpedance: -1}
-              otherwise: 1
-    """
-
-    _label: ClassVar[str] = "a parameter's 'missing:'"
-
-    by: str
-    fill: ByName[_Reading]
-    otherwise: _Reading = 'refused'
-
-    @field_validator('fill', mode='before')
-    @classmethod
-    def _names_a_label(cls, v: object) -> object:
-        """A ``fill:`` with no label reads every missing row as ``otherwise:``, which a plain ``missing:`` says."""
-        if v == {}:
-            raise ValueError('lists no label. Name at least one, or write the reading itself as missing:.')
-        return v
-
-    @property
-    def readings(self) -> tuple[ParameterReading, ...]:
-        """Every reading a missing row may take, by label, ``otherwise`` last."""
-        return (*self.fill.values(), self.otherwise)
-
-
 class ParameterSpec(_StrictSpec):
     """A declared parameter with dims and dtype, the coordinates it has, and what a missing row of its data means."""
 
@@ -526,38 +440,51 @@ class ParameterSpec(_StrictSpec):
     """The condition that limits the coordinates of the parameter inside its ``in:``, in the condition grammar. Where it
     is false, the parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
-    missing: _Reading | MissingBySpec = 'refused'
+    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
 
     @field_validator('missing', mode='before')
     @classmethod
-    def _a_mapping_is_by(cls, v: object, info: ValidationInfo[object]) -> object:
-        """A mapping is a [`MissingBySpec`][], so a refusal names the form written and not each form ``missing:`` takes.
+    def _a_reading_or_a_value(cls, v: object, info: ValidationInfo[object]) -> object:
+        """``inf`` is a string to YAML and a number to the expression grammar, so it is taken as the number.
 
-        A number on a float parameter loads as a float, in a mapping too, so ``1`` and ``1.0`` are one spec and write one
-        text.
+        A number on a float parameter loads as a float, so ``1`` and ``1.0`` are one spec and write one text.
         """
-        dtype = info.data.get('dtype')
-        if not isinstance(v, dict):
-            return _on_dtype(_a_reading(v), dtype)
-        by = cast('dict[str, object]', v)
-        if isinstance(fill := by.get('fill'), dict):
-            by = {**by, 'fill': {label: _on_dtype(x, dtype) for label, x in cast('dict[str, object]', fill).items()}}
-        if 'otherwise' in by:
-            by = {**by, 'otherwise': _on_dtype(by['otherwise'], dtype)}
-        return MissingBySpec.model_validate(by)
+        if v is None:
+            raise _missing_null(
+                'a parameter', 'Write absent for a row that is not there, or leave the key out for refused.'
+            )
+        if v in ('inf', '-inf'):
+            return float(cast('str', v))
+        if isinstance(v, str) and v not in get_args(RelationMissing):
+            msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
+            raise ValueError(msg)
+        if isinstance(v, float) and math.isnan(v):
+            msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
+            raise ValueError(msg)
+        if info.data.get('dtype') == 'float' and isinstance(v, int) and not isinstance(v, bool):
+            return float(v)
+        return v
 
     @model_validator(mode='after')
     def _a_value_fits_the_dtype(self) -> ParameterSpec:
         """A value fills rows of the column, so it has the column's dtype, and a label has none."""
-        if msg := next(filter(None, (_misfit(v, self.dtype) for v in self.readings)), None):
+        v = self.missing
+        if self.dtype == 'str' and not isinstance(v, str):
+            msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
+            raise ValueError(msg)
+        if isinstance(v, str):
+            return self
+        if self.dtype == 'bool' and not isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a bool parameter, which takes true or false.'
+            raise ValueError(msg)
+        if self.dtype != 'bool' and isinstance(v, bool):
+            msg = f'missing: {_as_yaml(v)} on a {self.dtype} parameter, which takes a number. Write 1 or 0.'
+            raise ValueError(msg)
+        if self.dtype == 'int' and isinstance(v, float):
+            msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
             raise ValueError(msg)
         return self
-
-    @property
-    def readings(self) -> tuple[ParameterReading, ...]:
-        """Every reading a missing row may take: the one ``missing:`` names, or each of a [`MissingBySpec`][]."""
-        return self.missing.readings if isinstance(self.missing, MissingBySpec) else (self.missing,)
 
 
 class BoundsSpec(_StrictSpec):

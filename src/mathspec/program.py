@@ -51,7 +51,6 @@ __all__ = [
     'Connective',
     'Constant',
     'Constraint',
-    'ConstraintDefined',
     'ConstraintSense',
     'CountComparison',
     'DeclaredDtype',
@@ -74,7 +73,6 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
-    'MissingBy',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -88,7 +86,6 @@ __all__ = [
     'ParameterDefined',
     'ParameterDtype',
     'ParameterMissing',
-    'ParameterReading',
     'ParameterReference',
     'Partition',
     'Piecewise',
@@ -154,36 +151,9 @@ RelationMissing = Literal['refused', 'absent']
 key. Under ``absent``, that combination has no row.
 """
 
-ParameterReading = RelationMissing | bool | float
-"""What a missing row of a parameter reads as: a value of [`RelationMissing`][], or the value that the row takes."""
-
-
-@dataclass(frozen=True)
-class MissingBy:
-    """A ``missing:`` that reads a missing row by the label a map gives its coordinate.
-
-    At a coordinate with no row, the parameter reads as the [`fill`][] of the
-    label that the map [`column`][] of the subject [`by`][] gives that
-    coordinate, and as [`otherwise`][] where [`fill`][] names no such label.
-    """
-
-    by: str
-    """The subject whose map gives each coordinate its label. Its own columns are over dimensions of the parameter."""
-    column: str
-    """The map of [`by`][] that gives the label."""
-    fill: Mapping[str, ParameterReading]
-    """The reading of a missing row, per label of [`column`][]."""
-    otherwise: ParameterReading = 'refused'
-    """The reading of a missing row at a label that [`fill`][] does not name, or where [`column`][] gives no label."""
-
-    @property
-    def readings(self) -> tuple[ParameterReading, ...]:
-        """Every reading a missing row may take, by label, [`otherwise`][] last."""
-        return (*self.fill.values(), self.otherwise)
-
-
-ParameterMissing = ParameterReading | MissingBy
-"""The values of ``missing:`` on a parameter: one reading for every missing row, or a [`MissingBy`][]."""
+ParameterMissing = RelationMissing | bool | float
+"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], or the value that a missing row takes.
+"""
 
 VariableMissing = Literal['absent'] | float
 """The values of ``missing:`` on a variable. Under ``absent``, the default, a term that contains the variable has no row
@@ -770,11 +740,6 @@ class Parameter:
     row at a key combination one of them has no row for, before ``where`` drops anything and before ``missing`` fills
     anything. A value column of the relation plays no part.
     """
-
-    @property
-    def readings(self) -> tuple[ParameterReading, ...]:
-        """Every reading a missing row may take: the one ``missing`` names, or each of a [`MissingBy`][]."""
-        return self.missing.readings if isinstance(self.missing, MissingBy) else (self.missing,)
 
 
 @dataclass(frozen=True)
@@ -1410,18 +1375,6 @@ class VariableDefined:
 
 
 @dataclass(frozen=True)
-class ConstraintDefined:
-    """True at the coordinates where the named constraint has a row. Only an assumption reads one.
-
-    A row exists where the constraint's ``where`` holds and every term outside
-    a sum is present, which the data alone decides, before any solve.
-    """
-
-    name: str
-    dims: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class ParameterComparison:
     """Compare a parameter against a literal, element-wise."""
 
@@ -1602,7 +1555,6 @@ TypedCondition = (
     | ExpressionComparison
     | ParameterDefined
     | VariableDefined
-    | ConstraintDefined
     | DimensionComparison
     | DimensionPosition
     | RelationComparison
@@ -1677,7 +1629,6 @@ def _atom_dims(atom: TypedCondition) -> frozenset[str]:
             | ExpressionComparison()
             | ParameterDefined()
             | VariableDefined()
-            | ConstraintDefined()
             | CountComparison()
             | TranslatedCondition()
             | RelationComparison()
@@ -1706,14 +1657,7 @@ def _atom_names(atom: TypedCondition) -> frozenset[str]:
     than a name silently dropped at the first spec to use it.
     """
     match atom:
-        case (
-            ParameterComparison()
-            | ParameterDefined()
-            | VariableDefined()
-            | ConstraintDefined()
-            | RelationComparison()
-            | RelationDefined()
-        ):
+        case ParameterComparison() | ParameterDefined() | VariableDefined() | RelationComparison() | RelationDefined():
             return frozenset({atom.name})
         case RelationPairComparison():
             return frozenset({atom.name, atom.other})

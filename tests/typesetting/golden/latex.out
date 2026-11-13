@@ -32,7 +32,7 @@
 \item[{$\mathrm{is\_flexible}$}] \texttt{is\_flexible} over $\mathcal{G}$, \texttt{false} where the data has no row
 \item[{$\mathrm{lead}$}] \texttt{lead} over $\mathcal{G}$
 \item[{$\mathrm{link\_eff}$}] \texttt{link\_eff} over $\left( u,\ g \right) \in \mathrm{connection}$, $1$ where the data has no row
-\item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{U} \times \mathcal{T}$, where the data has no row: $0$ where \texttt{bus[zone]} is \texttt{north}, \texttt{absent} where \texttt{bus[zone]} is \texttt{south}, \texttt{refused} otherwise
+\item[{$\mathrm{load}$}] \texttt{load} over $\mathcal{U} \times \mathcal{T}$
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
@@ -195,7 +195,6 @@
 \text{bounds\_do\_not\_cross} && \mathrm{p}^{\mathrm{min}}_{g} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G} \\
 \text{budget\_covers\_the\_peak} && \sum_{g \in \mathcal{G}} \mathrm{p}^{\mathrm{max}}_{g} & \ge \mathrm{budget} \\
 \text{efficiency\_is\_a\_fraction} && \mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 &  && \forall\, g \in \mathcal{G} \\
-\text{every\_dispatch\_has\_a\_start\_row} && \mathrm{starts}_{g,t} \text{ has a row} &  && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, p_{g,t} \text{ exists} \\
 \text{flexible\_units\_have\_headroom} && \mathrm{p}^{\mathrm{min}}_{g} & < \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G} \,:\, \mathrm{is\_flexible}_{g} \\
 \text{lead\_times\_are\_short} && \mathrm{lead}_{g} & \le 3 && \forall\, g \in \mathcal{G} \\
 \text{northern\_demand\_is\_real} && \mathrm{load}_{u,t} & \ge 0 && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone}(u) = \text{'}\mathrm{north}\text{'} \\

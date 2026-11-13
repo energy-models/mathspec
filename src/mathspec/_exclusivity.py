@@ -2,15 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""What a model's conditions decide without data: whether two cases overlap, and whether entries leave a gap.
+"""Can two of a named expression's cases claim one coordinate? Decided without data.
 
 Each ``when`` is read over cells: regions of one subject's value on which every
 atom is constant. The cells of the pair's subjects are multiplied out, both
 masks are evaluated on each, and a cell where both hold is a witness.
 Independence between subjects over-approximates, so it can manufacture a
-witness but never hide one. The overlap rule is stated in
-``docs/reference/language/expressions.md``, the gap rule in
-``docs/reference/language/assumptions.md``.
+witness but never hide one. The rule itself is stated in
+``docs/reference/language/expressions.md``.
 """
 
 from __future__ import annotations
@@ -27,7 +26,6 @@ from mathspec.program import (
     BooleanLiteral,
     ConditionReference,
     Constant,
-    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -94,85 +92,6 @@ def overlapping(
                 f'Narrow one of the two `when:` strings by the negation of the other, or drop the wider one '
                 f'and let `otherwise:` cover that region.'
             )
-
-
-@dataclass(frozen=True)
-class Existence:
-    """The ``where`` each of the file's own variables and constraints exists under, ``None`` for everywhere."""
-
-    variables: Mapping[str, Mask | None]
-    constraints: Mapping[str, Mask | None]
-
-
-def left_out(
-    holds: Condition,
-    where: Condition | None,
-    entries: Existence,
-    dtypes: Mapping[str, DeclaredDtype],
-    defaults: Mapping[str, bool | float],
-) -> str | None:
-    """A region where the ``where:`` of the model's entries alone make an assumption fail, rendered.
-
-    Each bare variable name reads as the ``where`` the variable exists under,
-    and each bare constraint name as the ``where`` of the constraint. A row
-    exists only inside its ``where``, so data with a row in the region fails
-    the assumption. A constraint row can still be absent inside its ``where``,
-    which only the data decides, so ``None`` proves nothing about the data.
-
-    Raises:
-        Undecidable: A name whose ``where`` another file declares, a constraint
-            whose ``where`` would widen the assumption's ``where:``, two
-            variables whose ``where`` name each other, an atom the cells do
-            not decide, or more cells than [`CELL_BUDGET`][].
-    """
-    written = _written_out(holds, entries, wider=True)
-    within = BooleanLiteral(value=True) if where is None else _written_out(where, entries, wider=False)
-    return _witness(within, Not(written), dtypes, defaults)
-
-
-def _written_out(
-    node: Condition, entries: Existence, *, wider: bool, through: frozenset[str] = frozenset()
-) -> Condition:
-    """*node* with each bare variable or constraint name replaced by the ``where`` it exists under, recursively.
-
-    A variable exists exactly where its ``where`` holds, but a constraint row
-    only within it, so a constraint is written out only where *wider* says a
-    wider region keeps a gap a real one: in ``holds:`` and not under a ``NOT``.
-    *through* holds the variables being written out, since nothing yet refuses
-    two variables whose ``where`` name each other.
-    """
-
-    def inner(child: Condition, *, flip: bool = False) -> Condition:
-        return _written_out(child, entries, wider=wider != flip, through=through)
-
-    match node:
-        case VariableDefined(name=name) | ConstraintDefined(name=name):
-            declared = entries.variables if isinstance(node, VariableDefined) else entries.constraints
-            if name not in declared:
-                msg = f"the `where:` of '{name}' is declared in another file"
-                raise Undecidable(msg)
-            if isinstance(node, ConstraintDefined) and not wider:
-                msg = f"a row of '{name}' can be absent where its `where:` holds"
-                raise Undecidable(msg)
-            if name in through:
-                msg = f"the `where:` of '{name}' names itself through another variable"
-                raise Undecidable(msg)
-            mask = declared[name]
-            return (
-                BooleanLiteral(value=True)
-                if mask is None
-                else _written_out(mask.root, entries, wider=wider, through=through | {name})
-            )
-        case Not(operand=operand):
-            return Not(inner(operand, flip=True))
-        case And(left=left, right=right):
-            return And(inner(left), inner(right))
-        case Or(left=left, right=right):
-            return Or(inner(left), inner(right))
-        case ConditionReference(body=body):
-            return inner(body)
-        case _:
-            return node
 
 
 def _witness(
@@ -434,7 +353,7 @@ def _subject_of(node: TypedCondition) -> Subject:
     match node:
         case ParameterDefined(name=name) | ParameterComparison(name=name):
             return Subject('param', name)
-        case VariableDefined(name=name) | ConstraintDefined(name=name):
+        case VariableDefined(name=name):
             return Subject('variable', name)
         case DimensionComparison(name=name):
             return Subject('dim', name)
@@ -668,7 +587,7 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             if isinstance(value, bool):
                 return value
             return value not in (Special.NULL, Special.POS_INF, Special.NEG_INF)
-        case VariableDefined() | ConstraintDefined():
+        case VariableDefined():
             return bool(value)
         case RelationPairComparison(op=op):
             if any(cell[label] is Special.NULL for label in _labels_read(node)):

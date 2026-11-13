@@ -112,7 +112,7 @@ class Namespace:
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
-            if isinstance(pd.missing, bool | int | float) and pd.where is None and not pd.in_
+            if not isinstance(pd.missing, str) and pd.where is None and not pd.in_
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: pd.dims for p, pd in parameters.items()},
@@ -271,9 +271,6 @@ class Namespace:
     def unknown(self, name: str, context: str, *, allow_dims: bool, formals: Iterable[str] = ()) -> str:
         """The refusal for a *name* declared nowhere, listing what it could have been.
 
-        A constraint's name in a condition is declared, but only an assumption
-        may test it, so it gets a refusal of its own.
-
         Args:
             name: The name the file wrote.
             context: The entry it was found in.
@@ -283,11 +280,6 @@ class Namespace:
                 value, lists the variables instead.
             formals: A macro's formals, listed first when there are any.
         """
-        if allow_dims and name in self.constraints:
-            return (
-                f"{context}: '{name}' is a constraint, and only an assumption's `holds:` or `where:` may test "
-                f"whether it has a row, by its bare name. Test the `where:` of '{name}' here instead."
-            )
         shown: list[tuple[str, Iterable[str]]] = [('Formals', formals)] if formals else []
         shown += (
             [
@@ -373,13 +365,8 @@ def resolve_condition(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-    *,
-    rows: bool = False,
 ) -> Condition | None:
     """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
-
-    *rows* is set for an assumption, where a bare constraint name asks whether
-    the constraint has a row.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -387,7 +374,7 @@ def resolve_condition(
         problems appended to *errors*.
     """
     before = len(errors)
-    resolved = ConditionResolver(ns, context, errors, self_variable, rows).build(node)
+    resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
     return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
@@ -397,8 +384,6 @@ def resolve_condition_text(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-    *,
-    rows: bool = False,
 ) -> Condition | None:
     """Parse and resolve one condition as [`resolve_condition`][] does, a parse failure appended to *errors*.
 
@@ -412,7 +397,7 @@ def resolve_condition_text(
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
-    return resolve_condition(node, ns, context, errors, self_variable, rows=rows)
+    return resolve_condition(node, ns, context, errors, self_variable)
 
 
 def resolve_expression_text(

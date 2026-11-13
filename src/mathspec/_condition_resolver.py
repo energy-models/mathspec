@@ -46,7 +46,6 @@ from mathspec.program import (
     Condition,
     ConditionReference,
     Constant,
-    ConstraintDefined,
     CountComparison,
     DimensionComparison,
     DimensionPosition,
@@ -92,17 +91,15 @@ class ConditionResolver:
     A node that cannot be typed comes back unresolved with its refusal
     appended to ``errors``; every sibling is still read, so a mask with two
     faults reports both. ``self_variable`` is the variable whose own
-    ``where`` is being read, which may not ask whether it exists. ``rows``
-    is set for an assumption, the one place a bare constraint name asks
-    whether the constraint has a row. A side that is an expression is built
-    by an [`ExpressionResolver`][] over the same namespace.
+    ``where`` is being read, which may not ask whether it exists. A side
+    that is an expression is built by an [`ExpressionResolver`][] over
+    the same namespace.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
-    rows: bool = False
 
     @property
     def _expressions(self) -> ExpressionResolver:
@@ -135,28 +132,13 @@ class ConditionResolver:
         """Every named condition this file declares or is given."""
         return self.ns.conditions | self.ns.given_conditions
 
-    @property
-    def _variable_value_rewrite(self) -> str:
-        """The rewrite for a variable's value in a condition, which the solver decides only after every condition is read."""
-        if self.rows:
-            return (
-                'The solver decides its value, so an assumption tests only whether it has a row: write its bare '
-                'name, or state the bound as a constraint.'
-            )
-        return 'Test only parameters and dimension coordinates.'
-
     def _child(self, node: Condition | UnresolvedConditionNode) -> Condition:
         """A connective's child, typed as resolved: an unresolved one survives only with its refusal appended."""
         return cast('Condition', self.build(node))
 
     def _bare_name(self, node: NameNode) -> Condition | UnresolvedConditionNode:
-        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence.
-
-        In an assumption, a constraint's name asks whether the constraint has a row.
-        """
+        """A bare name: a named condition's body, a parameter's or relation's definedness, or a variable's existence."""
         ns, context = self.ns, self.context
-        if self.rows and node.name in ns.constraints:
-            return self._constraint_row(node)
         if node.name in ns.conditions:
             try:
                 return ns.condition(node.name, context)
@@ -172,7 +154,7 @@ class ConditionResolver:
                 declared = ns.spec.parameters.get(node.name)
                 if (
                     declared is not None
-                    and set(declared.readings) == {'refused'}
+                    and declared.missing == 'refused'
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
                     and not declared.in_
@@ -183,9 +165,9 @@ class ConditionResolver:
                         else f'Declare `missing: absent` or a value, or compare the value: where: "{node.name} > 0".'
                     )
                     self.errors.append(
-                        f"{context}: '{node.name}' is declared dtype: {declared.dtype}, and missing: refuses every "
-                        f'missing row, so it has a row at every coordinate and the bare name is true at every '
-                        f'coordinate — the mask has no effect. {rewrite}'
+                        f"{context}: '{node.name}' is declared dtype: {declared.dtype} and missing: refused, so it "
+                        f'has a row at every coordinate and the bare name is true at every coordinate — the mask '
+                        f'has no effect. {rewrite}'
                     )
                     return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
@@ -214,19 +196,6 @@ class ConditionResolver:
                 else:
                     return VariableDefined(node.name, ns.leaf_dims[node.name])
         return node
-
-    def _constraint_row(self, node: NameNode) -> Condition | UnresolvedConditionNode:
-        """Whether constraint *node* has a row. Constraints have a namespace of their own, so a shared name is refused."""
-        ns = self.ns
-        other = 'named condition' if node.name in self.conditions else ns.kind(node.name)
-        if other is not None:
-            self.errors.append(
-                f"{self.context}: '{node.name}' names a constraint and a {other}, so the bare name is ambiguous. "
-                f'Rename one of the two.'
-            )
-            return node
-        declared = ns.spec.constraints.get(node.name) or ns.spec.given.constraints[node.name]
-        return ConstraintDefined(node.name, tuple(declared.dims))
 
     def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
         """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=subject[map])`` — the two operators that read a condition and answer one.
@@ -433,8 +402,8 @@ class ConditionResolver:
                 )
             elif carries_variable(side):
                 self.errors.append(
-                    f'{context}: a condition compares expressions, and one side names a variable. '
-                    f'{self._variable_value_rewrite}'
+                    f'{context}: a condition compares expressions, and one side names a variable. Test only '
+                    f'parameters and dimension coordinates.'
                 )
             elif degree.calls_dual(side):
                 self.errors.append(
@@ -568,8 +537,10 @@ class ConditionResolver:
                     f"{context}: where references the given expression '{left_name}'. {GIVEN_IN_A_CONDITION}"
                 )
             case 'variable':
-                head = f"'{left_name}' is a variable" if self.rows else f"where references variable '{left_name}'"
-                self.errors.append(f'{context}: {head}. {self._variable_value_rewrite}')
+                self.errors.append(
+                    f"{context}: where references variable '{left_name}'. Test only parameters "
+                    f'and dimension coordinates.'
+                )
         return node
 
     def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:
