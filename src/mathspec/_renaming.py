@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from collections.abc import Callable, Mapping
 from functools import partial
-from typing import TYPE_CHECKING, Literal, cast, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Literal, cast, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -38,12 +38,12 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
     """*source* with each name that *names* changes replaced by its new name.
 
     A name is replaced everywhere it occurs in the spec: as the key of its
-    entry, in ``dims:``, on the sides of a relation, in ``adds_to:``, under
-    ``given:``, and in the text of every expression, ``where:``, bound, case
-    and assumption. Only whole names are replaced, and the text around each
-    name is unchanged. A relation column named after its dimension is renamed
-    with the dimension, because an expression refers to a relation by its
-    columns.
+    entry, in ``dims:``, under ``maps:``, in ``adds_to:``, under ``given:``,
+    and in the text of every expression, ``where:``, bound, case and
+    assumption. Only whole names are replaced, and the text around each name
+    is unchanged. A map or a relation column named after its dimension is
+    renamed with the dimension, because an expression reads a map as
+    ``subject[map]``.
 
     Prose and labels stay as written: a description, the labels of
     ``one_of:``, the name of a case or of a piecewise link, and the arguments
@@ -74,7 +74,8 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
             name of an entry that is not renamed, or an argument of a macro
             whose template uses the old name.
             Also when two names get the same new name, or when an old or a new
-            name is a relation column that is not named after its dimension.
+            name is a map or a relation column that is not named after its
+            dimension.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *names* is neither a mapping nor a function.
     """
@@ -92,9 +93,12 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
 
 
 def _declared(spec: Spec) -> dict[str, str]:
-    """Every name that *spec* declares or lists under ``given:``, with the kind of its entry for a refusal."""
+    """Every name that *spec* declares or lists under ``given:``, with the kind of its entry for a refusal.
+
+    ``maps:`` declares no name of its own: its keys are dimensions and relations.
+    """
     declared = {name: GIVEN_KINDS[kind] for kind in GIVEN_KINDS for name in getattr(spec.given, kind)}
-    for section in (*SHARED_SECTIONS, *OWNED_SECTIONS):
+    for section in (s for s in (*SHARED_SECTIONS, *OWNED_SECTIONS) if s != 'maps'):
         declared |= dict.fromkeys(getattr(spec, section), _singular(section))
     return declared
 
@@ -104,7 +108,7 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
 
     A token in text is renamed wherever it has the spelling, so a new name that
     is the argument of a macro whose template uses the old name, or a name that
-    is a relation column named after something else, would change an
+    is a map or a relation column named after something else, would change an
     expression without a refusal.
     """
     for old in names:
@@ -116,12 +120,15 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
             raise LanguageError(msg)
     changed = {old: new for old, new in names.items() if new is not None and new != old}
     columns = {
-        column: relation
+        column: f"a column of the relation '{relation}'"
         for relation, entry in spec.relations.items()
-        for side in (entry.key, entry.values)
-        if isinstance(side, Mapping)
-        for column, dimension in side.items()
+        for column, dimension in entry.pairs
         if column != dimension
+    } | {
+        name: f"a map of '{subject}'"
+        for subject, maps in spec.maps.items()
+        for name, entry in maps.items()
+        if name != entry.refers_to
     }
     for old, new in changed.items():
         for macro, entry in spec.macros.items():
@@ -133,8 +140,8 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
                 raise LanguageError(msg)
         if (column := old if old in columns else new) in columns:
             msg = (
-                f"rename changes '{old}' to '{new}', and '{column}' is also a column of the relation "
-                f"'{columns[column]}'. Give the column another name in the file, or choose another name."
+                f"rename changes '{old}' to '{new}', and '{column}' is also {columns[column]}. "
+                f'Give it another name in the file, or choose another name.'
             )
             raise LanguageError(msg)
     for old, new in changed.items():
@@ -162,7 +169,8 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
     with prose or labels needs a place in ``_KEPT`` or ``_LABELLED``. A description, the labels
     of ``one_of:`` and a fixed choice (a ``Literal``, such as a dtype) are
     kept. A field of entries has its keys renamed, except ``cases:`` and
-    ``links:``, whose keys are labels of rows. Every other string is text that
+    ``links:``, whose keys are labels of rows, and ``maps:`` holds entries by
+    subject and then by map. Every other string is text that
     may contain names. An entry that is not a mapping is a short form of one:
     an expression on one line, or a piecewise link written as a list.
     """
@@ -176,11 +184,7 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
         if field in _KEPT or _is_choice(annotation):
             out[field] = value
         elif (each := _entries_of(annotation)) is not None:
-            labels = field in _LABELLED
-            out[field] = {
-                (key if labels else names.get(key, key)): _renamed(each, item, names)
-                for key, item in cast('Mapping[str, object]', value).items()
-            }
+            out[field] = _keyed(each, value, names, labels=field in _LABELLED)
         elif (model := _model_in(annotation)) is None:
             out[field] = _in_text(value, names)
         elif isinstance(value, list):
@@ -188,6 +192,22 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
         else:
             out[field] = _renamed(model, value, names)
     return out
+
+
+def _keyed(annotation: object, value: object, names: Mapping[str, str], *, labels: bool = False) -> object:
+    """Entries by key, each as *annotation* is written, with each key renamed unless the keys are *labels*."""
+    nested = _entries_of(annotation)
+    model = _model_in(annotation)
+    return {
+        (key if labels else names.get(key, key)): (
+            _keyed(nested, item, names)
+            if nested is not None
+            else _renamed(model, item, names)
+            if model is not None
+            else _in_text(item, names)
+        )
+        for key, item in cast('Mapping[str, object]', value).items()
+    }
 
 
 def _macro(entry: Mapping[str, object], names: Mapping[str, str]) -> dict[str, object]:
@@ -221,10 +241,15 @@ def _token(match: re.Match[str], text: str, names: Mapping[str, str]) -> str:
     return names[name]
 
 
-def _entries_of(annotation: object) -> type[BaseModel] | None:
-    """The class of each entry where a field maps names to entries, as ``parameters:`` and ``cases:`` do."""
+def _entries_of(annotation: object) -> object | None:
+    """The annotation of each entry where a field maps names to entries, as ``parameters:`` and ``cases:`` do."""
+    if get_origin(annotation) is Annotated:
+        annotation = get_args(annotation)[0]
     origin = get_origin(annotation)
-    return _model_in(get_args(annotation)[1]) if isinstance(origin, type) and issubclass(origin, Mapping) else None
+    if not (isinstance(origin, type) and issubclass(origin, Mapping)):
+        return None
+    each = get_args(annotation)[1]
+    return each if _model_in(each) is not None else None
 
 
 def _model_in(annotation: object) -> type[BaseModel] | None:

@@ -108,7 +108,7 @@ from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, SchemaError, did_you_mean, schema_error
 from mathspec.program import variables_of
-from mathspec.spec import GivenSpec, Spec
+from mathspec.spec import GivenSpec, MapSpec, Spec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -116,12 +116,23 @@ if TYPE_CHECKING:
     from mathspec.program import Program
     from mathspec.spec import DimensionSpec
 
-SHARED_SECTIONS = ('dimensions', 'relations')
+SHARED_SECTIONS = ('dimensions', 'relations', 'maps')
 
-SETTINGS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 'relations': frozenset({'missing'})}
-"""The fields of a dimension or a relation, other than ``description``, that a patch may change. A patch may change no
-other field of one that its base declares.
+SETTINGS: dict[str, frozenset[str]] = {
+    'dimensions': frozenset({'ordered'}),
+    'relations': frozenset({'missing'}),
+    'maps': frozenset({'missing'}),
+}
+"""The fields of a dimension, a relation or a map, other than ``description``, that a patch may change. A patch may
+change no other field of one that its base declares.
 """
+
+
+class _Maps(BaseModel):
+    """The ``maps:`` section one level flatter, each map under ``subject[map]``, so it folds as a section of entries."""
+
+    maps: Frozen[str, MapSpec]
+
 
 OWNED_SECTIONS = tuple(
     name
@@ -163,7 +174,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     Raises:
         LanguageError: A fragment does not load on its own; two fragments
             declare one name; two fragments say different things about one
-            dimension, relation or given entry; a fragment reads a name as
+            dimension, relation, map or given entry; a fragment reads a name as
             something other than what its sibling introduces, as another kind
             of thing, or over fewer dimensions than its body carries; a fragment
             adds a term to a variable, a parameter, a constraint or a
@@ -180,9 +191,14 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     merged: dict[str, object] = {'version': _one_version(read)}
     if description is not None:
         merged['description'] = description
-    for section in SHARED_SECTIONS:
+    for section in ('dimensions', 'relations'):
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
+    flat: dict[str, dict[str, object]] = {
+        name: {'maps': _flat_maps(sections.get('maps'))} for name, sections in read.items()
+    }
+    if agreed := _agreed(flat, 'maps', 'map', 'give one of them a name of its own', owner=_Maps):
+        merged['maps'] = _nested_maps(agreed)
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
         kind: _agreed(asked, kind, label, 'read it over the same dims', owner=GivenSpec)
@@ -279,17 +295,24 @@ def _same(owner: type[BaseModel], section: str, a: object, b: object, *, aside: 
     return all(getattr(x, f) == getattr(y, f) for f in type(x).model_fields if f not in aside)
 
 
-def _restates(section: str, declared: object, restated: dict[str, object], *, aside: frozenset[str]) -> bool:
+def _restates(
+    section: str,
+    declared: object,
+    restated: dict[str, object],
+    *,
+    aside: frozenset[str],
+    owner: type[BaseModel] = Spec,
+) -> bool:
     """Whether a patch's *restated* fields declare an entry as *declared* does, each field in *aside* apart.
 
     A restatement the schema refuses on its own, such as a relation with no
-    ``key:``, does not say what the base says, so the patch's refusal names
+    ``dims:``, does not say what the base says, so the patch's refusal names
     the rewrite. A key the schema does not know stays a schema error, which
     names the near-miss.
     """
-    known = restated.keys() <= _entry_class(Spec, section).model_fields.keys()
+    known = restated.keys() <= _entry_class(owner, section).model_fields.keys()
     try:
-        return _same(Spec, section, declared, restated, aside=aside)
+        return _same(owner, section, declared, restated, aside=aside)
     except SchemaError:
         if not known:
             raise
@@ -719,6 +742,24 @@ def _entries(source: Source) -> dict[str, object]:
     return read_spec(source)
 
 
+def _flat_maps(section: object) -> dict[str, object]:
+    """A ``maps:`` section keyed by ``subject[map]``, each map written as a mapping, as [`_Maps`][] reads it."""
+    return {
+        f'{subject}[{role}]': {'refers_to': entry} if isinstance(entry, str) else entry
+        for subject, maps in _mapping(section).items()
+        for role, entry in _mapping(maps).items()
+    }
+
+
+def _nested_maps(flat: Mapping[str, object]) -> dict[str, dict[str, object]]:
+    """*flat* as the ``maps:`` section a file writes, under each subject."""
+    nested: dict[str, dict[str, object]] = {}
+    for key, entry in flat.items():
+        subject, _, role = key.partition('[')
+        nested.setdefault(subject, {})[role.removesuffix(']')] = entry
+    return nested
+
+
 def _mapping(value: object) -> dict[str, object]:
     """*value* as the mapping a section or an entry is, an absent one read as empty.
 
@@ -785,6 +826,15 @@ def _lay_over(base: dict[str, object], patch: dict[str, object], name: str) -> d
     for key, value in patch.items():
         if key == 'given':
             laid[key] = _given(_mapping(laid.get(key)), _section(value, key, name), name)
+        elif key == 'maps':
+            section = _section(value, key, name)
+            if dropped := [subject for subject, maps in section.items() if maps is None]:
+                raise LanguageError(
+                    f"patch '{name}' removes the maps of '{dropped[0]}', which a patch cannot change. Leave the "
+                    f'subject out of the patch, and remove the entries written over its maps one at a time.'
+                )
+            shared = _shared(_flat_maps(laid.get(key)), _flat_maps(section), key, name, owner=_Maps)
+            laid[key] = _nested_maps(shared)
         elif key in SHARED_SECTIONS:
             laid[key] = _shared(_mapping(laid.get(key)), _section(value, key, name), key, name)
         elif key in OWNED_SECTIONS:
@@ -846,8 +896,15 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
     return out
 
 
-def _shared(declared: dict[str, object], patch: dict[str, object], section: str, name: str) -> dict[str, object]:
-    """One ``dimensions`` or ``relations`` section: a patch adds one or restates one, never changes or drops it.
+def _shared(
+    declared: dict[str, object],
+    patch: dict[str, object],
+    section: str,
+    name: str,
+    *,
+    owner: type[BaseModel] = Spec,
+) -> dict[str, object]:
+    """One ``dimensions``, ``relations`` or ``maps`` section: a patch adds one or restates one, never changes or drops it.
 
     A patch may change the description and the [`SETTINGS`][] of one its
     base declares, and ``null`` puts back the default. A dimension may gain
@@ -871,7 +928,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
         changed = {f: v for f, v in _mapping(entry).items() if f in changeable}
         restated = {f: v for f, v in _mapping(entry).items() if f not in changeable}
         base, out[key] = out[key], _lay(out[key], changed)
-        was, now = (getattr(_read(Spec, section, e), 'ordered', False) for e in (base, out[key]))
+        was, now = (getattr(_read(owner, section, e), 'ordered', False) for e in (base, out[key]))
         if was and not now:
             raise LanguageError(
                 f"patch '{name}' says the {singular} '{key}' is not ordered, where its base declares it "
@@ -880,7 +937,7 @@ def _shared(declared: dict[str, object], patch: dict[str, object], section: str,
             )
         if changed and not restated:
             continue
-        if not _restates(section, out[key], restated, aside=changeable):
+        if not _restates(section, out[key], restated, aside=changeable, owner=owner):
             fields = ' and '.join(f'`{f}`' for f in sorted(changeable))
             raise LanguageError(
                 f"patch '{name}' declares the {singular} '{key}' as {entry!r}, where its base "

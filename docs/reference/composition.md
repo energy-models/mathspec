@@ -83,8 +83,8 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   generator: { dtype: str }
-relations:
-  Generator_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 parameters:
   Generator_p_nom: { dims: [generator] }
   Generator_marginal_cost: { dims: [generator] }
@@ -92,7 +92,7 @@ variables:
   Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
 expressions:
   Generator_injection:
-    expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+    expression: sum(Generator_p, over=generator, by=generator[bus])
     adds_to: Bus_injection
   Generator_cost:
     expression: sum(Generator_p * Generator_marginal_cost)
@@ -107,13 +107,13 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   load: { dtype: str }
-relations:
-  Load_bus: { key: load, values: bus }
+maps:
+  load: { bus: bus }
 parameters:
   Load_p_set: { dims: [snapshot, load] }
 expressions:
   Load_injection:
-    expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+    expression: -sum(Load_p_set, over=load, by=load[bus])
     adds_to: Bus_injection
 ```
 
@@ -134,9 +134,9 @@ dimensions:
   generator: {dtype: str}
   load: {dtype: str}
   snapshot: {dtype: int}
-relations:
-  Generator_bus: {key: generator, values: bus}
-  Load_bus: {key: load, values: bus}
+maps:
+  generator: {bus: bus}
+  load: {bus: bus}
 parameters:
   Generator_marginal_cost: {dims: [generator]}
   Generator_p_nom: {dims: [generator]}
@@ -151,8 +151,8 @@ expressions:
     expression: Generator_injection + Load_injection
     description: what the components put into a bus
   Generator_cost: sum(Generator_p * Generator_marginal_cost)
-  Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
-  Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
+  Generator_injection: sum(Generator_p, over=generator, by=generator[bus])
+  Load_injection: -sum(Load_p_set, over=load, by=load[bus])
   total_cost:
     dims: []
     expression: Generator_cost
@@ -176,20 +176,21 @@ The objective is the one that `network.yaml` sets.
 ### Each kind of entry
 
 Two fragments may share a [dimension](language/dimensions.md), a
-[relation](language/relations.md), a given entry or a sum.
+[relation](language/relations.md#relations), a [map](language/relations.md#maps), a given entry or a
+sum.
 
-| The entry                                         | What `merge` does                                                                                                                |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | accepts it from every fragment that declares it, where every fragment declares it the same way                                   |
-| a `description` on a shared dimension or relation | keeps the first wording in the list                                                                                              |
-| `ordered: true` on a shared dimension             | makes the dimension ordered if one fragment sets it                                                                              |
-| `missing:` on a shared relation                   | requires the same value from every fragment that declares the relation, where `missing: refused` and no `missing:` are one value |
-| an entry under `given:`                           | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))                        |
-| an expression with `adds_to:`                     | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                               |
-| `objective`                                       | takes it from the one fragment that sets it, and refuses a second                                                                |
-| `version`                                         | requires the same value from every fragment                                                                                      |
-| `description` at the top of a fragment            | drops it                                                                                                                         |
-| any other entry                                   | takes it from the one fragment that declares it, and refuses a second                                                            |
+| The entry                                              | What `merge` does                                                                                                      |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| a dimension, a relation or a map                       | accepts it from every fragment that declares it, where every fragment declares it the same way                         |
+| a `description` on a shared dimension, relation or map | keeps the first wording in the list                                                                                    |
+| `ordered: true` on a shared dimension                  | makes the dimension ordered if one fragment sets it                                                                    |
+| `missing:` on a shared relation or map                 | requires the same value from every fragment that declares it, where `missing: refused` and no `missing:` are one value |
+| an entry under `given:`                                | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))              |
+| an expression with `adds_to:`                          | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                     |
+| `objective`                                            | takes it from the one fragment that sets it, and refuses a second                                                      |
+| `version`                                              | requires the same value from every fragment                                                                            |
+| `description` at the top of a fragment                 | drops it                                                                                                               |
+| any other entry                                        | takes it from the one fragment that declares it, and refuses a second                                                  |
 
 ### Terms and sums
 
@@ -431,10 +432,10 @@ patched `dispatch` has no row at `old`.
 | a whole entry under a new name                                       | adds it                                                                                                                                                                        |
 | a named expression as a [bare string](language/named.md#expressions) | replaces only its body, `expression:` or `cases:`, and keeps its `dims:`, description and `adds_to:`, so the new body may have no dimension outside those `dims:`              |
 | `null` on an entry, a field or a section                             | applies the rule in [`null` in a patch](#null-in-a-patch)                                                                                                                      |
-| a dimension or a relation                                            | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
-| `description:` on a dimension or a relation of the base              | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
+| a dimension, a relation or a map                                     | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
+| `description:` on a dimension, a relation or a map of the base       | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
 | `ordered:` on a restated dimension                                   | makes the dimension ordered for `true`, and refuses `false` over an ordered dimension                                                                                          |
-| `missing:` on a relation, alone or with other fields                 | changes whether every key combination needs a row, as on a parameter                                                                                                           |
+| `missing:` on a relation or a map, alone or with other fields        | changes whether every combination needs a row, or every row a label, as on a parameter                                                                                         |
 | an entry under one kind of `given:`                                  | edits, adds or removes it like any entry, and keeps the other kinds                                                                                                            |
 | `version`, `description`                                             | replaces the value of the base                                                                                                                                                 |
 | a field that an earlier patch writes                                 | replaces that value                                                                                                                                                            |
@@ -517,19 +518,19 @@ A second call with the inverse map returns a spec with the
 
 ### What a rename changes
 
-| The spec has                                                                                        | What `rename` does                                                    |
-| --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| a name as the key of an entry, in `dims:`, on the sides of a relation, in `adds_to:` or in `given:` | replaces the name                                                     |
-| a name in an expression, `where:`, bound, case or assumption                                        | replaces the name, and keeps the spaces and line breaks around it     |
-| a relation column named after its dimension, such as `bus` in `Unit_bus[bus]`                       | replaces the column with the dimension                                |
-| a relation column named after something else, such as `bus0` in `{bus0: bus}`                       | keeps the column, and refuses a map that changes a name to or from it |
-| a longer name that contains a renamed name, such as `Unit_p_nom` for `Unit_p`                       | keeps the longer name                                                 |
-| a keyword of an operator, such as `over=`                                                           | keeps the keyword                                                     |
-| a quoted label, a label under `one_of:`, or a number such as `1e6`                                  | keeps the label or the number                                         |
-| the name of a case or of a piecewise link                                                           | keeps the name, because it is a label of rows                         |
-| an argument of a macro, and the template text that uses it                                          | keeps the argument                                                    |
-| a fixed value of a field, such as `domain: integer`                                                 | keeps the value                                                       |
-| a `description`                                                                                     | keeps the text as written                                             |
+| The spec has                                                                           | What `rename` does                                                |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| a name as the key of an entry, in `dims:`, under `maps:`, in `adds_to:` or in `given:` | replaces the name                                                 |
+| a name in an expression, `where:`, bound, case or assumption                           | replaces the name, and keeps the spaces and line breaks around it |
+| a map or a relation column named after its dimension, such as `bus` in `unit[bus]`     | replaces it with the dimension                                    |
+| a map or a relation column named after something else, such as `bus0` in `{bus0: bus}` | keeps it, and refuses a map that changes a name to or from it     |
+| a longer name that contains a renamed name, such as `Unit_p_nom` for `Unit_p`          | keeps the longer name                                             |
+| a keyword of an operator, such as `over=`                                              | keeps the keyword                                                 |
+| a quoted label, a label under `one_of:`, or a number such as `1e6`                     | keeps the label or the number                                     |
+| the name of a case or of a piecewise link                                              | keeps the name, because it is a label of rows                     |
+| an argument of a macro, and the template text that uses it                             | keeps the argument                                                |
+| a fixed value of a field, such as `domain: integer`                                    | keeps the value                                                   |
+| a `description`                                                                        | keeps the text as written                                         |
 
 ## Refusals
 
@@ -600,8 +601,9 @@ patch 'project.yaml' edits the constraint 'power_balnce', which its base does no
 
 ### A dimension restated differently
 
-Over a dimension or a relation that its base declares, a patch may change
-only `description`, a dimension's `ordered` and a relation's `missing`. A patch
+Over a dimension, a relation or a map that its base declares, a patch may
+change only `description`, a dimension's `ordered`, and the `missing` of a
+relation or a map. A patch
 that writes any other field restates the entry. Every other field must then be
 as the base declares it, and a field the patch leaves out equals its default.
 
@@ -692,16 +694,16 @@ entry. Here the macro `scaled` has the argument `x` and the template
 rename gives the parameter 'Unit_marginal_cost' the name 'x', which is an argument of the macro 'scaled', whose template uses 'Unit_marginal_cost'. Choose another name.
 ```
 
-### A name that is also a relation column
+### A name that is also a map
 
-`rename` refuses a map that changes a name to or from the name of a relation
-column that is not named after its dimension. An expression such as
-`ends[bus0]` uses the column by its name, so the rename would change the
-column too. Here the relation `ends` has the columns `{bus0: bus, bus1: bus}`,
-and the map is `{'bus0': 'price'}`:
+`rename` refuses a map that changes a name to or from the name of a
+[map](language/relations.md#maps) or a relation column that is not named after
+its dimension. An expression such as `line[bus0]` reads the map by its name,
+so the rename would change the map too. Here `line` has the maps
+`{bus0: bus, bus1: bus}`, and the map is `{'bus0': 'price'}`:
 
 ```text
-rename changes 'bus0' to 'price', and 'bus0' is also a column of the relation 'ends'. Give the column another name in the file, or choose another name.
+rename changes 'bus0' to 'price', and 'bus0' is also a map of 'line'. Give it another name in the file, or choose another name.
 ```
 
 ### A renamed spec that does not load

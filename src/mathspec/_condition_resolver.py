@@ -111,6 +111,8 @@ class ConditionResolver:
             return node
         if isinstance(node, NameNode):
             return self._bare_name(node)
+        if isinstance(node, ColumnNode):
+            return self._map_defined(node)
         if isinstance(node, UnresolvedComparisonNode):
             return self._comparison(node)
         if isinstance(node, UnresolvedConditionCallNode):
@@ -181,8 +183,7 @@ class ConditionResolver:
                 if len(set(dims)) < len(dims):
                     self.errors.append(
                         f"{context}: '{node.name}' has two columns over one dimension ({list(shape.roles)}), so a "
-                        f'bare name is ambiguous. Compare a column: '
-                        f'{node.name}[{shape.values[0] if shape.values else shape.roles[-1]}] == ....'
+                        f'bare name is ambiguous. Declare the rows it tests as a bool parameter over {dims[0]!r}.'
                     )
                     return node
                 return RelationDefined(node.name, dims)
@@ -197,7 +198,7 @@ class ConditionResolver:
         return node
 
     def _condition_call(self, node: UnresolvedConditionCallNode) -> Condition | UnresolvedConditionNode:
-        """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=relation[column])`` — the two operators that read a condition and answer one.
+        """``shift(<condition>, along=, offset=)`` or ``at(<condition>, by=subject[map])`` — the two operators that read a condition and answer one.
 
         ``count`` answers a number, so it stands on a comparison's side and
         [`_count`][] reads it there. Anything else naming a condition is
@@ -253,7 +254,7 @@ class ConditionResolver:
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
     def _joined(self, node: UnresolvedConditionCallNode, mask: Mask) -> Condition | UnresolvedConditionNode:
-        """``at(<condition>, by=relation[column])`` — the condition read through a relation, as ``at`` reads an array.
+        """``at(<condition>, by=subject[map])`` — the condition read through a relation, as ``at`` reads an array.
 
         The columns are read by the rules an expression's ``at`` is, so the one
         refusal a file meets for a bad read is the same in a ``where:`` and in
@@ -430,13 +431,13 @@ class ConditionResolver:
     def _position(
         self, call: FunctionCallNode, node: UnresolvedComparisonNode
     ) -> DimensionPosition | UnresolvedComparisonNode:
-        """``position(dim[, within=relation[column]]) <op> i``: the name a dimension, the relation keyed over it."""
+        """``position(dim[, within=subject[map]]) <op> i``: the name a dimension, the relation keyed over it."""
         ns, context = self.ns, self.context
         shape = _position_shape(call)
         if shape is None:
             self.errors.append(
                 f'{context}: this position() call is not of the form '
-                f'position(<dim>[, within=<relation>[<column>]]). Write it in that form.'
+                f'position(<dim>[, within=<subject>[<map>]]). Write it in that form.'
             )
             return node
         dimension, within = shape
@@ -473,8 +474,8 @@ class ConditionResolver:
         left_name, left_column = _split_column(plain.name)
         if not plain.quoted and isinstance(value, str):
             right_name, right_column = _split_column(value)
-            if (rhs_kind := ns.kind(right_name)) is not None:
-                if rhs_kind == 'relation' and ns.kind(left_name) == 'relation':
+            if (rhs_kind := _kind(ns, right_name, right_column)) is not None:
+                if rhs_kind == 'relation' and _kind(ns, left_name, left_column) == 'relation':
                     left = self._relation_column(left_name, left_column or None, plain.name, plain.op)
                     right = self._relation_column(right_name, right_column or None, value, plain.op)
                     if left is None or right is None:
@@ -488,15 +489,12 @@ class ConditionResolver:
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
-        kind = ns.kind(left_name)
+        kind = _kind(ns, left_name, left_column)
         if kind is None:
             self.errors.append(ns.unknown(left_name, context, allow_dims=True))
             return node
         if left_column and kind != 'relation':
-            self.errors.append(
-                f"{context}: '{plain.name}' reads a column of '{left_name}', which is {_declared_as(ns, left_name)}. "
-                f'Only a relation has columns.'
-            )
+            self.errors.append(_no_maps(context, plain.name, left_name, ns))
             return node
         column = None
         dtype: DeclaredDtype | None = None
@@ -546,40 +544,62 @@ class ConditionResolver:
         return node
 
     def _relation_column(self, name: str, column: str | None, spelling: str, op: ComparisonOperator) -> str | None:
-        """The value column a where-comparison on relation *name* reads, or the refusal.
+        """The map a where-comparison through subject *name* reads, or the refusal.
 
-        A comparison reads one value per coordinate, so the relation is keyed
-        and the column is one the key determines; unsaid, it is the one value
-        column where there is exactly one.
+        A comparison reads one label per coordinate, so it names one map of the
+        subject in brackets, whatever the subject has.
         """
         ns, context = self.ns, self.context
         shape = ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{context}: '{spelling}' compares a column of '{name}', which has every column in its key. "
-                f"Declare that column under values:, or test the bare name '{name}' for whether a row exists."
+                f"{context}: '{spelling}' compares the relation '{name}', which has no map, so its rows hold no "
+                f"label. Test the bare name '{name}' for whether a row exists, or declare a map under maps: {name}:."
             )
             return None
         if column is None:
-            if len(shape.values) != 1:
-                self.errors.append(
-                    f"{context}: '{spelling}': '{name}' has {len(shape.values)} value columns ({list(shape.values)}), "
-                    f'so name one: {name}[{shape.values[0]}].'
-                )
-                return None
-            return shape.values[0]
-        if column not in shape.roles:
             self.errors.append(
-                f"{context}: '{spelling}': '{column}' is not a column of '{name}', whose columns are {list(shape.roles)}."
+                f"{context}: '{spelling}' compares the relation '{name}' itself, and a comparison reads a label. "
+                f'Name one of its maps: {name}[{shape.values[0]}].'
             )
             return None
         if column in shape.key:
             self.errors.append(
-                f"{context}: '{spelling}': '{column}' is a key column of '{name}'. Compare the coordinate itself, "
-                f'{shape.dim(column)} {op} ..., or a value column.'
+                f"{context}: '{spelling}': '{column}' is a column of '{name}' itself. Compare the coordinate, "
+                f'{shape.dim(column)} {op} ..., or a map.'
+            )
+            return None
+        if column not in shape.values:
+            self.errors.append(
+                f"{context}: '{spelling}': '{column}' is no map of '{name}'. "
+                f'{did_you_mean(column, shape.values, label="Maps")}'
             )
             return None
         return column
+
+    def _map_defined(self, node: ColumnNode) -> Condition | UnresolvedConditionNode:
+        """``subject[map]`` alone: true where the subject's row at the frame's coordinates has a label in the map."""
+        ns, context = self.ns, self.context
+        if _kind(ns, node.relation, node.column) != 'relation':
+            if ns.kind(node.relation) is None:
+                self.errors.append(ns.unknown(node.relation, context, allow_dims=True))
+            else:
+                self.errors.append(_no_maps(context, node.shown, node.relation, ns))
+            return node
+        shape = ns.relations[node.relation]
+        if node.column in shape.key:
+            self.errors.append(
+                f"{context}: '{node.shown}': '{node.column}' is a column of '{node.relation}' itself, which holds "
+                f"the row. Test the row with the bare name '{node.relation}'."
+            )
+            return node
+        if node.column not in shape.values:
+            self.errors.append(
+                f"{context}: '{node.shown}': '{node.column}' is no map of '{node.relation}'. "
+                f'{did_you_mean(node.column, shape.values, label="Maps")}'
+            )
+            return node
+        return RelationDefined(node.relation, tuple(sorted(shape.dim(k) for k in shape.key)), node.column)
 
     def _inequality_rewrite(self, node: _Plain, dtype: DeclaredDtype) -> str:
         """What to write in place of an inequality on a value whose dtype does not define one.
@@ -590,8 +610,8 @@ class ConditionResolver:
         """
         if dtype == 'bool':
             return f"Test the bare name, '{node.name}' or 'not {node.name}'"
-        name = _split_column(node.name)[0]
-        if self.ns.kind(name) == 'dimension' and not self.ns.unordered(name):
+        name, column = _split_column(node.name)
+        if not column and self.ns.kind(name) == 'dimension' and not self.ns.unordered(name):
             return f'Select members by their place with position({name}) {node.op} n, or compare it with == or !='
         return 'Compare it with == or !=, or precompute the comparison as a boolean parameter'
 
@@ -661,6 +681,23 @@ def _declared_as(ns: Namespace, name: str) -> str:
     return f'a {kind}' if kind else 'not declared'
 
 
+def _kind(ns: Namespace, name: str, column: str) -> str | None:
+    """What *name* is declared as, read as a subject with maps where *column* is written in brackets after it.
+
+    A dimension with maps shares its name with its table, so the brackets are
+    what make it a subject.
+    """
+    return 'relation' if column and name in ns.relations else ns.kind(name)
+
+
+def _no_maps(context: str, spelling: str, name: str, ns: Namespace) -> str:
+    """The refusal for ``name[map]`` where *name* has no maps."""
+    return (
+        f"{context}: '{spelling}' reads a map of '{name}', which is {_declared_as(ns, name)} with no maps. "
+        f'Declare it under maps: {name}:, or read a subject that has it.'
+    )
+
+
 class _Plain(NamedTuple):
     """A where-comparison read as ``name <op> literal`` or ``name <op> name`` — the shape the dtype rules are written for.
 
@@ -680,7 +717,7 @@ def _side_name_or_none(side: ArithmeticNode | ColumnNode | KeywordNode) -> str |
 
 
 def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
-    """The name a side of a where-comparison spells — bare or ``relation[column]`` — or ``None`` where it is arithmetic."""
+    """The name a side of a where-comparison spells — bare or ``subject[map]`` — or ``None`` where it is arithmetic."""
     if isinstance(side, NameNode):
         return side.name
     if isinstance(side, ColumnNode):
@@ -689,7 +726,7 @@ def _side_name(side: ArithmeticNode | ColumnNode) -> str | None:
 
 
 def _split_column(name: str) -> tuple[str, str]:
-    """``relation[column]`` as its two names, and a bare name with an empty column: the one reader of a side's spelling."""
+    """``subject[map]`` as its two names, and a bare name with an empty column: the one reader of a side's spelling."""
     relation, _, column = name.partition('[')
     return relation, column.removesuffix(']')
 
@@ -752,8 +789,8 @@ def _not_arithmetic(context: str, side: ColumnNode | KeywordNode) -> str:
     """Why a relation column or a quoted label may not stand on a side of a comparison of expressions."""
     if isinstance(side, ColumnNode):
         return (
-            f"{context}: '{side.shown}' is a relation column in arithmetic. Compare it alone against a literal "
-            f'or a column, or carry the value in a parameter.'
+            f"{context}: '{side.shown}' is a map in arithmetic. Compare it alone against a literal or another "
+            f'map, or carry the value in a parameter.'
         )
     return (
         f"{context}: '{side.value}' is a quoted label, which is compared against one name. Put the name alone on "
@@ -776,8 +813,8 @@ def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, gi
         )
     if kind == 'relation':
         return (
-            f'{context}: {comparison} compares {node.name!r} against relation {value!r}. Compare against a '
-            f'literal, or put a relation over the same dimensions on the left.'
+            f'{context}: {comparison} compares {node.name!r} against {value!r}, which is no label. Compare '
+            f'against a literal, or compare two maps of subjects over the same dimensions: subject[map].'
         )
     return (
         f'{context}: {comparison} compares against dimension {value!r}, and two dimensions cannot be '
@@ -801,9 +838,9 @@ def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, 
     left_keys, right_keys = {ls.dim(k) for k in ls.key}, {rs.dim(k) for k in rs.key}
     if left_keys != right_keys:
         return (
-            f'{context}: {comparison} compares relations keyed over different dimensions '
-            f"('{left_name}' by {sorted(left_keys)}, '{right_name}' by {sorted(right_keys)}). Compare relations "
-            f'whose keys are over the same dimensions.'
+            f'{context}: {comparison} compares maps of subjects over different dimensions '
+            f"('{left_name}' over {sorted(left_keys)}, '{right_name}' over {sorted(right_keys)}). Compare maps "
+            f'of subjects over the same dimensions.'
         )
     if ls.dim(left) != rs.dim(right):
         return (

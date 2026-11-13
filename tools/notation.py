@@ -47,8 +47,8 @@ PIECEWISE = {
 }
 BEGIN, END = '<!-- notation:begin -->', '<!-- notation:end -->'
 
-#: The sections of the fixture that declare math. ``dimensions``, ``relations``
-#: and ``parameters`` are absent on purpose: they declare no equation, and what
+#: The sections of the fixture that declare math. ``dimensions``, ``relations``,
+#: ``maps`` and ``parameters`` are absent on purpose: they declare no equation, and what
 #: they print is the legend, which the page shows once rather than a row at a
 #: time.
 SECTIONS = ('objective', 'constraints', 'expressions', 'conditions', 'variables', 'piecewise', 'sos', 'assumptions')
@@ -81,20 +81,20 @@ FAMILIES: dict[str, dict[str, str]] = {
     'Objective': {
         'objective': 'Products and powers in the objective',
     },
-    'Relations': {
-        'balance': 'Sum through a relation',
+    'Relations and maps': {
+        'balance': 'Sum through a map',
         'total': 'Sum over every dimension',
-        'lookup': '`at` through a relation',
-        'grouped_once': 'Sum into two value columns',
-        'looked_up_once': '`at` through two value columns',
-        'within_bus': 'Shift within one value column',
-        'relational': 'Sum through a bare relation',
-        'connected': 'Bare relation as a condition',
+        'lookup': '`at` through a map',
+        'grouped_once': 'Sum into two maps',
+        'looked_up_once': '`at` through two maps',
+        'within_bus': 'Shift within one map',
+        'relational': 'Sum through a relation',
+        'connected': 'Relation as a condition',
         'representative': 'Map into its own dimension',
-        'zonal': 'Sum through a two-key map',
-        'zonal_history': 'Sum over the other key of a two-key map',
-        'zonal_membership': 'Sum between the two keys of a map',
-        'zonal_lookup': '`at` through a two-key map',
+        'zonal': 'Sum through a map of a relation',
+        'zonal_history': 'Sum over the other column of a relation',
+        'zonal_membership': 'Sum between the two columns of a relation',
+        'zonal_lookup': '`at` through a map of a relation',
     },
     'Arithmetic and literals': {
         'arithmetic': 'Signs, division and number literals',
@@ -144,18 +144,18 @@ FAMILIES: dict[str, dict[str, str]] = {
         'bounds_do_not_cross': 'Two parameters compared',
         'efficiency_is_a_fraction': 'Connective in an assumption',
         'lead_times_are_short': 'Parameter compared to a literal',
-        'zones_agree': 'Two relations compared',
+        'zones_agree': 'Two maps compared',
         'budget_covers_the_peak': 'Reduction in an assumption',
         'ramps_are_gentle': 'Shift in an assumption',
         'flexible_units_have_headroom': 'Assumption with a boolean condition',
-        'northern_demand_is_real': 'Assumption with a relation condition',
+        'northern_demand_is_real': 'Assumption with a map condition',
     },
     'Where conditions': {
         'scalar': 'Parameter as a condition',
         'running': 'Variable and label conditions',
         'first': 'Position in a dimension',
         'last': 'Position counted from the end',
-        'northern': 'Relation compared to a label',
+        'northern': 'Map compared to a label',
         'always': 'Constant true condition',
         'redundant': 'Constant true inside a condition',
         'never': 'Constant false condition',
@@ -165,7 +165,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'counted': 'Count over a dimension',
         'counted_here': 'Count along a dimension of the frame',
         'run_start': 'Condition at the previous coordinate',
-        'zoned': 'Condition through a relation',
+        'zoned': 'Condition through a map',
     },
 }
 
@@ -296,11 +296,11 @@ def legend() -> str:
 
 #: What the legend is made of. No equation comes from these, so they are shown
 #: once, together, above the tables they turn into.
-DECLARED = ('dimensions', 'relations', 'parameters')
+DECLARED = ('dimensions', 'relations', 'maps', 'parameters')
 
 
 def preamble(text: str) -> str:
-    """The fixture's ``dimensions``/``relations``/``parameters`` sections, verbatim."""
+    """The fixture's ``dimensions``/``relations``/``maps``/``parameters`` sections, verbatim."""
     sections = []
     for name in DECLARED:
         body = text[text.index(f'\n{name}:') + 1 :]
@@ -314,7 +314,7 @@ def block() -> str:
     rendered = to_markdown(MODEL, numbered=False)
     parts = [
         '### Legend',
-        'A dimension, a relation and a parameter declare no equation; what they '
+        'A dimension, a relation, a map and a parameter declare no equation; what they '
         'print is the legend every spec opens with.',
         f'```yaml\n{preamble(MODEL.read_text())}\n```',
         legend(),

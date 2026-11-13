@@ -22,7 +22,8 @@ like yours, and what each line of the file means.
     running unit and a starting unit.
 - **[Units with ports](connection.md)** is a spec with one
     [relation](../reference/language/relations.md) for the ports of each unit,
-    and a parameter whose
+    [maps](../reference/language/relations.md#maps) for the bus and the role of
+    each port, and a parameter whose
     [`where:`](../reference/language/parameters-variables-constraints.md#where)
     keeps only the output ports.
 - **[One construct per spec](operators.md)** contains the smallest file for

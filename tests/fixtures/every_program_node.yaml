@@ -7,8 +7,8 @@ dimensions:
   t: { dtype: int, ordered: true }
   g: { dtype: str }
   zone: { dtype: str }
-relations:
-  zone_of: { key: g, values: zone }
+maps:
+  g: { zone: zone }
 parameters:
   cost: { dims: [g] }
   load: { dims: [zone] }
@@ -37,10 +37,10 @@ constraints:
     expression: "sum(p) >= 0"
   grouped:
     dims: [t, zone]
-    expression: "sum(p, over=g, by=zone_of[zone]) - q <= load"
+    expression: "sum(p, over=g, by=g[zone]) - q <= load"
   looked_up:
     dims: [t, g]
-    expression: "p - at(q, by=zone_of[zone]) <= 0"
+    expression: "p - at(q, by=g[zone]) <= 0"
   translated:
     dims: [t, g]
     expression: "p - shift(p, along=t, offset=lead, edge='wrap') <= 0"

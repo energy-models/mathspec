@@ -47,13 +47,13 @@ DISPATCH_MODEL: dict[str, Any] = {
     'objective': {'sense': 'minimize', 'expression': 'sum(p * cost)'},
 }
 
-#: Two dimensions, a relation between them, a numeric, a scalar, a boolean and a
+#: Two dimensions, a map from one into the other, a numeric, a scalar, a boolean and a
 #: label parameter, a variable on each frame — one entry of every kind
 #: a rule can name, and no objective, so a test adds what it judges. `p` and `r`
 #: share no dimension, which is what a rule about *different* dims needs.
 SMALL_MODEL: dict[str, Any] = {
     'dimensions': {'g': {'dtype': 'str', 'ordered': True}, 'h': {'dtype': 'str', 'ordered': True}},
-    'relations': {'lk': {'key': 'g', 'values': 'h'}},
+    'maps': {'g': {'h': 'h'}},
     'parameters': {
         'c': {'dims': ['g']},
         'k': {'dims': []},
@@ -93,8 +93,8 @@ def varied(base: dict[str, Any], **patch: Any) -> dict[str, Any]:
 def sets_reversed(data: Any) -> Any:
     """*data* with every list or mapping that names a set reversed, at any depth.
 
-    Each ``dims:``, ``one_of:`` and ``kwargs:`` list, and each relation's
-    ``key`` and ``values``.
+    Each ``dims:``, ``one_of:`` and ``kwargs:`` list, a relation's
+    ``dims:`` mapping among them, and the maps of each subject.
     """
     if isinstance(data, list):
         return [sets_reversed(item) for item in data]
@@ -104,11 +104,11 @@ def sets_reversed(data: Any) -> Any:
 
 
 def _reversed_under(key: str, value: Any) -> Any:
-    """*value* reversed where *key* names a set, its relations' sides reversed under ``relations``, else searched on."""
+    """*value* reversed where *key* names a set, each subject's maps reversed under ``maps``, else searched on."""
     if key in ('dims', 'one_of', 'kwargs'):
         return _reversed(value)
-    if key == 'relations' and isinstance(value, dict):
-        return {name: _columns_reversed(entry) for name, entry in value.items()}
+    if key == 'maps' and isinstance(value, dict):
+        return {subject: _reversed(maps) for subject, maps in value.items()}
     return sets_reversed(value)
 
 
@@ -122,13 +122,6 @@ def entries_reversed(data: dict[str, Any]) -> dict[str, Any]:
         key: {kind: backwards(entries) for kind, entries in value.items()} if key == 'given' else backwards(value)
         for key, value in data.items()
     }
-
-
-def _columns_reversed(relation: Any) -> Any:
-    """A relation entry with its ``key`` and ``values`` columns in reverse order."""
-    if not isinstance(relation, dict):
-        return relation
-    return {key: _reversed(value) if key in ('key', 'values') else value for key, value in relation.items()}
 
 
 def _reversed(value: Any) -> Any:

@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  One of two columns: where a relation has two columns over one dimension,
-  `at(array, by=relation[c])` takes the value at column `c`. Here `c` is `bus0`,
-  the sending end of a line.
+  One of two maps: where a subject has two maps into one dimension,
+  `at(array, by=subject[m])` takes the value at the label of map `m`. Here `m`
+  is `bus0`, the sending end of a line.
 
 dimensions:
   line: { dtype: str }
   bus: { dtype: str }
 
-relations:
-  ends: { key: line, values: { bus0: bus, bus1: bus } }
+maps:
+  line: { bus0: bus, bus1: bus }
 
 parameters:
   cap: { dims: [bus] }
@@ -25,6 +25,6 @@ variables:
 constraints:
   sending_cap:
     dims: [line]
-    expression: f <= at(cap, by=ends[bus0])
+    expression: f <= at(cap, by=line[bus0])
 
 objective: { sense: minimize, expression: sum(f) }

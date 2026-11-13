@@ -6,8 +6,8 @@ SPDX-License-Identifier: CC-BY-4.0
 # Relations as linear maps
 
 A [`sum`](../reference/language/operators.md#sum) or an
-[`at`](../reference/language/operators.md#at) through a table that maps
-coordinates ([a relation](../reference/language/relations.md)) is the product
+[`at`](../reference/language/operators.md#at) through a table that gives each
+row a label ([a map](../reference/language/relations.md#maps)) is the product
 of a matrix and a vector. The relations page describes the same sum in
 database words, "joined on" and "grouped by". The matrix form is the sum in
 the form a paper uses.
@@ -20,7 +20,9 @@ dimensions:
   generator: { dtype: str }
   zone: { dtype: str }
 relations:
-  gen_zone: { key: [generator, snapshot], values: zone, missing: absent }
+  zone_of: { dims: [generator, snapshot], missing: absent }
+maps:
+  zone_of: { zone: zone }
 parameters:
   zone_cap: { dims: [snapshot, zone] }
 variables:
@@ -28,28 +30,29 @@ variables:
 constraints:
   zonal:
     dims: [snapshot, zone]
-    expression: sum(p, over=generator, by=gen_zone[zone]) <= zone_cap
+    expression: sum(p, over=generator, by=zone_of[zone]) <= zone_cap
   looked_up:
     dims: [snapshot, generator]
-    where: gen_zone
-    expression: p <= at(zone_cap, by=gen_zone[zone])
+    where: zone_of
+    expression: p <= at(zone_cap, by=zone_of[zone])
 objective:
   sense: minimize
   expression: sum(p)
 ```
 
-`zonal` contains a sum of `p` through `gen_zone`, and `looked_up` a lookup of
-`zone_cap` through `gen_zone`. The spec loads.
+`zonal` contains a sum of `p` through the map `zone_of[zone]`, and
+`looked_up` a lookup of `zone_cap` through the same map. The spec loads.
 
 ## The indicator of a relation
 
 A relation with columns over the dimensions $`D_1, \dots, D_n`$ is a set of
 rows, so it is a subset $`R \subseteq D_1 \times \dots \times D_n`$. Its
 **indicator** $`\mathbf{1}_R`$ is $`1`$ at a row of the table and $`0`$
-everywhere else. [`key:`](../reference/language/relations.md#relations)
-declares that the set has one row per combination of key labels (a key
-tuple). So a relation with `key: K` and `values: V` is the set of pairs
-$`(k, f(k))`$ of a function $`f: K \to V`$ (its graph), and
+everywhere else. A [map](../reference/language/relations.md#maps) gives each
+row of its subject one label, and a row is one combination of key labels (a
+key tuple). So a map from the key $`K`$ of its subject into the dimension
+$`V`$ is a function $`f: K \to V`$. The set of pairs $`(k, f(k))`$ is a
+relation $`R`$ (the graph of $`f`$), and its indicator is
 
 ```math
 \mathbf{1}_R(k, v) = [\, f(k) = v \,].
@@ -60,24 +63,26 @@ The bracket is $`1`$ where $`f(k) = v`$ and $`0`$ elsewhere.
 By default the function has a value at every key tuple (it is total). With data attached, the tool that builds the model
 ([an engine](../reference/glossary.md#tool)) checks for
 [one row per key tuple](../reference/language/relations.md#the-data-contract).
-The engine refuses a key tuple with no row.
+The engine refuses a key tuple with no row or no label.
 Under [`missing: absent`](../reference/language/relations.md#missing), the
-function has no value at a key tuple with no row (it is partial). With $`\mathcal{G}`$, $`\mathcal{T}`$ and $`\mathcal{Z}`$ the sets of
-generators, snapshots and zones, `gen_zone` in the spec above is the graph of
-a partial $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$.
+function has no value at a key tuple with no row or no label (it is partial). With $`\mathcal{G}`$, $`\mathcal{T}`$ and $`\mathcal{Z}`$ the sets of
+generators, snapshots and zones, `zone_of[zone]` in the spec above is
+a partial $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, because the relation
+`zone_of` declares `missing: absent`.
 
-A relation with no `values:`
-([a bare relation](../reference/glossary.md#bare-relation)) is a subset with no function behind it. So one generator may sit in several
-rows, each with its own zone. By default a bare relation also lists every key tuple, so one
+A [relation](../reference/language/relations.md#relations) with no map is a
+subset with no function behind it. So one generator may sit in several
+rows, each with its own bus. By default a relation also lists every key tuple, so one
 that does not must declare `missing: absent`.
 
-Every column of a bare relation is in its key, so the relation has no value
-column for `at` to read. At load, mathspec refuses `at` through a bare relation.
+Every column of a relation is in its key, so a relation with no map has no
+label for `at` to read. At load, mathspec refuses `at` through a relation with
+no map.
 
 ## A join and group-by as a contraction
 
-`sum(p, over=generator, by=gen_zone[zone])` multiplies the indicator of
-`gen_zone` by `p`, and sums over the one index that they share and that the
+`sum(p, over=generator, by=zone_of[zone])` multiplies the indicator of the
+graph of `zone_of[zone]` by `p`, and sums over the one index that they share and that the
 call lists in `over=`:
 
 ```math
@@ -89,7 +94,7 @@ y_{t,z} = \sum_{g} \mathbf{1}_R(g, t, z) \cdot p_{g,t} = \sum_{g \,:\, f(g,\,t) 
 </figure>
 
 With the data in the figure, the join pairs each row of `p` with the row of
-`gen_zone` that has the same generator and snapshot. The group-by adds the two
+`zone_of` that has the same generator and snapshot. The group-by adds the two
 pairs in zone `north` at snapshot `0`, so the result `y` has three rows.
 
 The typesetter [prints](../reference/notation.md) the right-hand form. The left-hand form is a sum over an index that two factors share (a
@@ -102,7 +107,7 @@ index can take in the formula:
 | joined on, the column in `over=`                              | $`g`$ is on both factors and summed. It is not in the result.        |
 | grouped by, the column in `by=`                               | $`z`$ is on the indicator alone and not summed. It is in the result. |
 | joined on and grouped by, a key column the call does not name | $`t`$ is on both factors and not summed. It is in the result.        |
-| neither, a value column the call does not name                | The column is not in the formula, and the sum does not use it.       |
+| neither, a map the call does not name                         | The map is not in the formula, and the sum does not use it.          |
 
 The result has the **free indices**, which are the indices that are not
 summed. They are the indices of the operand and of the indicator together,
@@ -119,16 +124,16 @@ formula needs each of them:
   factors and not be summed. Then the product would match the two occurrences
   of $`z`$, and the result would gain no extra index (an axis) for $`z`$. You
   write that match outside the operator, as in
-  `zone_cap * sum(p, over=generator, by=gen_zone[zone])`.
+  `zone_cap * sum(p, over=generator, by=zone_of[zone])`.
 
 At each $`t`$, the matrix $`M_t[z, g] = \mathbf{1}_R(g, t, z)`$ has one row
 per zone and one column per generator, with entries of zero and one, and
 $`y_t = M_t\, p_t`$. Over all snapshots, the key column that the call does not name makes the
-matrix zero outside one block per snapshot (**block-diagonal**). A relation keyed by one column has one block.
+matrix zero outside one block per snapshot (**block-diagonal**). A map of a subject with one key column has one block.
 
-## A lookup through a relation
+## A lookup through a map
 
-`at(zone_cap, by=gen_zone[zone])` joins the same table, and sums over the
+`at(zone_cap, by=zone_of[zone])` joins the same table, and sums over the
 other index:
 
 ```math
@@ -139,7 +144,7 @@ w_{g,t} = \sum_{z} \mathbf{1}_R(g, t, z) \cdot \mathrm{zone\_cap}_{t,z} = \mathr
 --8<-- "docs/static/linear-maps-at.svg"
 </figure>
 
-With the data in the figure, each row of `gen_zone` takes the value of
+With the data in the figure, each row of `zone_of` takes the value of
 `zone_cap` at its snapshot and zone. So at snapshot `0`, wind and gas both
 take the value at `north`, and no row takes the value at `south`.
 
@@ -217,7 +222,7 @@ At two kinds of position the matrix product has no term.
   `at` has no row there (it is [absent](../reference/glossary.md#absence)), and
   [absence spreads](../reference/language/absence.md#how-absence-travels) to
   the row. Under the default, no key tuple is outside the domain. With
-  [`where: gen_zone`](../reference/language/absence.md#where), `looked_up`
+  [`where: zone_of`](../reference/language/absence.md#where), `looked_up`
   declares the domain of $`f`$ in the spec, so a reader sees which rows exist
   without opening the data.
 
@@ -226,42 +231,43 @@ At two kinds of position the matrix product has no term.
 </figure>
 
 With the data in the figure, no generator maps to `south`, so both rows of
-`zonal` at `south` are empty groups with no variable. `gen_zone` has no row for
+`zonal` at `south` are empty groups with no variable. `zone_of` has no row for
 `gas` at snapshot `1`, so the lookup has no row there either.
 
 ## Partitions and tests
 
-The other two uses of a relation, a
+The other two uses of a map, a
 [partition](../reference/language/relations.md#partitions) and a
 [test](../reference/language/relations.md#tests), are not matrix products. An
 operator with `within=`, such as `shift`, works separately on each set of
 members that $`f`$ sends to one value (a fibre). The dimensions of the result
-do not change. With `season_of: { key: snapshot, values: season }`,
-`shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season])`
+do not change. With the map `snapshot: { season: season }`,
+`shift(soc, along=snapshot, offset=1, edge='wrap', within=snapshot[season])`
 steps back within each season:
 
 <figure class="diagram">
 --8<-- "docs/static/relations-partition.svg"
 </figure>
 
-Each season is one fibre of `season_of`, so no value crosses from winter to
+Each season is one fibre of `snapshot[season]`, so no value crosses from winter to
 summer.
 
-A test is the indicator itself. In a `where`, the name of a
-relation is $`\mathbf{1}_R`$ at the coordinate of the entry.
+A test is an indicator. In a `where`, the name of a relation is
+$`\mathbf{1}_R`$ at the coordinate of the entry, and a map alone, such as
+`zone_of[zone]`, is the indicator of the domain of $`f`$.
 
-You can now judge the dimensions of a sum or an `at` through a relation, and
+You can now judge the dimensions of a sum or an `at` through a map, and
 why the language has no `join` operator.
 
 !!! info "See also"
 
-    - [relations](../reference/language/relations.md), for every key a relation
-      accepts
+    - [relations and maps](../reference/language/relations.md), for every key a
+      relation and a map accept
     - [how dimensions combine](../reference/language/expressions.md#how-dimensions-combine),
       for the rule that sets the free indices of every expression
     - [how absence travels](../reference/language/absence.md#how-absence-travels),
       for figures of the rows that absence removes
-    - [sums through a relation](../reference/language/relations.md#sums-through-a-relation),
+    - [sums through a relation](../reference/language/relations.md#sums),
       for the message mathspec prints when it refuses a sum with one row per group
     - [constructs the language already has](limits.md#constructs-the-language-already-has),
       for the refused `join` operator and what you write instead

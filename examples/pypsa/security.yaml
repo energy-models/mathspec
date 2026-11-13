@@ -40,21 +40,20 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-  Outage_line:
-    description: the line an outage takes out. An outage of a transformer has no row
-    key: outage
-    values: line
-    missing: absent
-  Outage_transformer:
-    description: the transformer an outage takes out. An outage of a line has no row
-    key: outage
-    values: transformer
-    missing: absent
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
+  outage:
+    line:
+      description: the line an outage takes out. An outage of a transformer has no row
+      refers_to: line
+      missing: absent
+    transformer:
+      description: the transformer an outage takes out. An outage of a line has no row
+      refers_to: transformer
+      missing: absent
 
 parameters:
   Line_BODF:
@@ -85,8 +84,8 @@ expressions:
       transformer's flow before it goes out
     dims: [scenario, snapshot, outage]
     cases:
-      line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line[line])" }
-    otherwise: at(Transformer_s_monitored, by=Outage_transformer[transformer])
+      line: { when: "outage[line]", expression: "at(Line_s_monitored, by=outage[line])" }
+    otherwise: at(Transformer_s_monitored, by=outage[transformer])
 
 constraints:
   Line_fix_s_lower_security:
@@ -99,8 +98,8 @@ constraints:
       This entry states them all over the outage dimension. A line inactive in
       the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-    expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
+    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+    expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
   Line_fix_s_upper_security:
     description: >-
       `Line-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}` — after
@@ -111,8 +110,8 @@ constraints:
       This entry states them all over the outage dimension. A line inactive in
       the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-    expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
+    where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+    expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
   Line_ext_s_lower_security:
     description: >-
       `Line-ext-s-lower-security-for-{c}-outage-in-sub-network-{n}` — after
@@ -123,8 +122,8 @@ constraints:
       `-period-{p}` for each period `p`. This entry states them all over the
       outage dimension. A line inactive in the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-    expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
+    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+    expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
   Line_ext_s_upper_security:
     description: >-
       `Line-ext-s-upper-security-for-{c}-outage-in-sub-network-{n}` — after
@@ -135,8 +134,8 @@ constraints:
       This entry states them all over the outage dimension. A line inactive in
       the snapshot's period has no row
     dims: [scenario, snapshot, line, outage]
-    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-    expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
+    where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+    expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
   Transformer_fix_s_lower_security:
     description: >-
       `Transformer-fix-s-lower-security-for-{c}-outage-in-sub-network-{n}` —
@@ -147,8 +146,8 @@ constraints:
       This entry states them all over the outage dimension. A transformer
       inactive in the snapshot's period has no row
     dims: [scenario, snapshot, transformer, outage]
-    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
+    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
   Transformer_fix_s_upper_security:
     description: >-
       `Transformer-fix-s-upper-security-for-{c}-outage-in-sub-network-{n}` —
@@ -159,8 +158,8 @@ constraints:
       This entry states them all over the outage dimension. A transformer
       inactive in the snapshot's period has no row
     dims: [scenario, snapshot, transformer, outage]
-    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
+    where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
   Transformer_ext_s_lower_security:
     description: >-
       `Transformer-ext-s-lower-security-for-{c}-outage-in-sub-network-{n}` —
@@ -172,8 +171,8 @@ constraints:
       outage dimension. A transformer inactive in the snapshot's period has no
       row
     dims: [scenario, snapshot, transformer, outage]
-    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
+    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
   Transformer_ext_s_upper_security:
     description: >-
       `Transformer-ext-s-upper-security-for-{c}-outage-in-sub-network-{n}` —
@@ -185,5 +184,5 @@ constraints:
       outage dimension. A transformer inactive in the snapshot's period has no
       row
     dims: [scenario, snapshot, transformer, outage]
-    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
+    where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+    expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext

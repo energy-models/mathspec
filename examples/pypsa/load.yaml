@@ -18,11 +18,11 @@ dimensions:
   load:
     description: demands, each on one bus
 
-relations:
-  Load_bus:
-    description: the bus a load sits on
-    key: load
-    values: bus
+maps:
+  load:
+    bus:
+      description: the bus a load sits on
+      refers_to: bus
 
 parameters:
   Load_p_set:
@@ -53,5 +53,5 @@ expressions:
       active: { when: Load_active, expression: Load_sign * Load_p_set }
     otherwise: 0
   Load_injection:
-    expression: sum(Load_demand, over=load, by=Load_bus[bus])
+    expression: sum(Load_demand, over=load, by=load[bus])
     adds_to: Bus_injection

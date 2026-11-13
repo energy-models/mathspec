@@ -147,26 +147,26 @@ def test_each_edge_policy_is_its_own_translation_symbol(
 def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: Format):
     """The fill subscripts the operator; the group superscripts it.
 
-    One slot each, so neither `\\boxminus_{0}_{season_of(t)}` — a *Double
+    One slot each, so neither `\\boxminus_{0}_{season(t)}` — a *Double
     subscript* error that stopped the page compiling — nor
-    `\\boxminus_{0,season_of(t)}`, which compiles and leaves a reader to guess
+    `\\boxminus_{0,season(t)}`, which compiles and leaves a reader to guess
     which of the two is the value standing at the boundary and which is the
     group the translation stays inside.
     """
     model = {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
+        'maps': {'snapshot': {'season': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, within=season_of[season])',
+                'expression': 'p <= shift(p, along=snapshot, offset=1, edge=0, within=snapshot[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
     }
     text = typeset(model, name, legend=False)
-    group = fmt.apply(fmt.upright('season_of'), 't')
+    group = fmt.apply(fmt.upright('season'), 't')
     filled = fmt.subscript(fmt.operators['edge_minus'], ['0'])
     assert fmt.superscript(filled, group) in text, 'the fill and the group are not in their own slots'
     assert fmt.subscript(fmt.operators['edge_minus'], ['0', group]) not in text, (
@@ -180,12 +180,12 @@ def test_a_translation_by_nothing_takes_no_legend_row(name: FormatName):
     translation as printed and explained a grouped operator the page never shows."""
     model = {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
+        'maps': {'snapshot': {'season': 'season'}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
                 'dims': ['snapshot'],
-                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, within=season_of[season])',
+                'expression': 'p <= shift(p, along=snapshot, offset=0, edge=0, within=snapshot[season])',
             }
         },
         'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
@@ -200,7 +200,7 @@ def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format)
     """``at`` and ``shift`` both re-index at the leaf, and the leaf has one subscript.
 
     Whoever wrote it last used to win: ``at(shift(cap, along=period, offset=1,
-    edge=0), by=period_of[period])`` printed `cap_{period_of(t)}`, dropping a
+    edge=0), by=snapshot[period])`` printed `cap_{period(t)}`, dropping a
     translation the plan builds. The subscript is a composition, so it renders
     as one.
     """
@@ -209,19 +209,19 @@ def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format)
             'snapshot': {'dtype': 'int', 'ordered': True},
             'period': {'dtype': 'int', 'ordered': True},
         },
-        'relations': {'period_of': {'key': 'snapshot', 'values': 'period'}},
+        'maps': {'snapshot': {'period': 'period'}},
         'parameters': {'cap': {'dims': ['period']}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'within': {
                 'dims': ['snapshot'],
-                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=period_of[period])',
+                'expression': 'p <= at(shift(cap, along=period, offset=1, edge=0), by=snapshot[period])',
             }
         },
     }
     text = typeset(model, name, legend=False)
     assert fmt.operators['edge_minus'] in text, 'the shift under the at was dropped from the subscript'
-    assert fmt.apply(fmt.upright('period_of'), 't') in text, 'the lookup itself was dropped'
+    assert fmt.apply(fmt.upright('period'), 't') in text, 'the lookup itself was dropped'
 
 
 @EVERY_FORMAT
@@ -318,7 +318,7 @@ def _selected(mask: str) -> dict[str, Any]:
     """One constraint carrying *mask*, over a dimension a relation groups."""
     return {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'relations': {'season_of': {'key': 'snapshot', 'values': 'season'}},
+        'maps': {'snapshot': {'season': 'season'}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {'seed': {'dims': ['snapshot'], 'where': mask, 'expression': 'soc == 0'}},
     }
@@ -339,11 +339,11 @@ def test_a_position_from_the_end_prints_against_the_size(name: FormatName, fmt: 
 def test_a_grouped_position_rides_a_subscript_rather_than_a_second_argument(name: FormatName, fmt: Format):
     """The group is a modifier — which order is counted — not another position.
 
-    As ``pos(t, season_of(t))`` the second argument sits where a reader of the
+    As ``pos(t, season(t))`` the second argument sits where a reader of the
     first one expects an integer, and nothing says it means "within".
     """
-    text = typeset(_selected('position(snapshot, within=season_of[season]) == 0'), name)
-    applied = fmt.apply(fmt.upright('season_of'), 't')
+    text = typeset(_selected('position(snapshot, within=snapshot[season]) == 0'), name)
+    applied = fmt.apply(fmt.upright('season'), 't')
     assert fmt.apply(fmt.subscript(fmt.operators['position'], [applied]), 't') in text
 
 
@@ -367,7 +367,7 @@ def test_a_dimension_compared_against_a_number_says_what_its_coordinates_are(nam
         pytest.param('counted from', _selected('position(snapshot) == 0'), DISPATCH_MODEL, id='a-position'),
         pytest.param(
             'inside its group',
-            _selected('position(snapshot, within=season_of[season]) == 0'),
+            _selected('position(snapshot, within=snapshot[season]) == 0'),
             _selected('position(snapshot) == 0'),
             id='a-grouped-position',
         ),
@@ -658,9 +658,9 @@ def test_every_operator_probe_renders(path, name: FormatName, fmt: Format):
 # ---------------------------------------------------------------------------
 
 
-#: Two tables a call can leave a value column unread. A sum between
-#: `gen_zone`'s two key columns reads no value column at all, and a sum that
-#: consumes one of `gen_bt`'s two value columns leaves the other one.
+#: Two tables a call can leave a map unread. A sum between `gen_zone`'s own
+#: two columns reads no map at all, and a sum that consumes one of
+#: `generator`'s two maps leaves the other one.
 UNREAD = {
     'dimensions': {
         'snapshot': {'dtype': 'int', 'ordered': True},
@@ -669,15 +669,13 @@ UNREAD = {
         'bus': {'dtype': 'str'},
         'technology': {'dtype': 'str'},
     },
-    'relations': {
-        'gen_zone': {'key': ['generator', 'snapshot'], 'values': 'zone'},
-        'gen_bt': {'key': 'generator', 'values': ['bus', 'technology']},
-    },
+    'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
+    'maps': {'gen_zone': {'zone': 'zone'}, 'generator': {'bus': 'bus', 'technology': 'technology'}},
     'parameters': {'cap': {'dims': []}},
     'variables': {
         'p': {'dims': ['snapshot', 'generator']},
         'f': {'dims': ['generator', 'bus']},
-        # indexed by the key column the sum consumes alone, so the column it lands on is one it brings
+        # indexed by the column of gen_zone the sum consumes alone, so the column it lands on is one it brings
         'u': {'dims': ['generator']},
     },
 }
@@ -689,34 +687,33 @@ def _grouped(dims: list[str], expression: str) -> str:
     return next(line for line in to_latex(model, legend=False).splitlines() if line.startswith(r'\text{c}'))
 
 
-def test_a_sum_that_reads_no_value_column_asks_only_that_the_key_has_a_row():
+def test_a_sum_that_reads_no_map_asks_only_that_the_relation_has_the_row():
     """`sum(u, over=generator, by=gen_zone[snapshot])` died with `KeyError: 'zone'`.
 
     The domain was written as a whole row of the table, which needs an index
-    for every column, and this sum goes between the two key columns: it reads
-    no value column, so there is no index to write in `zone`'s place. What the
-    sum asks of the table is that the key it reads between has a row at all.
+    for every column, and this sum goes between the relation's own two
+    columns: it reads no map, so there is no index to write in `zone`'s place.
+    What the sum asks of the relation is that it has the row at all.
     """
     row = _grouped(['snapshot'], 'sum(u, over=generator, by=gen_zone[snapshot]) <= cap')
-    assert r'\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_zone}(g,\ t) \text{ is defined}}' in row, (
-        'the condition is that the row exists, and the unread value column is written nowhere'
+    assert r'\sum_{g \in \mathcal{G} \,:\, \left( g,\ t \right) \in \mathrm{gen\_zone}}' in row, (
+        'the condition is that the row is in the relation, and the unread map is written nowhere'
     )
 
 
-def test_a_value_column_the_call_consumes_is_a_condition_like_a_produced_one():
-    """`sum(f, over=[generator, bus], by=gen_bt[technology])` bound `b` and then
+def test_a_map_the_call_consumes_is_a_condition_like_a_produced_one():
+    """`sum(f, over=[generator, bus], by=generator[technology])` bound `b` and then
     said nothing about it, so the sum ran over every bus rather than over the
     one the table puts each generator on.
 
-    The conditions were written per *produced* column. A call fixes a value
-    column by consuming it too, and either way the column is one lookup at the
-    key.
+    The conditions were written per *produced* column. A call fixes a map by
+    consuming it too, and either way the map is one lookup at the row.
     """
-    row = _grouped(['technology'], 'sum(f, over=[generator, bus], by=gen_bt[technology]) <= cap')
+    row = _grouped(['technology'], 'sum(f, over=[generator, bus], by=generator[technology]) <= cap')
     assert (
         r'\sum_{g \in \mathcal{G},\ b \in \mathcal{B} \,:\, '
-        r'\mathrm{gen\_bt.bus}(g) = b \wedge \mathrm{gen\_bt.technology}(g) = e}'
-    ) in row, 'both columns the call touches are read, the key column first'
+        r'\mathrm{bus}(g) = b \wedge \mathrm{technology}(g) = e}'
+    ) in row, 'both maps the call touches are read'
 
 
 # ---------------------------------------------------------------------------
@@ -732,7 +729,7 @@ BUSES = {
         'generator': {'dtype': 'str', 'ordered': True},
         'bus': {'dtype': 'str'},
     },
-    'relations': {'bus_of': {'key': 'generator', 'values': 'bus'}},
+    'maps': {'generator': {'bus': 'bus'}},
     'parameters': {'load': {'dims': ['snapshot']}, 'k': {'dims': []}, 'flag': {'dims': ['snapshot'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}, 'q': {'dims': ['snapshot', 'generator']}},
 }
@@ -751,15 +748,15 @@ def _row(expression: str, where: str | None = None, **patch: object) -> str:
     ('expression', 'expected'),
     [
         pytest.param(
-            'p == at(sum(q, over=generator, by=bus_of[bus]), by=bus_of[bus])',
-            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus\_of}(g') = \mathrm{bus\_of}(g)} q_{g',t}",
+            'p == at(sum(q, over=generator, by=generator[bus]), by=generator[bus])',
+            r"\sum_{g' \in \mathcal{G} \,:\, \mathrm{bus}(g') = \mathrm{bus}(g)} q_{g',t}",
             id='grouped-by-a-relation',
         ),
         pytest.param('p == q - sum(q, over=generator)', r"\sum_{g' \in \mathcal{G}} q_{g',t}", id='over-the-whole-dim'),
     ],
 )
 def test_a_reduction_under_its_own_dimension_takes_a_fresh_dummy(expression: str, expected: str):
-    """Reusing `g` makes `bus_of(g) = bus_of(g)` a tautology — the sum of everything."""
+    """Reusing `g` makes `bus(g) = bus(g)` a tautology — the sum of everything."""
     assert expected in _row(expression), "the reduction's dummy is primed, so it is not the row's own g"
 
 
@@ -1161,7 +1158,7 @@ def test_a_walked_link_prints_as_the_family_of_rows_that_read_one_curve():
     """Printed off the union of the links' dims, every flow sat on every converter's curve and no relation showed."""
     printed = typeset_line(to_spec(EXAMPLES / 'piecewise_coupling.yaml'), 'operating_point', 'latex')
 
-    family = r'_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = o}'
+    family = r'_{f \in \mathcal{F} \,:\, \mathrm{converter}(f) = o}'
     assert printed.startswith(rf'\left( \mathit{{rate}}_{{f,t}} \right){family} \in'), 'a converter ties its own flows'
     assert rf'(\left( \mathrm{{bp\_rate}}_{{b,f}} \right){family})' in printed, 'each flow reads its own breakpoints'
     assert printed.endswith(r'\forall\, o \in \mathcal{O},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{o}'), (

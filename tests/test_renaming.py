@@ -14,6 +14,8 @@ map is asked for the new name of each name the spec has.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from mathspec import merge, rename, to_spec
@@ -23,10 +25,8 @@ from mathspec.errors import LanguageError
 #: `unit_` entries. Every place a name can stand appears once.
 UNIT = {
     'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'unit': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'relations': {
-        'unit_bus': {'key': 'unit', 'values': 'bus'},
-        'unit_ends': {'key': {'unit': 'unit'}, 'values': {'bus0': 'bus'}},
-    },
+    'relations': {'unit_link': {'dims': ['bus', 'unit'], 'missing': 'absent'}},
+    'maps': {'unit': {'bus': 'bus', 'bus0': 'bus'}},
     'given': {'expressions': {'total_cost': {'dims': []}}},
     'parameters': {
         'unit_p_max': {'dims': ['unit'], 'description': 'the most a unit_p reaches'},
@@ -43,8 +43,8 @@ UNIT = {
             'cases': {'unit_p': {'when': 'position(snapshot) == 0', 'expression': 0}},
             'otherwise': 'shift(unit_p, along=snapshot, offset=1)',
         },
-        'unit_at_bus': 'sum(unit_p, over=unit, by=unit_bus[bus])',
-        'unit_at_end': 'sum(unit_p, over=unit, by=unit_ends[bus0])',
+        'unit_at_bus': 'sum(unit_p, over=unit, by=unit[bus])',
+        'unit_at_end': 'sum(unit_p, over=unit, by=unit[bus0])',
     },
     'constraints': {
         'unit_ramp': {
@@ -92,12 +92,12 @@ COST = {
     ('where', 'expected'),
     [
         pytest.param(lambda s: list(s['dimensions']), ['bus', 'generator', 'snapshot'], id='dimension'),
-        pytest.param(lambda s: s['relations']['Generator_bus'], {'key': 'generator', 'values': 'bus'}, id='relation'),
         pytest.param(
-            lambda s: s['relations']['Generator_ends'],
-            {'key': {'generator': 'generator'}, 'values': {'bus0': 'bus'}},
-            id='relation-column',
+            lambda s: s['relations']['Generator_link'],
+            {'dims': ['bus', 'generator'], 'missing': 'absent'},
+            id='relation',
         ),
+        pytest.param(lambda s: s['maps'], {'generator': {'bus': 'bus', 'bus0': 'bus'}}, id='map'),
         pytest.param(lambda s: s['parameters']['Generator_cost']['dims'], ['generator', 'snapshot'], id='dims'),
         pytest.param(lambda s: s['variables']['Generator_p']['where'], 'Generator_on', id='where'),
         pytest.param(lambda s: s['variables']['Generator_p']['bounds']['upper'], 'Generator_p_max', id='bound'),
@@ -110,13 +110,13 @@ COST = {
         ),
         pytest.param(
             lambda s: s['expressions']['Generator_at_bus'],
-            'sum(Generator_p, over=generator, by=Generator_bus[bus])',
+            'sum(Generator_p, over=generator, by=generator[bus])',
             id='one-line-expression',
         ),
         pytest.param(
             lambda s: s['expressions']['Generator_at_end'],
-            'sum(Generator_p, over=generator, by=Generator_ends[bus0])',
-            id='column-not-renamed',
+            'sum(Generator_p, over=generator, by=generator[bus0])',
+            id='map-not-renamed',
         ),
         pytest.param(
             lambda s: s['constraints']['Generator_ramp']['expression'],
@@ -167,11 +167,11 @@ def test_a_quoted_label_spelt_like_a_renamed_name_stays():
     """A label is data: `'gas'` names a coordinate, not the dimension `gas`."""
     spec = {
         'dimensions': {'gas': {'dtype': 'str'}, 'tech': {'dtype': 'str'}},
-        'relations': {'tech_gas': {'key': 'tech', 'values': 'gas'}},
-        'conditions': {'fossil': {'condition': "tech_gas[gas] == 'gas'"}},
+        'maps': {'tech': {'gas': 'gas'}},
+        'conditions': {'fossil': {'condition': "tech[gas] == 'gas'"}},
     }
     renamed = rename(spec, {'gas': 'fuel'})
-    assert renamed.conditions['fossil'].condition == "tech_gas[fuel] == 'gas'"
+    assert renamed.conditions['fossil'].condition == "tech[fuel] == 'gas'"
 
 
 def test_a_fixed_choice_spelt_like_a_renamed_name_stays():
@@ -300,6 +300,11 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
             id='a-name-the-spec-keeps',
         ),
         pytest.param(
+            {'unit': 'bus'},
+            r"rename gives the dimension 'unit' the name 'bus', which the dimension 'bus' already has\.",
+            id='a-dimension-with-maps-is-named-as-a-dimension',
+        ),
+        pytest.param(
             {'unit_cost': 'Generator_cost', 'unit_p_max': 'Generator_cost'},
             r"rename gives 'unit_cost' and 'unit_p_max' the one name 'Generator_cost'\.",
             id='two-names-on-one',
@@ -313,9 +318,9 @@ def test_a_function_is_asked_once_for_each_name_the_spec_has():
         ),
         pytest.param(
             {'unit_cost': 'bus0'},
-            r"rename changes 'unit_cost' to 'bus0', and 'bus0' is also a column of the relation 'unit_ends'\. "
-            r'Give the column another name in the file, or choose another name\.',
-            id='a-new-name-that-is-a-column',
+            r"rename changes 'unit_cost' to 'bus0', and 'bus0' is also a map of 'unit'\. "
+            r'Give it another name in the file, or choose another name\.',
+            id='a-new-name-that-is-a-map',
         ),
         pytest.param(
             {'unit_cost': 'unit_p_max'}.get,
@@ -339,14 +344,22 @@ def test_a_map_the_spec_cannot_take_is_refused(names, message):
         rename(UNIT, names)
 
 
-def test_a_name_that_is_also_a_column_of_a_relation_is_refused():
-    """`ends[bus0]` selects a column, and a rename of the parameter `bus0` would change it too."""
+@pytest.mark.parametrize(
+    ('old', 'message'),
+    [
+        pytest.param('bus0', "'bus0' is also a map of 'line'", id='a-map'),
+        pytest.param('from_bus', "'from_bus' is also a column of the relation 'corridor'", id='a-relation-column'),
+    ],
+)
+def test_a_name_that_is_also_a_map_or_a_relation_column_is_refused(old, message):
+    """`line[bus0]` reads a map, and a rename of the parameter `bus0` would change it too."""
     spec = {
         'dimensions': {'line': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-        'relations': {'ends': {'key': 'line', 'values': {'bus0': 'bus', 'bus1': 'bus'}}},
-        'parameters': {'bus0': {'dims': ['bus']}},
+        'relations': {'corridor': {'dims': {'from_bus': 'bus', 'to_bus': 'bus'}}},
+        'maps': {'line': {'bus0': 'bus', 'bus1': 'bus'}},
+        'parameters': {'bus0': {'dims': ['bus']}, 'from_bus': {'dims': ['bus']}},
         'variables': {'flow': {'dims': ['line']}},
-        'expressions': {'sent': 'sum(flow, over=line, by=ends[bus0])'},
+        'expressions': {'sent': 'sum(flow, over=line, by=line[bus0])'},
     }
-    with pytest.raises(LanguageError, match=r"'bus0' is also a column of the relation 'ends'"):
-        rename(spec, {'bus0': 'price'})
+    with pytest.raises(LanguageError, match=re.escape(message)):
+        rename(spec, {old: 'price'})

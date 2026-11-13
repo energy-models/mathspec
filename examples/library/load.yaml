@@ -12,8 +12,8 @@ dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
-relations:
-  Load_port: { key: load, values: port }
+maps:
+  load: { port: port }
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:
@@ -22,4 +22,4 @@ constraints:
       What a load takes is what its port withdraws. PyPSA has no row for this
       constraint, because PyPSA writes the load into the balance.
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
+    expression: at(Port_p, by=load[port]) == -Load_p_set

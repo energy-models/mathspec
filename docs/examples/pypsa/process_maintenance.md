@@ -42,7 +42,7 @@ relations:
       data prep. In a scenario, they are the start and the snapshots after it,
       until their generator weightings reach that scenario's
       `maintenance_duration`. A process that is not maintainable has no rows
-    key: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
+    dims: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
     missing: absent
 
 parameters:

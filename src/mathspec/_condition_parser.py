@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ColumnNode:
-    """``relation[column]`` on a side of a comparison, which reads one column at the frame's coordinates."""
+    """``subject[map]``: the label at the frame's coordinates on a side of a comparison, and alone, that there is one."""
 
     relation: str
     column: str
@@ -114,7 +114,9 @@ class UnresolvedComparisonNode:
     right: ArithmeticNode | ColumnNode | KeywordNode
 
 
-UnresolvedConditionNode = NameNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
+UnresolvedConditionNode = (
+    NameNode | ColumnNode | UnresolvedComparisonNode | UnresolvedConditionCallNode | UnresolvedCountNode
+)
 
 ParsedCondition = Condition | UnresolvedConditionNode | ArithmeticNode | ColumnNode | KeywordNode
 
@@ -186,6 +188,7 @@ def _build_condition_grammar() -> pp.ParserElement:
         | count_comparison
         | comparison
         | condition_call
+        | column
         | existence
         | (pp.Suppress('(') + condition + pp.Suppress(')'))
     )
@@ -227,7 +230,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
 
     ``!=``, ``<`` and ``>`` are legal here, so only the tokens no condition
     admits are diagnosed. The grammar gives up at the bracket of
-    ``relation[a, b]``, since a comparison reads one column.
+    ``subject[a, b]``, since a comparison reads one map.
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
@@ -243,7 +246,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     ):
         relation, columns = before.group(1), [c.strip() for c in listed.group(1).split(',')]
         each = ' AND '.join(f'{relation}[{column}] == …' for column in columns)
-        return f"a comparison reads one column of '{relation}'. Compare each column on its own: {each}."
+        return f"a comparison reads one map of '{relation}'. Compare each map on its own: {each}."
     return None
 
 

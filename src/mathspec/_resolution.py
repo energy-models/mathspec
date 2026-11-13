@@ -45,17 +45,17 @@ from mathspec.program import (
     ExpressionReference,
     Mask,
     Region,
-    Relation,
     VariableDefined,
     carries_variable,
 )
+from mathspec.spec import subject_tables
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mathspec._condition_parser import ParsedCondition
     from mathspec._expression_parser import ParsedNode, Sense
-    from mathspec.program import DeclaredDtype
+    from mathspec.program import DeclaredDtype, Relation
     from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
 
@@ -108,9 +108,7 @@ class Namespace:
         self.one_of: dict[str, tuple[str, ...]] = {
             d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
         }
-        self.relations: dict[str, Relation] = {
-            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
-        }
+        self.relations: dict[str, Relation] = subject_tables(spec)
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
@@ -287,7 +285,7 @@ class Namespace:
             [
                 ('Parameters', self.parameters),
                 ('Dimensions', self.dimensions),
-                ('Relations', self.relations),
+                ('Relations', [r for r in self.relations if r not in self.dimensions]),
                 *([('Conditions', self.conditions)] if self.conditions else []),
             ]
             if allow_dims

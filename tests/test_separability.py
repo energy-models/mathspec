@@ -30,7 +30,7 @@ BASE: dict[str, Any] = {
         'zone': {'dtype': 'str'},
         'day': {'dtype': 'int'},
     },
-    'relations': {'zone_of': {'key': 'u', 'values': 'zone'}, 'day_of': {'key': 'h', 'values': 'day'}},
+    'maps': {'u': {'zone': 'zone'}, 'h': {'day': 'day'}},
     'parameters': {
         'cost': {'dims': ['u']},
         'budget': {'dims': []},
@@ -87,8 +87,8 @@ def test_a_model_the_axis_ties_together_names_what_ties_it(patch, fragment):
     ('patch', 'reach'),
     [
         pytest.param(
-            _rows('p >= shift(p, along=h, offset=1, within=day_of[day], edge=0)'),
-            Reach("constraint 'k'", 'day_of', 'partition'),
+            _rows('p >= shift(p, along=h, offset=1, within=h[day], edge=0)'),
+            Reach("constraint 'k'", 'h[day]', 'partition'),
             id='a-shift-inside-groups',
         ),
         pytest.param(
@@ -99,7 +99,7 @@ def test_a_model_the_axis_ties_together_names_what_ties_it(patch, fragment):
     ],
 )
 def test_a_reach_only_data_can_say_names_what_says_it(patch, reach):
-    """The verdict names the parameter or relation and what it stands as, rather
+    """The verdict names the parameter or the subject of a map and what it stands as, rather
     than refusing the model, so a driver holding the data knows what to read
     and `resolved` knows how to fold it."""
     verdict = _verdict(**patch)
@@ -131,20 +131,20 @@ def test_a_named_reach_resolves_to_the_lookahead_its_values_need(patch, least, a
     assert verdict.ahead == ahead, 'the value decides the lookahead, by its sign'
 
 
-def test_resolving_keeps_the_static_reach_and_what_a_relation_decides():
+def test_resolving_keeps_the_static_reach_and_what_a_map_decides():
     verdict = _verdict(
         constraints={
             'fixed': {'dims': ['h', 'u'], 'expression': 'p >= shift(p, along=h, offset=-2, edge=0)'},
             'named': {'dims': ['h', 'u'], 'expression': 'p >= shift(p, along=h, offset=width, edge=0)'},
             'grouped': {
                 'dims': ['h', 'u'],
-                'expression': 'p >= shift(p, along=h, offset=1, within=day_of[day], edge=0)',
+                'expression': 'p >= shift(p, along=h, offset=1, within=h[day], edge=0)',
             },
         }
     ).resolved({'width': -1})
     assert verdict.ahead == 2, 'a folded value never narrows what the model reads on its own'
-    assert verdict.undecided == (Reach("constraint 'grouped'", 'day_of', 'partition'),), (
-        'a reach a relation decides is not a value and stays undecided'
+    assert verdict.undecided == (Reach("constraint 'grouped'", 'h[day]', 'partition'),), (
+        'a reach a map decides is not a value and stays undecided'
     )
     assert not verdict.windowable, 'so the axis is still not windowable'
 
@@ -154,13 +154,13 @@ def test_resolving_a_name_nothing_waits_on_is_refused():
         _verdict(**_rows('p >= shift(p, along=h, offset=width, edge=0)')).resolved({'depth': 0})
 
 
-def test_a_read_through_a_relation_is_undecided_on_the_axis_it_reads():
-    """`at(cap, by=zone_of[zone])` reads `zone` at whatever coordinate the relation
-    chooses, so how far that reaches along `zone` is the relation's data to say."""
-    verdict = _verdict('zone', **_rows('p - at(cap, by=zone_of[zone]) <= 0'))
-    assert not verdict.windowable and not verdict.coupled, 'undecided until the relation is attached'
-    assert verdict.undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
-        'the report names the relation a driver has to read'
+def test_a_read_through_a_map_is_undecided_on_the_axis_it_reads():
+    """`at(cap, by=u[zone])` reads `zone` at whatever coordinate the map
+    chooses, so how far that reaches along `zone` is the map's data to say."""
+    verdict = _verdict('zone', **_rows('p - at(cap, by=u[zone]) <= 0'))
+    assert not verdict.windowable and not verdict.coupled, 'undecided until the map is attached'
+    assert verdict.undecided == (Reach("constraint 'k'", 'u[zone]', 'coordinate'),), (
+        'the report names the subject whose map a driver has to read'
     )
 
 
@@ -172,13 +172,13 @@ def test_a_sum_over_a_lookup_is_a_sum_and_a_lookup_not_a_grouping():
     from its columns, not from the node above it.
     """
     variables = {**BASE['variables'], 'q': {'dims': ['h', 'zone'], 'bounds': {'lower': 0}}}
-    rows = _rows('sum(at(q, by=zone_of[zone]), over=u) <= budget', dims=['h'])
+    rows = _rows('sum(at(q, by=u[zone]), over=u) <= budget', dims=['h'])
     program = to_spec({**BASE, 'variables': variables, **rows}).program
     assert list(program.separability['u'].coupled.values()) == [
         'sums over u (use sum_back(window=n) for a rolling sum)'
     ], 'the sum over u is a plain sum, reported as one'
-    assert program.separability['zone'].undecided == (Reach("constraint 'k'", 'zone_of', 'coordinate'),), (
-        'the lookup under it still reads zone at a coordinate the relation chooses'
+    assert program.separability['zone'].undecided == (Reach("constraint 'k'", 'u[zone]', 'coordinate'),), (
+        'the lookup under it still reads zone at a coordinate the map chooses'
     )
 
 
@@ -239,7 +239,7 @@ def test_a_grouping_that_sums_the_axis_away_couples_it():
     program = to_spec(
         {
             **BASE,
-            'constraints': {'z': {'dims': ['h', 'zone'], 'expression': 'sum(p, over=u, by=zone_of[zone]) <= cap'}},
+            'constraints': {'z': {'dims': ['h', 'zone'], 'expression': 'sum(p, over=u, by=u[zone]) <= cap'}},
         }
     ).program
     verdict = program.separability['u']
@@ -247,7 +247,7 @@ def test_a_grouping_that_sums_the_axis_away_couples_it():
     assert verdict.coupled == {
         "constraint 'z'": 'groups u into zone (window that dimension instead, or cut only at the group edges)'
     }, 'the sum over the join is the grouping, reported once'
-    assert not verdict.undecided, 'the join under the sum is not also a lookup waiting on the relation'
+    assert not verdict.undecided, 'the join under the sum is not also a lookup waiting on the map'
 
 
 def test_every_declared_axis_has_a_verdict_and_nothing_else_does():

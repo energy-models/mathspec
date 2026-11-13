@@ -3,15 +3,15 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  The join without a grouping: `at(array, by=relation[c])` takes, for each
-  `snapshot`, the value at the `period` the relation lists for that snapshot.
+  The join without a grouping: `at(array, by=subject[m])` takes, for each
+  `snapshot`, the value at the `period` that the map gives that snapshot.
 
 dimensions:
   snapshot: { dtype: int }
   period: { dtype: int }
 
-relations:
-  period_of: { key: snapshot, values: period }
+maps:
+  snapshot: { period: period }
 
 parameters:
   cap: { dims: [period] }
@@ -24,6 +24,6 @@ variables:
 constraints:
   within_cap:
     dims: [snapshot]
-    expression: p <= at(cap, by=period_of[period])
+    expression: p <= at(cap, by=snapshot[period])
 
 objective: { sense: minimize, expression: sum(p) }

@@ -80,8 +80,8 @@ Keep this Python session open. Later steps use `ms`.
 Make a file `generators.yaml`. The file declares the [shared dimensions](../reference/composition.md#each-kind-of-entry) again, with only the type of their labels (a [`dtype`](../reference/language/dimensions.md#dimensions)). The
 [`adds_to:`](../reference/language/named.md#adds_to)
 keys of the file make `generation` a term of the injection and `generation_cost` a term of
-the total cost. `gen_bus` is a table of label pairs
-(a [relation](../reference/language/relations.md)) from each generator to its bus. `generation` uses `gen_bus` to sum the dispatch by bus.
+the total cost. `generator[bus]` gives each generator its bus
+(a [map](../reference/language/relations.md#maps)). `generation` uses `generator[bus]` to sum the dispatch by bus.
 
 ```yaml title="generators.yaml"
 description: A generator fleet, each unit on one bus.
@@ -96,8 +96,9 @@ dimensions:
   bus: { dtype: str }
   generator: { description: generating units }
 
-relations:
-  gen_bus: { key: generator, values: bus, description: the bus a generator sits on }
+maps:
+  generator:
+    bus: { refers_to: bus, description: the bus a generator sits on }
 
 parameters:
   capacity: { dims: [generator], description: installed capacity }
@@ -112,7 +113,7 @@ variables:
 expressions:
   generation:
     description: what the fleet puts into a bus
-    expression: sum(dispatch, over=generator, by=gen_bus[bus])
+    expression: sum(dispatch, over=generator, by=generator[bus])
     adds_to: injection
   generation_cost:
     description: what running the fleet costs
@@ -174,7 +175,7 @@ Use `markdown` or [`to_markdown`](../reference/typeset.md) to print the math of 
     **`generation`**
 
     ```math
-    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**
@@ -183,7 +184,7 @@ Use `markdown` or [`to_markdown`](../reference/typeset.md) to print the math of 
     \mathit{generation}^{\mathrm{cost}} = \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} \mathit{dispatch}_{g,t} \cdot \mathrm{cost}_{g}
     ```
 
-Each term appears as its own definition. The sum in `generation` covers the generators on bus $b$, the $g$ where $\mathrm{gen\_bus}(g) = b$. mathspec prints
+Each term appears as its own definition. The sum in `generation` covers the generators on bus $b$, the $g$ where $\mathrm{bus}(g) = b$. mathspec prints
 no objective,
 because the file sets none.
 
@@ -283,7 +284,7 @@ print(ms.to_markdown(spec, legend=False))
     **`generation`**
 
     ```math
-    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+    \mathit{generation}_{b,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = b} \mathit{dispatch}_{g,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
     ```
 
     **`generation_cost`**

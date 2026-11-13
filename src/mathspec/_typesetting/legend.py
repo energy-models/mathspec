@@ -54,7 +54,7 @@ class Noticed:
 
     Attributes:
         policies: Each translation policy some ``shift`` or ``sum_back`` prints.
-        grouped: Whether some translation is counted inside a relation's group.
+        grouped: Whether some translation is counted inside the group of a map.
         positions: Each form a ``position()`` prints in.
         numeric_coordinates: Each dimension whose index is compared against a
             number, where "position 3" and "the coordinate 3" are both
@@ -121,6 +121,8 @@ def notice(program: Program) -> Noticed:
 
 
 _NO_ROW = 'where the data has no row'
+
+_NO_LABEL = 'where the data gives no label'
 
 _MASKED_OUT = 'where the mask leaves it out'
 
@@ -260,18 +262,30 @@ class Legend:
             shown = self.format.math(number(value, self.format))
         return f', {shown} {where}'
 
-    def _signature(self, name: str, lk: Relation) -> str:
-        """A relation in the legend: a function from its key sets to its value sets, or a relation inside the product."""
+    def _signatures(self, name: str, lk: Relation, dim: str) -> list[str]:
+        """The parts of table *name* that touch *dim*: the relation inside its product, and each map from its subject.
 
-        def product(roles: Iterable[str]) -> str:
-            return self.format.joined([self.symbols.set[lk.dim(r)] for r in roles], self._op('times'))
-
-        if lk.values:
-            return f'{self.format.upright(name)}: {product(lk.key)} {self._op("maps_to")} {product(lk.values)}'
-        return f'{self.format.upright(name)} {self._op("subset_of")} {product(lk.roles)}'
+        A relation prints as ``connection ⊆ P x U`` under each of its
+        dimensions. A map prints as ``carrier: U → C`` under its subject's
+        dimensions and the one it refers to, its subject a set symbol for a
+        dimension and the relation's name for a relation.
+        """
+        own = {lk.dim(r) for r in lk.key}
+        dimension = name in self.program.dimensions and lk.key == (name,)
+        subject = self.symbols.set[name] if dimension else self.format.upright(name)
+        signatures = []
+        if not dimension and dim in own:
+            product = self.format.joined([self.symbols.set[lk.dim(r)] for r in lk.key], self._op('times'))
+            signatures.append(f'{self.format.upright(name)} {self._op("subset_of")} {product}')
+        signatures.extend(
+            f'{self.format.upright(role)}: {subject} {self._op("maps_to")} {self.symbols.set[lk.dim(role)]}'
+            for role in lk.values
+            if dim in own or lk.dim(role) == dim
+        )
+        return signatures
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: the labels its ``one_of`` allows, each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
+        """The dimension's carried structure: the labels its ``one_of`` allows, each relation over it and map from or into it, and each that may leave a row out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -284,12 +298,19 @@ class Legend:
         if (labels := self.program.dimensions[dim].one_of) is not None:
             clauses.append(f' (labels {", ".join(self.format.mono(m) for m in labels)})')
         if carried:
-            maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
-            clauses.append(f' with {self.format.math(maps)}')
+            signatures = [part for c, lk in carried.items() for part in self._signatures(c, lk, dim)]
+            clauses.append(f' with {self.format.math(self.format.joined(signatures, ""))}')
+            own = {c: {lk.dim(r) for r in lk.key} for c, lk in carried.items()}
             clauses.extend(
                 f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'
                 for c, lk in carried.items()
-                if lk.missing == 'absent'
+                if lk.missing == 'absent' and dim in own[c]
+            )
+            clauses.extend(
+                f', {self.format.mono(f"{c}[{role}]")} is {self.format.mono("absent")} {_NO_LABEL}'
+                for c, lk in carried.items()
+                for role in lk.partial
+                if dim in own[c] or lk.dim(role) == dim
             )
         return ''.join(clauses)
 
@@ -300,7 +321,7 @@ class Legend:
         holds no claim the language reference does not already make.
         """
         fmt, dash = self.format, self.format.dash
-        relation = fmt.apply(fmt.upright('relation'), 't')
+        relation = fmt.apply(fmt.upright('map'), 't')
         shifted, t = fmt.math('t-k'), fmt.math('t')
         items = []
         if 'wrap' in noticed.policies:
@@ -317,7 +338,7 @@ class Legend:
             items.append(
                 LegendItem(
                     f't {fmt.superscript(self._op("cyclic_minus"), relation)} k',
-                    f'{fmt.mono("within=relation[...]")} {dash} {shifted} inside the group of {t}',
+                    f'{fmt.mono("within=subject[map]")} {dash} {shifted} inside the group of {t}',
                 )
             )
         if noticed.positions:
@@ -331,7 +352,7 @@ class Legend:
             items.append(
                 LegendItem(
                     fmt.apply(fmt.subscript(self._op('position'), [relation]), 't'),
-                    f'{fmt.mono("position(within=relation[...])")} {dash} the position of {t} inside its group',
+                    f'{fmt.mono("position(within=subject[map])")} {dash} the position of {t} inside its group',
                 )
             )
         if 'from_end' in noticed.positions:

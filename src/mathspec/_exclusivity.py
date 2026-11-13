@@ -69,7 +69,9 @@ def overlapping(
         cases: The ``when`` of every case, keyed by the case's name. The
             entry's ``otherwise`` is not among them: it claims what the rest
             leave, so it overlaps nothing by construction.
-        dtypes: The declared dtype of every name a mask compares against.
+        dtypes: The declared dtype of every dimension and of every parameter
+            a mask compares against. A subject named here is a dimension,
+            so it has a row at every coordinate.
         defaults: The value a missing row reads as, for every parameter whose
             ``missing:`` names one.
 
@@ -188,6 +190,8 @@ class _Grid:
                 subject = _subject_of(node)
                 subjects[id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()))
+                for label in _labels_read(node):
+                    values.setdefault(label, set())
         return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
     @property
@@ -199,14 +203,29 @@ class _Grid:
             yield dict(zip(self.domains, combination, strict=True))
 
     def witness(self, cell: dict[Subject, Cell]) -> str:
-        """*cell* in words. A column names a value only where its row exists, and a value says the row exists."""
-        shown = [subject for subject in cell if all(_has_row(relation, cell) for relation in _columns_of(subject))]
+        """*cell* in words. A column names a value only where its row and its labels exist, and a value says the row exists.
+
+        A comparison of two maps that is shown says both have a label, so a
+        map no literal names is not listed beside it.
+        """
+        shown = [
+            subject
+            for subject in cell
+            if all(_has_row(relation, cell) for relation in _columns_of(subject))
+            and all(cell.get(label) is not Special.NULL for label in _pair_labels(subject))
+        ]
         read = {relation for subject in shown for relation in _columns_of(subject)}
+        paired = {label for subject in shown for label in _pair_labels(subject)}
         return ', '.join(
-            _clause(subject, cell[subject])
+            _clause(subject, cell[subject], named=not self._unnamed(subject))
             for subject in shown
             if not (subject.kind == 'relation' and subject.qualifier is None and subject.name in read)
+            and not (subject in paired and self._unnamed(subject))
         )
+
+    def _unnamed(self, subject: Subject) -> bool:
+        """Whether *subject* is a map no literal names, so its cells are only "a label" and "none"."""
+        return self.domains[subject] == [Special.OTHER, Special.NULL]
 
 
 _FLIPPED: Mapping[ComparisonOperator, ComparisonOperator] = {
@@ -283,7 +302,7 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         if node.op not in ('==', '!='):
             msg = (
                 f'{subject} uses {node.op!r}, and this analysis does not decide an inequality between two '
-                'relation columns. Compare them with == or !=, or precompute the comparison as a boolean '
+                'maps. Compare them with == or !=, or precompute the comparison as a boolean '
                 'parameter and test that'
             )
             raise Undecidable(msg)
@@ -294,12 +313,27 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
 def _rows_read(node: TypedCondition) -> tuple[str, ...]:
     """The relations whose row *node* reads a column of, and so is false without."""
     match node:
-        case RelationComparison(name=name):
+        case RelationComparison(name=name) | RelationDefined(name=name, column=str()):
             return (name,)
         case RelationPairComparison(name=name, other=other):
             return (name, other)
         case _:
             return ()
+
+
+def _labels_read(node: TypedCondition) -> tuple[Subject, ...]:
+    """The maps whose label *node* compares, and so is false without, beyond the label of its own subject."""
+    if isinstance(node, RelationPairComparison):
+        return (Subject('relation', node.name, node.column), Subject('relation', node.other, node.other_column))
+    return ()
+
+
+def _pair_labels(subject: Subject) -> tuple[Subject, ...]:
+    """The two labels a comparison of two maps compares, so a cell without either gives it no value."""
+    if subject.kind != 'relation_pair' or subject.qualifier is None:
+        return ()
+    (column, other_column), other = subject.group, subject.qualifier
+    return (Subject('relation', subject.name, column), Subject('relation', other, other_column))
 
 
 def _columns_of(subject: Subject) -> tuple[str, ...]:
@@ -326,9 +360,9 @@ def _subject_of(node: TypedCondition) -> Subject:
         case DimensionPosition(name=name, partition=partition):
             if partition is None:
                 return Subject('rank', name)
-            return Subject('rank', name, partition.name, partition.grouped)
-        case RelationDefined(name=name):
-            return Subject('relation', name)
+            return Subject('rank', name, f'{partition.name}[{", ".join(partition.grouped)}]', partition.grouped)
+        case RelationDefined(name=name, column=column):
+            return Subject('relation', name, column)
         case RelationComparison(name=name, column=column):
             return Subject('relation', name, column)
         case RelationPairComparison(name=name, column=column, other=other, other_column=other_column):
@@ -357,8 +391,8 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
     if subject.kind in ('relation_pair', 'variable'):
         return [True, False]
     if subject.kind == 'relation' and subject.qualifier is None:
-        return [True, Special.NULL]
-    dtype = dtypes.get(subject.name)
+        return [True] if subject.name in dtypes else [True, Special.NULL]
+    dtype = None if subject.kind == 'relation' else dtypes.get(subject.name)
     if dtype == 'bool':
         if values:
             msg = f'{subject} has dtype bool and is compared to a literal. Write the bare name, or `not {subject}`'
@@ -379,13 +413,15 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
 def _absence_cells(subject: Subject, *, numeric: bool) -> list[Cell]:
     """The regions where *subject* has no ordinary value.
 
-    A dimension's coordinates have no null, and nor has a relation's column:
-    whether the relation has a row is a subject of its own. ``defined``
+    A dimension's coordinates have no null. A map may give a row no label, so
+    it has one, beside the row itself, which is a subject of its own. ``defined``
     excludes an infinity, so a magnitude needs a region where every comparison
     still reads normally and the bare name is false.
     """
-    if subject.kind in ('dim', 'relation'):
+    if subject.kind == 'dim':
         return []
+    if subject.kind == 'relation':
+        return [Special.NULL]
     return [Special.NULL, Special.NEG_INF, Special.POS_INF] if numeric else [Special.NULL]
 
 
@@ -487,12 +523,21 @@ def _rank_cells(subject: Subject, positions_seen: set[int]) -> list[Cell]:
     return cells
 
 
-def _clause(subject: Subject, value: Cell) -> str:
-    """*subject* in one cell, in words. A null cell says the data has no row, never a ``missing:`` reading's name."""
+def _clause(subject: Subject, value: Cell, *, named: bool = True) -> str:
+    """*subject* in one cell, in words. A null cell says the data has no row or label, never a ``missing:`` reading's name.
+
+    A map compared against no literal has only the cells "a label" and "none",
+    so where *named* is false its label is not "anything else" but simply there.
+    """
+    label = subject.kind == 'relation' and subject.qualifier is not None
     if value is Special.NULL:
-        return f'{subject} has no value' if subject.kind == 'expression' else f'{subject} has no row'
+        if subject.kind == 'expression':
+            return f'{subject} has no value'
+        return f'{subject} has no label' if label else f'{subject} has no row'
     if subject.kind == 'relation' and subject.qualifier is None:
         return f'{subject} has a row'
+    if label and value is Special.OTHER and not named:
+        return f'{subject} has a label'
     return f'{subject} is {_shown(subject, value)}'
 
 
@@ -545,6 +590,8 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
         case VariableDefined():
             return bool(value)
         case RelationPairComparison(op=op):
+            if any(cell[label] is Special.NULL for label in _labels_read(node)):
+                return False
             return bool(value) if op == '==' else not value
         case ExpressionComparison():
             msg = 'a comparison of expressions is refused as undecidable before any cell is read'
