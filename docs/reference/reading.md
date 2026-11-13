@@ -140,11 +140,7 @@ An `Assumption` has three fields:
 - `description` is the text that a refusal ends with.
 
 `holds` and `where` are both a [`Mask`](#nodes-and-conditions), the resolved
-form of a condition. An assumption may contain a `VariableDefined`, which is
-true where the variable exists, and a `ConstraintDefined`, which is true where
-the constraint has a row. A tool checks such an assumption once it knows the
-rows of the model, before it solves
-([rows of the model](language/assumptions.md#rows-of-the-model)). [`assumption_message`](program.md#mathspec.program.assumption_message)
+form of a condition. [`assumption_message`](program.md#mathspec.program.assumption_message)
 returns the message a tool prints for
 an assumption that the data does not meet:
 

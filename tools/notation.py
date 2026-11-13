@@ -149,7 +149,6 @@ FAMILIES: dict[str, dict[str, str]] = {
         'ramps_are_gentle': 'Shift in an assumption',
         'flexible_units_have_headroom': 'Assumption with a boolean condition',
         'northern_demand_is_real': 'Assumption with a map condition',
-        'every_dispatch_has_a_start_row': 'Assumption on the rows of a constraint and a variable',
     },
     'Where conditions': {
         'scalar': 'Parameter as a condition',

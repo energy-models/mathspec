@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 
 from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
-from mathspec._exclusivity import Existence, Undecidable, left_out
 from mathspec._expansion import expand, parse_template
 from mathspec._expression_parser import columns_of
 from mathspec._piecewise import (
@@ -49,7 +48,6 @@ from mathspec.program import (
     BooleanLiteral,
     Constant,
     Constraint,
-    ConstraintDefined,
     Dimension,
     ExpressionReference,
     Given,
@@ -191,11 +189,8 @@ def lower(spec: Spec) -> Program:
             objective = Objective(spec.objective.sense, expression, spec.objective.description)
 
     assumptions: dict[str, Assumption] = {}
-    existence = Existence(
-        {name: v.where for name, v in variables.items()}, {name: c.where for name, c in constraints.items()}
-    )
     for aname, adef in spec.assumptions.items():
-        if (assumption := _assumption(aname, adef, ns, errors, existence)) is not None:
+        if (assumption := _assumption(aname, adef, ns, errors)) is not None:
             assumptions[aname] = assumption
 
     curves: dict[str, tuple[tuple[Expression, ...], dict[str, JoinColumns], Mask | None, Gate | None]] = {}
@@ -512,56 +507,36 @@ def _decided_by_index_set(context: str, name: str, text: str | None, in_: tuple[
             return f'{head} repeats the relation. Delete the relation from it.'
 
 
-def _assumption(
-    name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str], existence: Existence | None = None
-) -> Assumption | None:
+def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:
     """One ``assumptions:`` entry typed, or ``None`` once anything in it failed.
 
     A condition the connectives decide is refused: one that folds to true
     assumes nothing, and one that folds to false refuses every dataset. A
-    bare variable or constraint name asks whether a row exists, which the
-    data decides before any solve. An assumption on rows alone is refused
-    with the region that the ``where:`` of the entries in *existence* leave
-    out ([`left_out`][mathspec._exclusivity.left_out]).
+    variable is refused too, since an assumption is about the data and a
+    variable is what the solver decides from it.
     """
     context = f"Assumption '{name}'"
     found = len(errors)
-    holds = resolve_condition_text(entry.holds, ns, context, errors, rows=True)
-    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors, rows=True)
+    holds = resolve_condition_text(entry.holds, ns, context, errors)
+    where = resolve_condition_text(entry.where, ns, f'{context}, where', errors)
     if isinstance(holds, BooleanLiteral):
         errors.append(_decided_assumption(context, entry.holds, value=holds.value))
     if isinstance(where, BooleanLiteral):
         assert entry.where is not None, 'a `where:` the file did not write resolves to nothing'
         errors.append(_decided_where(context, entry.where, value=where.value))
+    for mask, key in ((holds, 'holds'), (where, 'where')):
+        if mask is None or isinstance(mask, BooleanLiteral):
+            continue
+        errors.extend(
+            f"{context}: variable '{atom.name}' appears in '{key}:', and an assumption checks only data. "
+            f'Name a parameter, or state the rule as a constraint.'
+            for atom in Mask(mask).atoms
+            if isinstance(atom, VariableDefined)
+        )
     if len(errors) > found:
         return None
     assert holds is not None, 'a condition that read to nothing appended an error'
-    if existence is not None and (gap := _rows_left_out(holds, where, existence, ns)) is not None:
-        errors.append(
-            f'{context}: the `where:` conditions of the entries it names leave a gap where {gap}. There its `where:` holds '
-            f'and its `holds:` does not, so data with a row there fails it. Add a constraint whose `where:` holds '
-            f'there, or widen the `where:` of an entry that `holds:` names.'
-        )
-        return None
     return Assumption(Mask(holds), mask_of(where), entry.description)
-
-
-def _rows_left_out(holds: Condition, where: Condition | None, entries: Existence, ns: Namespace) -> str | None:
-    """The region an assumption on rows alone fails in, or ``None``.
-
-    Only an assumption whose every atom is a bare variable or constraint name
-    is decided here: it is about how the model is built, so a region the
-    ``where:`` of those entries leave out is a gap whatever the values are. An
-    assumption that also tests a value is about the data, and is left to the
-    tool, as is one the cells cannot decide.
-    """
-    atoms = (*Mask(holds).atoms, *(Mask(where).atoms if where is not None else ()))
-    if not all(isinstance(atom, VariableDefined | ConstraintDefined) for atom in atoms):
-        return None
-    try:
-        return left_out(holds, where, entries, ns.dtypes, ns.defaults)
-    except Undecidable:
-        return None
 
 
 def _decided_assumption(context: str, text: str, *, value: bool) -> str:

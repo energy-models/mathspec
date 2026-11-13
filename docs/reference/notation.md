@@ -1517,21 +1517,6 @@ assumptions:
 \mathrm{load}_{u,t} \ge 0 \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \mathrm{zone}(u) = \text{'}\mathrm{north}\text{'}
 ```
 
-#### Assumption on the rows of a constraint and a variable
-
-a constraint's row where a variable exists: decided at load from their `where:`, then checked on the data
-
-```yaml
-assumptions:
-  every_dispatch_has_a_start_row:
-    holds: "starts"
-    where: "p"
-```
-
-```math
-\mathrm{starts}_{g,t} \text{ has a row} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, p_{g,t} \text{ exists}
-```
-
 ### Where conditions
 
 #### Parameter as a condition

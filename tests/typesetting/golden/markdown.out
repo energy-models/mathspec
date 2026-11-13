@@ -614,12 +614,6 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{zone}(g,\ t)} \
 \mathrm{eta}_{g} > 0 \wedge \mathrm{eta}_{g} \le 1 \qquad \forall\, g \in \mathcal{G}
 ```
 
-**`every_dispatch_has_a_start_row`**
-
-```math
-\mathrm{starts}_{g,t} \text{ has a row} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, p_{g,t} \text{ exists}
-```
-
 **`flexible_units_have_headroom`**
 
 ```math

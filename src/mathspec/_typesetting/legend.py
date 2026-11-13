@@ -201,7 +201,7 @@ class Legend:
             *(
                 self._item(
                     self.symbols.constraint[g],
-                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a row family another file builds',
+                    f'{fmt.mono(g)}{self._over(list(entry.dims))}, a row family this file reads the dual of',
                     entry.description,
                 )
                 for g, entry in program.given.constraints.items()

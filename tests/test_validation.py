@@ -1996,19 +1996,6 @@ class TestRulesDecidedWithoutData:
         _spec(**{'variables.q.where': where.replace('link', named.group(1), 1)}, **patch)
 
 
-#: A bound on `p` written as two constraints, one for each value of `flag`.
-_SPLIT = {
-    'constraints.on': {'dims': ['g'], 'where': 'flag', 'expression': 'p <= c'},
-    'constraints.off': {'dims': ['g'], 'where': 'NOT flag', 'expression': 'p <= k'},
-}
-
-#: A constraint whose rows `x` drops inside its `where:`, since `x` is absent where the data has no row.
-_NARROWED = {
-    'parameters.x': {'dims': ['g'], 'missing': 'absent'},
-    'constraints.n': {'dims': ['g'], 'where': 'flag', 'expression': 'p <= x'},
-}
-
-
 _LINKED = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
 
 
@@ -2133,10 +2120,10 @@ def test_a_where_that_in_cannot_state_loads(patch: dict[str, Any]):
 class TestAssumptions:
     """What an ``assumptions:`` entry may state, and what the load refuses.
 
-    Everything here is about the data, so little in it is decided at load: the
-    entry is refused where the connectives already settle it, where it reads a
-    variable's value, which is what the solver decides, and where the `where:`
-    of the variables and constraints it names already leave a row out.
+    Everything here is about the data, so nothing in it is decided at load but
+    the shape of the condition: the entry is refused where the connectives
+    already settle it, and where it names a variable, which is what the solver
+    decides rather than what the caller attaches.
     """
 
     @pytest.mark.parametrize(
@@ -2153,19 +2140,14 @@ class TestAssumptions:
                 id='a-condition-that-is-always-false',
             ),
             pytest.param(
-                'p > 0',
-                ("'p' is a variable. The solver decides its value", 'write its bare name, or state the bound'),
-                id='a-variable-value-in-the-condition',
+                'p',
+                ("variable 'p' appears in 'holds:'",),
+                id='a-variable-in-the-condition',
             ),
             pytest.param(
-                {'holds': 'c > 0', 'where': 'p > 1'},
-                ("'p' is a variable.",),
-                id='a-variable-value-in-the-where',
-            ),
-            pytest.param(
-                'p + c > 0',
-                ('one side names a variable', 'write its bare name, or state the bound'),
-                id='a-variable-in-arithmetic',
+                {'holds': 'c > 0', 'where': 'p'},
+                ("variable 'p' appears in 'where:'",),
+                id='a-variable-in-the-where',
             ),
             pytest.param(
                 {'holds': 'c > 0', 'where': 'false'},
@@ -2210,129 +2192,6 @@ class TestAssumptions:
     def test_an_entry_the_language_admits(self, entry):
         spec = _spec(assumptions={'sound': entry})
         assert set(spec.assumptions) == {'sound'}, 'the entry loads under the name the file wrote'
-
-    @pytest.mark.parametrize(
-        ('patch', 'entry'),
-        [
-            pytest.param(_SPLIT, {'holds': 'on OR off', 'where': 'p'}, id='two-constraints-that-cover-a-variable'),
-            pytest.param(
-                {**_SPLIT, 'variables.p.where': 'flag'},
-                {'holds': 'on', 'where': 'p'},
-                id='one-constraint-where-it-applies',
-            ),
-            pytest.param({}, {'holds': 'c > 0', 'where': 'p'}, id='a-variable-in-the-where'),
-            pytest.param({'variables.p.where': 'flag'}, {'holds': 'p', 'where': 'flag'}, id='a-variable-in-the-holds'),
-            pytest.param(
-                {'given.constraints.far': {'dims': ['g']}},
-                {'holds': 'far', 'where': 'p'},
-                id='a-given-constraint-whose-where-another-file-sets',
-            ),
-            pytest.param(
-                {'constraints.on': _SPLIT['constraints.on']},
-                {'holds': 'on', 'where': 'p AND c > 0'},
-                id='a-gap-beside-a-value-test-is-left-to-the-tool',
-            ),
-            pytest.param(
-                {'variables.p.where': 'flag', 'variables.q.where': 'p'},
-                {'holds': 'p', 'where': 'q'},
-                id='a-variable-whose-where-names-another',
-            ),
-            pytest.param(
-                {'variables.p.where': 'flag', 'variables.q.where': 'flag', 'conditions.dispatched': 'p'},
-                {'holds': 'dispatched', 'where': 'q'},
-                id='a-named-condition-that-names-a-variable',
-            ),
-            pytest.param(
-                {**_NARROWED, 'constraints.d': {'dims': ['g'], 'where': 'flag AND x', 'expression': 'p <= c'}},
-                {'holds': 'd', 'where': 'n'},
-                id='a-constraint-in-the-where-whose-term-drops-rows',
-            ),
-            pytest.param(
-                {**_NARROWED, 'variables.p.where': 'flag AND x'},
-                {'holds': 'NOT n', 'where': 'p'},
-                id='a-negated-constraint-whose-term-drops-rows',
-            ),
-            pytest.param(
-                {'variables.s': {'dims': ['g'], 'where': 'p'}, 'variables.p.where': 's'},
-                {'holds': 's', 'where': 'p'},
-                id='two-variables-whose-where-name-each-other',
-            ),
-            pytest.param(
-                {
-                    'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
-                    'variables.q.in': ['link'],
-                    'variables.s': {'dims': ['g', 'h'], 'in': ['link']},
-                },
-                {'holds': 'q', 'where': 's'},
-                id='two-variables-in-one-relation',
-            ),
-        ],
-    )
-    def test_an_assumption_on_rows_the_conditions_cannot_fault_loads(self, patch, entry):
-        """A bare variable or constraint name asks whether a row exists, which the data decides before any solve.
-
-        Where the assumption also tests a value, it is about the data, and a gap
-        the conditions leave is the tool's to find. A constraint row can be
-        absent inside its ``where:``, so its ``where:`` decides nothing where a
-        wider region would hide a row: in the assumption's own ``where:``, or
-        under a ``NOT``.
-        """
-        spec = _spec(**patch, assumptions={'covered': entry})
-        assert 'covered' in spec.program.assumptions, 'the tool still checks it, where a term can leave a row out'
-
-    @pytest.mark.parametrize(
-        ('patch', 'entry', 'fragment'),
-        [
-            pytest.param(
-                {'constraints.on': _SPLIT['constraints.on']},
-                {'holds': 'on', 'where': 'p'},
-                "Assumption 'gap': the `where:` conditions of the entries it names leave a gap where flag is false. "
-                'There its `where:` holds and its `holds:` does not, so data with a row there fails it. Add a '
-                'constraint whose `where:` holds there, or widen the `where:` of an entry that `holds:` names.',
-                id='a-case-no-constraint-covers',
-            ),
-            pytest.param(
-                {'variables.p.where': 'flag'},
-                {'holds': 'p', 'where': 'q'},
-                'leave a gap where flag is false.',
-                id='a-variable-whose-where-is-narrower',
-            ),
-            pytest.param(
-                {'variables.p.where': 'flag', 'variables.q.where': 'tag == "x"'},
-                {'holds': 'p', 'where': 'q'},
-                "leave a gap where tag is 'x', flag is false.",
-                id='a-gap-through-two-conditions',
-            ),
-            pytest.param(
-                {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}, 'variables.q.in': ['link']},
-                {'holds': 'q'},
-                'leave a gap where link has no row.',
-                id='a-variable-whose-in-leaves-a-row-out',
-            ),
-            pytest.param(
-                {'constraints.c': {'dims': ['g'], 'expression': 'p <= k'}},
-                {'holds': 'c', 'where': 'p'},
-                "Assumption 'gap': 'c' names a constraint and a parameter, so the bare name is ambiguous. "
-                'Rename one of the two.',
-                id='a-constraint-that-shares-a-name',
-            ),
-        ],
-    )
-    def test_an_assumption_the_conditions_already_fail_is_refused(self, patch, entry, fragment):
-        assert fragment in _refusal(**patch, assumptions={'gap': entry})
-
-    @pytest.mark.parametrize(
-        'patch',
-        [
-            pytest.param({'variables.p.where': 'on'}, id='in-a-variable-where'),
-            pytest.param({'conditions.covered': 'on', 'assumptions': {'a': 'covered'}}, id='in-a-named-condition'),
-        ],
-    )
-    def test_a_constraint_name_outside_an_assumption_is_refused(self, patch):
-        assert (
-            "'on' is a constraint, and only an assumption's `holds:` or `where:` may test whether it has a row, by "
-            "its bare name. Test the `where:` of 'on' here instead."
-        ) in _refusal(**_SPLIT, **patch)
 
     def test_an_entry_round_trips_as_the_form_it_was_written_in(self):
         """A bare string stays one, and a mapping keeps only the keys it carried."""
