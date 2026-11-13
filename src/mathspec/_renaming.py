@@ -260,5 +260,10 @@ def _model_in(annotation: object) -> type[BaseModel] | None:
 
 
 def _is_choice(annotation: object) -> bool:
-    """Whether the value of a field is one of a fixed set of words, none of which is a name."""
-    return get_origin(annotation) is Literal or any(_is_choice(arg) for arg in get_args(annotation))
+    """Whether the value of a field is one of a fixed set of words, none of which is a name.
+
+    A field that takes any string beside its words holds a name there, as a
+    parameter's ``missing:`` holds the name of an expression.
+    """
+    args = get_args(annotation)
+    return str not in args and (get_origin(annotation) is Literal or any(_is_choice(arg) for arg in args))

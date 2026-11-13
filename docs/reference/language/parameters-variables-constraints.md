@@ -392,6 +392,60 @@ A values parameter of a curve with a `where:` over its breakpoints must declare 
 The typeset legend lists what a missing row means beside the parameter, such
 as `` `0` where the data has no row ``. It lists nothing for `refused`.
 
+#### A value that depends on a label
+
+`missing:` also takes the name of an entry under
+[`expressions:`](named.md), and a missing row then takes the value of that
+entry. In this example, a missing row of `sign` is `-1` for a load and `1` for
+every other entity:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  component: { one_of: [Generator, Load] }
+maps:
+  entity:
+    component: { refers_to: component }
+parameters:
+  sign: { dims: [entity], missing: sign_default }
+variables:
+  p: { dims: [entity] }
+expressions:
+  sign_default:
+    dims: [entity]
+    cases:
+      load: { when: "entity[component] == 'Load'", expression: "-1" }
+    otherwise: "1"
+constraints:
+  limit:
+    dims: []
+    expression: sum(sign * p) <= 1
+```
+
+A tool fills a missing row before it reads any value. So mathspec holds the
+entry to three rules at load:
+
+- The entry is written with `cases:`, and each `expression:` and the
+  `otherwise:` is a number.
+- No `when:` reads a parameter. A `when:` tests dimensions, relations and
+  maps.
+- The entry is over dimensions of the parameter.
+
+Only a `float` or an `int` parameter takes the name of an entry. The entry is
+declared in the same file as the parameter, and a name under `given:` is
+refused.
+
+For a `when:` that reads a parameter, mathspec prints:
+
+```text
+Parameter 'sign': missing: sign_default reads ['scale'] in a `when:`, and a missing row is filled before any value is read. Test a dimension, a relation or a map.
+```
+
+mathspec suggests the rewrite: a test of a dimension, a relation or a map.
+
+The typeset legend names the entry beside the parameter, and the page prints
+the entry with its cases.
+
 ### `where`
 
 `where:` limits a parameter to the coordinates where a

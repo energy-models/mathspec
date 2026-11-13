@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
 from functools import cached_property
-from typing import TYPE_CHECKING, Literal, assert_never
+from typing import TYPE_CHECKING, Literal, assert_never, cast
 
 from mathspec._expression_parser import Sense
 from mathspec._frozen import Frozen
@@ -63,6 +63,7 @@ __all__ = [
     'Expression',
     'ExpressionComparison',
     'ExpressionReference',
+    'FillByLabel',
     'Footprint',
     'Gate',
     'Given',
@@ -73,6 +74,7 @@ __all__ = [
     'JoinedCondition',
     'Link',
     'Mask',
+    'MissingFrom',
     'Multiply',
     'NamedCondition',
     'NamedExpression',
@@ -117,6 +119,8 @@ __all__ = [
     'carries_variable',
     'children',
     'condition_children',
+    'fill_by_label',
+    'fill_values',
     'is_quadratic',
     'parameters_of',
     'variables_of',
@@ -151,8 +155,25 @@ RelationMissing = Literal['refused', 'absent']
 key. Under ``absent``, that combination has no row.
 """
 
-ParameterMissing = RelationMissing | bool | float
-"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], or the value that a missing row takes.
+
+@dataclass(frozen=True)
+class MissingFrom:
+    """A ``missing:`` that names the ``expressions:`` entry which gives the value of a missing row.
+
+    The entry is cases of plain numbers and reads no parameter and no variable,
+    so a tool fills a missing row from the dimensions, the relations and the
+    maps alone, before it reads any value. Its body is
+    [`Program.expressions`][] at [`expression`][], and [`fill_by_label`][]
+    gives the same fill as one number per label where the cases have that form.
+    """
+
+    expression: str
+    """The name of the entry under [`Program.expressions`][]."""
+
+
+ParameterMissing = RelationMissing | bool | float | MissingFrom
+"""The values of ``missing:`` on a parameter: a value of [`RelationMissing`][], the value that a missing row takes, or
+a [`MissingFrom`][].
 """
 
 VariableMissing = Literal['absent'] | float
@@ -1323,6 +1344,82 @@ def is_quadratic(expression: Expression) -> bool:
         isinstance(node, Multiply) and all(carries_variable(side) for side in (node.left, node.right))
         for node in walk(expression)
     )
+
+
+def fill_values(expression: Expression) -> tuple[float, ...] | None:
+    """The number of each region of a cased *expression*, or ``None`` where it is not cases of plain numbers."""
+    if not isinstance(expression, Cases):
+        return None
+    values = tuple(_number(region.value) for region in expression.regions)
+    return None if None in values else cast('tuple[float, ...]', values)
+
+
+def _number(expression: Expression) -> float | None:
+    """The number *expression* states, or ``None`` where it reads anything: ``-1`` is a negated constant."""
+    match expression:
+        case Constant(value=value):
+            return value
+        case Negate(operand=Constant(value=value)):
+            return -value
+        case _:
+            return None
+
+
+@dataclass(frozen=True)
+class FillByLabel:
+    """The fill of a [`MissingFrom`][] as one number per label of one map, for a tool that holds a default per label."""
+
+    by: str
+    """The subject whose map gives each coordinate its label."""
+    column: str
+    """The map of [`by`][] that gives the label."""
+    fill: Mapping[str, float]
+    """The value of a missing row, per label of [`column`][]."""
+    otherwise: float
+    """The value of a missing row at a label that [`fill`][] does not name, or where [`column`][] gives no label."""
+
+
+def fill_by_label(program: Program, parameter: str) -> FillByLabel | None:
+    """The fill of *parameter* per label of one map, or ``None`` where its ``missing`` does not have that form.
+
+    It has that form where ``missing`` is a [`MissingFrom`][] and every case of
+    the entry tests one map of one subject for equality with a label, alone or
+    joined with ``OR``. A tool that cannot evaluate a condition reads the fill
+    here, and reads ``None`` as a fill it cannot hold.
+    """
+    missing = program.parameters[parameter].missing
+    if not isinstance(missing, MissingFrom):
+        return None
+    body = program.expressions[missing.expression].expression
+    values = fill_values(body)
+    if values is None or not isinstance(body, Cases):
+        return None
+    *cases, _ = body.regions
+    tests = [_label_tests(region.when.root) for region in cases]
+    columns = {(test.name, test.column) for labels in tests for test in labels or ()}
+    if None in tests or len(columns) != 1:
+        return None
+    ((by, column),) = columns
+    fill = {str(test.value): value for labels, value in zip(tests, values, strict=False) for test in labels or ()}
+    return FillByLabel(by, column, Frozen(fill), values[-1])
+
+
+def _label_tests(condition: Condition) -> list[RelationComparison] | None:
+    """The ``subject[map] == 'label'`` tests that *condition* joins with ``OR``, or ``None`` where it is anything else."""
+    match condition:
+        case RelationComparison(op='==', value=str()):
+            return [condition]
+        case Or(left=left, right=right):
+            both = (_label_tests(left), _label_tests(right))
+            return (
+                None
+                if None in both
+                else [*cast('list[RelationComparison]', both[0]), *cast('list[RelationComparison]', both[1])]
+            )
+        case ConditionReference(body=body):
+            return _label_tests(body)
+        case _:
+            return None
 
 
 def carries_variable(expression: Expression) -> bool:

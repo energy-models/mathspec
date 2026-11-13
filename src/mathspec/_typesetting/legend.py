@@ -21,6 +21,7 @@ from mathspec.program import (
     DimensionPosition,
     ExpressionComparison,
     JoinedCondition,
+    MissingFrom,
     Translate,
     TranslatedCondition,
     WindowSum,
@@ -256,6 +257,8 @@ class Legend:
         """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
         if value == default:
             return ''
+        if isinstance(value, MissingFrom):
+            return f', {self.format.math(self.symbols.name[value.expression])} {where}'
         if isinstance(value, str | bool):
             shown = self.format.mono(str(value).lower())
         else:

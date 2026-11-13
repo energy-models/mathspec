@@ -2861,7 +2861,10 @@ def test_inf_and_dot_inf_load_as_one_number():
     [
         pytest.param('float', None, 'missing: null on a parameter says nothing', id='null'),
         pytest.param(
-            'float', 'zero', "missing is the string 'zero'. It takes refused, absent, or a value", id='a-word'
+            'float',
+            'zero',
+            'missing: zero is neither refused, absent nor a value, and names no expression',
+            id='a-word',
         ),
         pytest.param('float', '1', "missing is the string '1'", id='a-quoted-number'),
         pytest.param('float', float('nan'), 'missing is nan', id='nan'),

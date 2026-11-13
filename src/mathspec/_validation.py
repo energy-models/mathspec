@@ -112,6 +112,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_relation_targets(spec),
         *_map_targets(spec),
         *_index_sets(spec),
+        *_fill_names(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -323,6 +324,23 @@ def _not_a_relation(head: str, written: str, spec: Spec, dims: Sequence[str]) ->
         rewrite = f"Delete '{written}' from in:, since dims: lists it." if written in dims else 'List it under dims:.'
         return f"{head} '{written}', which is a dimension, and an index set is a relation. {rewrite}"
     return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
+
+
+def _fill_names(spec: Spec) -> Iterator[str]:
+    """A ``missing:`` that is a name names an ``expressions:`` entry of this file, whose cases the loader can read."""
+    for name, p in spec.parameters.items():
+        if (fill := p.fill_from) is None or fill in spec.expressions:
+            continue
+        if fill in spec.given.expressions:
+            yield (
+                f"Parameter '{name}': missing: {fill} names an expression this file reads under given:, and the "
+                f'loader reads the cases of the expression. Declare the parameter in the file that declares {fill!r}.'
+            )
+        else:
+            yield (
+                f"Parameter '{name}': missing: {fill} is neither refused, absent nor a value, and names no "
+                f'expression. {did_you_mean(fill, spec.expressions, label="Expressions")}'
+            )
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

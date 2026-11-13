@@ -16,7 +16,7 @@ as rows.
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
@@ -53,6 +53,7 @@ from mathspec.program import (
     GivenParameter,
     GivenTargets,
     Mask,
+    MissingFrom,
     NamedCondition,
     NamedExpression,
     Objective,
@@ -63,15 +64,17 @@ from mathspec.program import (
     Sos,
     Variable,
     VariableDefined,
+    fill_values,
     variables_of,
     walk,
+    walk_regions,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable, Iterator, Mapping
 
-    from mathspec.program import Condition, Expression, Gate, JoinColumns
-    from mathspec.spec import AssumptionSpec, Spec
+    from mathspec.program import Condition, Expression, Gate, JoinColumns, ParameterMissing
+    from mathspec.spec import AssumptionSpec, ParameterSpec, Spec
 
 
 def lower(spec: Spec) -> Program:
@@ -231,7 +234,7 @@ def lower(spec: Spec) -> Program:
             name: Parameter(
                 pdef.dims,
                 pdef.dtype,
-                pdef.missing,
+                _missing(pdef),
                 pdef.description,
                 parameter_masks.get(name),
                 pdef.in_,
@@ -274,7 +277,7 @@ def lower(spec: Spec) -> Program:
         ),
         description=spec.description,
     )
-    if errors := [*emitted_name_errors(spec, program), *refused_under_where(program, spec)]:
+    if errors := [*emitted_name_errors(spec, program), *refused_under_where(program, spec), *_fills(program)]:
         raise SchemaError('\n'.join(errors))
     check_spec(spec, program)
     return program
@@ -373,18 +376,73 @@ def _zero_divisor_refusals(
     there, and the quotient is read.
     """
     masks = {name: v.where for name, v in variables.items() if v.missing == 'absent'}
+    parameters = _zero_filled(spec, entries)
     found: list[str] = []
     for name, entry in entries.items():
-        found += zero_divisor_refusals(entry.body, f"Named expression '{name}'", spec.parameters, masks)
+        found += zero_divisor_refusals(entry.body, f"Named expression '{name}'", parameters, masks)
     for name, c in constraints.items():
         for side in (c.lhs, c.rhs):
-            found += zero_divisor_refusals(side, f"Constraint '{name}'", spec.parameters, masks, c.where)
+            found += zero_divisor_refusals(side, f"Constraint '{name}'", parameters, masks, c.where)
     if objective is not None:
-        found += zero_divisor_refusals(objective.expression, 'The objective', spec.parameters, masks)
+        found += zero_divisor_refusals(objective.expression, 'The objective', parameters, masks)
     for name, links in curves.items():
         for link in links:
-            found += zero_divisor_refusals(link, f"piecewise '{name}'", spec.parameters, masks)
+            found += zero_divisor_refusals(link, f"piecewise '{name}'", parameters, masks)
     return list(dict.fromkeys(found))
+
+
+def _missing(pdef: ParameterSpec) -> ParameterMissing:
+    """The program's ``missing``: the name of an expression sealed into a [`MissingFrom`][mathspec.program.MissingFrom]."""
+    if pdef.fill_from is not None:
+        return MissingFrom(pdef.fill_from)
+    return cast('ParameterMissing', pdef.missing)
+
+
+def _zero_filled(spec: Spec, entries: Mapping[str, ExpressionReference]) -> Mapping[str, ParameterSpec]:
+    """The parameters of *spec*, where one whose ``missing:`` names an expression that states a 0 reads ``missing: 0``.
+
+    The divisor check asks one question of a parameter: can a missing row be
+    0? A 0 in any case of the expression answers it as ``missing: 0`` does.
+    """
+    zero = {
+        name: p.model_copy(update={'missing': 0.0})
+        for name, p in spec.parameters.items()
+        if p.fill_from in entries and 0 in (fill_values(entries[p.fill_from].body) or ())
+    }
+    return {**spec.parameters, **zero}
+
+
+def _fills(program: Program) -> Iterator[str]:
+    """A ``missing:`` that names an expression names cases of plain numbers over dimensions of the parameter.
+
+    A tool fills a missing row before it reads any value, so the expression
+    reads no parameter and no variable: each value is a number the file
+    states, and each ``when:`` tests dimensions, relations and maps.
+    """
+    for name, p in program.parameters.items():
+        if not isinstance(p.missing, MissingFrom):
+            continue
+        entry = program.expressions[p.missing.expression]
+        context = f"Parameter '{name}': missing: {p.missing.expression}"
+        if stray := sorted(set(entry.dims) - set(p.dims)):
+            yield (
+                f'{context} is over {stray}, and the parameter is not (dims {list(p.dims)}). Give the expression '
+                f'dims: the parameter has.'
+            )
+        if fill_values(entry.expression) is None:
+            yield (
+                f'{context} is not cases of plain numbers. A missing row takes a number the file states: write each '
+                f'`expression:` and the `otherwise:` as a number, or write the number itself as missing:.'
+            )
+            continue
+        tested: set[str] = set().union(
+            *(mask.names_read for _, masks in walk_regions(entry.expression) for mask in masks)
+        )
+        if read := sorted(tested & program.parameters.keys()):
+            yield (
+                f'{context} reads {read} in a `when:`, and a missing row is filled before any value is read. Test a '
+                f'dimension, a relation or a map.'
+            )
 
 
 def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:

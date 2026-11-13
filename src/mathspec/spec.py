@@ -177,6 +177,7 @@ _MISSING_SCHEMA: dict[str, object] = {
         {'type': 'boolean'},
         {'type': 'number'},
         {'enum': ['inf', '-inf']},
+        {'type': 'string', 'pattern': f'^{NAME}$'},
     ],
 }
 
@@ -440,7 +441,10 @@ class ParameterSpec(_StrictSpec):
     """The condition that limits the coordinates of the parameter inside its ``in:``, in the condition grammar. Where it
     is false, the parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
-    missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    missing: Annotated[RelationMissing | bool | int | float | str, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
+    """What a missing row of the data means: ``refused``, ``absent``, the value the row takes, or the name of the
+    ``expressions:`` entry that gives the value (`fill_from`).
+    """
     description: str | None = None
 
     @field_validator('missing', mode='before')
@@ -456,8 +460,11 @@ class ParameterSpec(_StrictSpec):
             )
         if v in ('inf', '-inf'):
             return float(cast('str', v))
-        if isinstance(v, str) and v not in get_args(RelationMissing):
-            msg = f'missing is the string {v!r}. It takes {_WORDS}, or a value: a number, true or false.'
+        if isinstance(v, str) and v not in get_args(RelationMissing) and re.fullmatch(NAME, v) is None:
+            msg = (
+                f'missing is the string {v!r}. It takes {_WORDS}, a value (a number, true or false), or the name of '
+                f'an expression.'
+            )
             raise ValueError(msg)
         if isinstance(v, float) and math.isnan(v):
             msg = 'missing is nan, and a parameter has no nan value. Write a number, or one of ' + _WORDS + '.'
@@ -473,6 +480,12 @@ class ParameterSpec(_StrictSpec):
         if self.dtype == 'str' and not isinstance(v, str):
             msg = f'missing: {_as_yaml(v)} on a str parameter, which takes refused or absent. A label has no value to fill.'
             raise ValueError(msg)
+        if self.fill_from is not None and self.dtype not in NUMERIC_DTYPES:
+            msg = (
+                f'missing: {v} names an expression on a {self.dtype} parameter, and an expression gives a number. '
+                f'Write {"refused or absent" if self.dtype == "str" else "true or false"}.'
+            )
+            raise ValueError(msg)
         if isinstance(v, str):
             return self
         if self.dtype == 'bool' and not isinstance(v, bool):
@@ -485,6 +498,12 @@ class ParameterSpec(_StrictSpec):
             msg = f'missing: {_as_yaml(v)} on an int parameter, which takes an integer. Write one, or declare dtype: float.'
             raise ValueError(msg)
         return self
+
+    @property
+    def fill_from(self) -> str | None:
+        """The ``expressions:`` entry that gives the value of a missing row, or ``None`` where ``missing:`` names none."""
+        named = isinstance(self.missing, str) and self.missing not in get_args(RelationMissing)
+        return cast('str', self.missing) if named else None
 
 
 class BoundsSpec(_StrictSpec):
