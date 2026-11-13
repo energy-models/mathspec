@@ -314,9 +314,10 @@ A `str` parameter takes any label. A dimension with
 ### `missing`
 
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
-no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
-of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
-only where the condition is true. On a parameter with an [`in:`](#in), it
+no row. It takes `refused` (the default), `absent`, a value of the `dtype`
+of the parameter, or [a reading per label](#a-reading-per-label). On a
+parameter with a [`where:`](#where), `missing:` applies only where the
+condition is true. On a parameter with an [`in:`](#in), it
 applies only where each relation has a row.
 
 ```yaml
@@ -374,6 +375,59 @@ A value has the `dtype` of the parameter:
 | `bool`  | `true` or `false`                                       |
 | `str`   | none. A label has no value to fill                      |
 
+#### A reading per label
+
+`missing:` also takes a mapping that reads a missing row by the label that a
+[map](relations.md#maps) gives its coordinate:
+
+```yaml
+dimensions:
+  component:
+    dtype: str
+    one_of: [Generator, Link, Load, ShuntImpedance, StorageUnit]
+  entity:
+    dtype: str
+maps:
+  entity:
+    component: component
+parameters:
+  sign:
+    dims: [entity]
+    missing:
+      by: entity[component]
+      fill:
+        Load: -1
+        ShuntImpedance: -1
+      otherwise: 1
+```
+
+A missing row of `sign` reads `-1` at a load or a shunt impedance, and `1` at
+every other entity.
+
+| Key         | Value                                                                             | Default   |
+| ----------- | --------------------------------------------------------------------------------- | --------- |
+| `by`        | `subject[map]`: one map of a subject over dimensions of the parameter             | required  |
+| `fill`      | a reading for each of one or more labels of that map                              | required  |
+| `otherwise` | the reading at every other label, and where the map gives the coordinate no label | `refused` |
+
+Each reading is one that a plain `missing:` takes. As in
+[`at(x, by=)`](relations.md#lookups), `by:` names the map, so the subject may
+have other maps. In a flow mapping, quote it:
+`missing: { by: "entity[component]", fill: { Load: -1 } }`.
+
+mathspec refuses at load a `by:` that names a subject and no map, a key
+column, more than one map, or a map the subject does not have. It also
+refuses a `fill:` label that the [`one_of`](dimensions.md#one_of) of the
+dimension the map refers to does not list. For `by: entity`, it prints:
+
+```text
+Parameter 'sign': missing: by: entity names the subject and none of its maps. Write by: entity[<map>], with a map of 'entity': ['component'].
+```
+
+The subject may be a relation that the parameter names under [`in:`](#in).
+Every coordinate then has a row in it, so `otherwise` reads only at a label
+that `fill:` does not name, or where the map gives no label.
+
 mathspec refuses a NaN, a quoted number and `missing: null` at load, and in
 each message mathspec suggests what to write. For `missing: null` it prints:
 
@@ -390,7 +444,8 @@ A values parameter of a curve with a `where:` over its breakpoints must declare 
 [`missing:` other than `refused`](piecewise.md#missing-breakpoints).
 
 The typeset legend lists what a missing row means beside the parameter, such
-as `` `0` where the data has no row ``. It lists nothing for `refused`.
+as `` `0` where the data has no row ``. It lists nothing for `refused`. For a
+reading per label, it lists each reading with its labels, then `otherwise`.
 
 ### `where`
 

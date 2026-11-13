@@ -13,7 +13,8 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(language): assumptions may require a row to exist ([#982](https://github.com/energy-models/mathspec/pull/982))
-- feat(language)!: maps give labels, relations give rows ([#1001](https://github.com/energy-models/mathspec/pull/1001))
+- feat(language): a missing row reads per map label ([#1008](https://github.com/energy-models/mathspec/pull/1008))
+- feat(language)!: maps give labels, relations give rows ([#1007](https://github.com/energy-models/mathspec/pull/1007))
   - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, with `refers_to:` naming its dimension, and is read as `subject[map]`, such as `generator[bus]`.
   - Breaks a file: the `where:` of a parameter or a variable no longer takes a relation's bare name. Write `in: [relation]`.
   - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, `Reach.name` names `subject[map]`, and the advice kind `index-set` is gone.

@@ -19,7 +19,7 @@ from mathspec._typesetting import FORMATS, to_markdown, typeset, typeset_line
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.errors import DimensionError, LanguageError, SchemaError
-from mathspec.program import DimensionPosition
+from mathspec.program import BooleanLiteral, DimensionPosition, MissingBy
 from mathspec.spec import DimensionSpec
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, OPERATOR_PROBES, SMALL_MODEL, spec_of, varied, where_of
 
@@ -1847,7 +1847,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'variables.p.where': 'n'},
                 (
-                    "'n' is declared dtype: int and missing: refused",
+                    "'n' is declared dtype: int, and missing: refuses every missing row",
                     'Declare `missing: absent` or a value, or compare the value',
                 ),
                 id='where-a-bare-int-parameter-under-refused',
@@ -1855,14 +1855,14 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {'variables.p.where': 'tag'},
                 (
-                    "'tag' is declared dtype: str and missing: refused",
+                    "'tag' is declared dtype: str, and missing: refuses every missing row",
                     'Declare `missing: absent`, or compare the label',
                 ),
                 id='where-a-bare-str-parameter-under-refused',
             ),
             pytest.param(
                 {'parameters.n': {'dims': ['g'], 'dtype': 'int'}, 'conditions.held': 'NOT n'},
-                ("'n' is declared dtype: int and missing: refused",),
+                ("'n' is declared dtype: int, and missing: refuses every missing row",),
                 id='a-mask-reading-a-bare-int-parameter-under-refused',
             ),
             pytest.param(
@@ -3053,6 +3053,10 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
         pytest.param(
+            {'parameters.n': {'dims': ['g'], 'dtype': 'int', 'missing': {'by': 'g[h]', 'fill': {'north': 0}}}},
+            id='an-int-under-a-value-at-one-label',
+        ),
+        pytest.param(
             {
                 'parameters.n': {'dims': ['g', 'h'], 'dtype': 'int', 'in': ['link']},
                 'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
@@ -3066,6 +3070,18 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
     """The declaring file owns a given parameter's `missing:`, so this file cannot decide its rows."""
     spec = to_spec(varied(SMALL_MODEL, **patch, **{'variables.p.where': 'n'}))
     assert spec.program.variables['p'].where is not None, 'the bare name stays a mask'
+
+
+@pytest.mark.parametrize('dtype', ['int', 'str'])
+def test_a_bare_parameter_refused_at_every_label_is_refused(dtype: str):
+    """A `missing: {by: ...}` that reads `refused` at every label has a row at every coordinate, as `refused` does.
+
+    The check compared `missing` with `refused`, which a mapping never equals, so the bare name loaded as a mask
+    that drops nothing.
+    """
+    declared = {'dims': ['g'], 'dtype': dtype, 'missing': {'by': 'g[h]', 'fill': {'north': 'refused'}}}
+    message = _refusal(**{'parameters.n': declared, 'variables.p.where': 'n'})
+    assert f"'n' is declared dtype: {dtype}, and missing: refuses every missing row" in message
 
 
 #: A parameter over the pairs of `g` and `h` that a relation lists, with a fill.
@@ -3352,6 +3368,183 @@ def test_the_legend_prints_an_index_set_as_the_domain(fmt: FormatName, kind: str
     if kind == 'parameters':
         assert row.index('pair') < row.index('only where') < row.index('flag'), 'the domain, then the mask inside it'
         assert 'pair' not in row[row.index('only where') :], 'the relation is not printed again as a mask'
+
+
+#: `c` reads a missing row by the label the map `g[h]` gives its `g`.
+_BY = {'by': 'g[h]', 'fill': {'north': 0, 'south': -1}, 'otherwise': 1}
+
+
+@pytest.mark.parametrize(
+    ('written', 'read'),
+    [
+        pytest.param(_BY, MissingBy('g', 'h', {'north': 0, 'south': -1}, 1), id='a-value-per-label'),
+        pytest.param(
+            {'by': 'g[h]', 'fill': {'north': 'absent'}},
+            MissingBy('g', 'h', {'north': 'absent'}),
+            id='otherwise-refused',
+        ),
+        pytest.param(
+            {**_BY, 'fill': {'north': 'inf'}}, MissingBy('g', 'h', {'north': float('inf')}, 1), id='inf-in-fill'
+        ),
+    ],
+)
+def test_a_parameter_reads_a_missing_row_by_a_map(written, read):
+    spec = _spec(**{'parameters.c.missing': written})
+    assert spec.program.parameters['c'].missing == read
+    assert to_spec(spec.to_yaml()) == spec, 'the mapping form writes back the file it read'
+
+
+def test_a_parameter_reads_a_missing_row_by_one_of_several_maps():
+    """The map names which label a coordinate reads, so the subject may have others beside it."""
+    spec = _spec(
+        **{
+            'dimensions.technology': {'dtype': 'str', 'one_of': ['solar', 'wind']},
+            'maps.g.technology': 'technology',
+            'parameters.c.missing': {'by': 'g[technology]', 'fill': {'wind': 0}},
+        }
+    )
+    assert spec.program.parameters['c'].missing == MissingBy('g', 'technology', {'wind': 0})
+    assert to_spec(spec.to_yaml()) == spec, 'the map survives a round trip through YAML'
+
+
+#: `c` over the rows of `pair`, which gives each row a label of `h` through its map `zone`.
+_C_IN_PAIR = {
+    'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
+    'maps.pair': {'zone': 'h'},
+    'parameters.c.dims': ['g', 'h'],
+    'parameters.c.in': ['pair'],
+}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'by'),
+    [
+        pytest.param({'parameters.c.missing.by': 'pair[zone]'}, ('pair', 'zone'), id='by-the-relation-of-its-in'),
+        pytest.param(
+            {'parameters.c.missing.by': 'pair[zone]', 'parameters.c.where': 'flag'},
+            ('pair', 'zone'),
+            id='beside-a-where',
+        ),
+        pytest.param({}, ('g', 'h'), id='by-another-subject-than-its-in'),
+    ],
+)
+def test_a_parameter_reads_a_missing_row_by_a_map_inside_its_in(patch, by):
+    """`in:` leaves no coordinate without a row in its relation, so `by:` may name a map of that relation or another.
+
+    The program's `where` holds the rows of the `in:` relation and the file's `where:`, and the `missing:` reading
+    applies where both hold.
+    """
+    written = {**_C_IN_PAIR, 'parameters.c.missing': copy.deepcopy(_BY), **patch}
+    spec = _spec(**written)
+    c = spec.program.parameters['c']
+    assert (c.in_, c.missing) == (('pair',), MissingBy(*by, {'north': 0, 'south': -1}, 1))
+    assert c.where is not None and c.where.names_read >= {'pair'}, 'the index set is part of where `c` exists'
+    unindexed = _spec(**{**written, 'parameters.c.in': []}).program.parameters['c'].where
+    assert c.where.within(c.in_).root == (BooleanLiteral(value=True) if unindexed is None else unindexed.root), (
+        "inside the index set, only the file's `where:` is left"
+    )
+    assert to_spec(spec.to_yaml()) == spec, '`in:` and `missing: {by: ...}` survive a round trip together'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'fragment'),
+    [
+        pytest.param(
+            {'parameters.c.missing.by': 'g'},
+            "Parameter 'c': missing: by: g names the subject and none of its maps. Write by: g[<map>], with a map of "
+            "'g': ['h'].",
+            id='a-bare-subject',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'g[hh]'},
+            "Parameter 'c': missing: by: g[hh] names 'hh', which is no map of 'g'. Did you mean 'h'?",
+            id='an-unknown-map',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'g[g]'},
+            "Parameter 'c': missing: by: g[g] names 'g', which is no map of 'g'. Maps: h.",
+            id='the-subject-column',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'g[g, h]'},
+            "Parameter 'c': missing: by: g[g, h] names 2 maps, and a missing row reads one label. Write by: "
+            "g[<map>], with a map of 'g': ['h'].",
+            id='several-maps',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'g(h)'},
+            "Parameter 'c': missing: by: 'g(h)' is not a subject with its map in brackets. Write by: <subject>[<map>].",
+            id='not-a-map',
+        ),
+        pytest.param(
+            {'relations.pair': {'dims': ['g', 'h']}, 'parameters.c.missing.by': 'pair[h]'},
+            "names 'pair', which has no maps, so it gives a coordinate no label. Subjects with maps: g.",
+            id='a-relation-with-no-map',
+        ),
+        pytest.param(
+            {'parameters.c.missing.by': 'kl[h]'},
+            "names 'kl', which is neither a dimension nor a relation. Subjects with maps: g.",
+            id='no-subject',
+        ),
+        pytest.param(
+            {'parameters.c.dims': ['h']},
+            "names 'g', which is over ['g'], and the parameter is not over them",
+            id='subject-off-the-frame',
+        ),
+        pytest.param(
+            {'dimensions.h.one_of': ['north', 'sout']},
+            "fill: names 'south', which is not a label of g[h]. Did you mean 'sout'?",
+            id='label-off-one-of',
+        ),
+        pytest.param({'parameters.c.missing.fill': {}}, 'fill: lists no label', id='empty-fill'),
+        pytest.param({'parameters.c.missing.cases': {}}, "unknown key 'cases'", id='cases-is-not-fill'),
+        pytest.param(
+            {'parameters.c.missing.fill.north': True}, 'missing: true on a float parameter', id='a-flag-on-a-number'
+        ),
+        pytest.param({'parameters.c.missing.otherwise': 'zero'}, "missing is the string 'zero'", id='a-word'),
+    ],
+)
+def test_a_missing_by_that_gives_no_reading_is_refused(patch, fragment):
+    message = _refusal(**{'parameters.c.missing': copy.deepcopy(_BY)}, **patch)
+    assert fragment in message
+
+
+def test_a_divisor_that_a_fill_reads_as_zero_is_refused():
+    """A label filled with 0 makes the divisor 0 at a missing row of that label, as `missing: 0` does."""
+    patch = {'constraints.cap': {'dims': ['g'], 'expression': 'p / c <= 1'}}
+    message = _refusal(**{'parameters.c.missing': _BY, **patch})
+    assert "so a missing row of 'c' makes the divisor 0" in message
+
+
+def test_a_values_table_refused_at_some_label_under_a_ragged_where_is_refused():
+    """`otherwise:` left out reads `refused`, which a ragged `where:` contradicts at that label as a plain `refused` does."""
+    patch = {
+        'dimensions.kind': {},
+        'maps.bp': {'kind': 'kind'},
+        'parameters.x_bp.missing': {'by': 'bp[kind]', 'fill': {'end': 0}},
+    }
+    assert "parameter 'x_bp' is refused where a row is missing" in _refusal(read_yaml(CURVE_UNDER_WHERE), **patch)
+
+
+def test_cases_that_a_fill_may_both_claim_are_refused():
+    """The case check reads no label, so it reads a missing row of a `missing: {by: ...}` parameter as no row.
+
+    It took the mapping as the one value a missing row reads, and stopped on comparing it with a number.
+    """
+    cases = {
+        'low': {'when': 'NOT c > -1', 'expression': 1},
+        'high': {'when': 'NOT c < 1', 'expression': 2},
+    }
+    patch = {'parameters.c.missing': _BY, 'expressions.level': {'dims': ['g'], 'cases': cases, 'otherwise': 0}}
+    assert "cases 'high' and 'low' both claim the value where c has no row" in _refusal(**patch)
+
+
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_legend_lists_the_reading_of_each_label(fmt: FormatName):
+    row = next(
+        line for line in typeset(_spec(**{'parameters.c.missing': _BY}), fmt).splitlines() if 'otherwise' in line
+    )
+    assert row.index('north') < row.index('south') < row.index('otherwise'), 'labels in file order, otherwise last'
 
 
 def test_a_given_parameter_has_no_missing():

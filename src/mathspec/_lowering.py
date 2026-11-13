@@ -22,6 +22,7 @@ from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._exclusivity import Existence, Undecidable, left_out
 from mathspec._expansion import expand, parse_template
+from mathspec._expression_parser import columns_of
 from mathspec._piecewise import (
     assumptions_of,
     declaration_of,
@@ -55,6 +56,7 @@ from mathspec.program import (
     GivenParameter,
     GivenTargets,
     Mask,
+    MissingBy,
     NamedCondition,
     NamedExpression,
     Objective,
@@ -68,11 +70,12 @@ from mathspec.program import (
     variables_of,
     walk,
 )
+from mathspec.spec import MissingBySpec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
-    from mathspec.program import Condition, Expression, Gate, JoinColumns
+    from mathspec.program import Condition, Expression, Gate, JoinColumns, ParameterMissing, ParameterReading
     from mathspec.spec import AssumptionSpec, Spec
 
 
@@ -236,7 +239,7 @@ def lower(spec: Spec) -> Program:
             name: Parameter(
                 pdef.dims,
                 pdef.dtype,
-                pdef.missing,
+                _missing(pdef.missing),
                 pdef.description,
                 parameter_masks.get(name),
                 pdef.in_,
@@ -582,3 +585,12 @@ def _decided_where(context: str, text: str, *, value: bool) -> str:
         f'{context}: the `where:` condition {text!r} folds to false, so the assumption is checked on no row. '
         f'Delete the entry, or write a `where:` condition the data can satisfy.'
     )
+
+
+def _missing(missing: ParameterReading | MissingBySpec) -> ParameterMissing:
+    """The program's ``missing``: a [`MissingBySpec`][mathspec.spec.MissingBySpec] sealed into a [`MissingBy`][mathspec.program.MissingBy]."""
+    if isinstance(missing, MissingBySpec):
+        by = columns_of(missing.by)
+        assert by is not None and len(by.columns) == 1, 'reference_errors refuses any other by:'
+        return MissingBy(by.relation, by.columns[0], missing.fill, missing.otherwise)
+    return missing

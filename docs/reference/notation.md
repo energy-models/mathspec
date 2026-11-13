@@ -54,7 +54,7 @@ parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
-  load: { dims: [snapshot, bus] }
+  load: { dims: [snapshot, bus], missing: { by: "bus[zone]", fill: { north: 0, south: absent } } } # a reading per label of a map: the legend lists each, then otherwise
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
@@ -100,7 +100,7 @@ parameters:
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
 | $`\mathrm{link\_eff}`$ | `link_eff` over $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
-| $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
+| $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$, where the data has no row: $`0`$ where `bus[zone]` is `north`, `absent` where `bus[zone]` is `south`, `refused` otherwise |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |

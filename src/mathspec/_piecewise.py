@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, parse_expression
+from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, columns_of, parse_expression
 from mathspec._expression_resolver import ExpressionResolver
 from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
 from mathspec.errors import DimensionError, SchemaError
@@ -535,21 +535,13 @@ def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
     ``relation[column, ...]`` is refused before the text is read, and the
     columns are then held to every rule ``at`` holds them to.
     """
-    if (columns := _columns_of(by)) is None:
+    if (columns := columns_of(by)) is None:
         resolver.errors.append(
             f'{resolver.context}: by: {by!r} is not a subject with its maps in brackets. Write '
             f'by: <subject>[<map>], as in at(..., by=).'
         )
         return None
     return resolver.columns_ref(columns, 'at', 'by')
-
-
-def _columns_of(text: str) -> ColumnsNode | None:
-    """``relation[column, ...]`` as the expression parser reads it in a kwarg, or ``None`` where it is not that."""
-    match = re.fullmatch(rf'\s*({NAME})\s*\[\s*({NAME}(?:\s*,\s*{NAME})*)\s*\]\s*', text)
-    if match is None:
-        return None
-    return ColumnsNode(match.group(1), tuple(c.strip() for c in match.group(2).split(',')))
 
 
 def resolve_gate(
@@ -1035,7 +1027,7 @@ def refused_under_where(program: Program, spec: Spec) -> Iterator[str]:
         if not curve.ragged:
             continue
         for name in dict.fromkeys(link.values for link in curve.links):
-            if spec.parameters[name].missing == 'refused':
+            if 'refused' in spec.parameters[name].readings:
                 yield (
                     f"parameter '{name}' is refused where a row is missing, and it is a values parameter of "
                     f"piecewise '{entry_name}' under where: '{spec.piecewise[entry_name].where}', which sets where "

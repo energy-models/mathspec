@@ -23,7 +23,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from mathspec._expression_parser import NAME
+from mathspec._expression_parser import NAME, columns_of
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._piecewise import gate_of
@@ -31,12 +31,13 @@ from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
 from mathspec.errors import SchemaError, did_you_mean, unordered
-from mathspec.spec import NUMERIC_DTYPES, Spec
+from mathspec.spec import NUMERIC_DTYPES, MissingBySpec, Spec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
+    from mathspec._expression_parser import ColumnsNode
     from mathspec.program import Program
     from mathspec.spec import PiecewiseLinkSpec, PiecewiseSpec
 
@@ -112,6 +113,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_relation_targets(spec),
         *_map_targets(spec),
         *_index_sets(spec),
+        *_missing_by(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -323,6 +325,60 @@ def _not_a_relation(head: str, written: str, spec: Spec, dims: Sequence[str]) ->
         rewrite = f"Delete '{written}' from in:, since dims: lists it." if written in dims else 'List it under dims:.'
         return f"{head} '{written}', which is a dimension, and an index set is a relation. {rewrite}"
     return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
+
+
+def _missing_by(spec: Spec) -> Iterator[str]:
+    """A ``missing: {by: ...}`` names a map of a subject over the parameter's dimensions, which gives each coordinate one label."""
+    for name, p in spec.parameters.items():
+        if not isinstance(by := p.missing, MissingBySpec):
+            continue
+        selected = _by_column(name, p.dims, by.by, spec)
+        if isinstance(selected, str):
+            yield selected
+            continue
+        dimension = spec.dimensions.get(spec.maps[selected.relation][selected.columns[0]].refers_to)
+        if dimension is None or dimension.one_of is None:
+            continue
+        yield from (
+            f"Parameter '{name}': missing: by: {by.by}, and fill: names '{label}', which is not a label of "
+            f'{selected}. {did_you_mean(label, dimension.one_of, label="Labels")}'
+            for label in by.fill
+            if label not in dimension.one_of
+        )
+
+
+def _by_column(name: str, dims: Sequence[str], by: str, spec: Spec) -> ColumnsNode | str:
+    """The map *by* names, or why it is not one map of a subject over dimensions in *dims*.
+
+    A bare subject is refused as ``at(..., by=)`` refuses it, so a subject may
+    gain a map without changing what the file means.
+    """
+    context = f"Parameter '{name}': missing: by: {by}"
+    selected = columns_of(by)
+    if selected is None and re.fullmatch(NAME, by) is None:
+        return f"Parameter '{name}': missing: by: {by!r} is not a subject with its map in brackets. Write by: <subject>[<map>]."
+    subject = by if selected is None else selected.relation
+    if subject not in spec.dimensions and subject not in spec.relations:
+        hint = did_you_mean(subject, spec.maps, label='Subjects with maps')
+        return f"{context} names '{subject}', which is neither a dimension nor a relation. {hint}"
+    if (maps := spec.maps.get(subject)) is None:
+        hint = did_you_mean(subject, spec.maps, label='Subjects with maps')
+        return f"{context} names '{subject}', which has no maps, so it gives a coordinate no label. {hint}"
+    pick = f"Write by: {subject}[<map>], with a map of '{subject}': {list(maps)}."
+    if selected is None:
+        return f'{context} names the subject and none of its maps. {pick}'
+    if len(selected.columns) > 1:
+        return f'{context} names {len(selected.columns)} maps, and a missing row reads one label. {pick}'
+    column = selected.columns[0]
+    if column not in maps:
+        return f"{context} names '{column}', which is no map of '{subject}'. {did_you_mean(column, maps, label='Maps')}"
+    own = spec.relations[subject].pairs if subject in spec.relations else ((subject, subject),)
+    if stray := [d for _, d in own if d not in dims]:
+        return (
+            f"{context} names '{subject}', which is over {stray}, and the parameter is not over them "
+            f'(dims {list(dims)}). Read a map of a subject over dimensions of the parameter.'
+        )
+    return selected
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

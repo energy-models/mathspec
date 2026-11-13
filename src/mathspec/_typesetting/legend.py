@@ -21,6 +21,7 @@ from mathspec.program import (
     DimensionPosition,
     ExpressionComparison,
     JoinedCondition,
+    MissingBy,
     Translate,
     TranslatedCondition,
     WindowSum,
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
     from mathspec._typesetting.format import Format, OperatorName
     from mathspec._typesetting.symbols import Symbols
-    from mathspec.program import Expression, Mask, ParameterMissing, Program, Relation
+    from mathspec.program import Expression, Mask, ParameterMissing, ParameterReading, Program, Relation
 
 TranslationPolicy = Literal['plain', 'wrap', 'edge']
 
@@ -254,13 +255,28 @@ class Legend:
 
     def _missing(self, value: ParameterMissing, default: str = 'refused', where: str = _NO_ROW) -> str:
         """What *where* means: the reading or the value ``missing:`` names, and nothing for the *default* reading."""
+        if isinstance(value, MissingBy):
+            return f', {where}: {self._by(value)}'
         if value == default:
             return ''
+        return f', {self._reading(value)} {where}'
+
+    def _reading(self, value: ParameterReading) -> str:
+        """A reading as the file spells it: a word or a flag in code, a number in math."""
         if isinstance(value, str | bool):
-            shown = self.format.mono(str(value).lower())
-        else:
-            shown = self.format.math(number(value, self.format))
-        return f', {shown} {where}'
+            return self.format.mono(str(value).lower())
+        return self.format.math(number(value, self.format))
+
+    def _by(self, value: MissingBy) -> str:
+        """Each reading with the labels of ``by[column]`` that take it, by label, and ``otherwise`` last."""
+        labels: dict[ParameterReading, list[str]] = {}
+        for label, reading in value.fill.items():
+            labels.setdefault(reading, []).append(self.format.mono(label))
+        column = self.format.mono(f'{value.by}[{value.column}]')
+        cases = [
+            f'{self._reading(reading)} where {column} is {" or ".join(named)}' for reading, named in labels.items()
+        ]
+        return ', '.join([*cases, f'{self._reading(value.otherwise)} otherwise'])
 
     def _signatures(self, name: str, lk: Relation, dim: str) -> list[str]:
         """The parts of table *name* that touch *dim*: the relation inside its product, and each map from its subject.
