@@ -40,7 +40,7 @@ parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
   p_min: { dims: [generator] }
   cost: { dims: [generator], missing: 0 } # a reading: the legend names it
-  load: { dims: [snapshot, bus] }
+  load: { dims: [snapshot, bus], missing: { by: "bus[zone]", fill: { north: 0, south: absent } } } # a reading per label of a map: the legend lists each, then otherwise
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }

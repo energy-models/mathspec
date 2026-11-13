@@ -112,7 +112,7 @@ class Namespace:
         self.defaults: dict[str, bool | float] = {
             p: pd.missing
             for p, pd in spec.parameters.items()
-            if not isinstance(pd.missing, str) and pd.where is None and not pd.in_
+            if isinstance(pd.missing, bool | int | float) and pd.where is None and not pd.in_
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: pd.dims for p, pd in parameters.items()},

@@ -168,7 +168,8 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
     with a name or an expression is renamed without a change here. A new field
     with prose or labels needs a place in ``_KEPT`` or ``_LABELLED``. A description, the labels
     of ``one_of:`` and a fixed choice (a ``Literal``, such as a dtype) are
-    kept. A field of entries has its keys renamed, except ``cases:`` and
+    kept, unless the field holds an entry, such as the mapping form of a
+    parameter's ``missing:``. A field of entries has its keys renamed, except ``cases:`` and
     ``links:``, whose keys are labels of rows, and ``maps:`` holds entries by
     subject and then by map. Every other string is text that
     may contain names. An entry that is not a mapping is a short form of one:
@@ -181,16 +182,19 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
     out: dict[str, object] = {}
     for field, value in cast('Mapping[str, object]', entry).items():
         annotation = cls.model_fields[field].annotation
-        if field in _KEPT or _is_choice(annotation):
+        model = _model_in(annotation)
+        if field in _KEPT:
             out[field] = value
         elif (each := _entries_of(annotation)) is not None:
             out[field] = _keyed(each, value, names, labels=field in _LABELLED)
-        elif (model := _model_in(annotation)) is None:
-            out[field] = _in_text(value, names)
-        elif isinstance(value, list):
+        elif model is not None and isinstance(value, list):
             out[field] = [_renamed(model, item, names) for item in value]
-        else:
+        elif model is not None and isinstance(value, Mapping):
             out[field] = _renamed(model, value, names)
+        elif _is_choice(annotation):
+            out[field] = value
+        else:
+            out[field] = _in_text(value, names)
     return out
 
 

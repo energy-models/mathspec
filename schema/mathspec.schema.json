@@ -643,6 +643,72 @@
         }
       ]
     },
+    "MissingBySpec": {
+      "additionalProperties": false,
+      "description": "A ``missing:`` that reads a missing row by the label a map gives its coordinate.\n\n``by:`` names one map of a subject over dimensions of the parameter, as\n``subject[map]``. ``fill:`` maps labels of that map to a reading each, and\n``otherwise:`` reads every other coordinate, ``refused`` where it is left\nout. Each reading is one that a plain ``missing:`` takes::\n\n    maps:\n      entity:\n        component: component\n    parameters:\n      sign:\n        dims: [entity]\n        missing:\n          by: entity[component]\n          fill: {Load: -1, ShuntImpedance: -1}\n          otherwise: 1",
+      "properties": {
+        "by": {
+          "title": "By",
+          "type": "string"
+        },
+        "fill": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "enum": [
+                  "refused",
+                  "absent"
+                ]
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "enum": [
+                  "inf",
+                  "-inf"
+                ]
+              }
+            ]
+          },
+          "title": "Fill",
+          "type": "object"
+        },
+        "otherwise": {
+          "anyOf": [
+            {
+              "enum": [
+                "refused",
+                "absent"
+              ]
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "enum": [
+                "inf",
+                "-inf"
+              ]
+            }
+          ],
+          "default": "refused",
+          "title": "Otherwise"
+        }
+      },
+      "required": [
+        "by",
+        "fill"
+      ],
+      "title": "MissingBySpec",
+      "type": "object"
+    },
     "ObjectiveSpec": {
       "additionalProperties": false,
       "description": "A declared objective function.",
@@ -740,6 +806,9 @@
                 "inf",
                 "-inf"
               ]
+            },
+            {
+              "$ref": "#/$defs/MissingBySpec"
             }
           ],
           "default": "refused",

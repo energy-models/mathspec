@@ -11,6 +11,7 @@ nests anywhere; a comparison appears only at the top of a parsed expression.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import TYPE_CHECKING, Literal, assert_never, cast, get_args
@@ -433,3 +434,11 @@ def literal_number(value: ArithmeticNode) -> NumberNode | None:
     if isinstance(value, UnaryOperatorNode) and isinstance(value.operand, NumberNode):
         return NumberNode(-value.operand.value if value.op == '-' else value.operand.value)
     return None
+
+
+def columns_of(text: str) -> ColumnsNode | None:
+    """``relation[column, ...]`` as the grammar reads it in a kwarg, or ``None`` where *text* is not that."""
+    match = re.fullmatch(rf'\s*({NAME})\s*\[\s*({NAME}(?:\s*,\s*{NAME})*)\s*\]\s*', text)
+    if match is None:
+        return None
+    return ColumnsNode(match.group(1), tuple(c.strip() for c in match.group(2).split(',')))

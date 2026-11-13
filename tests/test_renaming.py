@@ -363,3 +363,22 @@ def test_a_name_that_is_also_a_map_or_a_relation_column_is_refused(old, message)
     }
     with pytest.raises(LanguageError, match=re.escape(message)):
         rename(spec, {old: 'price'})
+
+
+def test_a_missing_row_read_by_a_map_follows_the_rename():
+    """`by:` names a subject and its map, and `fill:` names labels of the data.
+
+    The rename kept the whole `missing:`, since a reading may be a fixed word,
+    so `by: g[h]` named a subject the renamed spec no longer had.
+    """
+    spec = {
+        'dimensions': {'g': {}, 'h': {'one_of': ['north', 'south']}, 'north': {}},
+        'maps': {'g': {'h': 'h'}},
+        'parameters': {'c': {'dims': ['g'], 'missing': {'by': 'g[h]', 'fill': {'north': 0}, 'otherwise': 'absent'}}},
+    }
+    renamed = rename(spec, {'g': 'gen', 'h': 'zone', 'north': 'n'})
+    assert renamed.to_dict()['parameters']['c']['missing'] == {
+        'by': 'gen[zone]',
+        'fill': {'north': 0.0},
+        'otherwise': 'absent',
+    }, 'the subject and the map are renamed, and the label stays'

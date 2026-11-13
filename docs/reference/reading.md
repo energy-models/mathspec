@@ -163,7 +163,11 @@ the colon is the description that the file sets.
 
 `program.parameters[name].missing` is what the file sets under
 [`missing:`](language/absence.md#missing) for a missing row of that parameter.
-It is `'refused'`, `'absent'`, or the value that a tool uses for the row.
+It is
+`'refused'`, `'absent'`, the value that a tool uses for the row, or a
+`MissingBy`. A `MissingBy` reads the label that the map `column` of the
+subject `by` gives the coordinate: the row takes `fill[label]` where `fill`
+names the label, and `otherwise` at every other coordinate.
 `program.relations` has one table per relation and per subject with
 [maps](language/relations.md#the-data-contract), named after it, and each map
 is one of its `values`. `program.relations[name].missing` is `'refused'` or
