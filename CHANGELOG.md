@@ -19,6 +19,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
   - Breaks a file: the `where:` of a parameter or a variable no longer takes a relation's bare name. Write `in: [relation]`.
   - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, `Reach.name` names `subject[map]`, and the advice kind `index-set` is gone.
 - feat(language): relation rows may index an entry ([#980](https://github.com/energy-models/mathspec/pull/980))
+- feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
 - docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
 - docs(pypsa): component cites point at PyPSA 3625c816 ([#997](https://github.com/energy-models/mathspec/pull/997))
 - docs(pypsa): the reference pins PyPSA at 3625c816 ([#996](https://github.com/energy-models/mathspec/pull/996))

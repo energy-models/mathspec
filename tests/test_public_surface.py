@@ -35,8 +35,8 @@ SURFACE = frozenset(
         'advice',
         # typesetting, and the two inputs it takes
         'typeset', 'typeset_line', 'to_latex', 'to_typst', 'to_markdown', 'FormatName', 'SymbolTable',
-        # the two file-level verbs: peers composed, and patches laid over a base
-        'merge', 'override',
+        # the three file-level verbs: peers composed, patches laid over a base, and names changed
+        'merge', 'override', 'rename',
     }
 )  # fmt: skip
 
