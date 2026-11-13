@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 206" width="760" height="206" style="max-width: 100%; height: auto" role="img" aria-labelledby="arm-t arm-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="arm-t">A relation with missing absent is absent at a key with no row</title>
-  <desc id="arm-d">The dimension line has three labels: l1, l2 and l3. The relation line_to, declared with missing absent, maps each line to its bus. Its data has a row for l1 at bus north and a row for l2 at bus south, and no row for l3. At l3 the relation line_to is absent.</desc>
+  <title id="arm-t">A map with missing absent is absent at a row with no label</title>
+  <desc id="arm-d">The dimension line has three labels: l1, l2 and l3. The map line[bus1], declared with missing absent, gives each line a bus. Its data gives l1 the bus north and l2 the bus south, and gives l3 no label. At l3 the map line[bus1] is absent.</desc>
   <defs>
     <pattern id="arm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -21,8 +21,8 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-      <text x="16" y="28">relations:</text>
-      <text x="31" y="46">line_to: { key: line, values: bus, <tspan font-weight="bold">missing: absent</tspan> }</text>
+      <text x="16" y="28">maps:</text>
+      <text x="31" y="46">line: { bus1: { refers_to: bus, <tspan font-weight="bold">missing: absent</tspan> } }</text>
     </g>
     <text x="16" y="86" font-weight="bold">line</text>
     <text x="50" y="86" fill-opacity="0.7">a dimension</text>
@@ -42,16 +42,16 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M186,140 L312,140"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="198" y="128" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">line_to</text>
-    <text x="198" y="158" fill-opacity="0.7">maps each line</text>
-    <text x="198" y="173" fill-opacity="0.7">to its bus</text>
+    <text x="198" y="128" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">line[bus1]</text>
+    <text x="198" y="158" fill-opacity="0.7">gives each line</text>
+    <text x="198" y="173" fill-opacity="0.7">a bus</text>
   </g>
   <g fill="currentColor">
-    <text x="324" y="86" font-weight="bold">line_to</text>
-    <text x="378" y="86" fill-opacity="0.7">a relation</text>
+    <text x="324" y="86" font-weight="bold">line[bus1]</text>
+    <text x="400" y="86" fill-opacity="0.7">a map</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="332" y="110" font-weight="bold">line</text>
-      <text x="418" y="110" font-weight="bold">bus</text>
+      <text x="418" y="110" font-weight="bold">bus1</text>
       <text x="332" y="134">l1</text><text x="418" y="134">north</text>
       <text x="332" y="152">l2</text><text x="418" y="152">south</text>
     </g>
@@ -62,14 +62,14 @@ SPDX-License-Identifier: CC-BY-4.0
     <rect x="324" y="164" width="250" height="24" rx="3" stroke-dasharray="4 3" stroke-opacity="0.6"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="332" y="180" fill-opacity="0.7" font-style="italic">no row for l3: line_to is absent</text>
+    <text x="332" y="180" fill-opacity="0.7" font-style="italic">no label for l3: line[bus1] is absent</text>
   </g>
   <g fill="none" stroke="currentColor" stroke-width="1">
     <rect x="600" y="102" width="14" height="14" fill="url(#arm-hatch)"/>
     <rect x="600" y="126" width="14" height="14" stroke-dasharray="4 3" stroke-opacity="0.6"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="620" y="113">no row in line_to</text>
+    <text x="620" y="113">no label in line[bus1]</text>
     <text x="620" y="137">absent: no row</text>
   </g>
 </svg>

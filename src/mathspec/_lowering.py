@@ -421,7 +421,7 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
             continue
         errors.extend(
             f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
-            f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
+            f'from the data alone, before any variable has a value. Test a parameter or a map instead.'
             for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
         )
         errors.extend(_masked_read(context, pname, read, spec) for read in sorted(mask.names_read & masked))
@@ -459,16 +459,41 @@ def _index_mask(
 
     A refusal is appended where the relations already decide some of the
     ``where:``: inside them each bare relation name is true, so reading one
-    there says nothing. A value column read as ``relation[column]`` is a test,
+    there says nothing. A map read as ``subject[map]`` is a test,
     and stays.
     """
     if where is not None and in_ and (written := Mask(where)).within(in_) != written:
         errors.append(_decided_by_index_set(context, name, text, in_, written.within(in_).root))
+    elif where is not None and (problem := _rows_tested(context, text, Mask(where), in_, ns)) is not None:
+        errors.append(problem)
     rows: list[Condition] = [
         RelationDefined(r, tuple(sorted(ns.relations[r].dim(k) for k in ns.relations[r].key))) for r in in_
     ]
     conjuncts = [*rows, *(() if where is None else (where,))]
     return mask_of(functools.reduce(And, conjuncts)) if conjuncts else None
+
+
+def _rows_tested(context: str, text: str | None, written: Mask, in_: tuple[str, ...], ns: Namespace) -> str | None:
+    """The refusal for a ``where:`` that tests the rows of a relation, which ``in:`` states, or ``None``.
+
+    ``in:`` and a bare relation name in ``where:`` would say one thing twice, so
+    only ``in:`` is taken. A map read as ``subject[map]`` is a test of a label,
+    and stays.
+    """
+    tested = sorted({a.name for a in written.atoms if isinstance(a, RelationDefined) and a.column is None})
+    if not tested:
+        return None
+    named = ' and '.join(f"'{r}'" for r in tested)
+    head = f'{context}: `where: {text}` tests the rows of {named}'
+    if everywhere := [r for r in tested if ns.relations[r].missing == 'refused']:
+        return (
+            f"{head}, and under missing: refused '{everywhere[0]}' has a row everywhere. Delete it from the `where:`."
+        )
+    top = {c.name for c in written.conjuncts if isinstance(c, RelationDefined) and c.column is None}
+    if not set(tested) <= top:
+        return f'{head} under OR or NOT, which `in:` cannot state. Declare those rows as a bool parameter, and test that in its place.'
+    rest = ', and keep the rest in the `where:`.' if len(written.conjuncts) > len(top) else ' in place of the `where:`.'
+    return f'{head}, which `in:` states. Write `in: [{", ".join(sorted({*in_, *tested}))}]`{rest}'
 
 
 def _decided_by_index_set(context: str, name: str, text: str | None, in_: tuple[str, ...], inside: Condition) -> str:

@@ -26,18 +26,18 @@ A file cannot add an operator, and only
 | `sum(array)`                                               | `sum` removes every [dimension](dimensions.md) of `array`. The result is a scalar                                                                              |
 | `sum(array, over=dim)`                                     | `sum` removes `dim`                                                                                                                                           |
 | `sum(array, over=[a, …])`                                  | `sum` removes each dimension in the list                                                                                                                      |
-| `sum(array, over=dim, by=relation[c])`                     | `sum` removes `dim`, and groups the result by the column `c` of the [relation](relations.md). The call joins on the other key columns, so `array` and the result are indexed over them |
-| `sum(array, over=[dim, …], by=relation[c, …])`             | The call does the same with several dimensions and several columns of one relation, joins on them together, and groups by their product                            |
-| `at(array, by=relation[c])`                                | The result is `array` read at the value of the relation's column `c`, once per key of the relation. The result gains the key                                                |
+| `sum(array, over=dim, by=subject[c])`                      | `sum` removes `dim`, and groups the result by the column `c` of the table of `subject`, a [map](relations.md#maps) or a column of a [relation](relations.md#relations). The call joins on the other key columns, so `array` and the result are indexed over them |
+| `sum(array, over=[dim, …], by=subject[c, …])`              | The call does the same with several dimensions and several columns of one table, joins on them together, and groups by their product                            |
+| `at(array, by=subject[m])`                                 | The result is `array` read at the label that the map `m` gives each row of `subject`, once per row. The result gains the key of `subject`                                                |
 | `shift(array, along=dim, offset=n)`                        | The result is the value `n` positions earlier along `dim`, and the vacated edge is [absent](absence.md)                                                                         |
 | `shift(array, along=dim, offset=n, edge='wrap')`           | The result is the value `n` positions earlier, counted cyclically, so nothing is vacated                                                                                    |
 | `shift(array, along=dim, offset=n, edge=v)`                | The result is the value `n` positions earlier, with the number `v` at the vacated edge                                                                                      |
 | `shift(array, along=dim, offset=p, edge=…)`                | The result is the value `p` positions earlier, with `p` an integer parameter read per entity                                                                                |
-| `shift(array, along=dim, offset=n, within=relation[c])`    | The result is the value `n` positions earlier inside each group that the relation's column `c` makes. Neighbours, edges and a wrap all belong to that group                 |
+| `shift(array, along=dim, offset=n, within=subject[m])`     | The result is the value `n` positions earlier inside each group that the map `m` makes. Neighbours, edges and a wrap all belong to that group                 |
 | `sum_back(array, along=dim, window=n)`                     | The result is the sum of the last `n` positions along `dim`, ending at the position being written                                                                           |
 | `sum_back(array, along=dim, window=p)`                     | The result is the sum of the last `p` positions, with `p` an integer parameter read per entity                                                                              |
 | `sum_back(array, along=dim, window=p, edge='wrap')`        | Instead of stopping short at its start, the window reaches around the dimension                                                                               |
-| `sum_back(array, along=dim, window=n, within=relation[c])` | The window stays inside each group that the relation's column `c` makes                                                                                       |
+| `sum_back(array, along=dim, window=n, within=subject[m])`  | The window stays inside each group that the map `m` makes                                                                                       |
 
 `array` is any expression with the right dimensions, such as a parameter or a
 variable. [Every operator as math](#every-operator-as-math) lists the typeset
@@ -53,8 +53,8 @@ each dimension once. `sum(x, over=[a, b])` is the same as
 `sum(sum(x, over=a), over=b)`, and the [typesetter](../typeset.md) prints it as
 one sum over both sets.
 
-With `by=`, the sum adds up
-each group that a column of a [relation](relations.md) makes, and the result is
+With `by=`, the sum adds up each group that a [map](relations.md#maps) or a
+column of a [relation](relations.md#relations) makes, and the result is
 indexed over that column. The balance at each bus (a nodal balance) is one
 `sum(by=)` per kind of component:
 
@@ -63,10 +63,9 @@ dimensions:
   bus: { dtype: str }
   generator: { dtype: str }
   line: { dtype: str }
-relations:
-  gen_bus: { key: generator, values: bus }
-  line_from: { key: line, values: bus }
-  line_to: { key: line, values: bus }
+maps:
+  generator: { bus: bus }
+  line: { bus0: bus, bus1: bus }
 parameters:
   load: { dims: [bus] }
   cost: { dims: [generator] }
@@ -77,23 +76,24 @@ constraints:
   nodal_balance:
     dims: [bus]
     expression: >-
-      sum(p, over=generator, by=gen_bus[bus])
-      + sum(f, over=line, by=line_to[bus])
-      - sum(f, over=line, by=line_from[bus])
+      sum(p, over=generator, by=generator[bus])
+      + sum(f, over=line, by=line[bus1])
+      - sum(f, over=line, by=line[bus0])
       == load
 objective: { sense: minimize, expression: "sum(p * cost, over=generator)" }
 ```
 
 ```math
-\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g} + \sum_{l \in \mathcal{L} \,:\, \mathrm{line\_to}(l) = b} f_{l} - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{line\_from}(l) = b} f_{l} \right) = \mathrm{load}_{b} \qquad \forall\, b \in \mathcal{B}
+\sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = b} p_{g} + \sum_{l \in \mathcal{L} \,:\, \mathrm{bus1}(l) = b} f_{l} - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{bus0}(l) = b} f_{l} \right) = \mathrm{load}_{b} \qquad \forall\, b \in \mathcal{B}
 ```
 
 <figure class="diagram">
 --8<-- "docs/static/operators-sum.svg"
 </figure>
 
-With the data in the figure, the sum through `gen_bus` adds `p` of `wind` and
-`gas` at bus `north`. The line `l1` leaves `north` and enters `south`. Each sum
+With the data in the figure, the sum through `generator[bus]` adds `p` of
+`wind` and `gas` at bus `north`. The line `l1` leaves `north` at `bus0` and
+enters `south` at `bus1`. Each sum
 removes `generator` or `line` and adds `bus`, so the constraint is indexed over
 `bus` alone.
 
@@ -110,15 +110,16 @@ sum.
 
 !!! info "See also"
 
-    - [How a relation is used](relations.md#how-a-relation-is-used), for
-      the dimensions that a call through a relation joins on, and those its result
-      has.
+    - [How relations and maps are used](relations.md#how-relations-and-maps-are-used),
+      for the dimensions that a call through a relation or a map joins on, and
+      those its result has.
 
 ## `at`
 
-`at` takes, for each key label of a relation, the value of an expression at
-the label that the relation maps it to. `at` adds nothing up (a
-[lookup](relations.md#lookups)), and takes one row for each key label. Here
+`at` takes, for each row of the subject of a [map](relations.md#maps), the
+value of an expression at the label that the map gives the row. `at` adds
+nothing up (a [lookup](relations.md#lookups)), and takes one row for each row
+of the subject. Here
 `at` takes,
 for every line, the build decision of its bus:
 
@@ -126,8 +127,8 @@ for every line, the build decision of its bus:
 dimensions:
   bus: { dtype: str }
   line: { dtype: str }
-relations:
-  line_bus: { key: line, values: bus }
+maps:
+  line: { bus: bus }
 parameters:
   cap: { dims: [line] }
 variables:
@@ -136,20 +137,20 @@ variables:
 constraints:
   flow_needs_build:
     dims: [line]
-    expression: f <= cap * at(build, by=line_bus[bus])
+    expression: f <= cap * at(build, by=line[bus])
 objective: { sense: minimize, expression: "sum(build, over=bus)" }
 ```
 
 ```math
-f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{line\_bus}(l)} \qquad \forall\, l \in \mathcal{L}
+f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{bus}(l)} \qquad \forall\, l \in \mathcal{L}
 ```
 
 <figure class="diagram">
 --8<-- "docs/static/operators-at.svg"
 </figure>
 
-`at` removes the column in `by=`, `bus`, and adds the key, `line`, so `build`
-is read once per line.
+`at` removes `bus`, the dimension that the map in `by=` refers to, and adds
+the key, `line`, so `build` is read once per line.
 
 ## `shift`
 
@@ -235,8 +236,8 @@ group:
 dimensions:
   snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
-relations:
-  season_of: { key: snapshot, values: season }
+maps:
+  snapshot: { season: season }
 parameters:
   inflow: { dims: [snapshot] }
 variables:
@@ -244,12 +245,12 @@ variables:
 constraints:
   season_balance:
     dims: [snapshot]
-    expression: soc == shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season]) + inflow
+    expression: soc == shift(soc, along=snapshot, offset=1, edge='wrap', within=snapshot[season]) + inflow
 objective: { sense: minimize, expression: sum(soc) }
 ```
 
 ```math
-\mathit{soc}_{t} = \mathit{soc}_{t \ominus^{\mathrm{season\_of}(t)} 1} + \mathrm{inflow}_{t} \qquad \forall\, t \in \mathcal{T}
+\mathit{soc}_{t} = \mathit{soc}_{t \ominus^{\mathrm{season}(t)} 1} + \mathrm{inflow}_{t} \qquad \forall\, t \in \mathcal{T}
 ```
 
 <figure class="diagram">
@@ -314,14 +315,14 @@ Constraint 'arrives_after_its_lead': shift(offset=lead) steps along 'month', and
 `lead` then varies along `month`, the dimension that the shift moves along.
 
 mathspec reads the offset over the dimensions of the shifted expression, and
-over the dimension that a [`within=`](#within) column groups into. At load, mathspec refuses an offset over any other dimension. With a dimension `period`, a relation
-`period_of: { key: month, values: period }`, and `lead` declared over
-`[period]`, the spec loads under `within=period_of[period]`, with one offset
+over the dimension that a [`within=`](#within) map groups into. At load, mathspec refuses an offset over any other dimension. With a dimension `period`, a map
+`month: { period: period }`, and `lead` declared over
+`[period]`, the spec loads under `within=month[period]`, with one offset
 per period. Without the `within=` on the shift, mathspec refuses the file and
 prints:
 
 ```text
-Constraint 'arrives_after_its_lead': shift(offset=lead): 'lead' varies over ['period'], which the expression does not carry (dims ['month', 'technology']). Declare 'lead' over dims the expression carries, or group by a relation into one of ['period'].
+Constraint 'arrives_after_its_lead': shift(offset=lead): 'lead' varies over ['period'], which the expression does not carry (dims ['month', 'technology']). Declare 'lead' over dims the expression carries, or group by a map into one of ['period'].
 ```
 
 `period` is neither a dimension of `order` nor a group of a `within=`.
@@ -406,20 +407,20 @@ The typesetter prints each form from the smallest spec that uses it.
 | `sum(array)` | $`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} \le \mathrm{budget}`$ |
 | `sum(array, over=dim)` | $`\sum_{g \in \mathcal{G}} p_{g,t} \le \mathrm{limit}_{t} \qquad \forall\, t \in \mathcal{T}`$ |
 | `sum(array, over=[a, …])` | $`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{c,g,t} \le \mathrm{limit}_{c} \qquad \forall\, c \in \mathcal{C}`$ |
-| `sum(array, over=dim, by=relation[c])` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{gen\_bus}(g) = b} p_{g,t} \le \mathrm{limit}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
-| `sum(array, over=dim, by=relation[c]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone\_of}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{e,z} \qquad \forall\, e \in \mathcal{E},\ z \in \mathcal{Z}`$ |
-| `sum(array, over=[dim, …], by=relation[c, …])` | $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{slot\_of.bus}(g,\ e) = b \wedge \mathrm{slot\_of.technology}(g,\ e) = t} p_{g,e} \le \mathrm{cap}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
-| `at(array, by=relation[c])` | $`p_{t} \le \mathrm{cap}_{\mathrm{period\_of}(t)} \qquad \forall\, t \in \mathcal{T}`$ |
-| `at(array, by=relation[c]), two columns over one dimension` | $`f_{l} \le \mathrm{cap}_{\mathrm{ends.bus0}(l)} \qquad \forall\, l \in \mathcal{L}`$ |
+| `sum(array, over=dim, by=subject[m])` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = b} p_{g,t} \le \mathrm{limit}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
+| `sum(array, over=dim, by=subject[m]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{e,z} \qquad \forall\, e \in \mathcal{E},\ z \in \mathcal{Z}`$ |
+| `sum(array, over=[dim, …], by=subject[m, …])` | $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{bus}(g,\ e) = b \wedge \mathrm{technology}(g,\ e) = t} p_{g,e} \le \mathrm{cap}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
+| `at(array, by=subject[m])` | $`p_{t} \le \mathrm{cap}_{\mathrm{period}(t)} \qquad \forall\, t \in \mathcal{T}`$ |
+| `at(array, by=subject[m]), two maps into one dimension` | $`f_{l} \le \mathrm{cap}_{\mathrm{bus0}(l)} \qquad \forall\, l \in \mathcal{L}`$ |
 | `shift(array, along=dim, offset=n)` | $`p_{t} \le p_{t - 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge='wrap')` | $`p_{t} \le p_{t \ominus 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge=v)` | $`p_{t} \le p_{t \boxminus_{0} 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=p, edge=…)` | $`\mathit{order}_{m \boxminus_{0} \mathrm{lead},t} \ge \mathrm{demand}_{m,t} \qquad \forall\, m \in \mathcal{M},\ t \in \mathcal{T}`$ |
-| `shift(array, along=dim, offset=n, within=relation[c])` | $`p_{t} \le p_{t \ominus^{\mathrm{season\_of}(t)} 1} \qquad \forall\, t \in \mathcal{T}`$ |
+| `shift(array, along=dim, offset=n, within=subject[m])` | $`p_{t} \le p_{t \ominus^{\mathrm{season}(t)} 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `sum_back(array, along=dim, window=n)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
 | `sum_back(array, along=dim, window=p)` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h - h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
 | `sum_back(array, along=dim, window=p, edge='wrap')` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h \ominus h' < \mathrm{min\_up}} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
-| `sum_back(array, along=dim, window=n, within=relation[c])` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day\_of}(h)} h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
+| `sum_back(array, along=dim, window=n, within=subject[m])` | $`\sum_{h' \in \mathcal{H} \,:\, 0 \le h -^{\mathrm{day}(h)} h' < 3} \mathit{started}_{h',u} \le \mathit{on}_{h,u} \qquad \forall\, h \in \mathcal{H},\ u \in \mathcal{U}`$ |
 | `dual(constraint)` | $`\mathit{price}_{t} = \lambda_{\mathrm{balance},t} \qquad \forall\, t \in \mathcal{T}`$ |
 <!-- operator-math:end -->
 
@@ -427,8 +428,8 @@ The typesetter prints each form from the smallest spec that uses it.
 
     - [Absence and where](absence.md) for what each operator does with an absent
       input.
-    - [Relations](relations.md#how-a-relation-is-used) for the relation that `by=`
-      and `within=` take.
+    - [Relations and maps](relations.md#how-relations-and-maps-are-used) for the
+      relation or the map that `by=` and `within=` take.
     - [Macros](named.md#macros) for a composition of operators under one name.
     - [One construct per spec](../../examples/operators.md) for the smallest spec
       that uses each form.

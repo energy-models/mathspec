@@ -24,7 +24,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mathspec.program import Expression, Program
+    from mathspec.program import Expression, JoinColumns, Program
 
 
 class _Block(NamedTuple):
@@ -117,7 +117,7 @@ def separabilities(program: Program) -> dict[str, Separability]:
                         )
             elif isinstance(node, Join) and not node.columns.axes:
                 for dimension in node.columns.dropped_dims:
-                    waits_on(dimension, label, node.columns.name, 'coordinate')
+                    waits_on(dimension, label, _read_through(node.columns), 'coordinate')
             elif isinstance(node, (Translate, WindowSum)):
                 dimension = node.along
                 if node.wrap:
@@ -130,7 +130,9 @@ def separabilities(program: Program) -> dict[str, Separability]:
                     )
                     continue
                 if node.partition is not None:
-                    waits_on(dimension, label, node.partition.name, 'partition')
+                    waits_on(
+                        dimension, label, f'{node.partition.name}[{", ".join(node.partition.grouped)}]', 'partition'
+                    )
                 if isinstance(node, WindowSum):
                     continue
                 if isinstance(node.offset, str):
@@ -183,3 +185,9 @@ def separabilities(program: Program) -> dict[str, Separability]:
         )
         for dimension in program.dimensions
     }
+
+
+def _read_through(columns: JoinColumns) -> str:
+    """The subject *columns* reads, with the maps whose labels decide the reach, as the file writes them."""
+    maps = [role for role in (*columns.joined, *columns.grouped) if role in columns.relation.values]
+    return f'{columns.name}[{", ".join(maps)}]' if maps else columns.name

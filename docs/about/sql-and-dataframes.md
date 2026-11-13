@@ -19,8 +19,8 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str }
   bus: { dtype: str }
-relations:
-  gen_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 parameters:
   load: { dims: [snapshot, bus] }
   capacity: { dims: [generator] }
@@ -34,7 +34,7 @@ variables:
 constraints:
   power_balance:
     dims: [snapshot, bus]
-    expression: sum(dispatch, over=generator, by=gen_bus[bus]) == load
+    expression: sum(dispatch, over=generator, by=generator[bus]) == load
   ramp_up:
     dims: [snapshot, generator]
     expression: dispatch - shift(dispatch, along=snapshot, offset=1) <= ramp_limit
@@ -70,11 +70,14 @@ are tables of the rows that a tool builds. `dispatch` has one decision variable
 per coordinate of `(snapshot, generator)`, and `power_balance` has one row per
 coordinate of `(snapshot, bus)`.
 
-A [relation](../reference/language/relations.md) is a table whose `key:` is its
-primary key. `gen_bus: { key: generator, values: bus }` is a table with two
-columns and one row per generator. Under the default `missing: refused`, every
-generator needs a row. Under [`missing: absent`](../reference/language/relations.md#missing),
-a generator may have no row.
+A [relation](../reference/language/relations.md#relations) is a table whose
+columns are all in its primary key, so it lists which combinations of labels
+exist. A [map](../reference/language/relations.md#maps) is a column of the
+table of its subject. `generator: { bus: bus }` under `maps:` is a table
+`generator` with the columns `generator` and `bus`, and one row per generator.
+Under the default `missing: refused`, every generator needs a bus. Under
+[`missing: absent`](../reference/language/relations.md#missing), the bus of a
+generator may be null.
 
 ## Absence
 
@@ -102,14 +105,15 @@ The table covers [`sum`](../reference/language/operators.md#sum),
 [`shift`](../reference/language/operators.md#shift) and
 [`sum_back`](../reference/language/operators.md#sum_back), and each one is one
 query shape. In the table, `x` is the table of the operand and `value` is its
-value column. `rest` is every key column of `x` that the operator does not name.
+value column. `rest` is every key column of `x` that the operator does not name,
+and `S` is the table of the subject in `by=` or `within=`.
 
 | Operator                         | SQL                                                                                           | polars                                                                 |
 | -------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `sum(x, over=d)`                 | `SELECT rest, SUM(value) FROM x GROUP BY rest`                                                | `x.group_by(rest).agg(pl.col('value').sum())`                          |
 | `sum(x)`                         | `SELECT SUM(value) FROM x`                                                                    | `x.select(pl.col('value').sum())`                                      |
-| `sum(x, over=d, by=R[c])`        | `SELECT rest, R.c, SUM(value) FROM x JOIN R ON x.d = R.d GROUP BY rest, R.c`                  | `x.join(R, on=d).group_by([*rest, c]).agg(pl.col('value').sum())`      |
-| `at(x, by=R[c])`                 | `SELECT R.key, rest, value FROM R JOIN x ON R.c = x.c`                                        | `R.join(x, on=c)`                                                      |
+| `sum(x, over=d, by=S[c])`        | `SELECT rest, S.c, SUM(value) FROM x JOIN S ON x.d = S.d GROUP BY rest, S.c`                  | `x.join(S, on=d).group_by([*rest, c]).agg(pl.col('value').sum())`      |
+| `at(x, by=S[c])`                 | `SELECT S.key, rest, value FROM S JOIN x ON S.c = x.c`                                        | `S.join(x, on=c)`                                                      |
 | `shift(x, along=d, offset=n)`    | `LAG(value, n) OVER (PARTITION BY rest ORDER BY d)`, and the first `n` rows are dropped       | `pl.col('value').shift(n).over(rest, order_by=d)`, then drop the nulls |
 | `shift(…, edge=v)`               | `LAG(value, n, v) OVER (PARTITION BY rest ORDER BY d)`                                        | `pl.col('value').shift(n, fill_value=v).over(rest, order_by=d)`        |
 | `sum_back(x, along=d, window=n)` | `SUM(value) OVER (PARTITION BY rest ORDER BY d ROWS BETWEEN n - 1 PRECEDING AND CURRENT ROW)` | `pl.col('value').rolling_sum(n, min_samples=1).over(rest, order_by=d)` |
@@ -131,14 +135,14 @@ exact except in four cases:
   Each entity then has its own window length, and a SQL frame takes a
   constant. Write it as a self-join on the positions from `d - min_up + 1` to
   `d`.
-- `within=R[c]` adds the group to the partition. After a join with `R`,
-  `shift(…, within=R[c])` is `PARTITION BY rest, R.c`.
+- `within=S[c]` adds the group to the partition. After a join with `S`,
+  `shift(…, within=S[c])` is `PARTITION BY rest, S.c`.
 
 ## Queries outside the language
 
 A spec combines two tables only through arithmetic, `sum(by=)` and `at(by=)`.
-Each of `sum(by=)` and `at(by=)` joins with a relation and drops the key column
-of the join in the same call. A separate `join` would return a table with a key
+Each of `sum(by=)` and `at(by=)` joins with the table of a relation or a
+subject, and drops the key column of the join in the same call. A separate `join` would return a table with a key
 column that no dimension declares, so mathspec has no `join` operator.
 
 You run any other query, such as a pivot, a string operation or a join on a

@@ -35,11 +35,11 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
 
 parameters:
   Cycle_in_basis:
@@ -62,7 +62,7 @@ constraints:
       that are active in it (`constraints.py:1710-1729`). A cycle label that
       period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
-    where: at(Cycle_in_basis, by=snapshot_period[period])
+    where: at(Cycle_in_basis, by=snapshot[period])
     expression: Cycle_angle_sum == 0
 ```
 
@@ -77,9 +77,9 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
@@ -92,7 +92,7 @@ constraints:
 **`Kirchhoff_Voltage_Law`**
 
 ```math
-\mathit{Cycle\_angle\_sum}_{c,\xi,t} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Cycle\_in\_basis}_{c,\mathrm{snapshot\_period}(t)}
+\mathit{Cycle\_angle\_sum}_{c,\xi,t} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Cycle\_in\_basis}_{c,\mathrm{period}(t)}
 ```
 <!-- gallery:end -->
 

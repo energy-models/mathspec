@@ -30,12 +30,6 @@ An [engine](#tool) attaches data: it combines tables of data with a spec. A
 rule about the data, such as "every generator has a cost", can be checked only
 after the data is attached. mathspec checks no such rule itself.
 
-## Bare relation
-
-A bare relation is a relation with no `values:`, so every column identifies a
-row. A bare relation lists which combinations of labels exist, and a `where:`
-on it is true where a row exists ([relations](language/relations.md)).
-
 ## Base
 
 A base is a whole spec that another party extends, such as the spec that a
@@ -148,16 +142,16 @@ does not build](reading.md#what-a-program-does-not-build)).
 
 ## Group
 
-A group is the set of rows of a relation that share one label in a value
-column. `within=<relation>[<column>]` makes `shift`, `sum_back` or
-`position()` work separately in each group, such as each season of a year
-([partitions](language/relations.md#partitions)).
+A group is the set of rows of a dimension or a relation to which one
+[map](#map) gives one label. `within=<subject>[<map>]` makes `shift`,
+`sum_back` or `position()` work separately in each group, such as each season
+of a year ([partitions](language/relations.md#partitions)).
 
 ## Index set
 
 The index set of a parameter or a variable is the coordinates its `in:` lists:
-the key combinations where each of its relations has a row. The value columns
-of a relation play no part. A tool refuses a row of the data of a parameter
+the combinations of labels where each of its relations has a row. A map is
+not an index set. A tool refuses a row of the data of a parameter
 outside its index set
 ([`in`](language/parameters-variables-constraints.md#in)).
 
@@ -180,6 +174,13 @@ A macro is a template that takes arguments and is substituted into an
 expression before any tool reads it. A file declares its own macros under
 `macros:`, so a macro is the one construct a file can add
 ([macros](language/named.md#macros)).
+
+## Map
+
+A map gives each row of a dimension or a relation (its subject) one label of a
+dimension, such as the bus of each generator. A condition or an
+operator reads it as `subject[map]`, as in `generator[bus]`
+([maps](language/relations.md#maps)).
 
 ## Missing row
 
@@ -254,7 +255,7 @@ solves. Each rung states one
 
 A section is a top-level key of a file, such as `parameters:` or `given:`,
 together with the entries under it. Every top-level key except `version` and
-`description` is a section key, thirteen in all
+`description` is a section key, fourteen in all
 ([file shape](language/file.md)).
 
 A heading of a typeset document, such as Definitions, is a heading of the

@@ -2530,7 +2530,7 @@ Inside each period, its ramp rows are tight at the optimum.
 
 | PyPSA                                                                                                                    | status | note                                                                                                                                                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`StorageUnit-energy_balance`](#storageunit-energy_balance), [`Store-energy_balance`](#store-energy_balance), per period | done   | two more cases in the charge carried in: a `shift(…, edge='wrap', within=snapshot_period[period])` and the initial level where [`position()`](../reference/language/expressions.md#position) within `snapshot_period[period]` is `0` |
+| [`StorageUnit-energy_balance`](#storageunit-energy_balance), [`Store-energy_balance`](#store-energy_balance), per period | done   | two more cases in the charge carried in: a `shift(…, edge='wrap', within=snapshot[period])` and the initial level where [`position()`](../reference/language/expressions.md#position) within `snapshot[period]` is `0` |
 | [`{c}-p-ramp_limit_*`, `-bigM`, at a period start](#generator-p-ramp_limit_up)                                           | done   | a `where:` that is false at every period start but the horizon's first                                                                                                                                                               |
 
 <!-- reference:rung_29_storage_per_period:begin -->
@@ -3306,7 +3306,7 @@ It states an assumption for it,
 When data is attached, a tool refuses a delayed port whose `generators`
 weighting has more than one value over the horizon (#299).
 `Link_output_arrival` and `Process_output_arrival` shift with
-`within=snapshot_period[period]`. On a plain run, the data has one period, so
+`within=snapshot[period]`. On a plain run, the data has one period, so
 the shift is the flat one.
 
 The rung adds a link that delays by two and wraps, and a process that delays
@@ -3317,7 +3317,7 @@ flat shift patched into PyPSA's source index, PyPSA solves the network to
 
 | PyPSA                                                                                | status | note                                                                                                                                              |
 | ------------------------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [link and process `delay`, `cyclic_delay`](#bus-nodal_balance) per investment period | done   | `shift(offset=delay, within=snapshot_period[period])`, with `edge='wrap'` closing each period and `edge=0` vacating each period's first snapshots |
+| [link and process `delay`, `cyclic_delay`](#bus-nodal_balance) per investment period | done   | `shift(offset=delay, within=snapshot[period])`, with `edge='wrap'` closing each period and `edge=0` vacating each period's first snapshots |
 
 <!-- reference:rung_38_delay_per_period:begin -->
 > ✔ `pypsa 1.4.0.post1.dev62+g3625c8168` solves this rung's network at objective `12918.75`, 104 rows.
@@ -6115,8 +6115,8 @@ whose flow enters the row. PyPSA builds:
   zero per snapshot (`flow_based.py:289-293`)
 
 The file reads the PTDF columns long, as `GlobalConstraint_zonal_ptdf` and
-`GlobalConstraint_link_ptdf`, and the domains as the relation
-`Bus_flow_based_domain`, from data prep. `FlowBased_injection` is the zone's
+`GlobalConstraint_link_ptdf`, and the domain of each zone bus as the map
+`bus[flow_based_domain]`, from data prep. `FlowBased_injection` is the zone's
 term in `Bus_injection`. On a run without flow-based rows, no bus is a zone and
 the balance is the standard one.
 
@@ -6656,26 +6656,26 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{B}`$ | index $`b`$ — `breakpoint` — the corners of a piecewise-linear curve, in order. A curve runs over the breakpoints its data has rows for, so curves may differ in length |
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L},\ \mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N},\ \mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$, `Bus_flow_based_domain` is `absent` where the data has no row — network nodes |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I},\ \mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{flow\_based\_domain}: \mathcal{N} \to \mathcal{L},\ \mathrm{bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{bus}: \mathcal{D} \to \mathcal{N},\ \mathrm{bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{M} \to \mathcal{N}`$, `bus[flow_based_domain]` is `absent` where the data gives no label — network nodes |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{carrier}: \mathcal{S} \to \mathcal{I},\ \mathrm{carrier}: \mathcal{V} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
-| $`\mathcal{L}`$ | index $`l`$ — `flow_based_domain` with $`\mathrm{Bus\_flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `Bus_flow_based_domain` is `absent` where the data has no row — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{Generator\_carrier}: \mathcal{G} \to \mathcal{I},\ \mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
+| $`\mathcal{L}`$ | index $`l`$ — `flow_based_domain` with $`\mathrm{flow\_based\_domain}: \mathcal{N} \to \mathcal{L}`$, `bus[flow_based_domain]` is `absent` where the data gives no label — the flow-based domains, each with its own zero-sum balance of net positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose flow-based rows name no domain has one. A run without them has none |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{bus}: \mathcal{G} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{G} \to \mathcal{I}`$, `Generator_maintenance_cover` is `absent` where the data has no row — generating units, each on one bus |
 | $`\mathcal{O}`$ | index $`o`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `Outage_line` is `absent` where the data has no row — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{Link\_carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{O}`$ | index $`o`$ — `link_output` with $`\mathrm{Link\_output\_bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{Link\_output\_link}: \mathcal{O} \to \mathcal{L}`$ — a link's output ports, one label per port a link declares. The labels are PyPSA's `bus1`, `bus2`, … columns read long, data prep. A link of any number of output ports is then one term in the balance |
-| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
-| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{Outage\_line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `Outage_line` is `absent` where the data has no row, `Outage_transformer` is `absent` where the data has no row — the passive branches a security-constrained run takes out one at a time (PyPSA's `branch_outages`), each a line or a transformer. A plain run has none |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
-| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — a process's ports, one label per port a process declares. The labels are PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A process of any number of ports is then one term in the balance |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{K} \to \mathcal{I},\ \mathrm{line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K}`$, `outage[line]` is `absent` where the data gives no label — passive branches, each between two buses, their flow set by impedance |
+| $`\mathcal{L}`$ | index $`l`$ — `link` with $`\mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{bus0}: \mathcal{L} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{L} \to \mathcal{I},\ \mathrm{link}: \mathcal{O} \to \mathcal{L}`$, `Link_maintenance_cover` is `absent` where the data has no row — controllable connections, each from one bus to the buses it delivers to |
+| $`\mathcal{O}`$ | index $`o`$ — `link_output` with $`\mathrm{bus}: \mathcal{O} \to \mathcal{N},\ \mathrm{link}: \mathcal{O} \to \mathcal{L}`$ — a link's output ports, one label per port a link declares. The labels are PyPSA's `bus1`, `bus2`, … columns read long, data prep. A link of any number of output ports is then one term in the balance |
+| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{bus}: \mathcal{D} \to \mathcal{N}`$ — demands, each on one bus |
+| $`\mathcal{K}^{\mathrm{out}}`$ | index $`\kappa`$ — `outage` with $`\mathrm{line}: \mathcal{K}^{\mathrm{out}} \to \mathcal{K},\ \mathrm{transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M}`$, `outage[line]` is `absent` where the data gives no label, `outage[transformer]` is `absent` where the data gives no label — the passive branches a security-constrained run takes out one at a time (PyPSA's `branch_outages`), each a line or a transformer. A plain run has none |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T},\ \mathrm{carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{process}: \mathcal{R} \to \mathcal{J}`$, `Process_maintenance_cover` is `absent` where the data has no row — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{process}: \mathcal{R} \to \mathcal{J}`$ — a process's ports, one label per port a process declares. The labels are PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A process of any number of ports is then one term in the balance |
 | $`\Xi`$ | index $`\xi`$ — `scenario` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{M}`$ | index $`m`$ — `segment` — the cuts a passive branch's loss curve is held above. They are PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places. A lossless run has none |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T},\ \mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
-| $`\mathcal{S}`$ | index $`s`$ — `storage_unit` with $`\mathrm{StorageUnit\_bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{StorageUnit\_carrier}: \mathcal{S} \to \mathcal{I}`$ — storage units, dispatch and store behind one bus connection |
-| $`\mathcal{V}`$ | index $`v`$ — `store` with $`\mathrm{Store\_bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{Store\_carrier}: \mathcal{V} \to \mathcal{I}`$ — pure energy stores, each on one bus |
-| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{Outage\_transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M},\ \mathrm{Transformer\_bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{Transformer\_bus1}: \mathcal{M} \to \mathcal{N}`$, `Outage_transformer` is `absent` where the data has no row — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{Generator\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{G} \times \Xi \times \mathcal{T},\ \mathrm{Link\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{L} \times \Xi \times \mathcal{T},\ \mathrm{Process\_maintenance\_cover} \subseteq \mathcal{T} \times \mathcal{J} \times \Xi \times \mathcal{T},\ \mathrm{period}: \mathcal{T} \to \mathcal{Y}`$, `Generator_maintenance_cover` is `absent` where the data has no row, `Link_maintenance_cover` is `absent` where the data has no row, `Process_maintenance_cover` is `absent` where the data has no row — dispatch periods |
+| $`\mathcal{S}`$ | index $`s`$ — `storage_unit` with $`\mathrm{bus}: \mathcal{S} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{S} \to \mathcal{I}`$ — storage units, dispatch and store behind one bus connection |
+| $`\mathcal{V}`$ | index $`v`$ — `store` with $`\mathrm{bus}: \mathcal{V} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{V} \to \mathcal{I}`$ — pure energy stores, each on one bus |
+| $`\mathcal{M}`$ | index $`m`$ — `transformer` with $`\mathrm{transformer}: \mathcal{K}^{\mathrm{out}} \to \mathcal{M},\ \mathrm{bus0}: \mathcal{M} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{M} \to \mathcal{N}`$, `outage[transformer]` is `absent` where the data gives no label — passive branches between two buses, their flow set by impedance and tap ratio, with a phase shift fixed or optimised |
 
 #### Parameters
 
@@ -7013,14 +7013,14 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`u`$ | `Generator_status` over $`\mathcal{G} \times \Xi \times \mathcal{T}`$ — `Generator-status` — how much of a committable unit is on. It is an integer the rows below cap at one, or at the module count where the build is modular |
 | $`\ell`$ | `Line_loss` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Line-loss` — what a line dissipates carrying its flow, pushed down by the cost and held up by the cuts. Absent, and zero in the balance, where the network is lossless |
 | $`N^{s}`$ | `Line_n_mod` over $`\mathcal{K}`$ — `Line-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
-| $`s`$ | `Line_s` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a positive value withdraws there and injects at `Line_bus1`, lossless |
+| $`s`$ | `Line_s` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `line[bus0]` end: a positive value withdraws there and injects at `line[bus1]`, lossless |
 | $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision, for a line that is active. A fixed build is the parameter of the same PyPSA name |
 | $`\mu^{f}`$ | `Link_maintenance` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance` — whether a maintainable link is in maintenance: continuous, and one exactly where an event covers the snapshot |
 | $`\mu^{f,\mathrm{nom}}`$ | `Link_maintenance_capacity` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_capacity` — the chosen build while in maintenance, zero otherwise: the product the `maintcap` rows linearise |
 | $`\mu^{f,\mathrm{up}}`$ | `Link_maintenance_start` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_start` — whether a maintenance event starts in this snapshot |
 | $`\mu^{f,u}`$ | `Link_maintenance_status` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Link-maintenance_status` — the status while in maintenance, zero otherwise: the product the `maint-status` rows linearise, so a unit in maintenance may also be off |
 | $`N^{f}`$ | `Link_n_mod` over $`\mathcal{L}`$ — `Link-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
-| $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-p` — PyPSA's `p0`, the flow measured at the `Link_bus0` end. A positive value withdraws there and injects at every bus the link's output ports deliver to |
+| $`f`$ | `Link_p` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-p` — PyPSA's `p0`, the flow measured at the `link[bus0]` end. A positive value withdraws there and injects at every bus the link's output ports deliver to |
 | $`F`$ | `Link_p_nom_ext` over $`\mathcal{L}`$ — `Link-p_nom` — nominal power where it is a decision, for a link that is active. A fixed build is the parameter of the same PyPSA name |
 | $`\mathit{dn}^{f}`$ | `Link_shut_down` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-shut_down` — how much of a committable link turns off this snapshot, capped as the status is |
 | $`\mathit{up}^{f}`$ | `Link_start_up` over $`\mathcal{L} \times \Xi \times \mathcal{T}`$ — `Link-start_up` — how much of a committable link turns on this snapshot, capped as the status is |
@@ -7050,7 +7050,7 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 | $`\ell^{\sigma}`$ | `Transformer_loss` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-loss` — what a transformer dissipates carrying its flow, as a line does. Absent, and zero in the balance, where the network is lossless |
 | $`N^{\sigma}`$ | `Transformer_n_mod` over $`\mathcal{M}`$ — `Transformer-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
 | $`\mathit{Transformer\_phase\_shift}`$ | `Transformer_phase_shift` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$, $`0`$ where the mask leaves it out — `Transformer-phase_shift` — a phase-shifting transformer's voltage angle shift in degrees, chosen per snapshot to redistribute the flows around its cycles without moving active power. Absent, and zero in the cycle sum, where the shift is fixed |
-| $`\sigma`$ | `Transformer_s` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — `Transformer-s` — PyPSA's `p0`, the flow measured at the `Transformer_bus0` end: a positive value withdraws there and injects at `Transformer_bus1`, lossless |
+| $`\sigma`$ | `Transformer_s` over $`\Xi \times \mathcal{T} \times \mathcal{M}`$ — `Transformer-s` — PyPSA's `p0`, the flow measured at the `transformer[bus0]` end: a positive value withdraws there and injects at `transformer[bus1]`, lossless |
 | $`\Sigma`$ | `Transformer_s_nom_ext` over $`\mathcal{M}`$ — `Transformer-s_nom` — nominal apparent power where it is a decision, for a transformer that is active. A fixed build is the parameter of the same PyPSA name |
 
 #### Definitions
@@ -7187,9 +7187,9 @@ The file states a plain `n.optimize()`, its multi-period class under the `multi_
 |---|---|
 | $`t \ominus k`$ | `edge='wrap'` — $`t-k`$, cyclic |
 | $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
-| $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
+| $`t \ominus^{\mathrm{map}(t)} k`$ | `within=subject[map]` — $`t-k`$ inside the group of $`t`$ |
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
-| $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
+| $`\mathrm{pos}_{\mathrm{map}(t)}(t)`$ | `position(within=subject[map])` — the position of $`t`$ inside its group |
 | $`\lvert \mathcal{T} \rvert`$ | the size of $`\mathcal{T}`$; $`\lvert \mathcal{T} \rvert - 1`$ is the last position |
 
 ### `Generator_com_ext`
@@ -7309,12 +7309,12 @@ Generator_ramps_from_previous:
     period's first, and the horizon's first where the generator comes in off
     or carries an initial output
   condition: >-
-    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    position(snapshot, within=snapshot[period]) > 0 OR (position(snapshot) == 0 AND
     (Generator_status_initial == 0 OR Generator_p_init))
 ```
 
 ```math
-\mathrm{prev}_{g,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{g,\xi} = 0 \vee \mathrm{p}^{0}_{g,\xi} \text{ is defined} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}_{g,\xi,t} \iff \mathrm{pos}_{\mathrm{period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{0}_{g,\xi} = 0 \vee \mathrm{p}^{0}_{g,\xi} \text{ is defined} \right) \qquad \forall\, g \in \mathcal{G},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Line_lossy`
@@ -7392,12 +7392,12 @@ Link_ramps_from_previous:
     period's first, and the horizon's first where the link comes in off or
     carries an initial output
   condition: >-
-    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    position(snapshot, within=snapshot[period]) > 0 OR (position(snapshot) == 0 AND
     (Link_status_initial == 0 OR Link_p_init))
 ```
 
 ```math
-\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{l,\xi} = 0 \vee \mathrm{f}^{0}_{l,\xi} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{l,\xi} = 0 \vee \mathrm{f}^{0}_{l,\xi} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Process_com_ext`
@@ -7461,12 +7461,12 @@ Process_ramps_from_previous:
     period's first, and the horizon's first where the process comes in off
     or carries an initial output
   condition: >-
-    position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+    position(snapshot, within=snapshot[period]) > 0 OR (position(snapshot) == 0 AND
     (Process_status_initial == 0 OR Process_p_init))
 ```
 
 ```math
-\mathrm{prev}^{z}_{j,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{j,\xi} = 0 \vee \mathrm{z}^{0}_{j,\xi} \text{ is defined} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}^{z}_{j,\xi,t} \iff \mathrm{pos}_{\mathrm{period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{z,0}_{j,\xi} = 0 \vee \mathrm{z}^{0}_{j,\xi} \text{ is defined} \right) \qquad \forall\, j \in \mathcal{J},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `StorageUnit_ext`
@@ -7948,11 +7948,11 @@ FlowBased_injection:
 ```yaml
 Generator_additions:
   expression: >-
-    sum(Generator_p_nom_ext * Generator_first_active, over=generator, by=Generator_carrier[carrier])
+    sum(Generator_p_nom_ext * Generator_first_active, over=generator, by=generator[carrier])
 ```
 
 ```math
-\mathit{Generator\_additions}_{i,y} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_carrier}(g) = i} P_{g} \cdot \mathrm{new}_{g,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Generator\_additions}_{i,y} = \sum_{g \in \mathcal{G} \,:\, \mathrm{carrier}(g) = i} P_{g} \cdot \mathrm{new}_{g,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `Generator_capex`
@@ -7971,24 +7971,24 @@ Generator_capex:
 ```yaml
 Generator_commitment_opex:
   expression: >-
-    sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
-    + sum(sum((Generator_start_up * Generator_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
-    + sum(sum((Generator_shut_down * Generator_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+    sum(sum(((Generator_status * Generator_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=generator), over=snapshot)
+    + sum(sum((Generator_start_up * Generator_start_up_cost) * at(period_weight_objective, by=snapshot[period]), over=generator), over=snapshot)
+    + sum(sum((Generator_shut_down * Generator_shut_down_cost) * at(period_weight_objective, by=snapshot[period]), over=generator), over=snapshot)
 ```
 
 ```math
-\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{on}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{up}}_{g,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{dn}}_{g,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} u_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{on}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{up}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{up}}_{g,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} \mathit{dn}_{g,\xi,t} \cdot \mathrm{c}^{\mathrm{dn}}_{g,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Generator_injection`
 
 ```yaml
 Generator_injection:
-  expression: sum(Generator_sign * Generator_p, over=generator, by=Generator_bus[bus])
+  expression: sum(Generator_sign * Generator_p, over=generator, by=generator[bus])
 ```
 
 ```math
-\mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Generator\_injection}_{n,\xi,t} = \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Generator_maintenance_modules`
@@ -8044,12 +8044,12 @@ Generator_operational_limit:
 ```yaml
 Generator_opex:
   expression: >-
-    sum(sum((Generator_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
-    + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=generator), over=snapshot)
+    sum(sum((Generator_running_cost * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=generator), over=snapshot)
+    + sum(sum((((Generator_p * Generator_p) * Generator_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=generator), over=snapshot)
 ```
 
 ```math
-\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} C^{\mathrm{run}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot p_{g,\xi,t} \cdot \mathrm{c}^{(2)}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Generator\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} C^{\mathrm{run}}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{g \in \mathcal{G}} p_{g,\xi,t} \cdot p_{g,\xi,t} \cdot \mathrm{c}^{(2)}_{g,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Generator_p_carried_over`
@@ -8350,12 +8350,12 @@ GlobalConstraint_energy_weight:
   cases:
     counted:
       when: GlobalConstraint_counts_snapshot
-      expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+      expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
   otherwise: 0
 ```
 
 ```math
-\mathit{w}^{\mathrm{gc}}_{o,\xi,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{in}_{o,\xi,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{w}^{\mathrm{gc}}_{o,\xi,t} = \begin{cases} \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} & \text{if } \mathrm{in}_{o,\xi,t} \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Line_additions`
@@ -8363,21 +8363,21 @@ GlobalConstraint_energy_weight:
 ```yaml
 Line_additions:
   expression: >-
-    sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
+    sum(Line_s_nom_ext * Line_first_active, over=line, by=line[carrier])
 ```
 
 ```math
-\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{k,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{k,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `Line_angle_sum`
 
 ```yaml
-Line_angle_sum: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
+Line_angle_sum: sum(Line_s * at(Line_cycle_weight, by=snapshot[period]), over=line)
 ```
 
 ```math
-\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{period}(t)} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Line_capex`
@@ -8396,14 +8396,14 @@ Line_capex:
 ```yaml
 Line_injection:
   expression: >-
-    -sum(Line_s, over=line, by=Line_bus0[bus])
-    + sum(Line_s, over=line, by=Line_bus1[bus])
-    - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
-    - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
+    -sum(Line_s, over=line, by=line[bus0])
+    + sum(Line_s, over=line, by=line[bus1])
+    - (0.5 * sum(Line_loss, over=line, by=line[bus0]))
+    - (0.5 * sum(Line_loss, over=line, by=line[bus1]))
 ```
 
 ```math
-\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{k,\xi,t} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} \ell_{k,\xi,t} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Line_s_monitored`
@@ -8462,11 +8462,11 @@ Line_transmission_volume_expansion:
 ```yaml
 Link_additions:
   expression: >-
-    sum(Link_p_nom_ext * Link_first_active, over=link, by=Link_carrier[carrier])
+    sum(Link_p_nom_ext * Link_first_active, over=link, by=link[carrier])
 ```
 
 ```math
-\mathit{Link\_additions}_{i,y} = \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_carrier}(l) = i} F_{l} \cdot \mathrm{new}^{f}_{l,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Link\_additions}_{i,y} = \sum_{l \in \mathcal{L} \,:\, \mathrm{carrier}(l) = i} F_{l} \cdot \mathrm{new}^{f}_{l,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `Link_capex`
@@ -8485,13 +8485,13 @@ Link_capex:
 ```yaml
 Link_commitment_opex:
   expression: >-
-    sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
-    + sum(sum((Link_start_up * Link_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
-    + sum(sum((Link_shut_down * Link_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+    sum(sum(((Link_status * Link_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=link), over=snapshot)
+    + sum(sum((Link_start_up * Link_start_up_cost) * at(period_weight_objective, by=snapshot[period]), over=link), over=snapshot)
+    + sum(sum((Link_shut_down * Link_shut_down_cost) * at(period_weight_objective, by=snapshot[period]), over=link), over=snapshot)
 ```
 
 ```math
-\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{on}}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{up}}_{l,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{dn}}_{l,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} u^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{on}}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{up}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{up}}_{l,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} \mathit{dn}^{f}_{l,\xi,t} \cdot \mathrm{c}^{f,\mathrm{dn}}_{l,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Link_injection`
@@ -8499,12 +8499,12 @@ Link_commitment_opex:
 ```yaml
 Link_injection:
   expression: >-
-    -sum(Link_p, over=link, by=Link_bus0[bus])
-    + sum(Link_output_arrival, over=link_output, by=Link_output_bus[bus])
+    -sum(Link_p, over=link, by=link[bus0])
+    + sum(Link_output_arrival, over=link_output, by=link_output[bus])
 ```
 
 ```math
-\mathit{Link\_injection}_{n,\xi,t} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{l,\xi,t} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_bus}(o) = n} \overrightarrow{f}_{o,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Link\_injection}_{n,\xi,t} = -\left( \sum_{l \in \mathcal{L} \,:\, \mathrm{bus0}(l) = n} f_{l,\xi,t} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{bus}(o) = n} \overrightarrow{f}_{o,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Link_maintenance_modules`
@@ -8548,12 +8548,12 @@ Link_modules:
 ```yaml
 Link_opex:
   expression: >-
-    sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
-    + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=link), over=snapshot)
+    sum(sum(((Link_p * Link_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=link), over=snapshot)
+    + sum(sum((((Link_p * Link_p) * Link_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=link), over=snapshot)
 ```
 
 ```math
-\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Link\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot \mathrm{c}^{f}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{l \in \mathcal{L}} f_{l,\xi,t} \cdot f_{l,\xi,t} \cdot \mathrm{c}^{f,(2)}_{l,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Link_output_arrival`
@@ -8572,12 +8572,12 @@ Link_output_arrival:
   cases:
     wrapping:
       when: Link_output_cyclic_delay
-      expression: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot_period[period]) * Link_efficiency
-  otherwise: shift(at(Link_p, by=Link_output_link[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot_period[period]) * Link_efficiency
+      expression: shift(at(Link_p, by=link_output[link]), along=snapshot, offset=Link_output_delay, edge='wrap', within=snapshot[period]) * Link_efficiency
+  otherwise: shift(at(Link_p, by=link_output[link]), along=snapshot, offset=Link_output_delay, edge=0, within=snapshot[period]) * Link_efficiency
 ```
 
 ```math
-\overrightarrow{f}_{o,\xi,t} = \begin{cases} f_{\mathrm{Link\_output\_link}(o),\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f}} \cdot \eta_{o,\xi,t} & \text{if } \mathrm{cyc}^{f}_{o} \\ f_{\mathrm{Link\_output\_link}(o),\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{f}} \cdot \eta_{o,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overrightarrow{f}_{o,\xi,t} = \begin{cases} f_{\mathrm{link}(o),\xi,t \ominus^{\mathrm{period}(t)} \mathrm{d}^{f}} \cdot \eta_{o,\xi,t} & \text{if } \mathrm{cyc}^{f}_{o} \\ f_{\mathrm{link}(o),\xi,t \boxminus_{0}^{\mathrm{period}(t)} \mathrm{d}^{f}} \cdot \eta_{o,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Link_p_carried_over`
@@ -8878,11 +8878,11 @@ Load_demand:
 ### `Load_injection`
 
 ```yaml
-Load_injection: sum(Load_demand, over=load, by=Load_bus[bus])
+Load_injection: sum(Load_demand, over=load, by=load[bus])
 ```
 
 ```math
-\mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{Load\_injection}_{n,\xi,t} = \sum_{d \in \mathcal{D} \,:\, \mathrm{bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Outage_s`
@@ -8894,12 +8894,12 @@ Outage_s:
     transformer's flow before it goes out
   dims: [scenario, snapshot, outage]
   cases:
-    line: { when: Outage_line, expression: "at(Line_s_monitored, by=Outage_line[line])" }
-  otherwise: at(Transformer_s_monitored, by=Outage_transformer[transformer])
+    line: { when: "outage[line]", expression: "at(Line_s_monitored, by=outage[line])" }
+  otherwise: at(Transformer_s_monitored, by=outage[transformer])
 ```
 
 ```math
-\hat{s}_{\kappa,\xi,t} = \begin{cases} \check{s}_{\mathrm{Outage\_line}(\kappa),\xi,t} & \text{if } \mathrm{Outage\_line}(\kappa) \text{ is defined} \\ \check{\sigma}_{\xi,t,\mathrm{Outage\_transformer}(\kappa)} & \text{otherwise} \end{cases} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T}
+\hat{s}_{\kappa,\xi,t} = \begin{cases} \check{s}_{\mathrm{line}(\kappa),\xi,t} & \text{if } \mathrm{line}(\kappa) \text{ is defined} \\ \check{\sigma}_{\xi,t,\mathrm{transformer}(\kappa)} & \text{otherwise} \end{cases} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Process_additions`
@@ -8907,11 +8907,11 @@ Outage_s:
 ```yaml
 Process_additions:
   expression: >-
-    sum(Process_p_nom_ext * Process_first_active, over=process, by=Process_carrier[carrier])
+    sum(Process_p_nom_ext * Process_first_active, over=process, by=process[carrier])
 ```
 
 ```math
-\mathit{Process\_additions}_{i,y} = \sum_{j \in \mathcal{J} \,:\, \mathrm{Process\_carrier}(j) = i} Z_{j} \cdot \mathrm{new}^{z}_{y,j} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Process\_additions}_{i,y} = \sum_{j \in \mathcal{J} \,:\, \mathrm{carrier}(j) = i} Z_{j} \cdot \mathrm{new}^{z}_{y,j} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `Process_capex`
@@ -8930,13 +8930,13 @@ Process_capex:
 ```yaml
 Process_commitment_opex:
   expression: >-
-    sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
-    + sum(sum((Process_start_up * Process_start_up_cost) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
-    + sum(sum((Process_shut_down * Process_shut_down_cost) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+    sum(sum(((Process_status * Process_stand_by_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
+    + sum(sum((Process_start_up * Process_start_up_cost) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
+    + sum(sum((Process_shut_down * Process_shut_down_cost) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
 ```
 
 ```math
-\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{on}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{up}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{dn}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_commitment\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} u^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{on}}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{up}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{up}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} \mathit{dn}^{z}_{j,\xi,t} \cdot \mathrm{c}^{z,\mathrm{dn}}_{j,\xi,t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Process_injection`
@@ -8944,11 +8944,11 @@ Process_commitment_opex:
 ```yaml
 Process_injection:
   expression: >-
-    sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
+    sum(Process_output_arrival, over=process_output, by=process_output[bus])
 ```
 
 ```math
-\mathit{Process\_injection}_{n,\xi,t} = \sum_{r \in \mathcal{R} \,:\, \mathrm{Process\_output\_bus}(r) = n} \overrightarrow{z}_{r,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Process\_injection}_{n,\xi,t} = \sum_{r \in \mathcal{R} \,:\, \mathrm{bus}(r) = n} \overrightarrow{z}_{r,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Process_maintenance_modules`
@@ -8992,12 +8992,12 @@ Process_modules:
 ```yaml
 Process_opex:
   expression: >-
-    sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
-    + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+    sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
+    + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
 ```
 
 ```math
-\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Process_output_arrival`
@@ -9016,12 +9016,12 @@ Process_output_arrival:
   cases:
     wrapping:
       when: Process_output_cyclic_delay
-      expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
-  otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
+      expression: shift(at(Process_p, by=process_output[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot[period]) * Process_rate
+  otherwise: shift(at(Process_p, by=process_output[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot[period]) * Process_rate
 ```
 
 ```math
-\overrightarrow{z}_{r,\xi,t} = \begin{cases} z_{\mathrm{Process\_output\_process}(r),\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{if } \mathrm{cyc}^{z}_{r} \\ z_{\mathrm{Process\_output\_process}(r),\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, r \in \mathcal{R},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overrightarrow{z}_{r,\xi,t} = \begin{cases} z_{\mathrm{process}(r),\xi,t \ominus^{\mathrm{period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{if } \mathrm{cyc}^{z}_{r} \\ z_{\mathrm{process}(r),\xi,t \boxminus_{0}^{\mathrm{period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, r \in \mathcal{R},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Process_p_carried_over`
@@ -9284,11 +9284,11 @@ Process_tech_capacity_expansion:
 ```yaml
 StorageUnit_additions:
   expression: >-
-    sum(StorageUnit_p_nom_ext * StorageUnit_first_active, over=storage_unit, by=StorageUnit_carrier[carrier])
+    sum(StorageUnit_p_nom_ext * StorageUnit_first_active, over=storage_unit, by=storage_unit[carrier])
 ```
 
 ```math
-\mathit{StorageUnit\_additions}_{i,y} = \sum_{s \in \mathcal{S} \,:\, \mathrm{StorageUnit\_carrier}(s) = i} H_{s} \cdot \mathrm{new}^{h}_{y,s} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{StorageUnit\_additions}_{i,y} = \sum_{s \in \mathcal{S} \,:\, \mathrm{carrier}(s) = i} H_{s} \cdot \mathrm{new}^{h}_{y,s} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `StorageUnit_capex`
@@ -9334,17 +9334,17 @@ StorageUnit_charge_carried_in:
       when: StorageUnit_cyclic_state_of_charge_per_period
       expression: >-
         StorageUnit_retention
-        * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
+        * shift(StorageUnit_state_of_charge, along=snapshot, offset=1, edge='wrap', within=snapshot[period])
     period_opening:
       when: >-
         StorageUnit_state_of_charge_initial_per_period AND NOT StorageUnit_cyclic_state_of_charge_per_period
-        AND position(snapshot, within=snapshot_period[period]) == 0
+        AND position(snapshot, within=snapshot[period]) == 0
       expression: StorageUnit_state_of_charge_initial
   otherwise: StorageUnit_retention * shift(StorageUnit_state_of_charge, along=snapshot, offset=1)
 ```
 
 ```math
-\overleftarrow{\mathit{soc}}_{\xi,t,s} = \begin{cases} \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,\left( t \ominus \mathrm{idle} \right) \ominus 1,s} & \text{if } \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \neg \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} 1,s} & \text{if } \mathrm{cyc}^{y}_{\xi,s} \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \mathrm{reset}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = 0 \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t - 1,s} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+\overleftarrow{\mathit{soc}}_{\xi,t,s} = \begin{cases} \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,\left( t \ominus \mathrm{idle} \right) \ominus 1,s} & \text{if } \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \neg \mathrm{cyc}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}_{t,s} \right) \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t \ominus^{\mathrm{period}(t)} 1,s} & \text{if } \mathrm{cyc}^{y}_{\xi,s} \\ \mathrm{soc}^{0}_{\xi,s} & \text{if } \mathrm{reset}_{\xi,s} \wedge \neg \mathrm{cyc}^{y}_{\xi,s} \wedge \mathrm{pos}_{\mathrm{period}(t)}(t) = 0 \\ \rho_{\xi,t,s} \cdot \mathit{soc}_{\xi,t - 1,s} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 ### `StorageUnit_closing_weight`
@@ -9360,8 +9360,8 @@ StorageUnit_closing_weight:
   dims: [scenario, global_constraint, snapshot, storage_unit]
   cases:
     per_period:
-      when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
-      expression: at(period_weight_years, by=snapshot_period[period])
+      when: StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot[period]) == -1
+      expression: at(period_weight_years, by=snapshot[period])
     carried_over:
       when: NOT StorageUnit_state_of_charge_initial_per_period
       expression: StorageUnit_last_counted_active
@@ -9369,7 +9369,7 @@ StorageUnit_closing_weight:
 ```
 
 ```math
-\mathit{w}^{h}_{o,\xi,t,s} = \begin{cases} \mathit{last}^{h}_{o,\xi,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{o,\xi,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
+\mathit{w}^{h}_{o,\xi,t,s} = \begin{cases} \mathit{last}^{h}_{o,\xi,t,s} & \text{if } \neg \mathrm{reset}_{\xi,s} \\ \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} & \text{if } \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{o,\xi,t} \wedge \mathrm{pos}_{\mathrm{period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{period}(t)} \rvert - 1 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S}
 ```
 
 ### `StorageUnit_injection`
@@ -9377,11 +9377,11 @@ StorageUnit_closing_weight:
 ```yaml
 StorageUnit_injection:
   expression: >-
-    sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=StorageUnit_bus[bus])
+    sum(StorageUnit_sign * (StorageUnit_p_dispatch - StorageUnit_p_store), over=storage_unit, by=storage_unit[bus])
 ```
 
 ```math
-\mathit{StorageUnit\_injection}_{n,\xi,t} = \sum_{s \in \mathcal{S} \,:\, \mathrm{StorageUnit\_bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{StorageUnit\_injection}_{n,\xi,t} = \sum_{s \in \mathcal{S} \,:\, \mathrm{bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `StorageUnit_last_counted_active`
@@ -9424,14 +9424,14 @@ StorageUnit_operational_limit:
 ```yaml
 StorageUnit_opex:
   expression: >-
-    sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
-    + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
-    + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
-    + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=storage_unit), over=snapshot)
+    sum(sum(((StorageUnit_p_dispatch * StorageUnit_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=storage_unit), over=snapshot)
+    + sum(sum((((StorageUnit_p_dispatch * StorageUnit_p_dispatch) * StorageUnit_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=storage_unit), over=snapshot)
+    + sum(sum(((StorageUnit_state_of_charge * StorageUnit_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=storage_unit), over=snapshot)
+    + sum(sum(((StorageUnit_spill * StorageUnit_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=storage_unit), over=snapshot)
 ```
 
 ```math
-\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{StorageUnit\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} h^{+}_{\xi,t,s} \cdot h^{+}_{\xi,t,s} \cdot \mathrm{c}^{h,(2)}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{soc}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{soc}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{s \in \mathcal{S}} \mathit{spill}_{\xi,t,s} \cdot \mathrm{c}^{\mathrm{spill}}_{\xi,t,s} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `StorageUnit_primary_energy`
@@ -9462,11 +9462,11 @@ StorageUnit_tech_capacity_expansion:
 ```yaml
 Store_additions:
   expression: >-
-    sum(Store_e_nom_ext * Store_first_active, over=store, by=Store_carrier[carrier])
+    sum(Store_e_nom_ext * Store_first_active, over=store, by=store[carrier])
 ```
 
 ```math
-\mathit{Store\_additions}_{i,y} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Store\_additions}_{i,y} = \sum_{v \in \mathcal{V} \,:\, \mathrm{carrier}(v) = i} E_{v} \cdot \mathrm{new}^{e}_{y,v} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 ### `Store_capex`
@@ -9511,8 +9511,8 @@ Store_closing_weight:
   dims: [scenario, global_constraint, snapshot, store]
   cases:
     per_period:
-      when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot_period[period]) == -1
-      expression: at(period_weight_years, by=snapshot_period[period])
+      when: Store_e_initial_per_period AND GlobalConstraint_counts_snapshot AND position(snapshot, within=snapshot[period]) == -1
+      expression: at(period_weight_years, by=snapshot[period])
     carried_over:
       when: NOT Store_e_initial_per_period
       expression: Store_last_counted_active
@@ -9520,7 +9520,7 @@ Store_closing_weight:
 ```
 
 ```math
-\mathit{w}^{e}_{o,\xi,t,v} = \begin{cases} \mathit{last}^{e}_{o,\xi,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{o,\xi,t} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{snapshot\_period}(t)} \rvert - 1 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+\mathit{w}^{e}_{o,\xi,t,v} = \begin{cases} \mathit{last}^{e}_{o,\xi,t,v} & \text{if } \neg \mathrm{reset}^{e}_{\xi,v} \\ \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{o,\xi,t} \wedge \mathrm{pos}_{\mathrm{period}(t)}(t) = \lvert \mathcal{T}_{\mathrm{period}(t)} \rvert - 1 \\ 0 & \text{otherwise} \end{cases} \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 ### `Store_discharge_floor_pu`
@@ -9585,25 +9585,25 @@ Store_energy_carried_in:
       expression: Store_e_initial
     period_cyclic:
       when: Store_e_cyclic_per_period
-      expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', within=snapshot_period[period])
+      expression: Store_retention * shift(Store_e, along=snapshot, offset=1, edge='wrap', within=snapshot[period])
     period_opening:
-      when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot_period[period]) == 0
+      when: Store_e_initial_per_period AND NOT Store_e_cyclic_per_period AND position(snapshot, within=snapshot[period]) == 0
       expression: Store_e_initial
   otherwise: Store_retention * shift(Store_e, along=snapshot, offset=1)
 ```
 
 ```math
-\overleftarrow{e}_{\xi,t,v} = \begin{cases} \rho^{e}_{\xi,t,v} \cdot e_{\xi,\left( t \ominus \mathrm{idle}^{e} \right) \ominus 1,v} & \text{if } \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \neg \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t \ominus^{\mathrm{snapshot\_period}(t)} 1,v} & \text{if } \mathrm{cyc}^{e,y}_{\xi,v} \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) = 0 \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t - 1,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
+\overleftarrow{e}_{\xi,t,v} = \begin{cases} \rho^{e}_{\xi,t,v} \cdot e_{\xi,\left( t \ominus \mathrm{idle}^{e} \right) \ominus 1,v} & \text{if } \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \neg \mathrm{cyc}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \left( \mathrm{pos}(t) = 0 \vee \mathrm{open}^{e}_{t,v} \right) \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t \ominus^{\mathrm{period}(t)} 1,v} & \text{if } \mathrm{cyc}^{e,y}_{\xi,v} \\ \mathrm{e}^{0}_{\xi,v} & \text{if } \mathrm{reset}^{e}_{\xi,v} \wedge \neg \mathrm{cyc}^{e,y}_{\xi,v} \wedge \mathrm{pos}_{\mathrm{period}(t)}(t) = 0 \\ \rho^{e}_{\xi,t,v} \cdot e_{\xi,t - 1,v} & \text{otherwise} \end{cases} \qquad \forall\, \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V}
 ```
 
 ### `Store_injection`
 
 ```yaml
-Store_injection: sum(Store_sign * Store_p, over=store, by=Store_bus[bus])
+Store_injection: sum(Store_sign * Store_p, over=store, by=store[bus])
 ```
 
 ```math
-\mathit{Store\_injection}_{n,\xi,t} = \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Store\_injection}_{n,\xi,t} = \sum_{v \in \mathcal{V} \,:\, \mathrm{bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Store_last_counted_active`
@@ -9646,16 +9646,16 @@ Store_operational_limit:
 ```yaml
 Store_opex:
   expression: >-
-    sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
-    + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
-    + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
-    + sum(sum((((Store_p + Store_p_store) * Store_marginal_cost_dispatch) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
-    + sum(sum(((Store_p_store * Store_marginal_cost_store) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
-    + sum(sum(((Store_spill * Store_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=store), over=snapshot)
+    sum(sum(((Store_p * Store_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
+    + sum(sum((((Store_p * Store_p) * Store_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
+    + sum(sum(((Store_e * Store_marginal_cost_storage) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
+    + sum(sum((((Store_p + Store_p_store) * Store_marginal_cost_dispatch) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
+    + sum(sum(((Store_p_store * Store_marginal_cost_store) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
+    + sum(sum(((Store_spill * Store_spill_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=store), over=snapshot)
 ```
 
 ```math
-\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Store\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot \mathrm{c}^{q}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q_{\xi,t,v} \cdot q_{\xi,t,v} \cdot \mathrm{c}^{q,(2)}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} e_{\xi,t,v} \cdot \mathrm{c}^{e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \left( q_{\xi,t,v} + q^{-}_{\xi,t,v} \right) \cdot \mathrm{c}^{q,+}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} q^{-}_{\xi,t,v} \cdot \mathrm{c}^{q,-}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{v \in \mathcal{V}} \mathit{spill}^{e}_{\xi,t,v} \cdot \mathrm{c}^{\mathrm{spill},e}_{\xi,t,v} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 ### `Store_primary_energy`
@@ -9686,13 +9686,13 @@ Store_tech_capacity_expansion:
 ```yaml
 Transformer_angle_sum:
   expression: >-
-    sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot_period[period]), over=transformer)
+    sum(Transformer_s * at(Transformer_cycle_weight, by=snapshot[period]), over=transformer)
     + sum(Transformer_phase_shift_weight, over=transformer)
-    + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot_period[period]), over=transformer)
+    + sum(Transformer_phase_shift * at(Transformer_phase_shift_cycle_weight, by=snapshot[period]), over=transformer)
 ```
 
 ```math
-\mathit{Transformer\_angle\_sum}_{c,\xi,t} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{snapshot\_period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{snapshot\_period}(t),\xi,m} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Transformer\_angle\_sum}_{c,\xi,t} = \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{period}(t),\xi,m} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Transformer_capex`
@@ -9711,14 +9711,14 @@ Transformer_capex:
 ```yaml
 Transformer_injection:
   expression: >-
-    -sum(Transformer_s, over=transformer, by=Transformer_bus0[bus])
-    + sum(Transformer_s, over=transformer, by=Transformer_bus1[bus])
-    - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus0[bus]))
-    - (0.5 * sum(Transformer_loss, over=transformer, by=Transformer_bus1[bus]))
+    -sum(Transformer_s, over=transformer, by=transformer[bus0])
+    + sum(Transformer_s, over=transformer, by=transformer[bus1])
+    - (0.5 * sum(Transformer_loss, over=transformer, by=transformer[bus0]))
+    - (0.5 * sum(Transformer_loss, over=transformer, by=transformer[bus1]))
 ```
 
 ```math
-\mathit{Transformer\_injection}_{n,\xi,t} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Transformer\_injection}_{n,\xi,t} = -\left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Transformer_s_monitored`
@@ -9745,11 +9745,11 @@ energy_limit_weight:
     generator weighting times the years of the snapshot's period, as in an
     `operational_limit` row (`constraints.py:2935-2937`)
   dims: [snapshot]
-  expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot_period[period])
+  expression: snapshot_weightings_generators * at(period_weight_years, by=snapshot[period])
 ```
 
 ```math
-\mathit{w}^{E}_{t} = \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, t \in \mathcal{T}
+\mathit{w}^{E}_{t} = \mathrm{w}^{\mathrm{gen}}_{t} \cdot \mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} \qquad \forall\, t \in \mathcal{T}
 ```
 
 ### `operational_limit`
@@ -9936,7 +9936,7 @@ Bus_nodal_balance:
 ```
 
 ```math
--\mathit{NP}_{n,\xi,t} + \sum_{g \in \mathcal{G} \,:\, \mathrm{Generator\_bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} - \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{k,\xi,t} \right) - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{Link\_bus0}(l) = n} f_{l,\xi,t} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{Link\_output\_bus}(o) = n} \overrightarrow{f}_{o,\xi,t} + \sum_{d \in \mathcal{D} \,:\, \mathrm{Load\_bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} + \sum_{r \in \mathcal{R} \,:\, \mathrm{Process\_output\_bus}(r) = n} \overrightarrow{z}_{r,\xi,t} + \sum_{s \in \mathcal{S} \,:\, \mathrm{StorageUnit\_bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) + \sum_{v \in \mathcal{V} \,:\, \mathrm{Store\_bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} - \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{Transformer\_bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) = 0 \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Bus\_attached}_{n,t}
+-\mathit{NP}_{n,\xi,t} + \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = n} \mathrm{sgn}_{g} \cdot p_{g,\xi,t} - \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} \ell_{k,\xi,t} \right) - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{bus0}(l) = n} f_{l,\xi,t} \right) + \sum_{o \in \mathcal{O} \,:\, \mathrm{bus}(o) = n} \overrightarrow{f}_{o,\xi,t} + \sum_{d \in \mathcal{D} \,:\, \mathrm{bus}(d) = n} \check{\mathrm{load}}_{d,\xi,t} + \sum_{r \in \mathcal{R} \,:\, \mathrm{bus}(r) = n} \overrightarrow{z}_{r,\xi,t} + \sum_{s \in \mathcal{S} \,:\, \mathrm{bus}(s) = n} \mathrm{sgn}^{h}_{s} \cdot \left( h^{+}_{\xi,t,s} - h^{-}_{\xi,t,s} \right) + \sum_{v \in \mathcal{V} \,:\, \mathrm{bus}(v) = n} \mathrm{sgn}^{q}_{v} \cdot q_{\xi,t,v} - \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus0}(m) = n} \sigma_{\xi,t,m} \right) + \sum_{m \in \mathcal{M} \,:\, \mathrm{bus1}(m) = n} \sigma_{\xi,t,m} - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus0}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) - 0.5 \cdot \left( \sum_{m \in \mathcal{M} \,:\, \mathrm{bus1}(m) = n} \ell^{\sigma}_{\xi,t,m} \right) = 0 \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Bus\_attached}_{n,t}
 ```
 
 ### `CVaR-def`
@@ -10003,11 +10003,11 @@ Carrier_growth_limit:
 FlowBased_balance:
   description: "`FlowBased-balance` — the net positions of each domain's zones sum to zero"
   dims: [scenario, snapshot, flow_based_domain]
-  expression: sum(FlowBased_net_position, over=bus, by=Bus_flow_based_domain[flow_based_domain]) == 0
+  expression: sum(FlowBased_net_position, over=bus, by=bus[flow_based_domain]) == 0
 ```
 
 ```math
-\sum_{n \in \mathcal{N} \,:\, \mathrm{Bus\_flow\_based\_domain}(n) = l} \mathit{NP}_{n,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\sum_{n \in \mathcal{N} \,:\, \mathrm{flow\_based\_domain}(n) = l} \mathit{NP}_{n,\xi,t} = 0 \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 ### `Generator-com-down-time`
@@ -11161,12 +11161,12 @@ Kirchhoff_Voltage_Law:
     that are active in it (`constraints.py:1710-1729`). A cycle label that
     period's basis does not reach has no row
   dims: [scenario, snapshot, cycle]
-  where: at(Cycle_in_basis, by=snapshot_period[period])
+  where: at(Cycle_in_basis, by=snapshot[period])
   expression: Cycle_angle_sum == 0
 ```
 
 ```math
-\sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} + \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{snapshot\_period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{snapshot\_period}(t),\xi,m} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Cycle\_in\_basis}_{c,\mathrm{snapshot\_period}(t)}
+\sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{period}(t)} + \sum_{m \in \mathcal{M}} \sigma_{\xi,t,m} \cdot \mathrm{x}^{\sigma}_{c,\mathrm{period}(t),m} + \sum_{m \in \mathcal{M}} \vartheta_{c,\xi,t,m} + \sum_{m \in \mathcal{M}} \mathit{Transformer\_phase\_shift}_{\xi,t,m} \cdot \mathrm{Transformer\_phase\_shift\_cycle\_weight}_{c,\mathrm{period}(t),\xi,m} = 0 \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{Cycle\_in\_basis}_{c,\mathrm{period}(t)}
 ```
 
 ### `Line-ext-s-lower`
@@ -11200,12 +11200,12 @@ Line_ext_s_lower_security:
     `-period-{p}` for each period `p`. This entry states them all over the
     outage dimension. A line inactive in the snapshot's period has no row
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Line-ext-s_nom-lower`
@@ -11271,12 +11271,12 @@ Line_ext_s_upper_security:
     This entry states them all over the outage dimension. A line inactive in
     the snapshot's period has no row
   dims: [scenario, snapshot, line, outage]
-  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
+  where: Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom_ext
 ```
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot S_{k} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Line-fix-s-lower`
@@ -11310,12 +11310,12 @@ Line_fix_s_lower_security:
     This entry states them all over the outage dimension. A line inactive in
     the snapshot's period has no row
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s >= -Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Line-fix-s-upper`
@@ -11349,12 +11349,12 @@ Line_fix_s_upper_security:
     This entry states them all over the outage dimension. A line inactive in
     the snapshot's period has no row
   dims: [scenario, snapshot, line, outage]
-  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot_period[period]) AND Line_active
-  expression: Line_s_monitored + at(Line_BODF, by=snapshot_period[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
+  where: not Line_s_nom_extendable AND at(Line_BODF, by=snapshot[period]) AND Line_active
+  expression: Line_s_monitored + at(Line_BODF, by=snapshot[period]) * Outage_s <= Line_s_max_pu * Line_s_nom
 ```
 
 ```math
-\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{snapshot\_period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
+\check{s}_{k,\xi,t} + \beta_{k,\kappa,\mathrm{period}(t)} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\mathrm{s}}_{k,\xi,t} \cdot \mathrm{s}^{\mathrm{nom}}_{k,\xi} \qquad \forall\, k \in \mathcal{K},\ \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \neg \mathrm{ext}^{s}_{k} \wedge \beta_{k,\kappa,\mathrm{period}(t)} \text{ is defined} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Line-loss_tangents-{k}-1`
@@ -11470,12 +11470,12 @@ Line_v_ang_lower:
     voltage angle difference across it is the negative of its limit. That
     difference is `x_pu_eff` times the flow in radians
   dims: [scenario, snapshot, line]
-  where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+  where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
   expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
 ```
 
 ```math
-s_{k,\xi,t} \ge \frac{-\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
+s_{k,\xi,t} \ge \frac{-\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Line-v_ang-upper`
@@ -11488,12 +11488,12 @@ Line_v_ang_upper:
     `Line-v_ang-upper` — an AC line carries at most the flow at which the
     voltage angle difference across it reaches its limit
   dims: [scenario, snapshot, line]
-  where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+  where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
   expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
 ```
 
 ```math
-s_{k,\xi,t} \le \frac{\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
+s_{k,\xi,t} \le \frac{\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 ### `Link-com-down-time`
@@ -13972,12 +13972,12 @@ Transformer_ext_s_lower_security:
     outage dimension. A transformer inactive in the snapshot's period has no
     row
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 ### `Transformer-ext-s_nom-lower`
@@ -14044,12 +14044,12 @@ Transformer_ext_s_upper_security:
     outage dimension. A transformer inactive in the snapshot's period has no
     row
   dims: [scenario, snapshot, transformer, outage]
-  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
+  where: Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom_ext
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \Sigma_{m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 ### `Transformer-fix-s-lower`
@@ -14083,12 +14083,12 @@ Transformer_fix_s_lower_security:
     This entry states them all over the outage dimension. A transformer
     inactive in the snapshot's period has no row
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s >= -Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \ge -\overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 ### `Transformer-fix-s-upper`
@@ -14122,12 +14122,12 @@ Transformer_fix_s_upper_security:
     This entry states them all over the outage dimension. A transformer
     inactive in the snapshot's period has no row
   dims: [scenario, snapshot, transformer, outage]
-  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot_period[period]) AND Transformer_active
-  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot_period[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
+  where: not Transformer_s_nom_extendable AND at(Transformer_BODF, by=snapshot[period]) AND Transformer_active
+  expression: Transformer_s_monitored + at(Transformer_BODF, by=snapshot[period]) * Outage_s <= Transformer_s_max_pu * Transformer_s_nom
 ```
 
 ```math
-\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{snapshot\_period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
+\check{\sigma}_{\xi,t,m} + \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \cdot \hat{s}_{\kappa,\xi,t} \le \overline{\sigma}_{\xi,t,m} \cdot \sigma^{\mathrm{nom}}_{\xi,m} \qquad \forall\, \kappa \in \mathcal{K}^{\mathrm{out}},\ \xi \in \Xi,\ t \in \mathcal{T},\ m \in \mathcal{M} \,:\, \neg \mathrm{ext}^{\sigma}_{m} \wedge \beta^{\sigma}_{\kappa,\mathrm{period}(t),m} \text{ is defined} \wedge \mathrm{on}^{\sigma}_{t,m}
 ```
 
 ### `Transformer-loss_tangents-{k}-1`
@@ -14815,7 +14815,7 @@ StorageUnit_opens_late_where_it_opens:
 
 ```yaml
 StorageUnit_operational_limit_carried_over_has_unit_years:
-  holds: "at(period_weight_years == 1, by=snapshot_period[period])"
+  holds: "at(period_weight_years == 1, by=snapshot[period])"
   where: "StorageUnit_operational_limit_weight AND NOT StorageUnit_state_of_charge_initial_per_period AND GlobalConstraint_counts_snapshot"
   description: >-
     the same for an `operational_limit` row, over the periods it counts.
@@ -14823,7 +14823,7 @@ StorageUnit_operational_limit_carried_over_has_unit_years:
 ```
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{b}^{h}_{o,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{o,\xi,t}
+\mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} = 1 \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ s \in \mathcal{S} \,:\, \mathrm{b}^{h}_{o,\xi,s} \text{ is defined} \wedge \neg \mathrm{reset}_{\xi,s} \wedge \mathrm{in}_{o,\xi,t}
 ```
 
 ### `StorageUnit_primary_energy_carried_over_has_unit_years`
@@ -14911,7 +14911,7 @@ Store_opens_late_where_it_opens:
 
 ```yaml
 Store_operational_limit_carried_over_has_unit_years:
-  holds: "at(period_weight_years == 1, by=snapshot_period[period])"
+  holds: "at(period_weight_years == 1, by=snapshot[period])"
   where: "Store_operational_limit_weight AND NOT Store_e_initial_per_period AND GlobalConstraint_counts_snapshot"
   description: >-
     the same for an `operational_limit` row, over the periods it counts.
@@ -14919,7 +14919,7 @@ Store_operational_limit_carried_over_has_unit_years:
 ```
 
 ```math
-\mathrm{w}^{\mathrm{yr}}_{\mathrm{snapshot\_period}(t)} = 1 \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{o,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{o,\xi,t}
+\mathrm{w}^{\mathrm{yr}}_{\mathrm{period}(t)} = 1 \qquad \forall\, o \in \mathcal{O},\ \xi \in \Xi,\ t \in \mathcal{T},\ v \in \mathcal{V} \,:\, \mathrm{b}^{e}_{o,\xi,v} \text{ is defined} \wedge \neg \mathrm{reset}^{e}_{\xi,v} \wedge \mathrm{in}_{o,\xi,t}
 ```
 
 ### `Store_primary_energy_carried_over_has_unit_years`

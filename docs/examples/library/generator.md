@@ -32,8 +32,8 @@ dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   generator: { dtype: str, description: "generating units, each on one port" }
-relations:
-  Generator_port: { key: generator, values: port }
+maps:
+  generator: { port: port }
 parameters:
   Generator_p_nom: { dims: [generator], description: nominal power }
   Generator_marginal_cost: { dims: [generator], description: cost of one unit of output }
@@ -48,7 +48,7 @@ constraints:
       What a generator produces is what its port injects. PyPSA has no row for
       this constraint, because PyPSA writes the generator into the balance.
     dims: [snapshot, generator]
-    expression: at(Port_p, by=Generator_port[port]) == Generator_p
+    expression: at(Port_p, by=generator[port]) == Generator_p
 expressions:
   Generator_cost:
     expression: sum(Generator_p * Generator_marginal_cost)
@@ -68,8 +68,8 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
-| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — the connections components make, one label per connection |
+| $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
+| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J}`$ — the connections components make, one label per connection |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
@@ -112,7 +112,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 **`Generator_injection`**
 
 ```math
-f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+f_{\mathrm{port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
 

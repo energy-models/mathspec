@@ -23,8 +23,8 @@ dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
-relations:
-  Load_port: { key: load, values: port }
+maps:
+  load: { port: port }
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:
@@ -33,7 +33,7 @@ constraints:
       What a load takes is what its port withdraws. PyPSA has no row for this
       constraint, because PyPSA writes the load into the balance.
     dims: [snapshot, load]
-    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
+    expression: at(Port_p, by=load[port]) == -Load_p_set
 ```
 
 PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes is data, so the file declares no variable.
@@ -48,8 +48,8 @@ PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
-| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — the connections components make, one label per connection |
+| $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
+| $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{port}: \mathcal{D} \to \mathcal{J}`$ — the connections components make, one label per connection |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
 #### Parameters
@@ -63,7 +63,7 @@ PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes
 **`Load_withdrawal`**
 
 ```math
-f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
+f_{\mathrm{port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
 ```
 <!-- gallery:end -->
 

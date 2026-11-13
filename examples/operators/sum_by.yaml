@@ -3,17 +3,17 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  A sum by group: `sum(array, over=dim, by=relation[c])` groups the result by
-  the relation's column `c`. The relation's data, not the file, sets which
-  generator sits at which bus.
+  A sum by group: `sum(array, over=dim, by=subject[m])` groups the result by
+  the label that map `m` gives each row. The data of the map, not the file,
+  sets which generator sits at which bus.
 
 dimensions:
   snapshot: { dtype: int }
   generator: { dtype: str }
   bus: { dtype: str }
 
-relations:
-  gen_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 
 parameters:
   limit: { dims: [snapshot, bus] }
@@ -26,6 +26,6 @@ variables:
 constraints:
   bus_total:
     dims: [snapshot, bus]
-    expression: sum(p, over=generator, by=gen_bus[bus]) <= limit
+    expression: sum(p, over=generator, by=generator[bus]) <= limit
 
 objective: { sense: minimize, expression: sum(p) }

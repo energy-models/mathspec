@@ -82,8 +82,8 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   generator: { dtype: str }
-relations:
-  Generator_bus: { key: generator, values: bus }
+maps:
+  generator: { bus: bus }
 parameters:
   Generator_p_nom: { dims: [generator] }
   Generator_marginal_cost: { dims: [generator] }
@@ -91,7 +91,7 @@ variables:
   Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
 expressions:
   Generator_injection:
-    expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+    expression: sum(Generator_p, over=generator, by=generator[bus])
     adds_to: Bus_injection
   Generator_cost:
     expression: sum(Generator_p * Generator_marginal_cost)
@@ -106,13 +106,13 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   load: { dtype: str }
-relations:
-  Load_bus: { key: load, values: bus }
+maps:
+  load: { bus: bus }
 parameters:
   Load_p_set: { dims: [snapshot, load] }
 expressions:
   Load_injection:
-    expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+    expression: -sum(Load_p_set, over=load, by=load[bus])
     adds_to: Bus_injection
 ```
 
@@ -133,9 +133,9 @@ dimensions:
   generator: {dtype: str}
   load: {dtype: str}
   snapshot: {dtype: int}
-relations:
-  Generator_bus: {key: generator, values: bus}
-  Load_bus: {key: load, values: bus}
+maps:
+  generator: {bus: bus}
+  load: {bus: bus}
 parameters:
   Generator_marginal_cost: {dims: [generator]}
   Generator_p_nom: {dims: [generator]}
@@ -150,8 +150,8 @@ expressions:
     expression: Generator_injection + Load_injection
     description: what the components put into a bus
   Generator_cost: sum(Generator_p * Generator_marginal_cost)
-  Generator_injection: sum(Generator_p, over=generator, by=Generator_bus[bus])
-  Load_injection: -sum(Load_p_set, over=load, by=Load_bus[bus])
+  Generator_injection: sum(Generator_p, over=generator, by=generator[bus])
+  Load_injection: -sum(Load_p_set, over=load, by=load[bus])
   total_cost:
     dims: []
     expression: Generator_cost
@@ -175,20 +175,21 @@ The objective is the one that `network.yaml` sets.
 ### Each kind of entry
 
 Two fragments may share a [dimension](language/dimensions.md), a
-[relation](language/relations.md), a given entry or a sum.
+[relation](language/relations.md#relations), a [map](language/relations.md#maps), a given entry or a
+sum.
 
-| The entry                                         | What `merge` does                                                                                                                |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | accepts it from every fragment that declares it, where every fragment declares it the same way                                   |
-| a `description` on a shared dimension or relation | keeps the first wording in the list                                                                                              |
-| `ordered: true` on a shared dimension             | makes the dimension ordered if one fragment sets it                                                                              |
-| `missing:` on a shared relation                   | requires the same value from every fragment that declares the relation, where `missing: refused` and no `missing:` are one value |
-| an entry under `given:`                           | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))                        |
-| an expression with `adds_to:`                     | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                               |
-| `objective`                                       | takes it from the one fragment that sets it, and refuses a second                                                                |
-| `version`                                         | requires the same value from every fragment                                                                                      |
-| `description` at the top of a fragment            | drops it                                                                                                                         |
-| any other entry                                   | takes it from the one fragment that declares it, and refuses a second                                                            |
+| The entry                                              | What `merge` does                                                                                                      |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| a dimension, a relation or a map                       | accepts it from every fragment that declares it, where every fragment declares it the same way                         |
+| a `description` on a shared dimension, relation or map | keeps the first wording in the list                                                                                    |
+| `ordered: true` on a shared dimension                  | makes the dimension ordered if one fragment sets it                                                                    |
+| `missing:` on a shared relation or map                 | requires the same value from every fragment that declares it, where `missing: refused` and no `missing:` are one value |
+| an entry under `given:`                                | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))              |
+| an expression with `adds_to:`                          | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                     |
+| `objective`                                            | takes it from the one fragment that sets it, and refuses a second                                                      |
+| `version`                                              | requires the same value from every fragment                                                                            |
+| `description` at the top of a fragment                 | drops it                                                                                                               |
+| any other entry                                        | takes it from the one fragment that declares it, and refuses a second                                                  |
 
 ### Terms and sums
 
@@ -430,10 +431,10 @@ patched `dispatch` has no row at `old`.
 | a whole entry under a new name                                       | adds it                                                                                                                                                                        |
 | a named expression as a [bare string](language/named.md#expressions) | replaces only its body, `expression:` or `cases:`, and keeps its `dims:`, description and `adds_to:`, so the new body may have no dimension outside those `dims:`              |
 | `null` on an entry, a field or a section                             | applies the rule in [`null` in a patch](#null-in-a-patch)                                                                                                                      |
-| a dimension or a relation                                            | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
-| `description:` on a dimension or a relation of the base              | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
+| a dimension, a relation or a map                                     | adds it, or accepts it restated as the base declares it, field by field, where a field left out equals its default                                                             |
+| `description:` on a dimension, a relation or a map of the base       | replaces the description of the base, alone or with other fields, and `null` removes it                                                                                        |
 | `ordered:` on a restated dimension                                   | makes the dimension ordered for `true`, and refuses `false` over an ordered dimension                                                                                          |
-| `missing:` on a relation, alone or with other fields                 | changes whether every key combination needs a row, as on a parameter                                                                                                           |
+| `missing:` on a relation or a map, alone or with other fields        | changes whether every combination needs a row, or every row a label, as on a parameter                                                                                         |
 | an entry under one kind of `given:`                                  | edits, adds or removes it like any entry, and keeps the other kinds                                                                                                            |
 | `version`, `description`                                             | replaces the value of the base                                                                                                                                                 |
 | a field that an earlier patch writes                                 | replaces that value                                                                                                                                                            |
@@ -511,8 +512,9 @@ patch 'project.yaml' edits the constraint 'power_balnce', which its base does no
 
 ### A dimension restated differently
 
-Over a dimension or a relation that its base declares, a patch may change
-only `description`, a dimension's `ordered` and a relation's `missing`. A patch
+Over a dimension, a relation or a map that its base declares, a patch may
+change only `description`, a dimension's `ordered`, and the `missing` of a
+relation or a map. A patch
 that writes any other field restates the entry. Every other field must then be
 as the base declares it, and a field the patch leaves out equals its default.
 

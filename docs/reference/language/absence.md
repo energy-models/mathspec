@@ -60,6 +60,7 @@ Nine constructs make a coordinate absent:
 | `where:` on a constraint                          | the row ([`where`](#where))                                                                                                    |
 | `shift(x, along=d, offset=n)` without `edge=`     | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
 | a key with no row in a `missing: absent` relation | the relation, at that key ([relations](relations.md#missing))                                                                  |
+| a row with no label in a `missing: absent` map    | the map, at that row ([maps](relations.md#missing))                                                                            |
 | a key with no row in a relation in `in:`          | the parameter or variable, at that key ([`in`](parameters-variables-constraints.md#in))                                        |
 | a missing row of a `missing: absent` parameter    | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
 | `within=` at a coordinate in no group             | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
@@ -73,14 +74,14 @@ No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 
 `shift(x, along=snapshot, offset=1)` has no row at snapshot 1, so the expression is absent there.
 
-A relation with `missing: absent` is absent at a key that has no row in the
-data:
+A map with `missing: absent` is absent at a row of its subject that the data
+gives no label:
 
 <figure class="diagram">
 --8<-- "docs/static/absence-relation-missing.svg"
 </figure>
 
-`line_to` has no row for `l3`, so the relation is absent at `l3`.
+The data gives `l3` no label in `line[bus1]`, so the map is absent at `l3`.
 
 ## `missing`
 
@@ -92,12 +93,12 @@ with no row means.
 The [`missing:`](parameters-variables-constraints.md#missing) key of a
 parameter takes one of four values:
 
-| `missing:`              | Result                                                                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refused`, by default   | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                                                  |
-| `absent`                | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                                                |
-| a value                 | a missing row takes that value, wherever an expression uses the parameter                                                                                                 |
-| `{by, fill, otherwise}` | a missing row takes the reading of the label that a relation column gives its coordinate ([a reading per label](parameters-variables-constraints.md#a-reading-per-label)) |
+| `missing:`              | Result                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refused`, by default   | a tool refuses the parameter if any row of its data is missing, and names the coordinate                                                                      |
+| `absent`                | a missing row is absent: a term that uses the row is absent, and a sum leaves the term out                                                                    |
+| a value                 | a missing row takes that value, wherever an expression uses the parameter                                                                                     |
+| `{by, fill, otherwise}` | a missing row takes the reading of the label that a map gives its coordinate ([a reading per label](parameters-variables-constraints.md#a-reading-per-label)) |
 
 <figure class="diagram">
 --8<-- "docs/static/absence-missing-parameter.svg"
@@ -347,10 +348,10 @@ An operator has one of two results for an absent input:
 | Operator                         | Inputs to one output          | At an absent input                               |
 | -------------------------------- | ----------------------------- | ------------------------------------------------ |
 | `sum(x, over=d)`                 | every position along `d`      | the sum leaves it out, and the row stays         |
-| `sum(x, over=d, by=relation[c])` | every member of the group     | the sum leaves it out, and the row stays         |
+| `sum(x, over=d, by=s[c])`        | every member of the group     | the sum leaves it out, and the row stays         |
 | `sum_back(x, along=d, window=w)` | the positions in the window   | the sum leaves it out, and the row stays         |
 | `shift(x, along=d, offset=n)`    | one position, `n` back        | that input is the only one, so the row is absent |
-| `at(x, by=relation[c])`          | one position, through the map | that input is the only one, so the row is absent |
+| `at(x, by=s[m])`                 | one position, through the map | that input is the only one, so the row is absent |
 
 With data attached, a missing row that takes the value `0` can leave a
 constraint row with no variable in it. In a constraint

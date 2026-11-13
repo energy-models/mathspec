@@ -52,10 +52,10 @@ dimensions:
   load: {dtype: str, description: 'demands, each on one port'}
   port: {dtype: str, description: 'the connections components make, one label per connection'}
   snapshot: {dtype: datetime, description: dispatch periods}
-relations:
-  Generator_port: {key: generator, values: port}
-  Load_port: {key: load, values: port}
-  Port_bus: {key: port, values: bus}
+maps:
+  generator: {port: port}
+  load: {port: port}
+  port: {bus: bus}
 parameters:
   Generator_marginal_cost:
     dims: [generator]
@@ -84,16 +84,16 @@ objective: {sense: minimize, expression: total_cost}
 constraints:
   Bus_nodal_balance:
     dims: [bus, snapshot]
-    expression: sum(Port_p, over=port, by=Port_bus[bus]) == 0
+    expression: sum(Port_p, over=port, by=port[bus]) == 0
     description: '`Bus-nodal_balance` — what the ports on a bus put in sums to zero'
   Generator_injection:
     dims: [generator, snapshot]
-    expression: at(Port_p, by=Generator_port[port]) == Generator_p
+    expression: at(Port_p, by=generator[port]) == Generator_p
     description: What a generator produces is what its port injects. PyPSA has no row for this constraint,
       because PyPSA writes the generator into the balance.
   Load_withdrawal:
     dims: [load, snapshot]
-    expression: at(Port_p, by=Load_port[port]) == -Load_p_set
+    expression: at(Port_p, by=load[port]) == -Load_p_set
     description: What a load takes is what its port withdraws. PyPSA has no row for this constraint, because
       PyPSA writes the load into the balance.
 ```
@@ -104,10 +104,10 @@ constraints:
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
-    | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
-    | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
-    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J},\ \mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
+    | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
+    | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
+    | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
+    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J},\ \mathrm{port}: \mathcal{D} \to \mathcal{J},\ \mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
     | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
@@ -171,19 +171,19 @@ constraints:
     **`Bus_nodal_balance`**
 
     ```math
-    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
+    \sum_{j \in \mathcal{J} \,:\, \mathrm{bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
     ```
 
     **`Generator_injection`**
 
     ```math
-    f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    f_{\mathrm{port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     **`Load_withdrawal`**
 
     ```math
-    f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
+    f_{\mathrm{port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
     ```
 
 === "With commitment"
@@ -212,10 +212,10 @@ constraints:
 
     | Symbol | Meaning |
     |---|---|
-    | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
-    | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
-    | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{Load\_port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
-    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{Generator\_port}: \mathcal{G} \to \mathcal{J},\ \mathrm{Load\_port}: \mathcal{D} \to \mathcal{J},\ \mathrm{Port\_bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
+    | $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — network nodes |
+    | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J}`$ — generating units, each on one port |
+    | $`\mathcal{D}`$ | index $`d`$ — `load` with $`\mathrm{port}: \mathcal{D} \to \mathcal{J}`$ — demands, each on one port |
+    | $`\mathcal{J}`$ | index $`j`$ — `port` with $`\mathrm{port}: \mathcal{G} \to \mathcal{J},\ \mathrm{port}: \mathcal{D} \to \mathcal{J},\ \mathrm{bus}: \mathcal{J} \to \mathcal{N}`$ — the connections components make, one label per connection |
     | $`\mathcal{T}`$ | index $`t`$ — `snapshot` — dispatch periods |
 
     #### Parameters
@@ -287,7 +287,7 @@ constraints:
     **`Bus_nodal_balance`**
 
     ```math
-    \sum_{j \in \mathcal{J} \,:\, \mathrm{Port\_bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
+    \sum_{j \in \mathcal{J} \,:\, \mathrm{bus}(j) = n} f_{j,t} = 0 \qquad \forall\, n \in \mathcal{N},\ t \in \mathcal{T}
     ```
 
     **`Generator_com_p_lower`**
@@ -305,13 +305,13 @@ constraints:
     **`Generator_injection`**
 
     ```math
-    f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+    f_{\mathrm{port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
     ```
 
     **`Load_withdrawal`**
 
     ```math
-    f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
+    f_{\mathrm{port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \mathcal{D},\ t \in \mathcal{T}
     ```
 <!-- gallery:end -->
 

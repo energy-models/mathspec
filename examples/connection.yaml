@@ -14,9 +14,11 @@ dimensions:
 relations:
   connection:
     description: the bus each port of a unit attaches to, and whether the port draws or delivers
-    key: [unit, port]
-    values: [bus, role]
+    dims: [unit, port]
     missing: absent
+
+maps:
+  connection: { bus: bus, role: role }
 
 parameters:
   capacity: { dims: [unit], description: the most a unit can draw at its input }

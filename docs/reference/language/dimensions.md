@@ -54,8 +54,8 @@ mathspec loads a dimension that no entry uses, and for that dimension
 `python -m mathspec check` prints a message that does not refuse the file
 ([advice](../glossary.md#advice)).
 
-A map from one dimension onto another is a [relation](relations.md), not a
-dimension.
+The label of another dimension that each label has, such as the carrier of
+each generator, is a [map](relations.md#maps), not a dimension.
 
 ## `one_of`
 
@@ -67,15 +67,15 @@ compares against.
 dimensions:
   carrier: { dtype: str, one_of: [ccgt, ocgt, wind] }
   generator: { dtype: str }
-relations:
-  carrier_of: { key: generator, values: carrier }
+maps:
+  generator: { carrier: carrier }
 variables:
-  p: { dims: [generator], where: "carrier_of == 'wind'" }
+  p: { dims: [generator], where: "generator[carrier] == 'wind'" }
 ```
 
-`p` exists only at the generators whose carrier is `wind`. The relation
-`carrier_of` maps each generator to one carrier, and `one_of` makes `wind` one of
-three allowed labels.
+`p` exists only at the generators whose carrier is `wind`. The map
+`generator[carrier]` gives each generator one carrier, and `one_of` makes `wind`
+one of three allowed labels.
 
 A `one_of` list meets four rules:
 
@@ -91,8 +91,8 @@ The order of the list changes nothing. mathspec sorts it by name at load, so
 `one_of: [wind, ccgt, ocgt]` declares the same dimension.
 
 At load, mathspec refuses a [condition](expressions.md#conditions) that
-compares the dimension, or a relation column over it, against a label that is
-not in the list. With `carrier_of == 'gnrtr'` in place of `'wind'` above, mathspec prints:
+compares the dimension, or a map into it, against a label that is not in the
+list. With `generator[carrier] == 'gnrtr'` in place of `generator[carrier] == 'wind'` above, mathspec prints:
 
 ```text
 Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'ocgt', 'wind']. Write one of them, or add 'gnrtr' to the one_of of 'carrier'.
@@ -101,8 +101,8 @@ Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'o
 mathspec lists the allowed labels and suggests two rewrites.
 
 With data attached, a tool refuses a label
-outside the list, in the table of the dimension and in every relation column
-over it.
+outside the list: in the table of the dimension, in every column of a relation
+over it, and in the column of every map into it.
 
 Only a dimension takes `one_of`, and a `one_of` key on a parameter is refused
 as an unknown key.
@@ -159,5 +159,5 @@ the dimension still needs `ordered: true`.
 
 !!! info "See also"
 
-    - [choose between a dimension, a relation and a parameter](../../howto/declare-a-column.md)
+    - [choose between a dimension, a relation, a map and a parameter](../../howto/declare-a-column.md)
       for a column of data.

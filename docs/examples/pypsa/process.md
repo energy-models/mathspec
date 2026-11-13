@@ -54,26 +54,25 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-  Process_carrier:
-    description: the carrier a process converts from
-    key: process
-    values: carrier
-  Process_output_process:
-    description: the process a port belongs to
-    key: process_output
-    values: process
-  Process_output_bus:
-    description: >-
-      the bus a port draws from or delivers to. It is PyPSA's `bus0`, `bus1`,
-      … columns. A process of three ports is three labels here rather than a
-      third relation, so the file states any number of them
-    key: process_output
-    values: bus
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
+  process:
+    carrier:
+      description: the carrier a process converts from
+      refers_to: carrier
+  process_output:
+    process:
+      description: the process a port belongs to
+      refers_to: process
+    bus:
+      description: >-
+        the bus a port draws from or delivers to. It is PyPSA's `bus0`, `bus1`,
+        … columns. A process of three ports is three labels here rather than a
+        third relation, so the file states any number of them
+      refers_to: bus
 
 parameters:
   Process_p_nom:
@@ -256,26 +255,26 @@ expressions:
     cases:
       wrapping:
         when: Process_output_cyclic_delay
-        expression: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot_period[period]) * Process_rate
-    otherwise: shift(at(Process_p, by=Process_output_process[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot_period[period]) * Process_rate
+        expression: shift(at(Process_p, by=process_output[process]), along=snapshot, offset=Process_output_delay, edge='wrap', within=snapshot[period]) * Process_rate
+    otherwise: shift(at(Process_p, by=process_output[process]), along=snapshot, offset=Process_output_delay, edge=0, within=snapshot[period]) * Process_rate
   Process_tech_capacity_expansion:
     expression: sum(Process_p_nom_ext * Process_tech_capacity_weight, over=process)
     adds_to: tech_capacity_expansion
   Process_opex:
     expression: >-
-      sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
-      + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot_period[period]), over=process), over=snapshot)
+      sum(sum(((Process_p * Process_marginal_cost) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
+      + sum(sum((((Process_p * Process_p) * Process_marginal_cost_quadratic) * snapshot_weightings_objective) * at(period_weight_objective, by=snapshot[period]), over=process), over=snapshot)
     adds_to: scenario_opex
   Process_capex:
     expression: sum(scenario_weight * Process_p_nom_ext * Process_capital_cost * Process_capital_weight)
     adds_to: total_cost
   Process_additions:
     expression: >-
-      sum(Process_p_nom_ext * Process_first_active, over=process, by=Process_carrier[carrier])
+      sum(Process_p_nom_ext * Process_first_active, over=process, by=process[carrier])
     adds_to: Carrier_additions
   Process_injection:
     expression: >-
-      sum(Process_output_arrival, over=process_output, by=Process_output_bus[bus])
+      sum(Process_output_arrival, over=process_output, by=process_output[bus])
     adds_to: Bus_injection
 
 conditions:
@@ -382,14 +381,14 @@ assumptions:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus}: \mathcal{R} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{carrier}: \mathcal{J} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
-| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{Process\_carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
-| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{Process\_output\_bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{Process\_output\_process}: \mathcal{R} \to \mathcal{J}`$ — a process's ports, one label per port a process declares. The labels are PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A process of any number of ports is then one term in the balance |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{J}`$ | index $`j`$ — `process` with $`\mathrm{carrier}: \mathcal{J} \to \mathcal{I},\ \mathrm{process}: \mathcal{R} \to \mathcal{J}`$ — generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate |
+| $`\mathcal{R}`$ | index $`r`$ — `process_output` with $`\mathrm{bus}: \mathcal{R} \to \mathcal{N},\ \mathrm{process}: \mathcal{R} \to \mathcal{J}`$ — a process's ports, one label per port a process declares. The labels are PyPSA's `bus0`, `bus1`, …, each with a signed `rate`, data prep. A process of any number of ports is then one term in the balance |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
@@ -454,7 +453,7 @@ assumptions:
 |---|---|
 | $`t \ominus k`$ | `edge='wrap'` — $`t-k`$, cyclic |
 | $`t \boxminus_{v} k`$ | `edge=v` — $`t-k`$, and $`v`$ past the edge |
-| $`t \ominus^{\mathrm{relation}(t)} k`$ | `within=relation[...]` — $`t-k`$ inside the group of $`t`$ |
+| $`t \ominus^{\mathrm{map}(t)} k`$ | `within=subject[map]` — $`t-k`$ inside the group of $`t`$ |
 
 #### Conditions
 
@@ -489,7 +488,7 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_additions`**
 
 ```math
-\mathit{Process\_additions}_{i,y} = \sum_{j \in \mathcal{J} \,:\, \mathrm{Process\_carrier}(j) = i} Z_{j} \cdot \mathrm{new}^{z}_{y,j} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Process\_additions}_{i,y} = \sum_{j \in \mathcal{J} \,:\, \mathrm{carrier}(j) = i} Z_{j} \cdot \mathrm{new}^{z}_{y,j} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Process_capex`**
@@ -501,7 +500,7 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_injection`**
 
 ```math
-\mathit{Process\_injection}_{n,\xi,t} = \sum_{r \in \mathcal{R} \,:\, \mathrm{Process\_output\_bus}(r) = n} \overrightarrow{z}_{r,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Process\_injection}_{n,\xi,t} = \sum_{r \in \mathcal{R} \,:\, \mathrm{bus}(r) = n} \overrightarrow{z}_{r,\xi,t} \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_modules`**
@@ -513,13 +512,13 @@ Z_{j} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J} \,:\, \mathrm{ext}^{z}_{
 **`Process_opex`**
 
 ```math
-\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{snapshot\_period}(t)} \qquad \forall\, \xi \in \Xi
+\mathit{Process\_opex}_{\xi} = \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot \mathrm{c}^{z}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} + \sum_{t \in \mathcal{T}} \sum_{j \in \mathcal{J}} z_{j,\xi,t} \cdot z_{j,\xi,t} \cdot \mathrm{c}^{z,(2)}_{j,\xi,t} \cdot \mathrm{w}_{t} \cdot \mathrm{w}^{y}_{\mathrm{period}(t)} \qquad \forall\, \xi \in \Xi
 ```
 
 **`Process_output_arrival`**
 
 ```math
-\overrightarrow{z}_{r,\xi,t} = \begin{cases} z_{\mathrm{Process\_output\_process}(r),\xi,t \ominus^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{if } \mathrm{cyc}^{z}_{r} \\ z_{\mathrm{Process\_output\_process}(r),\xi,t \boxminus_{0}^{\mathrm{snapshot\_period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, r \in \mathcal{R},\ \xi \in \Xi,\ t \in \mathcal{T}
+\overrightarrow{z}_{r,\xi,t} = \begin{cases} z_{\mathrm{process}(r),\xi,t \ominus^{\mathrm{period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{if } \mathrm{cyc}^{z}_{r} \\ z_{\mathrm{process}(r),\xi,t \boxminus_{0}^{\mathrm{period}(t)} \mathrm{d}^{z}} \cdot \alpha_{r,\xi,t} & \text{otherwise} \end{cases} \qquad \forall\, r \in \mathcal{R},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Process_p_nom_committed`**

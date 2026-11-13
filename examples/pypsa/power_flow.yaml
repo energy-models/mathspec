@@ -28,11 +28,11 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
 
 parameters:
   Cycle_in_basis:
@@ -55,5 +55,5 @@ constraints:
       that are active in it (`constraints.py:1710-1729`). A cycle label that
       period's basis does not reach has no row
     dims: [scenario, snapshot, cycle]
-    where: at(Cycle_in_basis, by=snapshot_period[period])
+    where: at(Cycle_in_basis, by=snapshot[period])
     expression: Cycle_angle_sum == 0
