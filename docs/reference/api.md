@@ -51,10 +51,10 @@ Every public function keeps three guarantees:
       show_root_toc_entry: true
       heading_level: 3
 
-## `merge` and `override`
+## `merge`, `override` and `rename`
 
-[Composing specs](composition.md) describes what `merge` and `override` do
-with their files, and [compose a spec from several files](../howto/compose.md)
+[Composing specs](composition.md) describes what each of the three functions
+does with its input, and [compose a spec from several files](../howto/compose.md)
 lists the steps.
 
 ::: mathspec.merge
@@ -64,6 +64,12 @@ lists the steps.
       heading_level: 3
 
 ::: mathspec.override
+    options:
+      show_root_heading: true
+      show_root_toc_entry: true
+      heading_level: 3
+
+::: mathspec.rename
     options:
       show_root_heading: true
       show_root_toc_entry: true
