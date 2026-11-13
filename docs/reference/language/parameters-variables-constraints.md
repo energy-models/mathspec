@@ -142,14 +142,14 @@ dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
   generator: { dtype: str }
-relations:
-  gen_port: { key: generator, values: port }
+maps:
+  generator: { port: port }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 constraints:
   gen_injects:
     dims: [snapshot, generator]
-    expression: at(flow, by=gen_port[port]) == gen_p
+    expression: at(flow, by=generator[port]) == gen_p
 ```
 
 `gen_injects` states that the flow at the port of each generator equals the
@@ -397,17 +397,24 @@ as `` `0` where the data has no row ``. It lists nothing for `refused`.
 `where:` limits a parameter to the coordinates where a
 [condition](expressions.md#conditions) is true. The dimensions keep every
 label, and only the parameter loses coordinates. In this example, `efficiency`
-has a value only at the pairs of an entity and a bus that are wired:
+has a value only at the pairs of an entity and a bus that are wired as an
+output:
 
 ```yaml
 dimensions:
   entity: { dtype: str }
   bus: { dtype: str }
+  role: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent }
+  connection: { dims: [entity, bus], missing: absent }
+maps:
+  connection: { role: role }
 parameters:
-  efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
+  efficiency:
+    dims: [entity, bus, snapshot]
+    where: "connection[role] == 'output'"
+    missing: 1
 variables:
   p: { dims: [entity, snapshot] }
 constraints:
@@ -423,8 +430,9 @@ $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad 
 </figure>
 
 With the data in the figure, `efficiency` has rows only at the pairs that
-`connection` lists. A tool drops the data row for `boiler` at `el`, and
-`missing: 1` gives `chp` at `heat` the value `1`. In `balance`,
+`connection` lists as an output. `connection` does not list `boiler` at `el`,
+so that pair has no role, and a tool drops its data row. `missing: 1` gives
+`chp` at `heat` the value `1`. In `balance`,
 `efficiency * p` is absent at an entity that is not wired to the bus, so the
 sum adds only the wired entities.
 
@@ -438,14 +446,19 @@ steps:
    A missing row there is refused, absent or a value, as
    [`missing:`](#missing) sets.
 
-Under `missing: refused`, a tool requires a row at each wired pair and
+Under `missing: refused`, a tool requires a row at each output pair and
 snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
 either, because the parameter has no row there. To have a tool refuse a row at
-a pair that is not wired, write [`in: [connection]`](#in) instead, and no
-`where:`.
+a pair that is not wired, write [`in: [connection]`](#in). A relation name
+alone in the `where:` would state the same rows a second time, so mathspec
+refuses it. For `where: connection` on `efficiency`, the message is:
+
+```text
+Parameter 'efficiency': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
+```
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
@@ -463,19 +476,19 @@ For a `where:` on `efficiency` that contains the variable `p`, the message
 is:
 
 ```text
-Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a relation instead.
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a map instead.
 ```
 
-mathspec suggests a parameter or a relation as the rewrite.
+mathspec suggests a parameter or a map as the rewrite.
 
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
-`only where` $(e, b) \in \mathrm{connection}$.
+`only where` $\mathrm{role}(b,\ e) = \text{'}\mathrm{output}\text{'}$.
 
 ### `in`
 
 `in:` lists the relations that make up the index set of the parameter. The
-parameter has coordinates only where the key of each relation has a row, and a tool
+parameter has coordinates only where each relation has a row, and a tool
 refuses a row of the data anywhere else. A [`where:`](#where) drops that row
 instead. In this example, `efficiency` and `p_nom_max` have values only at the
 pairs that `connection` lists:
@@ -486,7 +499,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent }
+  connection: { dims: [entity, bus], missing: absent }
 parameters:
   efficiency: { dims: [entity, bus, snapshot], in: [connection], missing: 1 }
   p_nom_max: { dims: [entity, bus], in: [connection], missing: .inf }
@@ -517,10 +530,10 @@ bus it is not wired to is refused.
 A parameter in several relations has coordinates only where each of them has
 a row.
 
-A relation in `in:` gives its key, and its value columns play no part in the
-index set. They stay readable as `relation[column]` in a `where:` and in a
-call. In this example, `connection` has a row per port of a unit, and its
-`bus` and `role` columns are properties of that port:
+A relation in `in:` gives its rows, and its [maps](relations.md#maps) play no
+part in the index set. They stay readable as `connection[bus]` in a `where:`
+and in a call. In this example, `connection` has a row per port of a unit, and
+its maps `bus` and `role` give each port a bus and a role:
 
 ```yaml
 dimensions:
@@ -530,7 +543,9 @@ dimensions:
   role: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [unit, port], values: [bus, role], missing: absent }
+  connection: { dims: [unit, port], missing: absent }
+maps:
+  connection: { bus: bus, role: role }
 parameters:
   efficiency:
     dims: [unit, port, snapshot]
@@ -548,40 +563,32 @@ constraints:
 `efficiency` has coordinates at each port that `connection` lists, and a tool
 refuses a data row for a port that `connection` does not list. The `where:`
 then drops the input ports. `efficiency` is not over `bus` or `role`, the
-dimensions of the value columns. An entry over one of them would have a
-coordinate at every label of that dimension, not only at the label in the row
-of `connection`, so mathspec refuses it.
+dimensions that the maps refer to. An entry over one of them has a coordinate
+at every label of that dimension, not only at the label that the map gives the
+port.
 
 mathspec refuses seven index sets at load:
 
-- a name that is not a relation, or a relation named twice
-- a value column, written as `relation[column]`, in place of its relation
-- a relation under `missing: refused`, which has a row at every key
-  combination and so leaves nothing out
-- a relation whose key has two columns over one dimension
-- a relation keyed by a dimension that the parameter does not have
-- a relation with a value column over a dimension that the parameter has and
-  the key does not
+- a name that is not a relation, such as a dimension
+- a relation named twice
+- a map, written as `subject[map]`, in place of a relation
+- a relation under `missing: refused`, which has a row at every combination
+  and so leaves nothing out
+- a relation with two columns over one dimension
+- a relation over a dimension that the parameter does not have
 - a `where:` that reads the bare name of a relation of the `in:`
 
 For `p_nom_max: { dims: [entity], in: [connection] }`, the message is:
 
 ```text
-Parameter 'p_nom_max': in: names 'connection', keyed by ['bus', 'entity'], and 'p_nom_max' is not over ['bus']. Add ['bus'] to its dims:, or delete 'connection' from in:.
+Parameter 'p_nom_max': in: names 'connection', over ['bus', 'entity'], and 'p_nom_max' is not over ['bus']. Add ['bus'] to its dims:, or delete 'connection' from in:.
 ```
 
 mathspec suggests both rewrites. For `in: ["connection[bus]"]` on
 `efficiency` in the second example, the message is:
 
 ```text
-Parameter 'efficiency': in: names 'connection[bus]', a column of 'connection', and an index set is the key of a relation. Write in: [connection], and test 'bus' in a `where:` if that was meant.
-```
-
-For `x: { dims: [generator, bus], in: [gen_bus] }`, with
-`gen_bus: { key: generator, values: bus, missing: absent }`, the message is:
-
-```text
-Parameter 'x': in: names 'gen_bus', whose value column 'bus' is over 'bus', and 'x' is over 'bus' too, so 'x' would have a coordinate at every 'bus', not only at the one in the row of 'gen_bus'. Delete 'bus' from its dims: and read it as gen_bus[bus], or name a relation keyed by ['bus', 'generator'] with no values: in in:.
+Parameter 'efficiency': in: names 'connection[bus]', a map of 'connection', and an index set is a relation. To keep the rows the map gives a label, write where: connection[bus].
 ```
 
 A `where:` on a parameter with an `in:` narrows the coordinates inside the
@@ -599,14 +606,14 @@ parameter no coordinate, and mathspec suggests a `where:` that holds somewhere
 inside the relation. For `where: "connection AND active"`, where `active` is a
 `bool` parameter, the message ends in
 `` `where: connection AND active` repeats the relation. Delete the relation from it. ``
-A test of a value column, such as `connection[role] == 'output'`, is not the
-bare name, so it loads.
+A test of a map, such as `connection[role] == 'output'`, is not the bare name
+of the relation, so it loads.
 
 The typeset legend prints the index set as the domain of the parameter, after
 `over`. For `efficiency` in the first example, the legend entry starts with
 `efficiency` over $(b, e) \in \mathrm{connection},\ t \in \mathcal{T}$. In
 the second example, it starts with `efficiency` over
-$(p, u) \in \mathrm{connection},\ t \in \mathcal{T}$, the key alone.
+$(p, u) \in \mathrm{connection},\ t \in \mathcal{T}$, without the maps.
 
 ## `variables`
 
@@ -663,8 +670,8 @@ still a variable.
 
 ### `in` on a variable
 
-A variable takes [`in:`](#in) as a parameter does: it exists only where the
-key of each relation has a row. In this example, `flow` exists at the pairs that
+A variable takes [`in:`](#in) as a parameter does: it exists only where each
+relation has a row. In this example, `flow` exists at the pairs that
 `connection` lists, at every snapshot:
 
 ```yaml
@@ -673,7 +680,7 @@ dimensions:
   bus: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [generator, bus], missing: absent }
+  connection: { dims: [generator, bus], missing: absent }
 parameters:
   load: { dims: [bus, snapshot] }
 variables:
@@ -695,18 +702,19 @@ the same index sets at load as on a parameter, and a `where:` on the variable
 narrows inside the index set. A `missing:` number stands for the variable
 outside its `in:`, as outside a `where:`.
 
-A `where:` that requires a row of a relation loads, and mathspec gives
-[advice](errors.md#what-advice-warns-about) to write the relation under `in:`.
-For `where: connection` on `flow`, the advice is:
+mathspec refuses a `where:` that tests the rows of a relation, as on a
+parameter, because `in:` states them. For `where: connection` on `flow`, the
+message is:
 
 ```text
-Variable 'flow': its `where:` names only 'connection', so it states the index set. Write `in: [connection]` in place of the `where:`.
+Variable 'flow': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
 ```
 
-For a `where:` that also tests a value, such as
-`where: "connection AND active"`, the advice is to write `in: [connection]`
-and keep the rest in the `where:`. A parameter gets no such advice, because
-its `where:` drops a stray row of the data and its `in:` refuses it.
+For `where: "connection AND active"`, the rewrite is `in: [connection]`, with
+`active` kept in the `where:`. Under `OR` or `NOT`, `in:` cannot state the
+rows, and mathspec suggests a `bool` parameter in their place. A
+[map](relations.md#maps) tested alone, such as `connection[bus]`, asks for a
+label rather than a row, so it loads.
 
 ## `objective`
 

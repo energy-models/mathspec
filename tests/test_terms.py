@@ -25,12 +25,12 @@ from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section, set
 #: A generator fleet: what it puts in is its term.
 FLEET = {
     'dimensions': {**BUS_DIMS, 'generator': {'dtype': 'str'}},
-    'relations': {'gen_bus': {'key': 'generator', 'values': 'bus'}},
+    'maps': {'generator': {'bus': 'bus'}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {
         'generator_injection': {
-            'expression': 'sum(gen_p, over=generator, by=gen_bus[bus])',
+            'expression': 'sum(gen_p, over=generator, by=generator[bus])',
             'description': 'what the generators put in',
             'adds_to': 'injection',
         }
@@ -49,11 +49,11 @@ DEMAND = {
 #: A store, added in a second merge.
 STORAGE = {
     'dimensions': {**BUS_DIMS, 'store': {'dtype': 'str'}},
-    'relations': {'store_bus': {'key': 'store', 'values': 'bus'}},
+    'maps': {'store': {'bus': 'bus'}},
     'variables': {'store_p': {'dims': ['snapshot', 'store']}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {
-        'store_injection': {'expression': 'sum(store_p, over=store, by=store_bus[bus])', 'adds_to': 'injection'}
+        'store_injection': {'expression': 'sum(store_p, over=store, by=store[bus])', 'adds_to': 'injection'}
     },
 }
 

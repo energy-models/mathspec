@@ -42,7 +42,7 @@ the file changes nothing:
 
 - the entries of each section, and of each kind under `given:`
 - each `dims:` list
-- each side of a relation, with the columns of the key first
+- the columns of each relation, and the maps of each subject
 - the cases under `cases:`
 - the `kwargs:` of a macro
 - the labels under `one_of:`
@@ -167,9 +167,11 @@ the colon is the description that the file sets.
 
 `program.parameters[name].missing` is what the file sets under
 [`missing:`](language/absence.md#missing) for a missing row of that parameter.
-It is
-`'refused'`, `'absent'`, or the value that a tool uses for the row.
-`program.relations[name].missing` is `'refused'` or `'absent'`. The program of
+It is `'refused'`, `'absent'`, or the value that a tool uses for the row.
+`program.relations` has one table per relation and per subject with
+[maps](language/relations.md#the-data-contract), named after it, and each map
+is one of its `values`. `program.relations[name].missing` is `'refused'` or
+`'absent'`, and `partial` lists the maps under `missing: absent`. The program of
 `spec.expand(...)` has the same `missing` values.
 
 A [given](language/parameters-variables-constraints.md#given) parameter is a
@@ -198,8 +200,8 @@ it reads any parameter that has one.
 
 `program.parameters[name].in_` lists the relations of the `in:` of the
 parameter, sorted by name. The attribute ends in `_` because `in` is a Python
-keyword. With data attached, an engine refuses a row of the parameter at a key
-combination that one of them has no row for, and reads no value column. It does this
+keyword. With data attached, an engine refuses a row of the parameter at a
+combination that one of them has no row for, and reads no map. It does this
 before it applies the `where`, and so before `missing:`, as
 [`in`](language/parameters-variables-constraints.md#in) describes. An engine
 drops a row outside the rest of the `where`, and refuses a row outside the
@@ -280,21 +282,23 @@ A name compared against a literal is a different node. `p_max > 5` is a
 `ParameterComparison` and `1 * p_max > 5` is an `ExpressionComparison`, though
 both are true at the same coordinates.
 
-A comparison on a relation column is a `RelationComparison`, and a comparison
-of two relation columns is a `RelationPairComparison`. The page on [conditions](language/expressions.md#conditions) defines both,
-and both are false for every operator where the relation has no row.
+A comparison of a map against a label is a `RelationComparison`, and a
+comparison of two maps is a `RelationPairComparison`. The page on [conditions](language/expressions.md#conditions) defines both,
+and both are false for every operator where the map gives no label. A
+relation name alone is a `RelationDefined`, and a map alone, `subject[map]`, is a
+`RelationDefined` with `column` set to the map.
 
 Three conditions contain another condition rather than an entry. A
 `CountComparison` contains the condition that it counts and the dimension that
 it counts away. A `TranslatedCondition` contains the condition that it
 evaluates at a neighbouring coordinate. A `JoinedCondition` contains the
-condition that it evaluates through a relation, and the `JoinColumns` that it
+condition that it evaluates through a map, and the `JoinColumns` that it
 joins on and groups by.
 
 Each of the three contains its inner condition as a `Mask`, whereas a
 connective contains a bare condition. So `condition_children()` recurses through a
 connective and stops at these three conditions. `.names_read` and `.dims`
-include the conditions inside all three, and the relation of a
+include the conditions inside all three, and the subject of a
 `JoinedCondition` is in its `.names_read`.
 
 ## What a program does not build
@@ -398,12 +402,13 @@ report has these attributes:
   sums it away, a wrapped shift, or an `sos:` set. In brackets, each entry states the change that would remove the tie.
 - `undecided` lists each `shift` or join whose reach, the number of
   coordinates that it looks across, is known only when the data is attached.
-  Each is a `Reach`, with the entry, the parameter or relation that the entry
-  uses, and the kind of use.
+  Each is a `Reach`, with the entry, the name of what the entry uses, and the
+  kind of use. The name is a parameter, or `subject[map]` where a map decides
+  the reach, such as `snapshot[season]`.
 - `resolved()` is a method that takes a mapping from a parameter under `undecided` to the least of its
   values. It returns the report with each `shift` offset in the mapping folded
   into `ahead`. A reach through a
-  relation stays undecided, and a name that no undecided reach uses raises
+  map stays undecided, and a name that no undecided reach uses raises
   `KeyError`.
 - `restarts` lists each entry that counts a `position()` along the dimension.
 - `linking_rows` lists each constraint that no single window contains.
@@ -460,7 +465,7 @@ Writing the canonical form out again gives the same text. The canonical form
 has these rules:
 
 - The sections come in one fixed order: `version`, `description`, `given`,
-  `dimensions`, `relations`, `parameters`, `conditions`, `variables`,
+  `dimensions`, `relations`, `maps`, `parameters`, `conditions`, `variables`,
   `expressions`, `objective`, `constraints`, `sos`, `piecewise`,
   `assumptions`, `macros`. The keys of an entry also come in one order.
 - Entries are sorted by name within each section, and so is every other list
@@ -471,7 +476,7 @@ has these rules:
   brackets are the printer's rather than the author's.
 - The terms of a sum are sorted with their signs, so `y - x` is written as
   `-x + y`. The factors of a product, the keyword arguments of a call, and a
-  list of names or the columns of a relation in a call, such as
+  list of names or the maps of a subject in a call, such as
   `over=[generator, snapshot]`, are sorted too.
 - A sum of two or more terms is broken one term to a line, each under its
   own sign.

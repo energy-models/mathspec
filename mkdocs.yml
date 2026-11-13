@@ -40,7 +40,7 @@ nav:
       - howto/index.md
       - Install mathspec: howto/installation.md
       - Check a spec without data: howto/check.md
-      - Choose between a dimension, a relation and a parameter: howto/declare-a-column.md
+      - Choose between a dimension, a relation, a map and a parameter: howto/declare-a-column.md
       - State a rule that differs by case: howto/cases.md
       - Fix a quantity that is data in one model and a decision in another: howto/pin-a-variable.md
       - Print a spec as math: howto/print.md
@@ -54,7 +54,7 @@ nav:
           - File shape: reference/language/file.md
           - Given, parameters, variables, objective and constraints: reference/language/parameters-variables-constraints.md
           - Dimensions: reference/language/dimensions.md
-          - Relations: reference/language/relations.md
+          - Relations and maps: reference/language/relations.md
           - Expressions: reference/language/expressions.md
           - Named expressions, conditions and macros: reference/language/named.md
           - Operators: reference/language/operators.md

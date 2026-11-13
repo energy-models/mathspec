@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" width="720" height="330" style="max-width: 100%; height: auto" role="img" aria-labelledby="osw-t osw-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="osw-t">shift with within= wraps inside each season</title>
-  <desc id="osw-d">The variable soc has four rows, snapshots 1 to 4. The relation season_of puts snapshots 1 and 2 in winter and snapshots 3 and 4 in summer. shift of soc along snapshot, offset 1, edge wrap, within season_of season, has one row per snapshot. Snapshot 2 reads soc at 1 and snapshot 4 reads soc at 3. Snapshot 1, the first of winter, wraps to soc at 2, the last of winter, and snapshot 3, the first of summer, wraps to soc at 4.</desc>
+  <desc id="osw-d">The variable soc has four rows, snapshots 1 to 4. The map snapshot[season] puts snapshots 1 and 2 in winter and snapshots 3 and 4 in summer. shift of soc along snapshot, offset 1, edge wrap, within snapshot[season], has one row per snapshot. Snapshot 2 reads soc at 1 and snapshot 4 reads soc at 3. Snapshot 1, the first of winter, wraps to soc at 2, the last of winter, and snapshot 3, the first of summer, wraps to soc at 4.</desc>
   <defs>
     <marker id="osw-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -21,7 +21,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M340,193 H480 V211 H340 Z" fill="#56B4E9" fill-opacity="0.25"/>
     <path d="M340,211 H480 V229 A3,3 0 0 1 477,232 H343 A3,3 0 0 1 340,229 Z" fill="#56B4E9" fill-opacity="0.25"/>
   </g>
-  <text x="16" y="24" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="bold">shift(soc, along=snapshot, offset=1, edge='wrap', within=season_of[season])</text>
+  <text x="16" y="24" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5" font-weight="bold">shift(soc, along=snapshot, offset=1, edge='wrap', within=snapshot[season])</text>
   <text x="16" y="62" font-weight="bold" fill="currentColor">soc</text>
   <text x="45" y="62" fill="currentColor" fill-opacity="0.7">a variable</text>
   <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
@@ -35,8 +35,8 @@ SPDX-License-Identifier: CC-BY-4.0
     <rect x="16" y="72" width="110" height="100" rx="3"/>
     <line x1="16" y1="94" x2="126" y2="94"/>
   </g>
-  <text x="16" y="202" font-weight="bold" fill="currentColor">season_of</text>
-  <text x="88" y="202" fill="currentColor" fill-opacity="0.7">a relation</text>
+  <text x="16" y="202" font-weight="bold" fill="currentColor">snapshot[season]</text>
+  <text x="142" y="202" fill="currentColor" fill-opacity="0.7">a map</text>
   <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
     <text x="24" y="226" font-weight="bold">snapshot</text>
     <text x="104" y="226" font-weight="bold">season</text>

@@ -212,18 +212,18 @@ expansion writes the link `power` of `chp` as the row `chp_power`.
 | _values_       | A parameter over the `along` dimension. Its other dimensions are dimensions of the row of the link.                                                     |
 | _sign_         | `<=`, `>=` or `==`. Without a sign, the link is `==` ([signs](#signs)).                                                                                 |
 
-A link that [walks a relation](#a-link-that-walks-a-relation) is a mapping
+A link that [walks a map](#a-link-that-walks-a-map) is a mapping
 instead, with the keys `expression`, `values`, `by` and, where it has one,
 `sign`.
 
-| Key        | Required | Default     | What it does                                                                                                                                                                                      |
-| ---------- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                                                                                                    |
-| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                                                                                                   |
-| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a relation.                                                                                                                          |
-| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                                                                                           |
-| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                                                                                                     |
-| `activity` | no       | `null`      | Sets the variable that switches the curve on and off: a binary, or an integer under `incremental`. Written as its name or as `at(<variable>, by=<relation>[<column>])` ([`activity`](#activity)). |
+| Key        | Required | Default     | What it does                                                                                                                                                                                  |
+| ---------- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `along`    | yes      |             | Sets the breakpoint dimension.                                                                                                                                                                |
+| `dims`     | yes      |             | Sets the dimensions of the curves. The entry states one curve per coordinate ([`dims`](#dims)).                                                                                               |
+| `links`    | yes      |             | Lists the links by name: two or more, or one link that walks a map.                                                                                                                           |
+| `where`    | no       | `null`      | Sets which curves exist, and how far each one runs ([`where`](#where)).                                                                                                                       |
+| `method`   | no       | `adjacency` | Sets the rows that the expansion writes for each curve ([`method`](#method)).                                                                                                                 |
+| `activity` | no       | `null`      | Sets the variable that switches the curve on and off: a binary, or an integer under `incremental`. Written as its name or as `at(<variable>, by=<subject>[<map>])` ([`activity`](#activity)). |
 
 The breakpoints follow the order of the `along` dimension, so that dimension
 must be declared [ordered](dimensions.md#ordered). Without `ordered: true`,
@@ -261,17 +261,17 @@ The entry states one curve, with its own weights, at each coordinate of
 dimension.
 
 The row of a link is over `dims:`, or over the dimensions of its
-[walk](#a-link-that-walks-a-relation). The expression of a link must be over
+[walk](#a-link-that-walks-a-map). The expression of a link must be over
 exactly the dimensions of its row. With `power` and `fuel` over
 `[snapshot, generator]` and an entry with `dims: [generator]`, mathspec
 prints:
 
 ```text
-piecewise 'fuel_use': link 'power' expression is over ['snapshot'], and its row ['generator'] is not, so every coordinate of ['snapshot'] would share one curve. Add ['snapshot'] to dims:, sum it out, or look the curve up through a relation with by: <relation>[<column>].
+piecewise 'fuel_use': link 'power' expression is over ['snapshot'], and its row ['generator'] is not, so every coordinate of ['snapshot'] would share one curve. Add ['snapshot'] to dims:, sum it out, or look the curve up through a map with by: <subject>[<map>].
 ```
 
 mathspec suggests three rewrites: `snapshot` in `dims:`, a sum over
-`snapshot`, or a walk through a relation. mathspec also refuses an expression
+`snapshot`, or a walk through a map. mathspec also refuses an expression
 that is not over a dimension of its row. One value of the expression would
 then lie on several curves at once.
 
@@ -391,14 +391,15 @@ pinned `power` on the curve, `fuel` may lie any amount above the curve, and
 `convex` and `lp` take exactly two links ([`method`](#method)). At load,
 mathspec refuses a sign other than `<=`, `>=` and `==`.
 
-### A link that walks a relation
+### A link that walks a map
 
-On a link with `by: relation[column]`, mathspec looks the weights of the
-curve up through a [relation](relations.md#lookups), as
-[`at(x, by=relation[column])`](operators.md#at) looks up the value of `x`. The
-row of the link is over `dims:`, with the dimension of `column` replaced by
-the key columns of the relation. Each row lies on the curve of the coordinate
-it maps to, so the number of rows is known only when the data is attached:
+On a link with `by: subject[map]`, mathspec looks the weights of the curve
+up through a [map](relations.md#lookups), as
+[`at(x, by=subject[map])`](operators.md#at) looks up the value of `x`. The
+row of the link is over `dims:`, with the dimension that `map` refers to
+replaced by the key columns of the subject. Each row lies on the curve of the
+label that the map gives it, so the number of rows is known only when the
+data is attached:
 
 ```yaml
 dimensions:
@@ -406,8 +407,8 @@ dimensions:
   converter: { dtype: str }
   flow: { dtype: str }
   bp: { dtype: int, ordered: true }
-relations:
-  converter_of: { key: flow, values: converter }
+maps:
+  flow: { converter: converter }
 parameters:
   bp_rate: { dims: [flow, bp] }
   price: { dims: [flow] }
@@ -418,25 +419,25 @@ piecewise:
     along: bp
     dims: [converter, snapshot]
     links:
-      rate: { expression: rate, values: bp_rate, by: "converter_of[converter]" }
+      rate: { expression: rate, values: bp_rate, by: "flow[converter]" }
 objective:
   sense: minimize
   expression: sum(price * rate)
 ```
 
 ```math
-\left( \mathit{rate}_{f,t} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_rate}_{b,f} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter\_of}(f) = c}) \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
+\left( \mathit{rate}_{f,t} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter}(f) = c} \in \mathrm{pwl}_{b \in \mathcal{B}}(\left( \mathrm{bp\_rate}_{b,f} \right)_{f \in \mathcal{F} \,:\, \mathrm{converter}(f) = c}) \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
 ```
 
 For each converter and snapshot, the rates of all flows of the converter lie
 on one curve. A converter with two flows and a converter with five share the
-entry, and a sixth flow is a row in `converter_of`.
+entry, and a sixth flow is a row in the table of `flow`.
 
 The expansion writes the row `operating_point_rate` over `[flow, snapshot]`.
 Each flow uses the weights of its converter:
 
 ```math
-\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{b,\mathrm{converter}(f),t} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T}
 ```
 
 These rules apply to a walked link:
@@ -445,19 +446,20 @@ These rules apply to a walked link:
   flow of a converter, and those rows share the weights.
 - The values parameter is over the row of the link, so `bp_rate` is per flow,
   not per converter.
-- `column` is over a dimension of `dims:`. The walk adds the key columns of the
-  relation that are over dimensions outside `dims:`, and joins on those over
+- `map` refers to a dimension of `dims:`. The walk adds the key columns of the
+  subject that are over dimensions outside `dims:`, and joins on those over
   dimensions of `dims:`. mathspec refuses a key column over `along`, because a
   row could then take each breakpoint from a different curve.
 - mathspec holds a walk to every rule of [`at`](relations.md#lookups), and quotes
   the link in the refusal.
-- If the relation declares [`missing: absent`](relations.md#missing), the
-  expansion adds `converter_of` to the `where:` of the row, so a flow with no
-  converter has no row.
+- If the map or its subject declares
+  [`missing: absent`](relations.md#missing), the expansion adds the map test
+  `flow[converter]` to the `where:` of the row, so a flow with no converter
+  has no row.
 - `method: convex` and `method: lp` take no walked link, and the other methods
   do.
 - In YAML flow style, `{…}`, the `by:` value needs quotes, as in
-  `by: "converter_of[converter]"`. Inside braces, a YAML parser takes `[` as the
+  `by: "flow[converter]"`. Inside braces, a YAML parser takes `[` as the
   start of a list. In block style the value needs no quotes.
 
 ### `where`
@@ -511,14 +513,14 @@ mathspec refuses a `where:` over a dimension that is neither in `dims:` nor
 `along`, because a condition cannot add coordinates.
 
 On the row of a walked link, the expansion looks the `where:` up through the
-relation of the link. In the
-[walk example](#a-link-that-walks-a-relation), with a boolean parameter
+map of the link. In the
+[walk example](#a-link-that-walks-a-map), with a boolean parameter
 `has_curve` over `[converter]` and `where: has_curve`, the expansion writes the row
 `operating_point_rate` with
-`where: at(has_curve, by=converter_of[converter])`:
+`where: at(has_curve, by=flow[converter])`:
 
 ```math
-\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{\mathrm{converter\_of}(f),t,b} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{\mathrm{converter\_of}(f)}
+\mathit{rate}_{f,t} = \sum_{b \in \mathcal{B}} \mathit{operating\_point\_lam}_{b,\mathrm{converter}(f),t} \cdot \mathrm{bp\_rate}_{b,f} \qquad \forall\, f \in \mathcal{F},\ t \in \mathcal{T} \,:\, \mathrm{has\_curve}_{\mathrm{converter}(f)}
 ```
 
 The row exists at every flow of a converter with a curve. A flow of a
@@ -529,7 +531,7 @@ exists per coordinate of `dims:`. With a boolean parameter `active` over
 `[flow]` as the `where:`, mathspec prints:
 
 ```text
-piecewise 'operating_point': where 'active' tests ['flow'], which link 'rate' adds through its relation. A where: sets which curves exist, one per coordinate of dims: ['converter', 'snapshot'], and only the rows of the link are over ['flow']. Test ['converter', 'snapshot'] in the where:, or declare a where: over ['flow'] on the variable of the link, so that its rows are absent.
+piecewise 'operating_point': where 'active' tests ['flow'], which link 'rate' adds through the map it walks. A where: sets which curves exist, one per coordinate of dims: ['converter', 'snapshot'], and only the rows of the link are over ['flow']. Test ['converter', 'snapshot'] in the where:, or declare a where: over ['flow'] on the variable of the link, so that its rows are absent.
 ```
 
 mathspec suggests two rewrites: a condition over `dims:`, or a `where:` on
@@ -776,15 +778,15 @@ Where the gate is [absent](absence.md), the curve is ungated, as under
 curve scaled by `running` alone.
 
 The gate must have no dimension that `dims:` does not include, unless it walks
-a relation. A gate over fewer dimensions switches every curve
+a map. A gate over fewer dimensions switches every curve
 that it covers, so a gate over `[generator]` switches the curve of a generator
 at every snapshot.
 
-#### A gate that walks a relation
+#### A gate that walks a map
 
 On a gate written as
-[`at(<variable>, by=<relation>[<column>])`](operators.md#at), mathspec looks
-the variable up through a [relation](relations.md#lookups), as `at` looks up
+[`at(<variable>, by=<subject>[<map>])`](operators.md#at), mathspec looks
+the variable up through a [map](relations.md#lookups), as `at` looks up
 any value. Here `running` is per unit, and the status of its unit switches
 the curve of each generator:
 
@@ -794,8 +796,9 @@ dimensions:
   unit: { dtype: str }
   generator: { dtype: str }
   bp: { dtype: int, ordered: true }
-relations:
-  unit_of: { key: generator, values: unit, missing: absent }
+maps:
+  generator:
+    unit: { refers_to: unit, missing: absent }
 parameters:
   power_bp: { dims: [generator, bp] }
   fuel_bp: { dims: [generator, bp] }
@@ -810,24 +813,23 @@ piecewise:
     links:
       power: [power, power_bp]
       fuel: [fuel, fuel_bp]
-    activity: at(running, by=unit_of[unit])
+    activity: at(running, by=generator[unit])
 objective:
   sense: minimize
   expression: sum(fuel)
 ```
 
 ```math
-\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit\_of}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit\_of}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\left( \mathit{power}_{g,t},\ \mathit{fuel}_{g,t} \right) \in \begin{cases} \mathit{running}_{t,\mathrm{unit}(g)} & \text{if } \mathit{running}_{t,\mathrm{unit}(g)} \text{ exists} \\ 1 & \text{otherwise} \end{cases} \cdot \mathrm{pwl}_{b \in \mathcal{B}}(\mathrm{power}^{\mathrm{bp}}_{b,g},\ \mathrm{fuel}^{\mathrm{bp}}_{b,g}) \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
-The weights of each curve sum to `at(running, by=unit_of[unit])`. Because
-`unit_of` declares [`missing: absent`](relations.md#missing), a generator may
-have no row in it. That generator has no gate, so its curve is ungated. With
+The weights of each curve sum to `at(running, by=generator[unit])`. Because
+`generator[unit]` declares [`missing: absent`](relations.md#missing), the
+data may give a generator no unit. That generator has no gate, so its curve is ungated. With
 `missing: 0` on the gate, the gate is `0` outside its `where:`, so the curve
-is switched off there. Only a generator with no row in `unit_of` then stays
-ungated.
+is switched off there. Only a generator with no unit then stays ungated.
 
-Under the default `missing: refused`, every generator has a row in `unit_of`.
+Under the default `missing: refused`, every generator has a unit.
 A curve is then ungated only where `running` is absent, as for a gate over
 `dims:`. Where `running` has no `where:`, every curve reads the gate, and the
 typesetter prints the gate alone.
@@ -836,7 +838,7 @@ After the lookup, the gate must be over dimensions of `dims:` only. With
 `running` over `[snapshot, unit, period]`, mathspec refuses the file at load:
 
 ```text
-piecewise 'fuel_use': activity 'running' is over ['period'] after the lookup, which is not in dims: ['snapshot', 'generator']. The gate switches the curve of one coordinate of dims:. Look it up through a relation that leaves it over dims:, or add ['period'] to dims:.
+piecewise 'fuel_use': activity 'running' is over ['period'] after the lookup, which is not in dims: ['generator', 'snapshot']. The gate switches the curve of one coordinate of dims:. Look it up through a map that leaves it over dims:, or add ['period'] to dims:.
 ```
 
 #### An integer gate

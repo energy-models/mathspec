@@ -270,14 +270,14 @@ _Assumptions_ heading as the assumptions you write, and
 [`spec.expand()`](../spec.md#mathspec.spec.Spec.expand) writes them out as
 `assumptions:` entries with these names:
 
-| Entry                   | Added for                                                                 | What it requires                                                                                                 |
-| ----------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `curve_complete`        | an entry with a link that does not walk a relation                        | every values parameter of such a link has a row at every breakpoint the curve runs through                       |
-| `curve_<link>_complete` | a [link that walks a relation](piecewise.md#a-link-that-walks-a-relation) | the values parameter of the link has a row at every breakpoint, at every row of the link                         |
-| `curve_increasing`      | `convex`, `lp`                                                            | the breakpoints of the pinned link, or of the first link where both are pinned, strictly increase along `along`  |
-| `curve_curvature`       | `convex`, `lp`                                                            | with a `>=` link the curve is convex, with a `<=` link concave, and with both links pinned it bends one way only |
-| `curve_breakpoints`     | `lp`                                                                      | each curve has at least two breakpoints                                                                          |
-| `curve_contiguous`      | a [`where:` over `along`](piecewise.md#curves-of-unequal-length)          | the marked breakpoints form one consecutive run of at least one                                                  |
+| Entry                   | Added for                                                        | What it requires                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `curve_complete`        | an entry with a link that does not walk a map                    | every values parameter of such a link has a row at every breakpoint the curve runs through                       |
+| `curve_<link>_complete` | a [link that walks a map](piecewise.md#a-link-that-walks-a-map)  | the values parameter of the link has a row at every breakpoint, at every row of the link                         |
+| `curve_increasing`      | `convex`, `lp`                                                   | the breakpoints of the pinned link, or of the first link where both are pinned, strictly increase along `along`  |
+| `curve_curvature`       | `convex`, `lp`                                                   | with a `>=` link the curve is convex, with a `<=` link concave, and with both links pinned it bends one way only |
+| `curve_breakpoints`     | `lp`                                                             | each curve has at least two breakpoints                                                                          |
+| `curve_contiguous`      | a [`where:` over `along`](piecewise.md#curves-of-unequal-length) | the marked breakpoints form one consecutive run of at least one                                                  |
 
 For an [`lp`](piecewise.md#method) entry named `cost_curve`, with its second link signed `>=`, the
 typesetter prints the first three added assumptions as:

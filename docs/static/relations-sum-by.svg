@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 370" width="800" height="370" style="max-width: 100%; height: auto" role="img" aria-labelledby="rsb-t rsb-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="rsb-t">A sum through a relation joins, then groups</title>
-  <desc id="rsb-d">The variable p is a table with three rows: wind, gas and solar. The relation gen_bus has three rows: wind on north, gas on north and solar on south. The sum of p over generator by gen_bus bus first joins p to gen_bus on generator, which gives each row of p its bus. It then adds up the rows of each bus. The result is a table with one row per bus: north holds p of wind plus p of gas, and south holds p of solar.</desc>
+  <title id="rsb-t">A sum through a map joins, then groups</title>
+  <desc id="rsb-d">The variable p is a table with three rows: wind, gas and solar. The map generator[bus] has three rows: wind on north, gas on north and solar on south. The sum of p over generator by generator[bus] first joins p to the table of generator on generator, which gives each row of p its bus. It then adds up the rows of each bus. The result is a table with one row per bus: north holds p of wind plus p of gas, and south holds p of solar.</desc>
   <defs>
     <marker id="rsb-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -24,11 +24,11 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-      <text x="16" y="28">relations:</text>
-      <text x="31" y="46">gen_bus: { key: generator, values: bus }</text>
+      <text x="16" y="28">maps:</text>
+      <text x="31" y="46">generator: { bus: bus }</text>
       <text x="16" y="64">variables:</text>
       <text x="31" y="82">p: { dims: [generator] }</text>
-      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=gen_bus[bus])</text>
+      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=generator[bus])</text>
     </g>
     <text x="16" y="146" font-weight="bold">p</text>
     <text x="30" y="146" fill-opacity="0.7">a variable</text>
@@ -38,8 +38,8 @@ SPDX-License-Identifier: CC-BY-4.0
       <text x="24" y="212">gas</text>
       <text x="24" y="230">solar</text>
     </g>
-    <text x="16" y="266" font-weight="bold">gen_bus</text>
-    <text x="80" y="266" fill-opacity="0.7">a relation</text>
+    <text x="16" y="266" font-weight="bold">generator[bus]</text>
+    <text x="118" y="266" fill-opacity="0.7">a map</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="290" font-weight="bold">generator</text>
       <text x="110" y="290" font-weight="bold">bus</text>

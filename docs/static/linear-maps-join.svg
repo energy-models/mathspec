@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 490" width="820" height="490" style="max-width: 100%; height: auto" role="img" aria-labelledby="lmj-t lmj-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="lmj-t">A sum through a relation is a join, then a group-by with a sum</title>
-  <desc id="lmj-d">The variable p has a row at each generator, gas and wind, and each snapshot, 0 and 1. The relation gen_zone, keyed by generator and snapshot, puts gas in zone north at snapshot 0 and in zone south at snapshot 1, and wind in zone north at both snapshots. The join pairs each row of p with the row of gen_zone that has the same generator and snapshot, and each pair takes the zone of that row. The group-by adds the pairs that have the same snapshot and zone. The result y has three rows: at snapshot 0 and zone north, p of gas and 0 plus p of wind and 0. At snapshot 1 and zone north, p of wind and 1. At snapshot 1 and zone south, p of gas and 1.</desc>
+  <title id="lmj-t">A sum through a map is a join, then a group-by with a sum</title>
+  <desc id="lmj-d">The variable p has a row at each generator, gas and wind, and each snapshot, 0 and 1. The map zone_of[zone], of the relation zone_of over generator and snapshot, puts gas in zone north at snapshot 0 and in zone south at snapshot 1, and wind in zone north at both snapshots. The join pairs each row of p with the row of zone_of that has the same generator and snapshot, and each pair takes the zone of that row. The group-by adds the pairs that have the same snapshot and zone. The result y has three rows: at snapshot 0 and zone north, p of gas and 0 plus p of wind and 0. At snapshot 1 and zone north, p of wind and 1. At snapshot 1 and zone south, p of gas and 1.</desc>
   <defs>
     <marker id="lmj-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
@@ -25,16 +25,16 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-      <text x="16" y="28">relations:</text>
-      <text x="31" y="46">gen_zone: { key: [generator, snapshot], values: zone, missing: absent }</text>
+      <text x="16" y="28">relations: { zone_of: { dims: [generator, snapshot], missing: absent } }</text>
+      <text x="16" y="46">maps: { zone_of: { zone: zone } }</text>
       <text x="16" y="64">variables:</text>
       <text x="31" y="82">p: { dims: [snapshot, generator] }</text>
-      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=gen_zone[zone])</text>
+      <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=zone_of[zone])</text>
     </g>
     <text x="16" y="146" font-weight="bold">p</text>
     <text x="30" y="146" fill-opacity="0.7">a variable</text>
-    <text x="16" y="286" font-weight="bold">gen_zone</text>
-    <text x="84" y="286" fill-opacity="0.7">a relation</text>
+    <text x="16" y="286" font-weight="bold">zone_of[zone]</text>
+    <text x="114" y="286" fill-opacity="0.7">a map</text>
     <text x="330" y="190" font-weight="bold">the join</text>
     <text x="392" y="190" fill-opacity="0.7">one pair per matching row</text>
     <text x="330" y="350" font-weight="bold">the result</text>

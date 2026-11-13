@@ -45,11 +45,11 @@ dimensions:
     dtype: int
     ordered: true
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
 
 parameters:
   Link_ramp_limit_up:
@@ -181,7 +181,7 @@ conditions:
       period's first, and the horizon's first where the link comes in off or
       carries an initial output
     condition: >-
-      position(snapshot, within=snapshot_period[period]) > 0 OR (position(snapshot) == 0 AND
+      position(snapshot, within=snapshot[period]) > 0 OR (position(snapshot) == 0 AND
       (Link_status_initial == 0 OR Link_p_init))
 
 constraints:
@@ -287,9 +287,9 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{L}`$ | index $`l`$ — `link` — controllable connections, each from one bus to the buses it delivers to |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
@@ -326,14 +326,14 @@ constraints:
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{pos}(t)`$ | `position()` — the position of $`t`$, counted from $`0`$; $`t`$ is the label |
-| $`\mathrm{pos}_{\mathrm{relation}(t)}(t)`$ | `position(within=relation[...])` — the position of $`t`$ inside its group |
+| $`\mathrm{pos}_{\mathrm{map}(t)}(t)`$ | `position(within=subject[map])` — the position of $`t`$ inside its group |
 
 #### Conditions
 
 **`Link_ramps_from_previous`**
 
 ```math
-\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{snapshot\_period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{l,\xi} = 0 \vee \mathrm{f}^{0}_{l,\xi} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathrm{prev}^{f}_{l,\xi,t} \iff \mathrm{pos}_{\mathrm{period}(t)}(t) > 0 \vee \mathrm{pos}(t) = 0 \wedge \left( \mathrm{u}^{f,0}_{l,\xi} = 0 \vee \mathrm{f}^{0}_{l,\xi} \text{ is defined} \right) \qquad \forall\, l \in \mathcal{L},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 #### Definitions

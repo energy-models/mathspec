@@ -54,23 +54,21 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-relations:
-  snapshot_period:
-    description: the investment period a snapshot falls in
-    key: snapshot
-    values: period
-  Line_carrier:
-    description: the carrier a line carries
-    key: line
-    values: carrier
-  Line_bus0:
-    description: the bus a line's flow is measured at
-    key: line
-    values: bus
-  Line_bus1:
-    description: the bus at a line's other end
-    key: line
-    values: bus
+maps:
+  snapshot:
+    period:
+      description: the investment period a snapshot falls in
+      refers_to: period
+  line:
+    carrier:
+      description: the carrier a line carries
+      refers_to: carrier
+    bus0:
+      description: the bus a line's flow is measured at
+      refers_to: bus
+    bus1:
+      description: the bus at a line's other end
+      refers_to: bus
 
 parameters:
   Line_active:
@@ -195,8 +193,8 @@ parameters:
 variables:
   Line_s:
     description: >-
-      `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a
-      positive value withdraws there and injects at `Line_bus1`, lossless
+      `Line-s` — PyPSA's `p0`, the flow measured at the `line[bus0]` end: a
+      positive value withdraws there and injects at `line[bus1]`, lossless
     dims: [scenario, snapshot, line]
     where: Line_active
   Line_loss:
@@ -238,7 +236,7 @@ expressions:
     adds_to: total_cost
   Line_additions:
     expression: >-
-      sum(Line_s_nom_ext * Line_first_active, over=line, by=Line_carrier[carrier])
+      sum(Line_s_nom_ext * Line_first_active, over=line, by=line[carrier])
     adds_to: Carrier_additions
   Line_s_monitored:
     description: >-
@@ -251,13 +249,13 @@ expressions:
     otherwise: 0
   Line_injection:
     expression: >-
-      -sum(Line_s, over=line, by=Line_bus0[bus])
-      + sum(Line_s, over=line, by=Line_bus1[bus])
-      - (0.5 * sum(Line_loss, over=line, by=Line_bus0[bus]))
-      - (0.5 * sum(Line_loss, over=line, by=Line_bus1[bus]))
+      -sum(Line_s, over=line, by=line[bus0])
+      + sum(Line_s, over=line, by=line[bus1])
+      - (0.5 * sum(Line_loss, over=line, by=line[bus0]))
+      - (0.5 * sum(Line_loss, over=line, by=line[bus1]))
     adds_to: Bus_injection
   Line_angle_sum:
-    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot_period[period]), over=line)
+    expression: sum(Line_s * at(Line_cycle_weight, by=snapshot[period]), over=line)
     adds_to: Cycle_angle_sum
 
 conditions:
@@ -319,14 +317,14 @@ constraints:
       voltage angle difference across it is the negative of its limit. That
       difference is `x_pu_eff` times the flow in radians
     dims: [scenario, snapshot, line]
-    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
     expression: Line_s >= -Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_v_ang_upper:
     description: >-
       `Line-v_ang-upper` — an AC line carries at most the flow at which the
       voltage angle difference across it reaches its limit
     dims: [scenario, snapshot, line]
-    where: Line_v_ang_max AND Line_carrier == 'AC' AND Line_active
+    where: Line_v_ang_max AND line[carrier] == 'AC' AND Line_active
     expression: Line_s <= Line_v_ang_max * (3.141592653589793 / 180) / Line_x_pu_eff
   Line_loss_upper:
     description: "`Line-loss_upper` — a line dissipates at most the loss at its rating"
@@ -369,15 +367,15 @@ constraints:
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N}`$ — network nodes |
-| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
+| $`\mathcal{N}`$ | index $`n`$ — `bus` with $`\mathrm{bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{K} \to \mathcal{N}`$ — network nodes |
+| $`\mathcal{I}`$ | index $`i`$ — `carrier` with $`\mathrm{carrier}: \mathcal{K} \to \mathcal{I}`$ — energy carriers, what a growth limit is set per |
 | $`\mathcal{C}`$ | index $`c`$ — `cycle` — independent cycles of the passive network graph, the cycle basis, data prep. Each period has its own basis, of the branches that are active in it. A label is a position in that period's basis, so one label is a different cycle in another period |
 | $`\mathcal{G}`$ | index $`g`$ — `global_constraint` — PyPSA's `GlobalConstraint` rows, one label per declared limit |
-| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{Line\_bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{Line\_carrier}: \mathcal{K} \to \mathcal{I}`$ — passive branches, each between two buses, their flow set by impedance |
-| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
+| $`\mathcal{K}`$ | index $`k`$ — `line` with $`\mathrm{bus0}: \mathcal{K} \to \mathcal{N},\ \mathrm{bus1}: \mathcal{K} \to \mathcal{N},\ \mathrm{carrier}: \mathcal{K} \to \mathcal{I}`$ — passive branches, each between two buses, their flow set by impedance |
+| $`\mathcal{Y}`$ | index $`y`$ — `period` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — investment periods. It is PyPSA's `investment_periods` |
 | $`\Xi`$ | index $`\xi`$ — `scenario` — the futures dispatch is chosen in, each with a weight |
 | $`\mathcal{E}`$ | index $`e`$ — `segment` — the cuts a passive branch's loss curve is held above. They are PyPSA's tangents, as many as its `segments` count, or its secants, as many as its tolerance loop places. A lossless run has none |
-| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{snapshot\_period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
+| $`\mathcal{T}`$ | index $`t`$ — `snapshot` with $`\mathrm{period}: \mathcal{T} \to \mathcal{Y}`$ — dispatch periods |
 
 #### Parameters
 
@@ -418,7 +416,7 @@ constraints:
 |---|---|
 | $`\ell`$ | `Line_loss` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$, $`0`$ where the mask leaves it out — `Line-loss` — what a line dissipates carrying its flow, pushed down by the cost and held up by the cuts. Absent, and zero in the balance, where the network is lossless |
 | $`N^{s}`$ | `Line_n_mod` over $`\mathcal{K}`$ — `Line-n_mod` — how many modules of an extendable modular build. A unit that is not active has none |
-| $`s`$ | `Line_s` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `Line_bus0` end: a positive value withdraws there and injects at `Line_bus1`, lossless |
+| $`s`$ | `Line_s` over $`\mathcal{K} \times \Xi \times \mathcal{T}`$ — `Line-s` — PyPSA's `p0`, the flow measured at the `line[bus0]` end: a positive value withdraws there and injects at `line[bus1]`, lossless |
 | $`S`$ | `Line_s_nom_ext` over $`\mathcal{K}`$ — `Line-s_nom` — nominal apparent power where it is a decision, for a line that is active. A fixed build is the parameter of the same PyPSA name |
 
 #### Definitions
@@ -473,13 +471,13 @@ S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{
 **`Line_additions`**
 
 ```math
-\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{k,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
+\mathit{Line\_additions}_{i,y} = \sum_{k \in \mathcal{K} \,:\, \mathrm{carrier}(k) = i} S_{k} \cdot \mathrm{new}^{s}_{k,y} \qquad \forall\, i \in \mathcal{I},\ y \in \mathcal{Y}
 ```
 
 **`Line_angle_sum`**
 
 ```math
-\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{snapshot\_period}(t)} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Line\_angle\_sum}_{c,\xi,t} = \sum_{k \in \mathcal{K}} s_{k,\xi,t} \cdot \mathrm{x}_{c,k,\mathrm{period}(t)} \qquad \forall\, c \in \mathcal{C},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Line_capex`**
@@ -491,7 +489,7 @@ S_{k} \in \mathbb{R} \qquad \forall\, k \in \mathcal{K} \,:\, \mathrm{ext}^{s}_{
 **`Line_injection`**
 
 ```math
-\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{Line\_bus1}(k) = n} \ell_{k,\xi,t} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
+\mathit{Line\_injection}_{n,\xi,t} = -\left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} s_{k,\xi,t} \right) + \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} s_{k,\xi,t} - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus0}(k) = n} \ell_{k,\xi,t} \right) - 0.5 \cdot \left( \sum_{k \in \mathcal{K} \,:\, \mathrm{bus1}(k) = n} \ell_{k,\xi,t} \right) \qquad \forall\, n \in \mathcal{N},\ \xi \in \Xi,\ t \in \mathcal{T}
 ```
 
 **`Line_s_monitored`**
@@ -595,13 +593,13 @@ s_{k,\xi,t} = \mathrm{s}^{\mathrm{set}}_{k,\xi,t} \qquad \forall\, k \in \mathca
 **`Line_v_ang_lower`**
 
 ```math
-s_{k,\xi,t} \ge \frac{-\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
+s_{k,\xi,t} \ge \frac{-\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
 ```
 
 **`Line_v_ang_upper`**
 
 ```math
-s_{k,\xi,t} \le \frac{\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{Line\_carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
+s_{k,\xi,t} \le \frac{\overline{\delta}_{k,\xi} \cdot \frac{3.141592653589793}{180}}{\mathrm{x}^{\mathrm{eff}}_{k,\xi}} \qquad \forall\, k \in \mathcal{K},\ \xi \in \Xi,\ t \in \mathcal{T} \,:\, \overline{\delta}_{k,\xi} \text{ is defined} \wedge \mathrm{carrier}(k) = \text{'}\mathrm{AC}\text{'} \wedge \mathrm{on}^{s}_{k,t}
 ```
 <!-- gallery:end -->
 

@@ -22,15 +22,19 @@ dimensions:
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
 
 relations:
-  gen_bus: { key: generator, values: bus }
-  zone_of: { key: bus, values: zone }
-  area_of: { key: bus, values: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
-  season_of: { key: snapshot, values: season }
-  gen_zone: { key: [generator, snapshot], values: zone } # a map keyed by two dimensions: a call sums one away and joins on the other
-  rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
-  connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
-  gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
-  bus_zone: { key: [bus, zone], missing: absent } # the pairs that exist
+  gen_zone: { dims: [generator, snapshot] } # a relation over two dimensions, with a map: a call sums one away and joins on the other
+  connection: { dims: [generator, bus], missing: absent } # a relation with no map: many-to-many, read only by sum with both ends named
+  bus_zone: { dims: [bus, zone], missing: absent } # the pairs that exist
+
+maps:
+  generator: { bus: bus, technology: technology } # two maps of one subject, read to both at once
+  bus:
+    zone: zone
+    area: { refers_to: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
+  snapshot:
+    season: season
+    rep: snapshot # a map into its own dimension: the representative snapshot
+  gen_zone: { zone: zone }
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
@@ -40,9 +44,9 @@ parameters:
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
-  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  link_eff: { dims: [generator, bus], in: [connection], missing: 1 } # over the pairs a relation lists; a `where:` may not test them
   zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
-  area_weight: { dims: [bus], in: [area_of] } # indexed by the key of a relation with a value column: the buses that have an area
+  area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -168,12 +172,12 @@ piecewise:
     links:
       p: [p, bp_x]
       fuel: [fuel, bp_y, ">="]
-  bus_curve: # one curve per bus, read by each generator on it: a link that walks a relation prints as the family it ties, and the mask is read through the relation too
+  bus_curve: # one curve per bus, read by each generator on it: a link that walks a map prints as the family it ties, and the mask is read through the map too
     along: bp
     dims: [snapshot, bus]
     where: load
     links:
-      p: { expression: p, values: bp_x, by: "gen_bus[bus]" }
+      p: { expression: p, values: bp_x, by: "generator[bus]" }
 
 expressions:
   spend_cap: cost * 2 # a data-only entry, so a where may compare it
@@ -193,7 +197,7 @@ expressions:
     dims: [snapshot, generator]
     cases:
       opening: { when: "position(snapshot) == 0", expression: cost }
-      winter: { when: "position(snapshot) > 0 and season_of == 'winter'", expression: cost * 2 }
+      winter: { when: "position(snapshot) > 0 and snapshot[season] == 'winter'", expression: cost * 2 }
     otherwise: 0
 
 conditions:
@@ -212,12 +216,12 @@ constraints:
   under_rating: # names the expression with declared dims, read in the row's own order
     dims: [snapshot, generator]
     expression: p <= rating
-  balance: # sum over a relation
+  balance: # sum through a map
     dims: [snapshot, bus]
-    expression: sum(p, over=generator, by=gen_bus[bus]) + spill - slack == load
+    expression: sum(p, over=generator, by=generator[bus]) + spill - slack == load
   netted: # names the signed sum on the right of a plus: inlined, its minus prints as a subtraction
     dims: [snapshot, bus]
-    expression: sum(p, over=generator, by=gen_bus[bus]) + net == load
+    expression: sum(p, over=generator, by=generator[bus]) + net == load
   ramp: # roll (cyclic) and shift (acyclic) in one equation
     dims: [snapshot, generator]
     expression: p - shift(p, along=snapshot, offset=1, edge='wrap') <= shift(p, along=snapshot, offset=1) + p_max
@@ -241,56 +245,56 @@ constraints:
   lead_time: # an offset the data carries, so it prints as a symbol rather than a number
     dims: [snapshot, generator]
     expression: shift(p, along=snapshot, offset=lead, edge=0) <= p_max
-  in_season: # a translation partitioned by a relation: the group rides on the operator
+  in_season: # a translation partitioned by a map: the group rides on the operator
     dims: [snapshot, generator]
-    expression: p <= shift(p, along=snapshot, offset=1, edge='wrap', within=season_of[season])
+    expression: p <= shift(p, along=snapshot, offset=1, edge='wrap', within=snapshot[season])
   held_in_season: # the same group, with a fill: each season's opening row is kept and given a zero
     dims: [snapshot, generator]
-    expression: p <= shift(p, along=snapshot, offset=1, edge=0, within=season_of[season])
+    expression: p <= shift(p, along=snapshot, offset=1, edge=0, within=snapshot[season])
   window: # a trailing window of fixed width
     dims: [snapshot, generator]
     expression: sum_back(on, along=snapshot, window=3) <= units
   history: # the same window, its width in the data and its edge wrapped
     dims: [snapshot, generator]
     expression: sum_back(on, along=snapshot, window=min_up, edge='wrap') <= units
-  seasonal_window: # a window partitioned by a relation: the group rides on the operator
+  seasonal_window: # a window partitioned by a map: the group rides on the operator
     dims: [snapshot, generator]
-    expression: sum_back(on, along=snapshot, window=3, within=season_of[season]) <= units
-  lookup: # at(), which re-indexes through a relation instead of an offset
+    expression: sum_back(on, along=snapshot, window=3, within=snapshot[season]) <= units
+  lookup: # at(), which re-indexes through a map instead of an offset
     dims: [snapshot, bus]
-    expression: spill <= at(zone_cap, by=zone_of[zone])
+    expression: spill <= at(zone_cap, by=bus[zone])
   grouped_once: # one table read to two value columns: the domain carries a condition per column
     dims: [snapshot, bus, technology]
-    expression: sum(p, over=generator, by=gen_bt[bus, technology]) <= tech_cap
+    expression: sum(p, over=generator, by=generator[bus, technology]) <= tech_cap
   looked_up_once: # the same table joined the other way, reading one slot through two columns
     dims: [generator]
-    expression: units <= at(tech_cap, by=gen_bt[bus, technology])
+    expression: units <= at(tech_cap, by=generator[bus, technology])
   within_bus: # a partition grouped by one named value column of a two-value table, and a position within both
     dims: [generator]
-    where: "position(generator, within=gen_bt[bus, technology]) == 0"
-    expression: units <= shift(units, along=generator, offset=1, edge=0, within=gen_bt[bus])
-  relational: # a sum through a bare relation: the domain is a row of the relation rather than a function's value
+    where: "position(generator, within=generator[bus, technology]) == 0"
+    expression: units <= shift(units, along=generator, offset=1, edge=0, within=generator[bus])
+  relational: # a sum through a relation with no map: the domain is a row of the relation rather than a label
     dims: [snapshot, bus]
     expression: sum(p, over=generator, by=connection[bus]) <= load
-  connected: # a bare relation as a where: the row of the frame has to be a member of the relation
+  connected: # a relation as a where: the row of the frame has to be a member of the relation
     dims: [snapshot, generator, bus]
     where: "connection"
     expression: p <= load
   representative: # a map into its own dimension, read both ways: the frame is unchanged and the index is primed
     dims: [snapshot]
-    expression: sum(spill, over=snapshot, by=rep_of[rep]) <= at(spill, by=rep_of[rep])
+    expression: sum(spill, over=snapshot, by=snapshot[rep]) <= at(spill, by=snapshot[rep])
   zonal: # a grouping through a two-key map, summing one key away: the condition reads the other, and the row keeps it
     dims: [snapshot, zone]
     expression: sum(p, over=generator, by=gen_zone[zone]) <= zone_cap
   zonal_history: # the same table summing its other key away
     dims: [generator, zone]
     expression: sum(p, over=snapshot, by=gen_zone[zone]) <= zone_cap
-  zonal_membership: # the same table read between its two key columns: no value column is read, so the domain asks only that the row is there
+  zonal_membership: # the same relation read between its own two columns: no map is read, so the domain asks only that the row is there
     dims: [snapshot]
     expression: sum(units, over=generator, by=gen_zone[snapshot]) <= budget
   zonal_lookup: # the same table joined the other way, reading the slot the row's own snapshot puts the generator in
     dims: [snapshot, generator]
-    where: "gen_zone == 'north' AND position(generator, within=gen_zone[zone]) == 0"
+    where: "gen_zone[zone] == 'north' AND position(generator, within=gen_zone[zone]) == 0"
     expression: p <= at(spill * zone_cap, by=gen_zone[zone])
   arithmetic: # division, both unary signs, a sign beside a sign, floats with and without an exponent, bracketing
     dims: [snapshot]
@@ -310,15 +314,15 @@ constraints:
     expression: theta <= load
   first: # a position in a dimension, and the same position within a group
     dims: [snapshot, generator]
-    where: "position(snapshot) == 0 OR position(snapshot, within=season_of[season]) == 0"
+    where: "position(snapshot) == 0 OR position(snapshot, within=snapshot[season]) == 0"
     expression: on == 1
   last: # the same two counted from the end, which print against a size rather than as themselves
     dims: [snapshot, generator]
-    where: "position(snapshot) == -1 OR position(snapshot, within=season_of[season]) == -1"
+    where: "position(snapshot) == -1 OR position(snapshot, within=snapshot[season]) == -1"
     expression: on == 0
-  northern: # a relation compared to a label, to another relation, and to nothing
+  northern: # a map compared to a label, to another map, and tested for a label
     dims: [snapshot, bus]
-    where: "zone_of == 'north' AND zone_of != area_of AND zone_of"
+    where: "bus[zone] == 'north' AND bus[zone] != bus[area] AND bus[area]"
     expression: slack <= load
   efficiency: # a Greek-named parameter, which is given — so the convention wins and it prints as the word
     dims: [snapshot, generator]
@@ -342,9 +346,9 @@ constraints:
     dims: [snapshot, generator]
     where: "p_max - p_min > cost / 2"
     expression: p <= p_max
-  ramped: # a translation under a comparison names its edge, a lookup reads through a relation, and the position keeps the vacated row out
+  ramped: # a translation under a comparison names its edge, a lookup reads through a map, and the position keeps the vacated row out
     dims: [snapshot, bus]
-    where: "load - shift(load, along=snapshot, offset=1, edge=0) <= at(zone_cap, by=zone_of[zone]) AND position(snapshot) > 0"
+    where: "load - shift(load, along=snapshot, offset=1, edge=0) <= at(zone_cap, by=bus[zone]) AND position(snapshot) > 0"
     expression: slack <= load
   covered: # a reduction on a side of a scalar mask, so nothing is left to quantify
     dims: []
@@ -362,9 +366,9 @@ constraints:
     dims: [snapshot, bus]
     where: "load AND NOT shift(load, along=snapshot, offset=1)"
     expression: slack <= load
-  zoned: # a condition read through a relation: a bus is held only where its zone has a cap at all
+  zoned: # a condition read through a map: a bus is held only where its zone has a cap at all
     dims: [bus]
-    where: "at(zone_cap, by=zone_of[zone])"
+    where: "at(zone_cap, by=bus[zone])"
     expression: theta <= budget
   capped: # an expressions: entry on a side, read by the name the file gave it
     dims: [snapshot, generator]
@@ -379,7 +383,7 @@ assumptions: # what the data has to satisfy for the answer to mean anything
   bounds_do_not_cross: "p_min <= p_max" # two parameters, which is arithmetic like any other
   efficiency_is_a_fraction: "eta > 0 AND eta <= 1" # a connective, so the line has no relation to align on
   lead_times_are_short: "lead <= 3" # one parameter against a literal
-  zones_agree: "zone_of == area_of" # two maps into one set, compared row by row
+  zones_agree: "bus[zone] == bus[area]" # two maps into one set, compared row by row
   budget_covers_the_peak: "sum(p_max, over=generator) >= budget" # a reduction on a side, leaving nothing to quantify
   ramps_are_gentle: # a translation inside arithmetic, and a position keeping the vacated row out
     holds: "load - shift(load, along=snapshot, offset=1, edge=0) <= budget"
@@ -388,9 +392,9 @@ assumptions: # what the data has to satisfy for the answer to mean anything
     holds: "p_min < p_max"
     where: "is_flexible"
     description: a unit that cannot be turned down needs somewhere to go
-  northern_demand_is_real: # a relation comparison as the where, over a frame two dims wide
+  northern_demand_is_real: # a map comparison as the where, over a frame two dims wide
     holds: "load >= 0"
-    where: "zone_of == 'north'"
+    where: "bus[zone] == 'north'"
   every_dispatch_has_a_start_row: # a constraint's row where a variable exists: decided at load from their `where:`, then checked on the data
     holds: "starts"
     where: "p"
