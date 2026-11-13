@@ -429,12 +429,18 @@ def _fills(program: Program) -> Iterator[str]:
                 f'{context} is over {stray}, and the parameter is not (dims {list(p.dims)}). Give the expression '
                 f'dims: the parameter has.'
             )
-        if fill_values(entry.expression) is None:
+        values = fill_values(entry.expression)
+        if values is None:
             yield (
                 f'{context} is not cases of plain numbers. A missing row takes a number the file states: write each '
                 f'`expression:` and the `otherwise:` as a number, or write the number itself as missing:.'
             )
             continue
+        if p.dtype == 'int' and (fractions := [v for v in values if not v.is_integer()]):
+            yield (
+                f'{context} states {fractions}, and an int parameter takes whole numbers. Write whole numbers, or '
+                f'declare dtype: float.'
+            )
         tested: set[str] = set().union(
             *(mask.names_read for _, masks in walk_regions(entry.expression) for mask in masks)
         )

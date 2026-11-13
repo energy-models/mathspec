@@ -1400,8 +1400,18 @@ def fill_by_label(program: Program, parameter: str) -> FillByLabel | None:
     if None in tests or len(columns) != 1:
         return None
     ((by, column),) = columns
-    fill = {str(test.value): value for labels, value in zip(tests, values, strict=False) for test in labels or ()}
-    return FillByLabel(by, column, Frozen(fill), values[-1])
+    whole = program.parameters[parameter].dtype == 'int'
+    fill = {
+        str(test.value): _typed(value, whole=whole)
+        for labels, value in zip(tests, values, strict=False)
+        for test in labels or ()
+    }
+    return FillByLabel(by, column, Frozen(fill), _typed(values[-1], whole=whole))
+
+
+def _typed(value: float, *, whole: bool) -> float:
+    """*value* as an ``int`` for an int column, so a tool reads ``1`` there and not ``1.0``."""
+    return int(value) if whole else value
 
 
 def _label_tests(condition: Condition) -> list[RelationComparison] | None:

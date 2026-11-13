@@ -58,6 +58,13 @@ def test_a_fill_by_one_map_reads_as_a_number_per_label() -> None:
     ), 'the labels joined with OR share one value, and otherwise: is the last region'
 
 
+def test_the_fill_of_an_int_parameter_reads_as_whole_numbers() -> None:
+    model = varied(MODEL, parameters={'sign': {'dims': ['entity'], 'dtype': 'int', 'missing': 'sign_default'}})
+    table = fill_by_label(to_spec(model).program, 'sign')
+    assert table is not None
+    assert [type(v) for v in (*table.fill.values(), table.otherwise)] == [int, int, int], 'no 1.0 for an int column'
+
+
 @pytest.mark.parametrize(
     'patch',
     [
@@ -136,6 +143,14 @@ def test_a_bare_int_name_is_a_row_test_under_a_fill() -> None:
             ),
             "is over ['snapshot'], and the parameter is not (dims ['entity']).",
             id='a-dimension-the-parameter-is-not-over',
+        ),
+        pytest.param(
+            {
+                **_fill(otherwise='0.5'),
+                'parameters': {'sign': {'dims': ['entity'], 'dtype': 'int', 'missing': 'sign_default'}},
+            },
+            'states [0.5], and an int parameter takes whole numbers.',
+            id='a-fraction-on-an-int',
         ),
         pytest.param(
             {**_fill(otherwise='0'), 'constraints': {'limit': {'dims': [], 'expression': 'sum(p / sign) <= 1'}}},
