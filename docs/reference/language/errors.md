@@ -144,6 +144,7 @@ advice, so the file still loads and `check` exits `0`.
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `never-an-axis` | a dimension that indexes nothing, that nothing sums into, and that no relation has a column over                                                                      | remove it, or keep it if the entries that use it are still to be written |
 | `given`         | a parameter, column, named expression or set of constraint rows (a row family) that it uses and does not declare ([given](parameters-variables-constraints.md#given)) | the file this one is layered onto provides it                            |
+| `index-set`     | a variable whose `where:` requires a row of a relation ([`in` on a variable](parameters-variables-constraints.md#in-on-a-variable))                                   | write the relation under `in:`                                           |
 | `unbounded`     | a variable that no constraint, set or curve uses, whose objective term pushes it towards a bound it does not have                                                     | give it a finite bound, or the constraint that was meant to define it    |
 
 In the spec below, `region` indexes nothing, and `slack` has no lower bound

@@ -66,7 +66,7 @@ if TYPE_CHECKING:
     from mathspec._expression_parser import BinaryOperator
     from mathspec._typesetting.format import Format
     from mathspec._typesetting.symbols import Symbols
-    from mathspec.program import Link, Piecewise, Program
+    from mathspec.program import Link, Parameter, Piecewise, Program, Variable
 
 _PRECEDENCE: dict[BinaryOperator, int] = {'+': 1, '-': 1, '*': 2, '/': 2, '**': 3}
 _ATOM = 5
@@ -204,6 +204,14 @@ def _unsigned(node: Expression) -> Expression | None:
                 else Divide(head, second, dims=node.dims)
             )
     return None
+
+
+def _inside_on(entry: Parameter | Variable) -> Mask | None:
+    """*entry*'s mask with its ``in:`` read as true, since the domain states it: ``None`` where nothing is left."""
+    if entry.where is None:
+        return None
+    inside = entry.where.within(entry.in_)
+    return None if isinstance(inside.root, BooleanLiteral) else inside
 
 
 class Walk:
@@ -635,10 +643,10 @@ class Walk:
         """
         return '' if mask is None else self._condition(mask.root, ctx)
 
-    def _quantifier(self, dims: list[str], condition: str) -> str:
+    def _quantifier(self, dims: list[str], condition: str, *, memberships: list[str] | None = None) -> str:
         if not dims and not condition:
             return ''
-        over = self.format.joined([self._membership(d) for d in dims], '')
+        over = self.format.joined(memberships or [self._membership(d) for d in dims], '')
         if not condition:
             return f'{self._op("forall")} {over}'
         if not over:
@@ -707,12 +715,41 @@ class Walk:
         return [self.definition(name) for name in self.defined()]
 
     def parameter_masks(self) -> dict[str, str]:
-        """Each masked parameter's mask, printed over the parameter's own indices for its legend row."""
+        """Each masked parameter's ``where:``, inside its ``in:``, printed over the parameter's own indices for its legend row."""
         return {
-            name: self._condition(entry.where.root, self._context(entry.dims))
+            name: self._condition(mask.root, self._context(entry.dims))
             for name, entry in self.program.parameters.items()
-            if entry.where is not None
+            if (mask := _inside_on(entry)) is not None
         }
+
+    def index_sets(self) -> dict[str, str]:
+        """Each parameter's and variable's ``in:``, printed as the domain its legend row is over."""
+        entries = {**self.program.parameters, **self.program.variables}
+        return {
+            name: self.format.joined(self._index_set(entry.dims, entry.in_, self._context(entry.dims)), '')
+            for name, entry in entries.items()
+            if entry.in_
+        }
+
+    def _index_set(self, dims: tuple[str, ...], in_: tuple[str, ...], ctx: _Context) -> list[str]:
+        """The key of each relation in *in_* as the rows it ranges over, then each other dimension of *dims*, as its set.
+
+        A relation with value columns prints by its key too, ``g ∈ gen_bus``:
+        its values play no part in the index set.
+        """
+        relations = self.program.relations
+        keyed = {relations[r].dim(k) for r in in_ for k in relations[r].key}
+        return [
+            *(self._key_in(r, ctx) for r in in_),
+            *(self._membership(d) for d in dims if d not in keyed),
+        ]
+
+    def _key_in(self, name: str, ctx: _Context) -> str:
+        """The key of relation *name* at the frame's own indices, as a member of the relation: ``(b, g) ∈ connection``."""
+        at = self._frame_key(name, ctx)
+        key = [at[k] for k in self.program.relations[name].key]
+        member = key[0] if len(key) == 1 else self.format.parenthesise(self.format.joined(key, ''))
+        return f'{member} {self._op("in")} {self.format.upright(name)}'
 
     def defined(self) -> list[str]:
         """The named expressions that print under their own symbol: every one, or only the unsubstitutable when inlining.
@@ -818,7 +855,11 @@ class Walk:
         entry = self.program.variables[name]
         ctx = self._context(frame=entry.dims)
         symbol = ctx.indexed(self.symbols.name[name], list(entry.dims))
-        condition = self._quantifier(list(entry.dims), self._mask_condition(ctx, entry.where))
+        condition = self._quantifier(
+            list(entry.dims),
+            self._mask_condition(ctx, _inside_on(entry)),
+            memberships=self._index_set(entry.dims, entry.in_, ctx),
+        )
         lower, upper = entry.lower, entry.upper
 
         if entry.domain == 'binary':

@@ -44,6 +44,7 @@ relations:
   rep_of: { key: snapshot, values: { rep: snapshot } } # a map into its own dimension: the representative snapshot
   connection: { key: [generator, bus], missing: absent } # a bare relation, with no value columns: many-to-many, read only by sum with both ends named
   gen_bt: { key: generator, values: [bus, technology] } # one table with two value columns, read to both at once
+  bus_zone: { key: [bus, zone], missing: absent } # the pairs that exist
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as
@@ -54,6 +55,8 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
+  area_weight: { dims: [bus], in: [area_of] } # indexed by the key of a relation with a value column: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -70,17 +73,18 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
-| $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
+| $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `bus_zone` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}`$ |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `bus_zone` is `absent` where the data has no row |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathrm{area\_weight}`$ | `area_weight` over $`u \in \mathrm{area\_of}`$ |
 | $`\mathrm{bp\_heat}`$ | `bp_heat` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_run}`$ | `bp_run` over $`\mathcal{B} \times \mathcal{G}`$ |
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
@@ -98,6 +102,7 @@ parameters:
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
+| $`\mathrm{zone\_share}`$ | `zone_share` over $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
 
 #### Conditions
 
@@ -110,6 +115,7 @@ parameters:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{flow}`$ | `flow` over $`\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -280,6 +286,23 @@ variables:
 
 ```math
 \mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
+```
+
+#### Variable over the rows of a relation
+
+a domain of the pairs `connection` lists, at every snapshot, and a `where:` inside it
+
+```yaml
+variables:
+  flow:
+    dims: [snapshot, generator, bus]
+    in: [connection]
+    where: "p_max > 0"
+    bounds: { lower: 0 }
+```
+
+```math
+\mathit{flow}_{u,g,t} \ge 0 \qquad \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0
 ```
 
 #### Variable in a special ordered set

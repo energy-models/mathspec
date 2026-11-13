@@ -18,6 +18,7 @@ a macro formal against a dimension, a curve's links, and every dim rule.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
@@ -28,7 +29,7 @@ from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError, unordered
+from mathspec.errors import SchemaError, did_you_mean, unordered
 from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
 
 if TYPE_CHECKING:
@@ -108,6 +109,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
+        *_index_sets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -226,6 +228,60 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
                 for d, count in Counter(dict(lk.pairs)[k] for k in lk.key_roles).items()
                 if count > 1
             )
+
+
+def _index_sets(spec: Spec) -> Iterator[str]:
+    """Each entry of an ``in:`` is a relation keyed by dimensions of the entry, leaves a key out, and is named once.
+
+    The entry is over no dimension of a value column outside the key, since the
+    index set is the key alone and would give the entry every label of that
+    dimension, not only the one the row lists.
+    """
+    entries = [
+        *((f"Parameter '{name}'", name, p.dims, p.in_) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", name, v.dims, v.in_) for name, v in spec.variables.items()),
+    ]
+    for context, name, dims, in_ in entries:
+        head = f'{context}: in: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(in_).items() if count > 1)
+        for rname in dict.fromkeys(in_):
+            if (lk := spec.relations.get(rname)) is None:
+                yield _not_a_relation(head, rname, spec)
+                continue
+            if lk.missing == 'refused':
+                yield (
+                    f"{head} '{rname}', which under missing: refused has a row at every key combination, so it "
+                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from in:."
+                )
+            key = Counter(dict(lk.pairs)[k] for k in lk.key_roles)
+            if twice := [d for d, count in key.items() if count > 1]:
+                yield (
+                    f"{head} '{rname}', whose key has two columns over '{twice[0]}', and '{name}' has "
+                    f"'{twice[0]}' once. Name a relation keyed by one column over each dimension."
+                )
+            elif outside := [d for d in key if d not in dims]:
+                yield (
+                    f"{head} '{rname}', keyed by {sorted(key)}, and '{name}' is not over {outside}. Add "
+                    f"{outside} to its dims:, or delete '{rname}' from in:."
+                )
+            elif widened := [(r, d) for r, d in side_columns(lk.values) if d in dims and d not in key]:
+                role, dim = widened[0]
+                yield (
+                    f"{head} '{rname}', whose value column '{role}' is over '{dim}', and '{name}' is over '{dim}' "
+                    f"too, so '{name}' would have a coordinate at every '{dim}', not only at the one in the row of "
+                    f"'{rname}'. Delete '{dim}' from its dims: and read it as {rname}[{role}], or name a relation "
+                    f'keyed by {sorted([*key, dim])} with no values: in in:.'
+                )
+
+
+def _not_a_relation(head: str, written: str, spec: Spec) -> str:
+    """The refusal for an ``in:`` entry that names no relation, a column of one, ``relation[column]``, apart."""
+    if (column := re.fullmatch(r'(\w+)\[(.+)\]', written)) is not None and column[1] in spec.relations:
+        return (
+            f"{head} '{written}', a column of '{column[1]}', and an index set is the key of a relation. Write "
+            f"in: [{column[1]}], and test '{column[2]}' in a `where:` if that was meant."
+        )
+    return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

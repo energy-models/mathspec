@@ -12,7 +12,7 @@ methods exist, and which gates an entry will accept.
 from __future__ import annotations
 
 import re
-from typing import get_args
+from typing import Any, get_args
 
 import pytest
 
@@ -780,13 +780,21 @@ def test_a_ragged_where_reaches_the_weights_as_written_and_the_frame_rows_as_a_c
     assert expanded.constraints['cost_curve_p'].where == 'count(has_curve AND bp_x, over=bp) > 0'
 
 
-def test_a_where_joins_both_gate_rows():
+@pytest.mark.parametrize(
+    'gate',
+    [
+        pytest.param({'where': 'committable'}, id='a-gate-with-a-where'),
+        pytest.param({'in': ['running']}, id='a-gate-in-a-relation'),
+    ],
+)
+def test_a_where_joins_both_gate_rows(gate: dict[str, Any]):
     """`activity:` splits the convexity row across the gate's own mask, and the block's where holds over both halves."""
     spec = spec_of(
         MASKED,
         **{
-            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', 'where': 'committable'},
+            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', **gate},
             'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+            'relations.running': {'key': ['generator', 'snapshot'], 'missing': 'absent'},
             'piecewise.cost_curve.activity': 'u',
         },
     )

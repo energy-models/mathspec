@@ -10,16 +10,17 @@
 \paragraph{Sets}
 \begin{description}
 \item[{$\mathcal{B}$}] index $b$ --- \texttt{bp}
-\item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{connection} is \texttt{absent} where the data has no row
+\item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{bus\_zone} is \texttt{absent} where the data has no row, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}$
-\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} (labels \texttt{north}, \texttt{south}) with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row
+\item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} (labels \texttt{north}, \texttt{south}) with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{bus\_zone} is \texttt{absent} where the data has no row
 \end{description}
 
 \paragraph{Parameters}
 \begin{description}
+\item[{$\mathrm{area\_weight}$}] \texttt{area\_weight} over $u \in \mathrm{area\_of}$
 \item[{$\mathrm{bp\_heat}$}] \texttt{bp\_heat} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_run}$}] \texttt{bp\_run} over $\mathcal{B} \times \mathcal{G}$
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
@@ -37,6 +38,7 @@
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{U} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
+\item[{$\mathrm{zone\_share}$}] \texttt{zone\_share} over $\left( u,\ z \right) \in \mathrm{bus\_zone}$, $1$ where the data has no row
 \end{description}
 
 \paragraph{Conditions}
@@ -47,6 +49,7 @@
 
 \paragraph{Variables}
 \begin{description}
+\item[{$\mathit{flow}$}] \texttt{flow} over $\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}$
 \item[{$\mathit{fuel}$}] \texttt{fuel} over $\mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{headroom}$}] \texttt{headroom} (scalar), $0$ where the mask leaves it out
 \item[{$\mathit{heat}$}] \texttt{heat} over $\mathcal{G} \times \mathcal{T}$
@@ -92,6 +95,7 @@
 
 \paragraph{Variable domains}
 \begin{align}
+\text{flow} && \mathit{flow}_{u,g,t} & \ge 0 && \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \\
 \text{fuel} && \mathit{fuel}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{headroom} && \mathit{headroom} & \ge 0 && \text{where } \mathrm{budget} \text{ is defined} \\
 \text{heat} && \mathit{heat}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
