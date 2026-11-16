@@ -11,6 +11,7 @@
 \begin{description}
 \item[{$\mathcal{B}$}] index $b$ --- \texttt{bp}
 \item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U}$, \texttt{connection} is \texttt{absent} where the data has no row, \texttt{bus[area]} is \texttt{absent} where the data gives no label
+\item[{$\mathcal{U}$}] index $u'$ --- \texttt{from\_bus}, an alias of \texttt{bus}
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{technology}: \mathcal{G} \to \mathcal{E}$, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{rep}: \mathcal{T} \to \mathcal{T},\ \mathrm{season}: \mathcal{T} \to \mathcal{S}$
@@ -36,6 +37,7 @@
 \item[{$\mathrm{min\_up}$}] \texttt{min\_up} over $\mathcal{G}$
 \item[{$\mathrm{p}^{\mathrm{max}}$}] \texttt{p\_max} over $\mathcal{G}$, $\infty$ where the data has no row
 \item[{$\mathrm{p}^{\mathrm{min}}$}] \texttt{p\_min} over $\mathcal{G}$
+\item[{$\mathrm{susceptance}$}] \texttt{susceptance} over $\mathcal{U} \times \mathcal{U}$, $0$ where the data has no row
 \item[{$\mathrm{tech\_cap}$}] \texttt{tech\_cap} over $\mathcal{U} \times \mathcal{E}$, \texttt{absent} where the data has no row
 \item[{$\mathrm{zone\_cap}$}] \texttt{zone\_cap} over $\mathcal{Z}$
 \end{description}
@@ -143,6 +145,7 @@
 \text{edges} && p_{g,t \boxminus_{0} 1} & \le p_{g,t \boxplus_{0} 1} + \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{efficiency} && p_{g,t} & \le \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{first} && \mathit{on}_{g,t} & = 1 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = 0 \vee \mathrm{pos}_{\mathrm{season}(t)}(t) = 0 \\
+\text{flow\_angle} && \theta_{u} & = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} && \forall\, u \in \mathcal{U} \\
 \text{grouped\_once} && \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = u \wedge \mathrm{technology}(g) = e} p_{g,t} & \le \mathrm{tech\_cap}_{u,e} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T},\ e \in \mathcal{E} \\
 \text{held\_in\_season} && p_{g,t} & \le p_{g,t \boxminus_{0}^{\mathrm{season}(t)} 1} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{history} && \sum_{t' \in \mathcal{T} \,:\, 0 \le t \ominus t' < \mathrm{min\_up}} \mathit{on}_{g,t'} & \le \mathit{units}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
