@@ -147,16 +147,19 @@ def lower(spec: Spec) -> Program:
     parameter_masks = _parameter_masks(spec, ns, errors)
 
     variables = {}
+    declared: dict[str, tuple[Expression | None, Expression | None]] = {}
     for vname, vdef in spec.variables.items():
         where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
-        if vdef.domain == 'binary':
-            lower_bound, upper_bound = Constant(0.0, dims=()), Constant(1.0, dims=())
-        else:
-            context = f"Variable '{vname}' bounds"
-            lower_bound = _bound(vdef.bounds.lower, ns, f'{context}.lower', errors)
-            upper_bound = _bound(vdef.bounds.upper, ns, f'{context}.upper', errors)
+        context = f"Variable '{vname}' bounds"
+        declared[vname] = (
+            _bound(vdef.bounds.lower, ns, f'{context}.lower', errors),
+            _bound(vdef.bounds.upper, ns, f'{context}.upper', errors),
+        )
+        lower_bound, upper_bound = (
+            (Constant(0.0, dims=()), Constant(1.0, dims=())) if vdef.domain == 'binary' else declared[vname]
+        )
         variables[vname] = Variable(
             vdef.dims,
             where=mask_of(where),
@@ -265,7 +268,7 @@ def lower(spec: Spec) -> Program:
     )
     if errors := [*emitted_name_errors(spec, program), *refused_under_where(program, spec)]:
         raise SchemaError('\n'.join(errors))
-    check_spec(spec, program)
+    check_spec(spec, program, declared)
     return program
 
 

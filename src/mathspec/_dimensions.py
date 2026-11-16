@@ -43,7 +43,7 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from mathspec.program import Program
     from mathspec.spec import Spec
@@ -211,8 +211,9 @@ def _bound_outside(
 ) -> str:
     """The refusal of a bound over dims the variable lacks, with the rewrite for where each dim comes from.
 
-    A looked-up bound gains a dim from the parameter it reads or from the key
-    of the relation it reads through, and each has its own rewrite.
+    A looked-up bound gains a dim from the parameter it reads, from the key
+    of the relation it reads through, or from both. Each source has its own
+    rewrite, and the bound loads only once every rewrite it needs is made.
     """
     if isinstance(bound, ParameterReference):
         return (
@@ -225,17 +226,25 @@ def _bound_outside(
     name = bound.operand.name
     kept = sorted(outside & set(bound.operand.dims))
     rewrites = [
-        *([f"Declare '{name}' without {kept}"] if kept else []),
-        *([f"Look '{name}' up through a relation keyed by the variable's dims"] if outside - set(kept) else []),
+        *([f"declare '{name}' without {kept}"] if kept else []),
+        *(
+            [f"look '{name}' up through a relation keyed by the variable's dims"]
+            if outside & set(bound.columns.grouped_dims)
+            else []
+        ),
     ]
+    rewrite = ', and '.join(rewrites)
     return (
         f"{context} {written!r} has dims {sorted(outside)} outside the variable's dims {sorted(frame)}. "
-        f'{", or ".join(rewrites)}.'
+        f'{rewrite[0].upper()}{rewrite[1:]}.'
     )
 
 
-def check_spec(spec: Spec, program: Program) -> None:
+def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expression | None, Expression | None]]) -> None:
     """Check every entry's dim rules, on the trees *program* holds for *spec*.
+
+    *bounds* holds each variable's bounds as its ``bounds:`` declares them,
+    which for a binary are not the 0 and 1 *program* holds.
 
     Raises:
         DimensionError: On the first entry that breaks one.
@@ -247,8 +256,7 @@ def check_spec(spec: Spec, program: Program) -> None:
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
         _check_condition_dims(program.variables[vname].where, frame, context)
-        for side in ('lower', 'upper'):
-            bound = getattr(program.variables[vname], side)
+        for side, bound in zip(('lower', 'upper'), bounds[vname], strict=True):
             if bound is not None and (outside := frozenset(bound.dims) - frame):
                 written = getattr(vdef.bounds, side)
                 raise DimensionError(_bound_outside(f'{context}: bounds.{side}', written, bound, outside, frame))

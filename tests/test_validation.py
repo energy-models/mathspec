@@ -1699,6 +1699,20 @@ class TestRulesDecidedWithoutData:
                 id='a-bound-that-looks-up-through-no-relation',
             ),
             pytest.param(
+                {
+                    'parameters.ch': {'dims': ['h']},
+                    'variables.p.domain': 'binary',
+                    'variables.p.bounds.upper': 'at(ch, by=nope[h])',
+                },
+                ("Variable 'p' bounds.upper: at(by=nope[...]) does not name a relation",),
+                id='a-binary-bound-that-looks-up-through-no-relation',
+            ),
+            pytest.param(
+                {'parameters.ch': {'dims': ['h']}, 'variables.p.bounds.upper': 'at(ch, by=lk[h]'},
+                ("Variable 'p' bounds.upper: Cannot parse the expression 'at(ch, by=lk[h]'",),
+                id='a-bound-that-does-not-parse',
+            ),
+            pytest.param(
                 {'parameters.ch': {'dims': ['h']}, 'variables.r.bounds.upper': 'at(ch, by=lk[h])'},
                 (
                     "Variable 'r': bounds.upper 'at(ch, by=lk[h])' has dims ['g'] outside the variable's dims ['h']",
@@ -1717,6 +1731,26 @@ class TestRulesDecidedWithoutData:
                     "Declare 'cht' without ['t']",
                 ),
                 id='a-looked-up-bound-over-a-parameter-dim-the-variable-lacks',
+            ),
+            pytest.param(
+                {
+                    'dimensions.t': {},
+                    'parameters.cht': {'dims': ['h', 't']},
+                    'variables.r.bounds.upper': 'at(cht, by=lk[h])',
+                },
+                (
+                    "has dims ['g', 't'] outside the variable's dims ['h']. Declare 'cht' without ['t'], and look "
+                    "'cht' up through a relation keyed by the variable's dims.",
+                ),
+                id='a-looked-up-bound-over-a-parameter-dim-and-a-relation-key-the-variable-lacks',
+            ),
+            pytest.param(
+                {'parameters.chg': {'dims': ['g', 'h']}, 'variables.r.bounds.upper': 'at(chg, by=lk[h])'},
+                (
+                    "has dims ['g'] outside the variable's dims ['h']. Declare 'chg' without ['g'], and look 'chg' "
+                    "up through a relation keyed by the variable's dims.",
+                ),
+                id='a-looked-up-bound-over-a-dim-both-the-parameter-and-the-relation-key-carry',
             ),
             pytest.param(
                 {'variables.p.bounds.upper': 'nope'},
