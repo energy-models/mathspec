@@ -58,6 +58,10 @@ like yours, and what each line of the file means.
     The model that `n.optimize()` builds in the power system modelling
     framework PyPSA is one file, and 25 fragments that compose into it.
     [Open →](pypsa/index.md)
+- **TIMES**
+    Two core equations of the ETSAP energy system model, capacity transfer
+    and trade between regions, each with the TIMES names it ports.
+    [Open →](times/index.md)
 
 </div>
 

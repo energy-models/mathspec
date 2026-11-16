@@ -58,6 +58,8 @@ MODELS = {
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
     'pypsa/generator_commitment.md': PYPSA / 'generator_commitment.yaml',
+    'times/capacity.md': ROOT / 'examples' / 'times' / 'capacity.yaml',
+    'times/trade.md': ROOT / 'examples' / 'times' / 'trade.yaml',
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
