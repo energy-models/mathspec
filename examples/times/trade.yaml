@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  Trade between regions from TIMES: IRE_FLO, the efficiency of a flow from one
+  region and commodity to another, with each link a label of its own.
+
+dimensions:
+  region: { description: a region of the model }
+  commodity: { description: an energy carrier or a material }
+  trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
+
+maps:
+  trade_link: # the region and commodity at each end of a link
+    from_commodity: { dim: commodity }
+    from_region: { dim: region }
+    to_commodity: { dim: commodity }
+    to_region: { dim: region }
+
+parameters:
+  ire_flo: { dims: [trade_link], description: the share of an export that arrives as an import (IRE_FLO) }
+  demand: { dims: [commodity, region], description: what a region needs of a commodity }
+  supply_cost: { dims: [commodity, region], description: the cost of a unit produced in a region }
+  trade_cost: { dims: [trade_link], description: the cost of a unit exported along a link }
+
+variables:
+  supply: { dims: [commodity, region], bounds: { lower: 0 }, description: what a region produces of a commodity }
+  export: { dims: [trade_link], bounds: { lower: 0 }, description: what leaves along a link (VAR_IRE) }
+
+constraints:
+  balance:
+    description: production and imports less exports meet the demand of each region and commodity
+    dims: [commodity, region]
+    expression: >-
+      supply
+      + sum(ire_flo * export, over=trade_link, by=trade_link[to_commodity, to_region])
+      - sum(export, over=trade_link, by=trade_link[from_commodity, from_region])
+      >= demand
+
+objective:
+  sense: minimize
+  expression: sum(supply_cost * supply) + sum(trade_cost * export)
