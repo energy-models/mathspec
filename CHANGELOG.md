@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language): a dimension may alias another's labels ([#0000](https://github.com/energy-models/mathspec/pull/0000))
+- feat(language): a dimension may alias another's labels ([#1020](https://github.com/energy-models/mathspec/pull/1020))
 - feat(language)!: maps give labels, relations give rows ([#1015](https://github.com/energy-models/mathspec/pull/1015))
   - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, with `dim:` naming its dimension and always written, and is read as `subject[map]`, such as `generator[bus]`.
   - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, `Reach.name` names `subject[map]`.
