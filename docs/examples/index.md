@@ -26,6 +26,10 @@ like yours, and what each line of the file means.
     One set lists the ports of each unit, maps give each port a bus and
     a role, and a parameter with `where:` keeps only the output ports.
     [Open →](connection.md)
+- **A sparse set, read four ways**
+    Units on the ports they have and in the periods they run: a parameter per
+    unit, a sum over the ports, a step in time and a sum over every port.
+    [Open →](sparse.md)
 - **One construct per spec**
     Each form of the four operators and `dual` has its smallest file, beside
     its typeset equation.

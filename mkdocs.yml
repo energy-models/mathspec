@@ -74,6 +74,7 @@ nav:
           - Least-cost dispatch: examples/dispatch.md
           - Unit commitment: examples/commitment.md
           - Units with ports: examples/connection.md
+          - A sparse set, read four ways: examples/sparse.md
           - One construct per spec: examples/operators.md
           - A curve by convex combination: examples/piecewise.md
           - A curve that is not convex: examples/piecewise_adjacency.md
