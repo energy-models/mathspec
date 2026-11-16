@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language)!: relation rows may index an entry ([#0000](https://github.com/energy-models/mathspec/pull/0000))
+- feat(language)!: relation rows may index an entry ([#1016](https://github.com/energy-models/mathspec/pull/1016))
   - Breaks a file: the `where:` of a parameter or a variable no longer takes a relation's bare name. Write `in: [relation]`.
 - feat(language)!: maps give labels, relations give rows ([#1015](https://github.com/energy-models/mathspec/pull/1015))
   - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, with `dim:` naming its dimension and always written, and is read as `subject[map]`, such as `generator[bus]`.
