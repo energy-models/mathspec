@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+description: >-
+  Capacity transfer and capacity–activity from TIMES: EQ_CPT and the upper
+  form of EQ_CAPACT, for a process without vintages and without storage.
+
+dimensions:
+  region: { description: a region of the model }
+  period: { dtype: int, ordered: true, description: a milestone year }
+  vintage: { dtype: int, description: the period a capacity was built in }
+  process: { description: a technology }
+  timeslice: { description: "a slice of the year, at any level of the timeslice tree" }
+
+relations:
+  rtp_vintyr:
+    description: the vintages of a process that exist in a period (RTP_VINTYR)
+    dims: [region, vintage, period, process]
+    missing: absent
+  prc_ts:
+    description: the timeslices a process operates at (PRC_TS)
+    dims: [region, process, timeslice]
+    missing: absent
+  ts_map:
+    description: each timeslice and the timeslices at or below it (TS_MAP)
+    dims: { region: region, s: timeslice, ts: timeslice }
+    missing: absent
+
+parameters:
+  coef_cpt: { dims: [region, vintage, period, process], description: the share of a vintage that still exists in a period }
+  ncap_pasti: { dims: [region, vintage, process], missing: 0, description: capacity built before the first period }
+  coef_af_up: { dims: [region, period, process, timeslice], missing: absent, description: the upper availability factor }
+  prc_capact: { dims: [region, process], description: the activity a unit of capacity can produce in a year }
+  g_yrfr: { dims: [region, timeslice], description: the share of the year a timeslice covers }
+  obj_icost: { dims: [region, vintage, process], description: "the cost of a unit of new capacity, discounted" }
+  obj_acost: { dims: [region, period, process], description: "the cost of a unit of activity, discounted" }
+
+variables:
+  ncap: { dims: [region, vintage, process], bounds: { lower: 0 }, description: new capacity (VAR_NCAP) }
+  cap: { dims: [region, period, process], bounds: { lower: 0 }, description: installed capacity (VAR_CAP) }
+  act:
+    description: activity of a vintage of a process in a timeslice (VAR_ACT)
+    dims: [region, vintage, period, process, timeslice]
+    where: rtp_vintyr AND prc_ts
+    bounds: { lower: 0 }
+
+constraints:
+  eq_cpt:
+    description: the installed capacity of each period, from the new capacity of each vintage (EQ_CPT)
+    dims: [region, period, process]
+    expression: cap == sum(coef_cpt * (ncap + ncap_pasti), over=vintage)
+  eq_capact_up:
+    description: activity summed over the timeslices at or below each one, up to the available capacity (EQ_CAPACT, UP)
+    dims: [region, period, process, timeslice]
+    where: coef_af_up
+    expression: >-
+      sum(sum(act, over=vintage), over=ts, by=ts_map[s])
+      <= coef_af_up * prc_capact * g_yrfr * cap
+
+objective:
+  sense: minimize
+  expression: >-
+    sum(obj_icost * ncap)
+    + sum(obj_acost * sum(act, over=[vintage, timeslice]))
