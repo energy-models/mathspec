@@ -3803,3 +3803,20 @@ def test_a_misspelled_key_is_not_told_of_the_field_the_load_writes():
     message = _refusal(**{'parameters.c.in': ['g']})
     assert "unknown key 'in'" in message
     assert 'in_' not in message, 'the field the load writes is no key a file may use'
+
+
+def test_a_sum_over_a_set_groups_by_a_map_of_the_set():
+    """`sum(q, over=link, by=link[zone])` was refused: beside `by=`, `over=` did not read the set as its dimensions."""
+    spec = to_spec(
+        varied(
+            SMALL_MODEL,
+            **_LINKED,
+            **{
+                'dimensions.z': {},
+                'maps.link': {'zone': {'dim': 'z'}},
+                'variables.y': {'dims': ['link']},
+                'constraints.c': {'dims': ['z'], 'expression': 'sum(y, over=link, by=link[zone]) >= 0'},
+            },
+        )
+    )
+    assert spec.program.constraints['c'].dims == ('z',), 'the set is summed away, grouped by its map'

@@ -17,9 +17,9 @@ the sets in one way:
 - `balance` sums over every row of `connection`, grouped by the bus each port
   feeds.
 
-`efficiency` and `flow` exist only where `connection` lists a port, so
-`missing: 1` fills only those ports, and a data row for a port that
-`connection` does not list is dropped.
+`efficiency` and `flow` name the set `connection` in `dims:`, so they are over
+`unit` and `port` where it lists a port, `missing: 1` fills only those ports,
+and a data row for a port that `connection` does not list is refused.
 [#1019](https://github.com/energy-models/mathspec/issues/1019) compares how
 three designs for sparse sets write this spec.
 
@@ -35,7 +35,7 @@ dimensions:
   bus: { description: a node of the network }
   period: { dtype: int, ordered: true, description: a step of the horizon }
 
-relations:
+sets:
   connection:
     description: the ports a unit has
     dims: [unit, port]
@@ -50,19 +50,19 @@ maps:
     bus: { dim: bus, description: the bus a port feeds }
 
 parameters:
-  efficiency: { dims: [unit, port, period], where: connection, missing: 1, description: share of the output a port delivers }
+  efficiency: { dims: [connection, period], missing: 1, description: share of the output a port delivers }
   capacity: { dims: [unit], description: the most a unit produces in a period }
   ramp: { dims: [unit], description: the most a unit's output rises from one period to the next }
   load: { dims: [bus, period], description: demand to be met }
 
 variables:
-  output: { dims: [unit, period], where: active, bounds: { lower: 0 }, description: what a unit produces }
-  flow: { dims: [unit, port, period], where: connection, bounds: { lower: 0 }, description: what a port takes of it }
+  output: { dims: [active], bounds: { lower: 0 }, description: what a unit produces }
+  flow: { dims: [connection, period], bounds: { lower: 0 }, description: what a port takes of it }
 
 constraints:
   port_limit:
     description: a port takes no more than the unit's capacity
-    dims: [unit, port, period]
+    dims: [connection, period]
     expression: flow <= capacity
   split:
     description: the ports of a unit take what it produces
@@ -70,12 +70,12 @@ constraints:
     expression: sum(flow, over=port) == output
   ramp_up:
     description: output rises by at most the ramp from one active period to the next
-    dims: [unit, period]
+    dims: [active]
     expression: output - shift(output, along=period, offset=1) <= ramp
   balance:
     description: what the ports deliver to a bus meets its load
     dims: [bus, period]
-    expression: sum(efficiency * flow, over=[unit, port], by=connection[bus]) >= load
+    expression: sum(efficiency * flow, over=connection, by=connection[bus]) >= load
 
 objective:
   sense: minimize
@@ -98,7 +98,7 @@ Units that feed buses through the ports they have, and run only in the periods t
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{U}`$ — the most a unit produces in a period |
-| $`\mathrm{efficiency}`$ | `efficiency` over $`\mathcal{T} \times \mathcal{O} \times \mathcal{U}`$, only where $`\left( o,\ u \right) \in \mathrm{connection}`$, $`1`$ where the data has no row — share of the output a port delivers |
+| $`\mathrm{efficiency}`$ | `efficiency` over $`\left( o,\ u \right) \in \mathrm{connection},\ t \in \mathcal{T}`$, $`1`$ where the data has no row — share of the output a port delivers |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{B} \times \mathcal{T}`$ — demand to be met |
 | $`\mathrm{ramp}`$ | `ramp` over $`\mathcal{U}`$ — the most a unit's output rises from one period to the next |
 
@@ -106,21 +106,21 @@ Units that feed buses through the ports they have, and run only in the periods t
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{flow}`$ | `flow` over $`\mathcal{T} \times \mathcal{O} \times \mathcal{U}`$ — what a port takes of it |
-| $`\mathit{output}`$ | `output` over $`\mathcal{T} \times \mathcal{U}`$ — what a unit produces |
+| $`\mathit{flow}`$ | `flow` over $`\left( o,\ u \right) \in \mathrm{connection},\ t \in \mathcal{T}`$ — what a port takes of it |
+| $`\mathit{output}`$ | `output` over $`\left( t,\ u \right) \in \mathrm{active}`$ — what a unit produces |
 
 #### Variable domains
 
 **`flow`**
 
 ```math
-\mathit{flow}_{t,o,u} \ge 0 \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \left( o,\ u \right) \in \mathrm{connection}
+\mathit{flow}_{t,o,u} \ge 0 \qquad \forall\, \left( o,\ u \right) \in \mathrm{connection},\ t \in \mathcal{T}
 ```
 
 **`output`**
 
 ```math
-\mathit{output}_{t,u} \ge 0 \qquad \forall\, t \in \mathcal{T},\ u \in \mathcal{U} \,:\, \left( t,\ u \right) \in \mathrm{active}
+\mathit{output}_{t,u} \ge 0 \qquad \forall\, \left( t,\ u \right) \in \mathrm{active}
 ```
 
 #### Objective
@@ -140,13 +140,13 @@ Units that feed buses through the ports they have, and run only in the periods t
 **`port_limit`**
 
 ```math
-\mathit{flow}_{t,o,u} \le \mathrm{capacity}_{u} \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O},\ u \in \mathcal{U}
+\mathit{flow}_{t,o,u} \le \mathrm{capacity}_{u} \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \left( o,\ u \right) \in \mathrm{connection}
 ```
 
 **`ramp_up`**
 
 ```math
-\mathit{output}_{t,u} - \mathit{output}_{t - 1,u} \le \mathrm{ramp}_{u} \qquad \forall\, t \in \mathcal{T},\ u \in \mathcal{U}
+\mathit{output}_{t,u} - \mathit{output}_{t - 1,u} \le \mathrm{ramp}_{u} \qquad \forall\, t \in \mathcal{T},\ u \in \mathcal{U} \,:\, \left( t,\ u \right) \in \mathrm{active}
 ```
 
 **`split`**

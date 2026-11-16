@@ -502,7 +502,7 @@ class ExpressionResolver:
                 f"'{value.relation}', or a dimension."
             )
             return None
-        names = names_in(value) if relation else _members_of_sets(names_in(value), self.ns)
+        names = _members_of_sets(names_in(value), self.ns)
         if not names:
             self.errors.append(
                 f'{self.context}: {operator}(over=...) is not a name. Write a declared dimension, or a list of them.'
