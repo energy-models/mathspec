@@ -1290,19 +1290,10 @@ class TestAConditionIsAnOperand:
         )
         assert f'both claim the value where {witness}' in message, message
 
-    @pytest.mark.parametrize(
-        ('other', 'refusal'),
-        [
-            pytest.param('not at(r, by=lk[h])', None, id='the-read-and-its-negation-load'),
-            pytest.param('c > 0', 'both claim the value where r through lk[h] is true, c is 1.0', id='a-shared-g'),
-        ],
-    )
-    def test_a_read_through_a_relation_is_decided_in_a_case_when(self, other: str, refusal: str | None):
-        """A coordinate reads one row of the relation, so a case split by the read is decided at load.
-
-        Before, every read through a relation was refused as undecidable, and the first pair did not load.
-        """
-        patch = {
+    @staticmethod
+    def _read_beside(other: str) -> dict[str, Any]:
+        """A case on `at(r, by=lk[h])` beside a case on *other*, over `g`."""
+        return {
             'expressions': {
                 'pick': {
                     'dims': ['g'],
@@ -1315,10 +1306,21 @@ class TestAConditionIsAnOperand:
             },
             'constraints': {'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
         }
-        if refusal is None:
-            assert _spec(**patch).expressions['pick'].cases, 'the two cases load'
-        else:
-            assert refusal in _refusal(**patch)
+
+    def test_a_read_through_a_relation_and_its_negation_load_in_a_case_when(self):
+        """A coordinate reads one row of the relation, so a case split by the read is decided at load.
+
+        Before, every read through a relation was refused as undecidable, and this pair did not load.
+        """
+        assert _spec(**self._read_beside('not at(r, by=lk[h])')).expressions['pick'].cases, 'the two cases load'
+
+    def test_a_read_beside_a_free_parameter_is_refused_with_a_witness(self):
+        """`c` does not depend on the read, so one coordinate satisfies both cases.
+
+        Before, the pair was refused as undecidable, with no witness.
+        """
+        message = _refusal(**self._read_beside('c > 0'))
+        assert 'both claim the value where r through lk[h] is true, c is 1.0' in message, message
 
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
