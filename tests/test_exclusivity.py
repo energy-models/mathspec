@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import pytest
 
 from mathspec._condition_parser import parse_condition
-from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
+from mathspec._exclusivity import CELL_BUDGET, Hop, Special, Subject, _evaluate, _Grid, overlapping
 from mathspec._resolution import Namespace, resolve_condition
 from mathspec._validation import to_spec
 from mathspec.program import And, Mask, Not, Or
@@ -60,6 +60,17 @@ NETWORK: dict[str, Any] = {
 
 #: The same network with a third end, so two pairs of columns can share one.
 THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'relations.ends.values': {'bus0': 'bus', 'bus1': 'bus', 'bus2': 'bus'}})
+
+#: A unit reads `kind` at its technology, through `tech_of` or through `backup_of`.
+#: `is_a` is one condition a case can test at a technology and read through a relation.
+FLEET: dict[str, Any] = {
+    'dimensions': {'unit': {}, 'tech': {}},
+    'conditions': {'is_a': {'condition': "kind == 'a'"}},
+    'relations': {'tech_of': {'key': 'unit', 'values': 'tech'}, 'backup_of': {'key': 'unit', 'values': 'tech'}},
+    'parameters': {'kind': {'dims': ['tech'], 'dtype': 'str', 'missing': 'absent'}, 'cap': {'dims': ['unit']}},
+    'variables': {'p': {'dims': ['unit']}},
+    'constraints': {'c': {'dims': ['unit'], 'expression': 'p >= 0'}},
+}
 
 
 @pytest.fixture(scope='module')
@@ -394,6 +405,60 @@ class TestSoundness:
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
 
+    JOINED_ATOMS: ClassVar[tuple[str, ...]] = (
+        'tech_of',
+        'kind',
+        "kind == 'a'",
+        "kind != 'c'",
+        'at(kind, by=tech_of[tech])',
+        "at(kind == 'a', by=tech_of[tech])",
+        "at(kind != 'b', by=tech_of[tech])",
+        "at(kind == 'a', by=backup_of[tech])",
+    )
+
+    @pytest.mark.parametrize('seed', [1, 7])
+    def test_a_read_through_a_relation_proved_apart_stays_apart_in_every_fleet(self, seed: int):
+        """The same walk over whole fleets: a unit's own technology, its rows in two relations, and each kind.
+
+        Two reads reach one technology where the rows agree, and the unit's
+        own technology can be that one too. The prover reads the three as free.
+        """
+        namespace = Namespace(to_spec(FLEET))
+        atoms = [_mask(text, namespace, 'a probe') for text in self.JOINED_ATOMS]
+        techs = ('t1', 't2')
+        through = {
+            relation: Subject('param', 'kind', via=(Hop(relation, ('tech',)),)) for relation in FLEET['relations']
+        }
+        grid = [
+            {
+                Subject('param', 'kind'): kinds[techs.index(own)],
+                **{
+                    Subject('relation', relation): Special.NULL if row is None else True
+                    for relation, row in rows.items()
+                },
+                **{
+                    through[relation]: Special.NULL if row is None else kinds[techs.index(row)]
+                    for relation, row in rows.items()
+                },
+            }
+            for own in techs
+            for rows in (dict(zip(through, pair, strict=True)) for pair in itertools.product([*techs, None], repeat=2))
+            for kinds in itertools.product(['a', 'b', 'c', Special.NULL], repeat=len(techs))
+        ]
+
+        rng = random.Random(seed)
+        proved = 0
+        for _ in range(2000):
+            first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
+            if list(overlapping({'a': first, 'b': second}, namespace.dtypes, namespace.defaults)):
+                continue
+            proved += 1
+            cells = _Grid.of([Mask(first), Mask(second)], namespace.dtypes, namespace.defaults)
+            for point in grid:
+                both = _evaluate(first, point, cells) and _evaluate(second, point, cells)
+                assert not both, f'both cases claim {point} — the cells hid a witness'
+        assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
 
 class TestAMissingRow:
     CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
@@ -504,3 +569,66 @@ class TestTwoPairsOfColumns:
         assert refusals(to_spec(THREE_ENDS), {'same': 'ends[bus0] == ends[bus1]', 'other': swapped}) == [], (
             'a line has its two columns equal or different, not both'
         )
+
+
+class TestAConditionReadThroughARelation:
+    """`at(<condition>, by=r[c])` reads one row of `r`, so two reads through one `by=` reach one label."""
+
+    @pytest.mark.parametrize(
+        'cases',
+        [
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "at(kind == 'b', by=tech_of[tech])"},
+                id='two-labels-through-one-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'rest': "not at(kind == 'a', by=tech_of[tech])"},
+                id='a-read-and-its-negation',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'left_out': 'not tech_of'},
+                id='a-read-and-the-missing-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech]) and cap > 1", 'b': "at(kind == 'b', by=tech_of[tech])"},
+                id='a-read-beside-an-atom-of-the-unit',
+            ),
+        ],
+    )
+    def test_reads_through_one_row_are_told_apart_by_what_they_read(self, cases: dict[str, str]):
+        """A unit's technology has one kind, so the two cases claim no unit together.
+
+        The prover refused every condition read through a relation as
+        undecidable, so the cases did not load.
+        """
+        assert refusals(to_spec(FLEET), cases) == [], 'one row of tech_of reaches one kind'
+
+    @pytest.mark.parametrize(
+        ('cases', 'witness'),
+        [
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'not_b': "at(kind != 'b', by=tech_of[tech])"},
+                "where kind through tech_of[tech] is 'a'.",
+                id='overlapping-reads-through-one-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "at(kind == 'b', by=backup_of[tech])"},
+                "where kind through tech_of[tech] is 'a', kind through backup_of[tech] is 'b'.",
+                id='reads-through-two-relations',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "kind == 'b'"},
+                "where kind through tech_of[tech] is 'a', kind is 'b'.",
+                id='a-read-and-the-same-parameter-at-the-coordinate',
+            ),
+            pytest.param(
+                {'own': 'not is_a', 'read': 'at(is_a, by=tech_of[tech])'},
+                "where kind is anything else, kind through tech_of[tech] is 'a'.",
+                id='one-condition-at-the-coordinate-and-through-a-row',
+            ),
+        ],
+    )
+    def test_reads_that_can_reach_two_labels_still_overlap(self, cases: dict[str, str], witness: str):
+        """A unit is claimed by both where its reads reach labels both cases admit."""
+        [refusal] = refusals(to_spec(FLEET), cases)
+        assert witness in refusal

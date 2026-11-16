@@ -1290,22 +1290,35 @@ class TestAConditionIsAnOperand:
         )
         assert f'both claim the value where {witness}' in message, message
 
-    def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
-        """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
-        message = _refusal(
-            expressions={
+    @pytest.mark.parametrize(
+        ('other', 'refusal'),
+        [
+            pytest.param('not at(r, by=lk[h])', None, id='the-read-and-its-negation-load'),
+            pytest.param('c > 0', 'both claim the value where r through lk[h] is true, c is 1.0', id='a-shared-g'),
+        ],
+    )
+    def test_a_read_through_a_relation_is_decided_in_a_case_when(self, other: str, refusal: str | None):
+        """A coordinate reads one row of the relation, so a case split by the read is decided at load.
+
+        Before, every read through a relation was refused as undecidable, and the first pair did not load.
+        """
+        patch = {
+            'expressions': {
                 'pick': {
                     'dims': ['g'],
                     'cases': {
                         'mapped': {'when': 'at(r, by=lk[h])', 'expression': '1'},
-                        'some': {'when': 'c > 0', 'expression': '2'},
+                        'other': {'when': other, 'expression': '2'},
                     },
                     'otherwise': '0',
                 }
             },
-            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
-        )
-        assert "it reads a condition through 'lk', which only the data decides" in message
+            'constraints': {'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        }
+        if refusal is None:
+            assert _spec(**patch).expressions['pick'].cases, 'the two cases load'
+        else:
+            assert refusal in _refusal(**patch)
 
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
