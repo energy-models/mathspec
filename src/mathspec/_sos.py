@@ -6,9 +6,9 @@
 
 A set becomes ordinary entries under names prefixed with the entry's own,
 the way a ``piecewise:`` entry becomes weights and rows; what it emits is
-tabled in ``docs/reference/language/piecewise.md``. An unpicked member is held
+tabled in ``docs/reference/language/piecewise.md``. An unpicked element is held
 at zero from both sides, so the rewrite states the same feasible set whatever
-sign the member takes — what it needs is a coefficient on each side, which a
+sign the element takes — what it needs is a coefficient on each side, which a
 spec declaring a set without is refused at load for
 ([`mathspec.spec.Spec`][] validates it) rather than here.
 """
@@ -27,13 +27,13 @@ Coefficients = tuple[float | str | None, float | str | None]
 
 
 def coefficients(domain: str, lower: float | str | None, upper: float | str | None) -> Coefficients:
-    """What a member's two linking rows multiply its binary by, ``None`` on a side the spec leaves open.
+    """What an element's two linking rows multiply its binary by, ``None`` on a side the spec leaves open.
 
     The 0 and 1 a binary's domain fixes, which no ``bounds:`` carries;
-    otherwise the member's own declared bounds, each a number or the name of a
+    otherwise the element's own declared bounds, each a number or the name of a
     parameter. A parameter is a coefficient like any other: it is what the row
     multiplies by, and no rewrite needs to know its value. Nothing else is a
-    coefficient: a number below the bound would cap a picked member the set
+    coefficient: a number below the bound would cap a picked element the set
     does not cap, and one above it is a looser row than the bound already
     states.
     """
@@ -47,9 +47,9 @@ class Emitted:
     """Every name one set's expansion writes, spelled once for the emitter and the collision check.
 
     The linking row is named after what it says, which the two orders do not
-    share: order 2 admits a member in either half of one segment, and order 1
+    share: order 2 admits an element in either half of one segment, and order 1
     admits it alone. ``below`` is the same row from underneath, written only
-    where the member may be nonzero below zero.
+    where the element may be nonzero below zero.
     """
 
     seg: str
@@ -74,8 +74,8 @@ class Emitted:
 
 
 _SEGMENTS = {
-    1: 'a binary per member, 1 where that member may be nonzero',
-    2: 'a binary per segment, 1 where the two members it spans may be nonzero',
+    1: 'a binary per element, 1 where that element may be nonzero',
+    2: 'a binary per segment, 1 where the two elements it spans may be nonzero',
 }
 
 
@@ -127,7 +127,7 @@ def emit(raw: dict[str, object], name: str) -> None:
 
 
 def _scaled(factor: float | str, picked: str) -> str:
-    """The binaries a member is admitted by, times *factor*.
+    """The binaries an element is admitted by, times *factor*.
 
     A coefficient of 1 is left out. It is the common one — a weight and a binary
     are both bounded by 1 — and ``x <= 1 * (seg)`` is a factor every reader of

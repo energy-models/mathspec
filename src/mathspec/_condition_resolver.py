@@ -37,7 +37,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed
 from mathspec.program import (
     Add,
     And,
@@ -93,17 +93,18 @@ class ConditionResolver:
     faults reports both. ``self_variable`` is the variable whose own
     ``where`` is being read, which may not ask whether it exists. A side
     that is an expression is built by an [`ExpressionResolver`][] over
-    the same namespace.
+    the same namespace and ``frame``, the ``dims:`` of the entry.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
+    frame: frozenset[str] = frozenset()
 
     @property
     def _expressions(self) -> ExpressionResolver:
-        return ExpressionResolver(self.ns, self.context, self.errors)
+        return ExpressionResolver(self.ns, self.context, self.errors, frame=self.frame)
 
     def build(self, node: Condition | UnresolvedConditionNode) -> Condition | UnresolvedConditionNode:
         """One condition node typed, or returned unresolved with its refusal appended."""
@@ -171,10 +172,12 @@ class ConditionResolver:
                     return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
+                members = ns.spec.dimensions[node.name].members
+                compared = f"{node.name}[{members[0][0]}] == '...'" if members else f'{node.name} > 0'
                 self.errors.append(
                     f"{context}: '{node.name}' is a dimension, and a bare dimension "
                     f'name is true at every coordinate. '
-                    f'Remove it, or compare it: where: "{node.name} > 0".'
+                    f'Remove it, or compare it: where: "{compared}".'
                 )
             case 'relation':
                 shape = ns.relations[node.name]
@@ -248,7 +251,9 @@ class ConditionResolver:
             )
             return node
         if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
+            self.errors.append(
+                self.ns.unordered_refusal(context, f'shift(<condition>, along={along.name})', along.name)
+            )
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
@@ -419,6 +424,8 @@ class ConditionResolver:
         if len(self.errors) > found:
             return node
         left, right = sides
+        if self._expressions.met(left, right):
+            return node
         if all(_is_number(side) for side in sides):
             self.errors.append(
                 f"{context}: '{node.left} {node.op} {node.right}' compares two numbers. Name the parameter one "
@@ -456,7 +463,7 @@ class ConditionResolver:
             )
             return node
         if ns.unordered(dimension):
-            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            self.errors.append(ns.unordered_refusal(context, f'position({dimension})', dimension))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -507,6 +514,13 @@ class ConditionResolver:
         elif kind in ('parameter', 'dimension'):
             dtype = ns.dtypes[left_name]
             labelled = left_name if kind == 'dimension' else None
+        if labelled is not None and (members := ns.spec.dimensions[labelled].members):
+            self.errors.append(
+                f"{context}: '{plain.name}' compares a label of '{labelled}', and '{labelled}' lists its members, "
+                f"so it has no label to compare. In an entry over '{labelled}', compare a member: "
+                f'{labelled}[{members[0][0]}] {plain.op} {plain.value!r}.'
+            )
+            return node
         if dtype is not None:
             typed = self._typed_literal(plain, dtype)
             if typed is None:

@@ -149,9 +149,10 @@ of a year ([partitions](language/relations.md#partitions)).
 
 ## Label
 
-A label is one member of a dimension, such as `wind` in `generator`. The
+A label is one element of a dimension, such as `wind` in `generator`. The
 labels arrive with the data, in the order that `shift`, `sum_back` and
-`position()` count along.
+`position()` count along. A label of a dimension with
+[members](#member) is one tuple of their labels.
 
 ## Load
 
@@ -173,6 +174,13 @@ A map gives each row of a dimension or a relation (its
 [subject](#subject)) one label of a dimension, such as the bus of each
 generator. A condition or an operator reads it as `subject[map]`, as in
 `generator[bus]` ([maps](language/relations.md#maps)).
+
+## Member
+
+A member is a dimension that another dimension lists under `over:`. A label
+of the listing dimension combines one label of each member, and a call reads
+a member as a map of the dimension, as in `connection[unit]`
+([`over`](language/dimensions.md#over)).
 
 ## Missing row
 
@@ -268,8 +276,8 @@ costs exists.
 ## Special ordered set (SOS)
 
 A special ordered set (SOS) is an `sos:` entry over one dimension of one
-variable. With `type: 1`, at most one member is non-zero. With `type: 2`, at
-most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
+variable. With `type: 1`, at most one element is non-zero. With `type: 2`, at
+most two consecutive elements are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Subject
 

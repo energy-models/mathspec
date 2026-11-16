@@ -656,7 +656,7 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
 
     assert where.dims == ('generator',), 'read at the generator axis'
     with pytest.raises(DimensionError, match=r"where-parameter 'p_max' reads dims \['generator'\]"):
-        _check_condition_dims(where, frozenset({'snapshot'}), 'test')
+        _check_condition_dims(where, frozenset({'snapshot'}), 'test', namespace.spec)
 
 
 @pytest.mark.parametrize(

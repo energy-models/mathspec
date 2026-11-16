@@ -170,6 +170,13 @@ is one of its `values`. `program.relations[name].missing` is `'refused'` or
 `'absent'`, and `partial` lists the maps under `missing: absent`. The program of
 `spec.expand(...)` has the same `missing` values.
 
+The table of a dimension with [members](language/dimensions.md#over) is in
+`program.relations` under the name of the dimension, whether or not the file
+declares maps of it. It has a map per member, and
+`program.relations[name].members` names them. A tool takes the labels of a
+member from the fields of each label of the dimension, and reads no column of
+the table for them.
+
 A [given](language/parameters-variables-constraints.md#given) parameter is a
 `GivenParameter` under `program.given.parameters`, and not under
 `program.parameters`. It has its `dims`, `dtype` and `description`, and no

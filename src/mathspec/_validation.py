@@ -109,6 +109,7 @@ def reference_errors(spec: Spec) -> list[str]:
     return [
         *_name_collisions(spec),
         *_frame_dimensions(spec),
+        *_members(spec),
         *_relation_targets(spec),
         *_map_targets(spec),
         *_bound_names(spec),
@@ -198,6 +199,40 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         )
 
 
+def _members(spec: Spec) -> Iterator[str]:
+    """A dimension lists plain, declared dimensions as its members, each once or under a role of its own.
+
+    Each member is a map of the dimension named after its role, so a role is
+    held to the rule of a map: it is named after its own dimension or after
+    none.
+    """
+    for name, entry in spec.dimensions.items():
+        dims = [dim for _, dim in entry.members]
+        yield from (
+            undeclared_dimension('Dimension', name, d, spec) for d in dict.fromkeys(dims) if d not in spec.dimensions
+        )
+        for d in dict.fromkeys(dims):
+            if d in spec.dimensions and (inner := spec.dimensions[d].members):
+                flat = sorted({*dims, *(dim for _, dim in inner)} - {d, name})
+                yield (
+                    f"Dimension '{name}' lists '{d}' under 'over:', and '{d}' has members of its own. A member is "
+                    f'a dimension without `over:`. List the members themselves: over: {flat}.'
+                )
+        if not isinstance(entry.over, Mapping):
+            yield from (
+                f"Dimension '{name}' lists '{d}' twice under 'over:'. Give the two members roles: "
+                f'over: {{{d}0: {d}, {d}1: {d}}}.'
+                for d, count in Counter(dims).items()
+                if count > 1
+            )
+        yield from (
+            f"Dimension '{name}' names member '{role}' after dimension '{role}', but the member is over "
+            f"'{dim}'. Rename the member after what it holds."
+            for role, dim in entry.members
+            if role in spec.dimensions and role != dim
+        )
+
+
 def _relation_targets(spec: Spec) -> Iterator[str]:
     """A relation has at least two columns, over declared dimensions, each named once."""
     for lname, lk in spec.relations.items():
@@ -236,6 +271,7 @@ def _map_targets(spec: Spec) -> Iterator[str]:
     """
     for subject, maps in spec.maps.items():
         head = f"maps: '{subject}'"
+        members = dict(spec.dimensions[subject].members if subject in spec.dimensions else ())
         if subject in spec.relations:
             pairs = spec.relations[subject].pairs
             if twice := [d for d, count in Counter(d for _, d in pairs).items() if count > 1]:
@@ -258,7 +294,12 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                     f'{head}: {role!r} is not a name. Start it with a letter or an underscore, then use only '
                     f'letters, digits or underscores.'
                 )
-            if role in dict(pairs):
+            if role in members:
+                yield (
+                    f"{head}: map '{role}' has the name of a member of '{subject}', which already gives each tuple "
+                    f"its label of '{members[role]}'. Read the member as {subject}[{role}], or rename the map."
+                )
+            elif role in dict(pairs):
                 yield (
                     f"{head}: map '{role}' has the name of a column of '{subject}', which holds the row, not a "
                     f'label of it. Rename the map after what it holds.'
@@ -324,7 +365,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
-            yield unordered(context, f'type: 2 along {entry.along}', entry.along)
+            yield unordered(context, f'type: 2 along {entry.along}', entry.along, spec.dimensions[entry.along].members)
         elif entry.variable in claimed:
             yield (
                 f"{context}: variable '{entry.variable}' already carries the set declared by "
@@ -336,10 +377,10 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
 
 
 def _sos_bounds(spec: Spec) -> Iterator[str]:
-    """A set states what the binaries it expands to state: each side of a member carries a coefficient.
+    """A set states what the binaries it expands to state: each side of an element carries a coefficient.
 
-    The rewrite holds an unpicked member at zero from both sides, so a side
-    the spec leaves open leaves the member free of it. Either coefficient
+    The rewrite holds an unpicked element at zero from both sides, so a side
+    the spec leaves open leaves the element free of it. Either coefficient
     may be a parameter, because a row multiplies by it rather than reading
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
@@ -352,13 +393,13 @@ def _sos_bounds(spec: Spec) -> Iterator[str]:
         if below is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no lower bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from below as well as above. Declare bounds.lower, '
+                f'that hold an unpicked element at zero from below as well as above. Declare bounds.lower, '
                 f'as a number or a parameter.'
             )
         if above is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no upper bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from above as well as below. Declare bounds.upper, '
+                f'that hold an unpicked element at zero from above as well as below. Declare bounds.upper, '
                 f'as a number or a parameter.'
             )
 
@@ -378,7 +419,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield undeclared_dimension('piecewise', name, pw.along, spec, along=True)
             continue
         if not spec.dimensions[pw.along].ordered:
-            yield unordered(context, f'along: {pw.along}', pw.along)
+            yield unordered(context, f'along: {pw.along}', pw.along, spec.dimensions[pw.along].members)
         for d in pw.dims:
             if d not in spec.dimensions:
                 yield undeclared_dimension('piecewise', name, d, spec)

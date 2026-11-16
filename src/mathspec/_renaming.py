@@ -108,8 +108,8 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
 
     A token in text is renamed wherever it has the spelling, so a new name that
     is the argument of a macro whose template uses the old name, or a name that
-    is a map or a relation column named after something else, would change an
-    expression without a refusal.
+    is a map, a relation column or a member named after something else, would
+    change an expression without a refusal.
     """
     for old in names:
         if old not in declared:
@@ -119,17 +119,26 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
             )
             raise LanguageError(msg)
     changed = {old: new for old, new in names.items() if new is not None and new != old}
-    columns = {
-        column: f"a column of the relation '{relation}'"
-        for relation, entry in spec.relations.items()
-        for column, dimension in entry.pairs
-        if column != dimension
-    } | {
-        name: f"a map of '{subject}'"
-        for subject, maps in spec.maps.items()
-        for name, entry in maps.items()
-        if name != entry.dim
-    }
+    columns = (
+        {
+            column: f"a column of the relation '{relation}'"
+            for relation, entry in spec.relations.items()
+            for column, dimension in entry.pairs
+            if column != dimension
+        }
+        | {
+            name: f"a map of '{subject}'"
+            for subject, maps in spec.maps.items()
+            for name, entry in maps.items()
+            if name != entry.dim
+        }
+        | {
+            role: f"a member of the dimension '{name}'"
+            for name, entry in spec.dimensions.items()
+            for role, dimension in entry.members
+            if role != dimension
+        }
+    )
     for old, new in changed.items():
         for macro, entry in spec.macros.items():
             if new in (*entry.args, *entry.kwargs) and old in _names_in(entry.template):

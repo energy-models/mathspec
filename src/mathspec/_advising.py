@@ -91,11 +91,12 @@ def _term_note(name: str) -> str:
 def _never_an_axis(program: Program) -> list[Advice]:
     """One piece of advice per dimension nothing reaches.
 
-    A dimension a relation has a column over is reached: its members are the
-    labels that column is checked against, and a ``where`` selects on them,
-    so it is in use even where nothing is indexed by it. A dimension only a
-    given entry indexes is reached too: the column exists, in another
-    file.
+    A dimension a relation has a column over is reached: its labels are what
+    that column is checked against, and a ``where`` selects on them, so it is
+    in use even where nothing is indexed by it. A dimension only a given entry
+    indexes is reached too: the column exists, in another file. A member of a
+    dimension is a map the file does not declare, so it is no use of its own;
+    a reached dimension reaches its members.
     """
     reached: set[str] = set()
     for entry in (
@@ -109,7 +110,11 @@ def _never_an_axis(program: Program) -> list[Advice]:
     ):
         reached.update(entry.dims)
     reached |= _grouped_axes(program)
-    reached |= {dim for lk in program.relations.values() for dim in lk.dims}
+    for lk in program.relations.values():
+        declared = [role for role in lk.values if role not in lk.members]
+        if declared or not lk.members:
+            reached.update(lk.dim(role) for role in (*lk.key, *declared))
+    reached |= {dim for name in reached for _, dim in program.dimensions[name].over}
 
     return [
         Advice(

@@ -6,8 +6,10 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 == Sets
 / $cal(B)$: index $b$ --- `bp`
 / $cal(U)$: index $u$ --- `bus` with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("bus"): cal(G) arrow.r cal(U)$, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label
+/ $cal(C)$: index $c$ --- `corridor`, $cal(C) = cal(U) times cal(U)$
 / $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_zone") subset.eq cal(G) times cal(T), upright("zone"): upright("gen_zone") arrow.r cal(Z), upright("bus"): cal(G) arrow.r cal(U), upright("technology"): cal(G) arrow.r cal(E)$, `connection` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season"): cal(T) arrow.r cal(S)$
+/ $cal(I)$: index $i$ --- `site`, $cal(I) subset.eq cal(U) times cal(G)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone") subset.eq cal(G) times cal(T), upright("zone"): upright("gen_zone") arrow.r cal(Z), upright("rep"): cal(T) arrow.r cal(T), upright("season"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("technology"): cal(G) arrow.r cal(E)$
 / $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("zone"): upright("gen_zone") arrow.r cal(Z)$, `bus[area]` is `absent` where the data gives no label
@@ -19,6 +21,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, $0$ where the data has no row
 / $upright("bp_y")$: `bp_y` over $cal(B) times cal(G)$, $0$ where the data has no row
 / $upright("budget")$: `budget` (scalar)
+/ $upright("corridor_cap")$: `corridor_cap` over $cal(C)$
 / $upright("cost")$: `cost` over $cal(G)$, $0$ where the data has no row
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("growth")$: `growth` (scalar)
@@ -44,6 +47,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $italic("op_cost")$: `op_cost` over $cal(G) times cal(T)$
 / $p$: `p` over $cal(G) times cal(T)$
 / $italic("reserve")$: `reserve` (scalar)
+/ $italic("site_out")$: `site_out` over $cal(I) times cal(T)$
 / $italic("slack")$: `slack` over $cal(T)$
 / $italic("spare")$: `spare` over $cal(G)$
 / $italic("spill")$: `spill` over $cal(T)$
@@ -83,6 +87,7 @@ $ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T
   upright("op_cost") & italic("op_cost")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("p") & upright("p")^(upright("min"))_(g) <= p_(g,t) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) colon upright("p")^(upright("max"))_(g) > 0 and not upright("is_flexible")_(g) or upright("p")^(upright("min"))_(g) > 0 \
   upright("reserve") & italic("reserve") & >= 0 \
+  upright("site_out") & italic("site_out")_(i,t) & >= 0 & forall i in cal(I), t in cal(T) colon upright("is_flexible")_(upright("generator")(i)) \
   upright("slack") & italic("slack")_(t) & <= 100 & forall t in cal(T) \
   upright("spare") & italic("spare")_(g) & in ZZ & forall g in cal(G) \
   upright("spill") & italic("spill")_(t) & >= 0 & forall t in cal(T) \

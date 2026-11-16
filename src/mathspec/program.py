@@ -511,6 +511,10 @@ class Relation:
     description: str | None = None
     partial: tuple[str, ...] = ()
     """The value roles a row may leave empty: the maps under ``missing: absent``, sorted by role."""
+    members: tuple[str, ...] = ()
+    """The value roles a dimension's members are, sorted by role. A tool reads each off the fields of a label of the
+    dimension, and the file declares no map of that name.
+    """
 
     @property
     def roles(self) -> tuple[str, ...]:
@@ -677,6 +681,15 @@ class Dimension:
     them.
     """
     description: str | None = None
+    over: tuple[tuple[str, str], ...] = ()
+    """The members of the dimension as ``(role, dimension)``, sorted by role, or empty when the file lists none. A label
+    is then one tuple of member labels, which ``dtype`` does not describe. The table of the dimension in
+    [`Program.relations`][mathspec.program.Program.relations] has a map per member.
+    """
+    missing: RelationMissing = 'absent'
+    """Whether every combination of member labels needs a tuple: ``absent`` or ``refused``. It has no meaning for a
+    dimension without members.
+    """
 
 
 @dataclass(frozen=True)
@@ -1143,7 +1156,9 @@ class Program:
     dimensions: Mapping[str, Dimension] = Frozen({})
     relations: Mapping[str, Relation] = Frozen({})
     """Each table the data supplies, by its subject's name: every relation the file declares, and every dimension it
-    declares maps of, each with its maps as value columns.
+    declares maps of or lists members of, each with its maps as value columns. A member is a map of its dimension, listed
+    in [`Relation.members`][mathspec.program.Relation.members]: a tool reads it off the labels of the dimension, one field
+    per member, and not off a table.
     """
     sos: Mapping[str, Sos] = Frozen({})
     piecewise: Mapping[str, Piecewise] = Frozen({})

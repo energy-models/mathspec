@@ -24,12 +24,14 @@ from mathspec.program import (
     DimensionPosition,
     Expression,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedCondition,
     Mask,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     RelationComparison,
     RelationDefined,
@@ -38,7 +40,9 @@ from mathspec.program import (
     Translate,
     TranslatedCondition,
     VariableDefined,
+    VariableReference,
     WindowSum,
+    walk,
 )
 
 if TYPE_CHECKING:
@@ -59,7 +63,7 @@ def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: st
     """
     inner = frozenset(node.operand.dims)
     if isinstance(node, Sum):
-        _check_sum(node, inner, context)
+        _check_sum(node, inner, spec, context)
     elif isinstance(node, Join):
         join_dims(node.columns, inner, context, 'the expression')
     else:
@@ -71,7 +75,7 @@ def _not_carried(context: str, call: str, inner: frozenset[str], rewrite: str) -
     return f'{context}: {call} but the expression has only the dims {sorted(inner)}. {rewrite}.'
 
 
-def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
+def _check_sum(node: Sum, inner: frozenset[str], spec: Spec, context: str) -> None:
     """``sum`` reduces each dim in ``over`` away, so the operand carries every one.
 
     The axes a join opens never reach a frame: the sum over the join closes
@@ -82,9 +86,32 @@ def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
         return
     for summed in node.over:
         if summed.dimension not in inner:
+            rewrite = _sum_through(summed.dimension, {s.dimension for s in node.over}, inner, spec)
             raise DimensionError(
-                _not_carried(context, f'sum(over={summed})', inner, 'Remove the sum, or correct the dimension')
+                _not_carried(
+                    context, f'sum(over={summed})', inner, rewrite or 'Remove the sum, or correct the dimension'
+                )
             )
+
+
+def _sum_through(summed: str, over: set[str], inner: frozenset[str], spec: Spec) -> str | None:
+    """The rewrite for a sum over *summed*, a member of a dimension the operand carries, or ``None``.
+
+    A dimension with members is one dimension in a sum, so the sum is over it
+    and groups by the members the call does not sum away.
+    """
+    for name in sorted(inner):
+        members = spec.dimensions[name].members
+        dims = [dim for _, dim in members]
+        if summed not in dims:
+            continue
+        kept = [role for role, dim in members if dim not in over]
+        if len(set(dims)) < len(dims):
+            by = f', by={name}[<the members to keep>]'
+        else:
+            by = f', by={name}[{", ".join(kept)}]' if kept else ''
+        return f"'{summed}' is a member of '{name}', which is one dimension here. Write sum(..., over={name}{by})"
+    return None
 
 
 def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
@@ -101,6 +128,12 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
     lookup = columns.one_row_per_group
     named = columns.dropped if lookup else columns.added
     call = f'{"at" if lookup else "sum"}(by={columns.name}[{", ".join(named)}])'
+    if columns.name in inner and (both := sorted(inner & {columns.dim(r) for r in columns.relation.members})):
+        raise DimensionError(
+            f"{context}: {call} reads through '{columns.name}', and {operand} carries both '{columns.name}' and "
+            f'its member {both} (dims {sorted(inner)}). Sum {both} out of the operand first, or declare the '
+            f"operand over '{columns.name}' without {both}."
+        )
     if missing := sorted(set(columns.dropped_dims) - inner):
         if lookup:
             raise DimensionError(
@@ -204,6 +237,100 @@ def _check_named_amount(
 # ---------------------------------------------------------------------------
 
 
+def _at_member(
+    stray: Iterable[str],
+    frame: frozenset[str],
+    spec: Spec,
+    operands: Iterable[Expression] = (),
+    read: str | None = None,
+) -> str | None:
+    """The rewrite for dims in *stray* that are members of a dimension in *frame*, or ``None`` where one is not.
+
+    An operand over a member does not align with the dimension that lists the
+    member, so the file reads it at each tuple with ``at``. The rewrite names
+    *read*, or else the operand in *operands* that is over the members.
+    """
+    wanted = sorted(stray)
+    for name in sorted(frame):
+        if (columns := _member_columns(name, wanted, spec)) is None:
+            continue
+        read = read or operand_over(operands, wanted, name)
+        return f'{_one_dimension(wanted, name)}. Read the operand at each tuple: at({read}, by={name}[{columns}])'
+    return None
+
+
+def _one_dimension(wanted: list[str], name: str) -> str:
+    """That the dims *wanted* are members of *name*, which an operator reads as one dimension."""
+    noun = 'is a member' if len(wanted) == 1 else 'are members'
+    return f"{', '.join(map(repr, wanted))} {noun} of '{name}', which is one dimension here"
+
+
+def _bound_member(
+    variable: str, side: str, bound: str, outside: frozenset[str], frame: frozenset[str], spec: Spec
+) -> str | None:
+    """The rewrite for a bound over members of a dimension in *frame*, or ``None`` where one is not.
+
+    A bound is a number or a parameter over the variable's dims, so a
+    parameter over a member is read at each tuple by a constraint instead.
+    """
+    wanted = sorted(outside)
+    for name in sorted(frame):
+        if (columns := _member_columns(name, wanted, spec)) is not None:
+            sense = '<=' if side == 'upper' else '>='
+            return (
+                f'{_one_dimension(wanted, name)}. Bound the variable in a constraint over its dims, which reads the '
+                f'parameter at each tuple: {variable} {sense} at({bound}, by={name}[{columns}])'
+            )
+    return None
+
+
+def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
+    """The maps of *name* that its members over the dims *wanted* are, as a call writes them, or ``None`` where one is no member."""
+    members = spec.dimensions[name].members
+    if not set(wanted) <= {dim for _, dim in members}:
+        return None
+    return ', '.join(' or '.join(role for role, dim in members if dim == d) for d in wanted)
+
+
+def operand_over(operands: Iterable[Expression], over: Iterable[str], without: str) -> str:
+    """The outermost name in *operands* over every dim in *over* and not over *without*, or ``...`` where none is.
+
+    A named expression is a name the file wrote, so the walk takes it before
+    the body it stands for.
+    """
+    wanted, named = set(over), ParameterReference | VariableReference | ExpressionReference
+    found = (n for n in walk(*operands) if isinstance(n, named) and wanted <= set(n.dims) and without not in n.dims)
+    return next((n.name for n in found), '...')
+
+
+def check_meeting(left: Expression, right: Expression, spec: Spec, context: str, frame: frozenset[str]) -> None:
+    """Two operands meet a member against the dimension that lists it only where *frame* declares both.
+
+    A dimension with members is one plain dimension, so an operand over a
+    member does not align with one over the dimension: the two meet as their
+    cross product. An entry whose ``dims:`` declares both asks for that
+    product; anywhere else, a sum or the objective would add it up without a
+    frame that names it. *frame* is the entry's ``dims:`` less what an
+    enclosing sum takes away, and empty in the objective.
+
+    Raises:
+        DimensionError: One operand carries a dimension with members, the
+            other carries a member of it but not the dimension, and *frame*
+            lacks one of the two.
+    """
+    for one, other in ((left, right), (right, left)):
+        for name in sorted(set(one.dims) - set(other.dims)):
+            members = {dim for _, dim in spec.dimensions[name].members}
+            stray = sorted((members & set(other.dims)) - set(one.dims))
+            if stray and not {name, *stray} <= frame:
+                summed = operand_over((one,), (name,), stray[0])
+                raise DimensionError(
+                    f"{context}: an operand over {stray} meets one over '{name}'. "
+                    f'{_at_member(stray, frozenset({name}), spec, (other,))}, or sum {summed} to the member: '
+                    f'sum({summed}, over={name}, by={name}[{_member_columns(name, stray, spec)}]).'
+                )
+
+
 def check_spec(spec: Spec, program: Program) -> None:
     """Check every entry's dim rules, on the trees *program* holds for *spec*.
 
@@ -211,21 +338,23 @@ def check_spec(spec: Spec, program: Program) -> None:
         DimensionError: On the first entry that breaks one.
     """
     for pname, parameter in program.parameters.items():
-        _check_condition_dims(parameter.where, frozenset(parameter.dims), f"Parameter '{pname}'")
+        _check_condition_dims(parameter.where, frozenset(parameter.dims), f"Parameter '{pname}'", spec)
 
     for vname, vdef in spec.variables.items():
         frame = frozenset(vdef.dims)
         context = f"Variable '{vname}'"
-        _check_condition_dims(program.variables[vname].where, frame, context)
+        _check_condition_dims(program.variables[vname].where, frame, context, spec)
         for side in ('lower', 'upper'):
             bound = getattr(vdef.bounds, side)
             if isinstance(bound, str):
                 bdims = frozenset({**spec.parameters, **spec.given.parameters}[bound].dims)
-                if not bdims <= frame:
+                if outside := bdims - frame:
+                    rewrite = _bound_member(vname, side, bound, outside, frame, spec) or (
+                        f"Declare '{bound}' over the variable's dims"
+                    )
                     raise DimensionError(
-                        f"{context}: bounds.{side} parameter '{bound}' has dims "
-                        f"{sorted(bdims - frame)} outside the variable's dims "
-                        f"{sorted(frame)}. Declare '{bound}' over the variable's dims."
+                        f"{context}: bounds.{side} parameter '{bound}' has dims {sorted(outside)} outside the "
+                        f"variable's dims {sorted(frame)}. {rewrite}."
                     )
 
     for ename, entry in program.expressions.items():
@@ -234,15 +363,15 @@ def check_spec(spec: Spec, program: Program) -> None:
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            indexed = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
+            indexed = _check_value_dims(entry.expression, frame, f"Named expression '{ename}'", spec, 'body')
             _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
             continue
         indexed = frozenset[str]()
         for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
             context = case_context(ename, label)
             if label is not None:
-                _check_condition_dims(region.when, frame, context)
-            indexed |= _check_value_dims(region.value, frame, context) | frozenset(region.when.dims)
+                _check_condition_dims(region.when, frame, context, spec)
+            indexed |= _check_value_dims(region.value, frame, context, spec, 'value') | frozenset(region.when.dims)
         _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
@@ -258,12 +387,14 @@ def check_spec(spec: Spec, program: Program) -> None:
     for cname, constraint in program.constraints.items():
         frame = frozenset(constraint.dims)
         context = f"Constraint '{cname}'"
-        _check_condition_dims(constraint.where, frame, context)
+        _check_condition_dims(constraint.where, frame, context, spec)
         got = frozenset((*constraint.lhs.dims, *constraint.rhs.dims))
         if got != frame:
             stray, missing = sorted(got - frame), sorted(frame - got)
+            operands = (constraint.lhs, constraint.rhs)
             detail = (
-                f'carries dims {stray} that are not in its dims: {sorted(frame)}. Add them to dims:, or sum them out'
+                f'carries dims {stray} that are not in its dims: {sorted(frame)}. '
+                f'{_at_member(stray, frame, spec, operands) or "Add them to dims:, or sum them out"}'
                 if stray
                 else f'does not carry {missing}, which its dims: declares. Remove them from dims:, or use them '
                 f'in the expression'
@@ -281,28 +412,17 @@ def check_spec(spec: Spec, program: Program) -> None:
             )
 
 
-def _check_value_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
-    """A region's value may only carry dims the frame does — the ``otherwise:`` included.
+def _check_value_dims(node: Expression, frame: frozenset[str], context: str, spec: Spec, noun: str) -> frozenset[str]:
+    """A named expression's body, or a region's value, carries only dims its ``dims:`` gives; those it carries come back.
 
     A wider one would give the quantity dims its entry does not, which is
     the second answer a ``dims:`` exists to avoid.
     """
     got = frozenset(node.dims)
-    if not got <= frame:
+    if stray := sorted(got - frame):
+        rewrite = _at_member(stray, frame, spec, (node,)) or f'Add them to dims:, or take them out of the {noun}'
         raise DimensionError(
-            f'{context}: the value carries dims {sorted(got - frame)} outside the dims: '
-            f'{sorted(frame)}. Add them to dims:, or take them out of the value.'
-        )
-    return got
-
-
-def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
-    """A plain entry's expression is indexed only over dims its ``dims:`` gives; the dims it is indexed over come back."""
-    got = frozenset(node.dims)
-    if not got <= frame:
-        raise DimensionError(
-            f'{context}: the body carries dims {sorted(got - frame)} outside the dims: {sorted(frame)}. '
-            f'Add them to dims:, or take them out of the body.'
+            f'{context}: the {noun} carries dims {stray} outside the dims: {sorted(frame)}. {rewrite}.'
         )
     return got
 
@@ -323,11 +443,7 @@ def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozen
         )
 
 
-def _check_condition_dims(
-    mask: Mask | None,
-    frame: frozenset[str],
-    context: str,
-) -> None:
+def _check_condition_dims(mask: Mask | None, frame: frozenset[str], context: str, spec: Spec) -> None:
     """A condition may only test dims the frame carries; reducing an outside dim to fit would fail open.
 
     The refusal names the leaf that left the frame, reading its dims as
@@ -360,7 +476,10 @@ def _check_condition_dims(
                 leaf = f"a condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
+        read = atom.name if isinstance(atom, ParameterDefined | ParameterComparison | VariableDefined) else None
+        rewrite = (
+            _at_member(outside, frame, spec, read=read) or 'Add them to dims:, or test a name over the declared dims'
+        )
         raise DimensionError(
-            f'{context}: {leaf} reads dims {outside} outside the declared dims {sorted(frame)}. '
-            f'Add them to dims:, or test a name over the declared dims.'
+            f'{context}: {leaf} reads dims {outside} outside the declared dims {sorted(frame)}. {rewrite}.'
         )

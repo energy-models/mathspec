@@ -17,7 +17,7 @@ variables:
     dims: [bp]
     where: x_bp
     domain: binary
-    description: a binary per segment, 1 where the two members it spans may be nonzero
+    description: a binary per segment, 1 where the two elements it spans may be nonzero
 
 constraints:
   curve_convexity:
