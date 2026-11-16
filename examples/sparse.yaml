@@ -27,14 +27,14 @@ maps:
     bus: { dim: bus, description: the bus a port feeds }
 
 parameters:
-  efficiency: { dims: [unit, port, period], where: connection, missing: 1, description: share of the output a port delivers }
+  efficiency: { dims: [unit, port, period], in: [connection], missing: 1, description: share of the output a port delivers }
   capacity: { dims: [unit], description: the most a unit produces in a period }
   ramp: { dims: [unit], description: the most a unit's output rises from one period to the next }
   load: { dims: [bus, period], description: demand to be met }
 
 variables:
-  output: { dims: [unit, period], where: active, bounds: { lower: 0 }, description: what a unit produces }
-  flow: { dims: [unit, port, period], where: connection, bounds: { lower: 0 }, description: what a port takes of it }
+  output: { dims: [unit, period], in: [active], bounds: { lower: 0 }, description: what a unit produces }
+  flow: { dims: [unit, port, period], in: [connection], bounds: { lower: 0 }, description: what a port takes of it }
 
 constraints:
   port_limit:
