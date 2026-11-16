@@ -557,6 +557,21 @@ constraints:
 \theta_{u} = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} \qquad \forall\, u \in \mathcal{U}
 ```
 
+#### Sum under an alias of its dimension
+
+a sum over a dimension inside a sum over its alias: the inner dummy primes past the alias's index
+
+```yaml
+constraints:
+  exchanged:
+    dims: [bus]
+    expression: theta == sum(sum(susceptance, over=bus), over=from_bus, by=from_bus[bus])
+```
+
+```math
+\theta_{u} = \sum_{u' \in \mathcal{U} \,:\, u' = u} \sum_{u'' \in \mathcal{U}} \mathrm{susceptance}_{u'',u'} \qquad \forall\, u \in \mathcal{U}
+```
+
 #### Sum through a map of a relation
 
 a grouping through a two-key map, summing one key away: the condition reads the other, and the row keeps it

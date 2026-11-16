@@ -127,6 +127,7 @@ $ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in ca
   upright("crossed") & p_(g + 1,t minus.o 1) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
   upright("edges") & p_(g,t minus.square_(0) 1) & <= p_(g,t plus.square_(0) 1) + upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
   upright("efficiency") & p_(g,t) & <= upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("exchanged") & theta_(u) & = sum_(u' in cal(U) colon u' = u) sum_(u'' in cal(U)) upright("susceptance")_(u'',u') & forall u in cal(U) \
   upright("first") & italic("on")_(g,t) & = 1 & forall g in cal(G), t in cal(T) colon upright("pos")(t) = 0 or upright("pos")_(upright("season")(t))(t) = 0 \
   upright("flow_angle") & theta_(u) & = sum_(u' in cal(U)) upright("susceptance")_(u,u') dot theta_(u') & forall u in cal(U) \
   upright("grouped_once") & sum_(g in cal(G) colon upright("bus")(g) = u and upright("technology")(g) = e) p_(g,t) & <= upright("tech_cap")_(u,e) & forall u in cal(U), t in cal(T), e in cal(E) \

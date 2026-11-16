@@ -212,6 +212,9 @@ constraints:
   flow_angle: # an alias read back into its dimension: the value at the other end prints at the primed index
     dims: [bus]
     expression: theta == sum(susceptance * at(theta, by=from_bus[bus]), over=from_bus)
+  exchanged: # a sum over a dimension inside a sum over its alias: the inner dummy primes past the alias's index
+    dims: [bus]
+    expression: theta == sum(sum(susceptance, over=bus), over=from_bus, by=from_bus[bus])
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
     expression: spend <= budget
