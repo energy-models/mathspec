@@ -135,17 +135,15 @@ def test_the_entries_of_a_section_are_sorted_by_name():
 
 
 @pytest.mark.parametrize(
-    ('declared', 'written'),
+    'declared',
     [
-        pytest.param({'refers_to': 'h'}, 'h', id='only-its-dimension-is-the-short-form'),
-        pytest.param(
-            {'refers_to': 'h', 'missing': 'absent'}, {'refers_to': 'h', 'missing': 'absent'}, id='more-is-a-mapping'
-        ),
+        pytest.param({'dim': 'h'}, id='only-its-dimension'),
+        pytest.param({'dim': 'h', 'missing': 'absent'}, id='with-missing'),
     ],
 )
-def test_a_map_is_written_in_its_short_form_where_it_says_nothing_else(declared, written):
+def test_a_map_is_written_back_as_the_mapping_it_was_declared_as(declared):
     dumped = yaml.safe_load(ms.to_spec(varied(SMALL_MODEL, **{'maps.g.h': declared})).to_yaml(canonical=True))
-    assert dumped['maps'] == {'g': {'h': written}}, 'a map that says only what it refers to is written as that name'
+    assert dumped['maps'] == {'g': {'h': declared}}, 'a map is written with `dim:`, never as the bare dimension name'
 
 
 #: The order the form writes the sections in, whatever order the file wrote

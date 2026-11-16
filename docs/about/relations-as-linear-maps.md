@@ -22,7 +22,7 @@ dimensions:
 relations:
   zone_of: { dims: [generator, snapshot], missing: absent }
 maps:
-  zone_of: { zone: zone }
+  zone_of: { zone: { dim: zone } }
 parameters:
   zone_cap: { dims: [snapshot, zone] }
 variables:
@@ -241,7 +241,7 @@ The other two uses of a map, a
 [test](../reference/language/relations.md#tests), are not matrix products. An
 operator with `within=`, such as `shift`, works separately on each set of
 members that $`f`$ sends to one value (a fibre). The dimensions of the result
-do not change. With the map `snapshot: { season: season }`,
+do not change. With the map `snapshot: { season: { dim: season } }`,
 `shift(soc, along=snapshot, offset=1, edge='wrap', within=snapshot[season])`
 steps back within each season:
 

@@ -69,9 +69,9 @@ BASE = {
     },
     'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
     'maps': {
-        'generator': {'bus': 'bus', 'zone': 'zone', 'b0': 'bus', 'b1': 'bus'},
-        'snapshot': {'bus': 'bus', 'rep': 'snapshot'},
-        'gen_zone': {'zone': 'zone'},
+        'generator': {'bus': {'dim': 'bus'}, 'zone': {'dim': 'zone'}, 'b0': {'dim': 'bus'}, 'b1': {'dim': 'bus'}},
+        'snapshot': {'bus': {'dim': 'bus'}, 'rep': {'dim': 'snapshot'}},
+        'gen_zone': {'zone': {'dim': 'zone'}},
     },
     'parameters': {
         'p_max': {'dims': ['generator']},
@@ -264,7 +264,7 @@ def test_a_value_column_added_to_a_relation_changes_no_call():
     it is the key column either way, and the new column is named where it
     is meant.
     """
-    wider = {'maps.snapshot.alt': 'snapshot'}
+    wider = {'maps.snapshot.alt': {'dim': 'snapshot'}}
     before = _dims('sum(p, over=snapshot, by=snapshot[rep])')
     assert _dims_with('sum(p, over=snapshot, by=snapshot[rep])', **wider) == before == {'snapshot', 'generator'}
     assert _dims_with('sum(p, over=snapshot, by=snapshot[alt])', **wider) == before, (
@@ -449,13 +449,13 @@ def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
     [
         pytest.param(
             'at(zone_cap, by=gen_zone[zone])',
-            {'zone': 'zone'},
+            {'zone': {'dim': 'zone'}},
             {'generator', 'snapshot'},
             id='a-key-column-the-operand-lacks-arrives',
         ),
         pytest.param(
             'at(load, by=gen_zone[rep])',
-            {'rep': 'snapshot'},
+            {'rep': {'dim': 'snapshot'}},
             {'bus', 'snapshot', 'generator'},
             id='a-key-column-over-the-dimension-the-read-column-matches-arrives',
         ),
@@ -695,7 +695,7 @@ def test_a_condition_names_the_entries_its_leaves_test(namespace, condition, exp
 )
 def test_names_read_takes_both_sides_of_a_map_pair(condition, expected):
     """The one leaf that can name two entries — two maps compared row by row on the key their subjects share."""
-    home_of = {'relations.home_of': {'dims': ['generator', 'snapshot']}, 'maps.home_of': {'zone': 'zone'}}
+    home_of = {'relations.home_of': {'dims': ['generator', 'snapshot']}, 'maps.home_of': {'zone': {'dim': 'zone'}}}
     where = where_of(condition, Namespace(_spec(**home_of)), 'test')
 
     assert where is not None, 'a condition the connectives cannot settle survives the fold'
@@ -981,8 +981,8 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(entry):
         **{
             'relations.zone_of': keyed_backwards,
             'relations.home_of': keyed_backwards,
-            'maps.zone_of': {'zone': 'zone'},
-            'maps.home_of': {'zone': 'zone'},
+            'maps.zone_of': {'zone': {'dim': 'zone'}},
+            'maps.home_of': {'zone': {'dim': 'zone'}},
         }
     )
     patch = {f'variables.p.{key}': value for key, value in entry.items()}

@@ -53,9 +53,12 @@ dimensions:
   port: {dtype: str, description: 'the connections components make, one label per connection'}
   snapshot: {dtype: datetime, description: dispatch periods}
 maps:
-  generator: {port: port}
-  load: {port: port}
-  port: {bus: bus}
+  generator:
+    port: {dim: port}
+  load:
+    port: {dim: port}
+  port:
+    bus: {dim: bus}
 parameters:
   Generator_marginal_cost:
     dims: [generator]

@@ -51,15 +51,15 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers_to: period
+      dim: period
   outage:
     line:
       description: the line an outage takes out. An outage of a transformer has no row
-      refers_to: line
+      dim: line
       missing: absent
     transformer:
       description: the transformer an outage takes out. An outage of a line has no row
-      refers_to: transformer
+      dim: transformer
       missing: absent
 
 parameters:

@@ -16,7 +16,7 @@ relations:
   slot_of: { dims: [generator, period] }
 
 maps:
-  slot_of: { bus: bus, technology: technology }
+  slot_of: { bus: { dim: bus }, technology: { dim: technology } }
 
 parameters:
   cap: { dims: [bus, technology] }

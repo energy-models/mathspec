@@ -18,7 +18,7 @@ relations:
     missing: absent
 
 maps:
-  connection: { bus: bus, role: role }
+  connection: { bus: { dim: bus }, role: { dim: role } }
 
 parameters:
   capacity: { dims: [unit], description: the most a unit can draw at its input }

@@ -38,7 +38,7 @@ relations:
   connection: { dims: [generator, bus], missing: absent }
 
 maps:
-  generator: { bus: bus }
+  generator: { bus: { dim: bus } }
 
 parameters:
   cost: { dims: [generator] }

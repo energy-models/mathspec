@@ -68,7 +68,7 @@ dimensions:
   carrier: { dtype: str, one_of: [ccgt, ocgt, wind] }
   generator: { dtype: str }
 maps:
-  generator: { carrier: carrier }
+  generator: { carrier: { dim: carrier } }
 variables:
   p: { dims: [generator], where: "generator[carrier] == 'wind'" }
 ```
