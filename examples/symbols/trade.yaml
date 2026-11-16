@@ -7,3 +7,4 @@ notation: latex
 dimensions:
   region: { index: r, set: '\mathcal{R}' }
   commodity: { index: c, set: '\mathcal{C}' }
+  top_ire: { index: l, set: '\mathcal{L}' }
