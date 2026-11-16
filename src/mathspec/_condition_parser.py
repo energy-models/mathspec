@@ -251,7 +251,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
 
 
 _DEEP_REWRITE = (
-    'Declare a parameter or relation carrying part of the test and name that here, or split the '
+    'Declare a parameter or set carrying part of the test and name that here, or split the '
     'entry into two, each masked by one half.'
 )
 

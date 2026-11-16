@@ -3,35 +3,41 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# Relations and maps
+# Sets and maps
 
-A **relation** is a set of combinations of labels of
+A **set** is a set of combinations of labels of
 [dimensions](dimensions.md), such as the buses that each generator may connect
-to. A **map** gives each row of a dimension or a relation one label of a
+to. A **map** gives each row of a dimension or a set one label of a
 dimension, such as the bus of each generator. The file declares both, and the
-rows come with the data. This page lists the keys of `relations:` and `maps:`,
+rows come with the data. This page lists the keys of `sets:` and `maps:`,
 the data they expect, and how each operator uses them.
 
-## `relations`
+## `sets`
 
-Each key under `relations:` declares one relation.
+Each key under `sets:` declares one set.
 
 ```yaml
 dimensions:
   bus: { dtype: str }
   generator: { dtype: str }
   snapshot: { dtype: int }
-relations:
+sets:
   connection: { dims: [generator, bus], missing: absent } # the pairs that are wired
   neighbour: { dims: { from: snapshot, to: snapshot }, missing: absent }
 ```
 
 Each row of `connection` is one pair of a generator and a bus, and a pair with
-no row is not in the relation.
+no row is not in the set.
+
+A set is what an entry is indexed over and what a sum runs over, as in
+$`\sum_{(g, b) \in \mathrm{connection}}`$. So its name may stand in the
+`dims:` of a parameter, a variable or a constraint, and in `over=`, for its
+dimensions at the combinations it lists
+([a set in `dims`](parameters-variables-constraints.md#a-set-in-dims)).
 
 | Key           | What it sets                                                             | Default   |
 | ------------- | ------------------------------------------------------------------------ | --------- |
-| `dims`        | required. The columns of the relation, at least two                      |           |
+| `dims`        | required. The columns of the set, at least two                           |           |
 | `missing`     | [`refused` or `absent`](#missing): whether every combination needs a row | `refused` |
 | `description` | free text                                                                | `null`    |
 
@@ -43,22 +49,24 @@ dimension. With `zp: { dims: { period: zone, generator: generator } }`,
 mathspec prints:
 
 ```text
-Relation 'zp' names column 'period' after dimension 'period', but the column is over 'zone'. Rename the column after what it holds.
+Set 'zp' names column 'period' after dimension 'period', but the column is over 'zone'. Rename the column after what it holds.
 ```
 
-A relation with one column is refused, because one column holds labels of one
+A set with one column is refused, because one column holds labels of one
 dimension, and a map or a condition states that. With
 `r: { dims: [generator] }`, mathspec prints:
 
 ```text
-Relation 'r' has one column under 'dims:', and a relation needs at least two. To give each generator a label, declare a map under maps: generator:. To mark some of them, declare a bool parameter or a condition.
+Set 'r' has one column under 'dims:', and a set needs at least two. To give each generator a label, declare a map under maps: generator:. To mark some of them, declare a bool parameter or a condition.
 ```
 
-A relation is not a dimension, so its name does not go in `dims:`, `over=` or
-`along=`. With `flow: { dims: [connection] }`, mathspec prints:
+A set is not one dimension, so its name does not go in `along=`, which steps
+along one. A set with two columns over one dimension, such as `neighbour`,
+does not go in `dims:` either, because an entry is over each dimension once.
+With `flow: { dims: [neighbour] }`, mathspec prints:
 
 ```text
-Variable 'flow' names the relation 'connection', and a relation is not a dimension. Name its dimensions, ['bus', 'generator'], under dims:, and confine the entry with where: connection.
+Variable 'flow' names the set 'neighbour', which has two columns over one dimension, and an entry is over each dimension once. Name its dimensions, ['snapshot'], with a second name for the one it repeats.
 ```
 
 The order of the columns under `dims:` changes nothing. The typesetter sorts
@@ -67,7 +75,7 @@ $`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
 
 ## `maps`
 
-Each key under `maps:` names a **subject**, which is a dimension or a relation.
+Each key under `maps:` names a **subject**, which is a dimension or a set.
 Each key under the subject declares one map, which gives every row of the
 subject one label of the dimension that `dim:` names.
 
@@ -98,8 +106,8 @@ typesetter prints a map as a function from its subject into that dimension, so
 `generator[bus]` prints as $`\mathrm{bus}: \mathcal{G} \to \mathcal{B}`$.
 mathspec refuses a map at load in four cases:
 
-- The subject is neither a dimension nor a relation.
-- `dim:` names a relation, or names no dimension.
+- The subject is neither a dimension nor a set.
+- `dim:` names a set, or names no dimension.
 - The map is named after a dimension that it does not refer to.
 - The map has the name of a column of its subject.
 
@@ -109,27 +117,27 @@ With `generator: { period: { dim: zone } }`, mathspec prints:
 maps: 'generator': map 'period' is named after dimension 'period', but refers to 'zone'. Rename the map after what it holds.
 ```
 
-A relation with two columns over one dimension takes no maps, because a map
+A set with two columns over one dimension takes no maps, because a map
 gives one label per combination of the dimensions of its subject.
 
 ### Cardinalities
 
 How many labels a row may have (the cardinality) decides whether a fact is a
-map or a relation:
+map or a set:
 
-| What the file states                         | Written                                                                                                  | Cardinality                 |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------- |
-| each generator has one bus                   | `maps: { generator: { bus: { dim: bus } } }`                                                             | many-to-one                 |
-| a generator may connect to several buses     | `relations: { connection: { dims: [generator, bus], missing: absent } }`                                 | many-to-many                |
-| a generator has one zone in each period      | `relations: { zone_of: { dims: [generator, period] } }` and `maps: { zone_of: { zone: { dim: zone } } }` | many-to-one, from a pair    |
-| a snapshot has a month, a week and a weekday | `maps: { snapshot: { month: { dim: month }, week: { dim: week }, weekday: { dim: weekday } } }`          | three maps of one subject   |
-| a line has two ends, both buses              | `maps: { line: { bus0: { dim: bus }, bus1: { dim: bus } } }`                                             | two maps into one dimension |
-| a snapshot has a representative snapshot     | `maps: { snapshot: { rep: { dim: snapshot } } }`                                                         | many-to-one, onto itself    |
-| a snapshot has neighbours                    | `relations: { neighbour: { dims: { from: snapshot, to: snapshot }, missing: absent } }`                  | many-to-many, onto itself   |
+| What the file states                         | Written                                                                                             | Cardinality                 |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------- |
+| each generator has one bus                   | `maps: { generator: { bus: { dim: bus } } }`                                                        | many-to-one                 |
+| a generator may connect to several buses     | `sets: { connection: { dims: [generator, bus], missing: absent } }`                                 | many-to-many                |
+| a generator has one zone in each period      | `sets: { zone_of: { dims: [generator, period] } }` and `maps: { zone_of: { zone: { dim: zone } } }` | many-to-one, from a pair    |
+| a snapshot has a month, a week and a weekday | `maps: { snapshot: { month: { dim: month }, week: { dim: week }, weekday: { dim: weekday } } }`     | three maps of one subject   |
+| a line has two ends, both buses              | `maps: { line: { bus0: { dim: bus }, bus1: { dim: bus } } }`                                        | two maps into one dimension |
+| a snapshot has a representative snapshot     | `maps: { snapshot: { rep: { dim: snapshot } } }`                                                    | many-to-one, onto itself    |
+| a snapshot has neighbours                    | `sets: { neighbour: { dims: { from: snapshot, to: snapshot }, missing: absent } }`                  | many-to-many, onto itself   |
 
 ## `missing`
 
-`missing:` sets whether the data may leave something out. On a relation, it
+`missing:` sets whether the data may leave something out. On a set, it
 sets whether every combination of the dimensions under `dims:` needs a row. On
 a map, it sets whether every row of the subject needs a label.
 
@@ -138,7 +146,7 @@ dimensions:
   generator: { dtype: str }
   bus: { dtype: str }
   line: { dtype: str }
-relations:
+sets:
   connection: { dims: [generator, bus], missing: absent } # most pairs are not wired
 maps:
   generator:
@@ -154,10 +162,10 @@ maps:
 
 At `l3`, the data gives `line[bus1]` no label, so `line[bus1]` is absent there.
 
-| `missing:`            | Result                                                                                                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `refused`, by default | a tool refuses the data when it is attached, and names the combination or the row                                        |
-| `absent`              | a combination with no row is not in the relation, and a row with no label maps to nothing, which is [absent](absence.md) |
+| `missing:`            | Result                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `refused`, by default | a tool refuses the data when it is attached, and names the combination or the row                                   |
+| `absent`              | a combination with no row is not in the set, and a row with no label maps to nothing, which is [absent](absence.md) |
 
 No number can replace a missing label, so at load mathspec refuses a value
 such as `missing: 0`:
@@ -166,8 +174,8 @@ such as `missing: 0`:
 maps.generator.bus.missing: missing: 0 on a map, which takes refused or absent. A row with nothing there is refused, or is not in the data.
 ```
 
-Under the default `refused`, a relation needs a row for every combination, so
-`connection` would need every generator wired to every bus. Most relations are
+Under the default `refused`, a set needs a row for every combination, so
+`connection` would need every generator wired to every bus. Most sets are
 sparse, so they declare `missing: absent`.
 
 The typeset legend lists `` `connection` is `absent` where the data has no row ``
@@ -176,8 +184,8 @@ dimension they are over, and nothing for `refused`.
 
 ## The data contract
 
-With data attached, each relation and each subject with maps has one table,
-named after it. The table of a relation has one column per column under
+With data attached, each set and each subject with maps has one table,
+named after it. The table of a set has one column per column under
 `dims:`. The table of a subject also has one column per map, named after the
 map. So the data for the maps of `line` is a table `line` with the columns
 `line`, `bus0` and `bus1`. A piece of software that reads a spec
@@ -188,38 +196,45 @@ map. So the data for the maps of `line` is a table `line` with the columns
 - Every label in the column of a map is a label of the dimension it refers to,
   and a label that matches none is refused.
 - The table has a row for every combination of its dimensions, unless the
-  relation declares `missing: absent`. The table of a dimension has a row for
+  set declares `missing: absent`. The table of a dimension has a row for
   every label of the dimension.
 - A null is refused, except in the column of a map that declares
   `missing: absent`.
 - The order of the rows has no meaning, because the order comes from the
   [dimension](dimensions.md#ordered).
 
-A relation and a map have no `where:`, so their rows and labels come from the
+A set and a map have no `where:`, so their rows and labels come from the
 data alone. A tool therefore knows them before it evaluates any condition,
 such as the [`where:` of a parameter](parameters-variables-constraints.md#where).
 
-An [assumption](assumptions.md) can require rows of a relation or labels of a
+The rows of a set can also be the coordinates of a parameter or a
+variable. An entry with `connection` in its `dims:` has coordinates only at
+the pairs that `connection` lists, and a tool refuses a row of the data of a
+parameter at any other pair
+([a set in `dims`](parameters-variables-constraints.md#a-set-in-dims)). A map
+is no set to be over, because it adds no row to its subject.
+
+An [assumption](assumptions.md) can require rows of a set or labels of a
 map. For `line[bus1]` [above](#missing), `{holds: "line[bus1]", where: "closed"}`
 requires an end for every closed line, where `closed` is a `bool` parameter
 over `line`.
 
-## How relations and maps are used
+## How sets and maps are used
 
-A relation fixes no direction, so the same table can map generators to buses
+A set fixes no direction, so the same table can map generators to buses
 or buses to generators. A call **joins** the expression it acts on (its
 operand) to the table on their shared columns, and then **groups** the rows it
 has joined. In a call, `s[c]` names the subject `s` and its column `c`, and
 `s[c, …]` names several columns of one table. A column is a map of `s`, or one
-of the columns of a relation under `dims:`. The subject appears once, so one
+of the columns of a set under `dims:`. The subject appears once, so one
 call uses one table.
 
-| Kind              | What it does                                                                  | Written as                                         |
-| ----------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| join and group by | rows of the operand match rows of the table, and each group is added up       | `sum(x, over=d, by=s[c])`                          |
-| join              | each row of the operand matches one row of the table, and takes its label     | `at(x, by=s[m])`                                   |
-| partition         | the dimensions stay, and the rows are grouped                                 | `shift`, `sum_back`, `position` with `within=s[m]` |
-| test              | a coordinate stays where the relation has a row, or where the map has a label | `r` or `s[m]` in a condition                       |
+| Kind              | What it does                                                              | Written as                                         |
+| ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------- |
+| join and group by | rows of the operand match rows of the table, and each group is added up   | `sum(x, over=d, by=s[c])`                          |
+| join              | each row of the operand matches one row of the table, and takes its label | `at(x, by=s[m])`                                   |
+| partition         | the dimensions stay, and the rows are grouped                             | `shift`, `sum_back`, `position` with `within=s[m]` |
+| test              | a coordinate stays where the set has a row, or where the map has a label  | `r` or `s[m]` in a condition                       |
 
 Four rules apply to every call:
 
@@ -260,8 +275,8 @@ Each column of the table is either **joined on** or not, and either
 | a key column the call does not list | yes       | yes        | kept          |
 | a map the call does not list        | no        | no         | not used      |
 
-With the relation `zone_of` over `[generator, period]` and its map `zone`, the
-relation `connection` over `[generator, bus]`, and a variable `p` over
+With the set `zone_of` over `[generator, period]` and its map `zone`, the
+set `connection` over `[generator, bus]`, and a variable `p` over
 `[generator, period]`, three sums have three results:
 
 | Call                                         | Joins on            | Groups by         | Result              |
@@ -324,7 +339,7 @@ it at `south`.
 Three rules apply to a lookup:
 
 - A lookup reads only maps. A key column in `by=` is refused, and so is a
-  relation with no map, where one combination can have several rows.
+  set with no map, where one combination can have several rows.
 - The result gains every key column that the operand is not already over. A
   key column over a dimension that the operand is over is joined on too,
   unless a map in `by=` already refers to that dimension. With `price` over
@@ -359,7 +374,7 @@ The first snapshot of each season takes the value of the last snapshot of the
 same season, and no value crosses from winter to summer.
 
 `within=` may list two maps into one dimension, but not a key column. A
-relation with no map makes no groups, so mathspec refuses it in `within=`:
+set with no map makes no groups, so mathspec refuses it in `within=`:
 
 ```text
 Constraint 'd': shift(within=sp[period]): 'sp' has no map, so it makes no groups. Declare the group as a map of the dimension shift steps along, under maps: snapshot:.
@@ -367,7 +382,7 @@ Constraint 'd': shift(within=sp[period]): 'sp' has no map, so it makes no groups
 
 ### Tests
 
-A condition tests a relation or a map at the coordinates of its own entry. It
+A condition tests a set or a map at the coordinates of its own entry. It
 compares a map, written `s[m]`, against a label, compares two maps, or tests
 that a row or a label exists. [Conditions](expressions.md#conditions) lists
 when two maps may be compared. A comparison reads one map, so
@@ -381,23 +396,23 @@ Expected end of text, found '['  (at char 8), (line:1, col:9)
 ```
 
 A map alone in a condition, such as `line[bus1]`, is true where the map gives
-the row a label. A relation name alone is true where the relation has a row.
-On a variable, the condition leaves the variable absent at every pair that the
-relation does not list:
+the row a label. A set name alone is true where the set has a row.
+On a parameter, a variable or a constraint, the set in `dims:` states those
+rows, so mathspec refuses the name in its `where:`. Over the set, a variable is
+absent at every pair that the set does not list:
 
 ```yaml title="flow.yaml"
 dimensions:
   generator: { dtype: str }
   bus: { dtype: str }
   snapshot: { dtype: int }
-relations:
+sets:
   connection: { dims: [generator, bus], missing: absent } # the pairs that are wired
 parameters:
   load: { dims: [bus, snapshot] }
 variables:
   flow:
-    dims: [generator, bus, snapshot]
-    where: connection
+    dims: [connection, snapshot]
     bounds: { lower: 0 }
 constraints:
   balance:
@@ -409,8 +424,14 @@ constraints:
 --8<-- "docs/static/relations-where-bare.svg"
 </figure>
 
-`flow` exists at the pairs that `connection` lists and is [absent](absence.md)
-at every other pair, so `balance` adds up the generators wired to each bus.
+`flow` exists at the pairs that `connection` lists and is
+[absent](absence.md) at every other pair, so `balance` adds up the generators
+wired to each bus. `where: connection` beside `dims: [generator, bus, snapshot]`
+is refused:
+
+```text
+Variable 'flow': `where: connection` tests the rows of 'connection', which dims: states. Name it in dims: in place of the dimensions, and delete the `where:`.
+```
 
 `python -m mathspec markdown flow.yaml` prints the domain of `flow` and the
 constraint:
@@ -429,5 +450,5 @@ $`\mathrm{bus1}(l) \text{ is defined}`$.
 
 !!! info "See also"
 
-    - [relations as linear maps](../../about/relations-as-linear-maps.md) for the
+    - [sets as linear maps](../../about/relations-as-linear-maps.md) for the
       same calls written as matrices

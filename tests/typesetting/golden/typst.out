@@ -5,12 +5,12 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 == Sets
 / $cal(B)$: index $b$ --- `bp`
-/ $cal(U)$: index $u$ --- `bus` with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("bus"): cal(G) arrow.r cal(U)$, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label
+/ $cal(U)$: index $u$ --- `bus` with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("bus_zone") subset.eq cal(U) times cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("bus"): cal(G) arrow.r cal(U)$, `bus_zone` is `absent` where the data has no row, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label
 / $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_zone") subset.eq cal(G) times cal(T), upright("zone"): upright("gen_zone") arrow.r cal(Z), upright("bus"): cal(G) arrow.r cal(U), upright("technology"): cal(G) arrow.r cal(E)$, `connection` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season"): cal(T) arrow.r cal(S)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone") subset.eq cal(G) times cal(T), upright("zone"): upright("gen_zone") arrow.r cal(Z), upright("rep"): cal(T) arrow.r cal(T), upright("season"): cal(T) arrow.r cal(S)$
 / $cal(E)$: index $e$ --- `technology` with $upright("technology"): cal(G) arrow.r cal(E)$
-/ $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("zone"): upright("gen_zone") arrow.r cal(Z)$, `bus[area]` is `absent` where the data gives no label
+/ $cal(Z)$: index $z$ --- `zone` (labels `north`, `south`) with $upright("area"): cal(U) arrow.r cal(Z), upright("zone"): cal(U) arrow.r cal(Z), upright("bus_zone") subset.eq cal(U) times cal(Z), upright("zone"): upright("gen_zone") arrow.r cal(Z)$, `bus_zone` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label
 
 == Parameters
 / $upright("area_weight")$: `area_weight` over $cal(U)$, only where $upright("area")(u) upright(" is defined")$
@@ -24,19 +24,21 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("growth")$: `growth` (scalar)
 / $upright("is_flexible")$: `is_flexible` over $cal(G)$, `false` where the data has no row
 / $upright("lead")$: `lead` over $cal(G)$
-/ $upright("link_eff")$: `link_eff` over $cal(U) times cal(G)$, only where $(u, g) in upright("connection")$, $1$ where the data has no row
+/ $upright("link_eff")$: `link_eff` over $(u, g) in upright("connection")$, $1$ where the data has no row
 / $upright("load")$: `load` over $cal(U) times cal(T)$
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
 / $upright("tech_cap")$: `tech_cap` over $cal(U) times cal(E)$, `absent` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
+/ $upright("zone_share")$: `zone_share` over $(u, z) in upright("bus_zone")$, $1$ where the data has no row
 
 == Conditions
 / $upright("dispatchable")$: `dispatchable` over $cal(G)$ --- a unit that dispatches and cannot be turned down
 / $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
 == Variables
+/ $italic("flow")$: `flow` over $(u, g) in upright("connection"), t in cal(T)$
 / $italic("fuel")$: `fuel` over $cal(G) times cal(T)$
 / $italic("headroom")$: `headroom` (scalar), $0$ where the mask leaves it out
 / $italic("heat")$: `heat` over $cal(G) times cal(T)$
@@ -76,7 +78,8 @@ $ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long 
 
 == Variable domains
 #set math.equation(numbering: "(1)")
-$ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
+$ upright("flow") & italic("flow")_(u,g,t) & >= 0 & forall (u, g) in upright("connection"), t in cal(T) colon upright("p")^(upright("max"))_(g) > 0 \
+  upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
   upright("heat") & italic("heat")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("on") & italic("on")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) \

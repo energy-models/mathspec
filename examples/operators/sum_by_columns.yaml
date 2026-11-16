@@ -13,7 +13,7 @@ dimensions:
   period: { dtype: int }
   zone: { dtype: str }
 
-relations:
+sets:
   zone_of: { dims: [generator, period] }
 
 maps:

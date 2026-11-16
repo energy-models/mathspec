@@ -6,7 +6,7 @@ SPDX-License-Identifier: CC-BY-4.0
 # Loads
 
 This [fragment](../../reference/glossary.md#fragment) states `Load` from an open-source power system framework ([PyPSA](https://pypsa.org)).
-The file declares the relation `Load_port`, the parameter `Load_p_set` and the
+The file declares the set `Load_port`, the parameter `Load_p_set` and the
 constraint `Load_withdrawal`. The minus sign in front of `Load_p_set` is the
 only place where the file uses the sign convention of
 [the surface](surface.md).

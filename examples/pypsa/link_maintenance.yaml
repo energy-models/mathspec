@@ -28,7 +28,7 @@ dimensions:
   link:
     description: controllable connections, each from one bus to the buses it delivers to
 
-relations:
+sets:
   Link_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in,

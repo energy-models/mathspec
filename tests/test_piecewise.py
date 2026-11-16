@@ -12,7 +12,7 @@ methods exist, and which gates an entry will accept.
 from __future__ import annotations
 
 import re
-from typing import get_args
+from typing import Any, get_args
 
 import pytest
 
@@ -782,13 +782,21 @@ def test_a_ragged_where_reaches_the_weights_as_written_and_the_frame_rows_as_a_c
     assert expanded.constraints['cost_curve_p'].where == 'count(has_curve AND bp_x, over=bp) > 0'
 
 
-def test_a_where_joins_both_gate_rows():
+@pytest.mark.parametrize(
+    'gate',
+    [
+        pytest.param({'where': 'committable'}, id='a-gate-with-a-where'),
+        pytest.param({'dims': ['running']}, id='a-gate-in-a-relation'),
+    ],
+)
+def test_a_where_joins_both_gate_rows(gate: dict[str, Any]):
     """`activity:` splits the convexity row across the gate's own mask, and the block's where holds over both halves."""
     spec = spec_of(
         MASKED,
         **{
-            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', 'where': 'committable'},
+            'variables.u': {'dims': ['snapshot', 'generator'], 'domain': 'binary', **gate},
             'parameters.committable': {'dims': ['generator'], 'dtype': 'bool'},
+            'sets.running': {'dims': ['generator', 'snapshot'], 'missing': 'absent'},
             'piecewise.cost_curve.activity': 'u',
         },
     )
@@ -975,7 +983,7 @@ def _walk(**written: object) -> dict[str, object]:
 
 def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
     """The `power` link walked through `generator_of`, a relation over *dims* that maps each row to a generator."""
-    return {'relations.generator_of': {'dims': dims}, 'maps.generator_of.generator': {'dim': 'generator'}} | _walk(
+    return {'sets.generator_of': {'dims': dims}, 'maps.generator_of.generator': {'dim': 'generator'}} | _walk(
         by='generator_of[generator]'
     )
 
@@ -1295,7 +1303,7 @@ def test_a_gate_read_through_a_relation_switches_the_curves_it_maps_to():
     assert (rows['curve_convexity_ungated'].where, rows['curve_convexity_ungated'].expression) == (
         f'NOT ({RUNNING})',
         'sum(curve_lam, over=bp) == 1',
-    ), 'a converter with no row in the relation is ungated'
+    ), 'a converter with no row in the set is ungated'
 
 
 def test_a_gate_read_through_a_relation_is_written_as_the_at_call_it_reads():
@@ -1400,7 +1408,7 @@ SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>
         ),
         pytest.param(
             {'piecewise.curve.activity': 'at(running, by=bp_p[converter])'},
-            r"piecewise 'curve' activity: at\(by=bp_p\[\.\.\.\]\): 'bp_p' is not a relation",
+            r"piecewise 'curve' activity: at\(by=bp_p\[\.\.\.\]\): 'bp_p' is not a set",
             id='a-walk-through-something-no-relation',
         ),
         pytest.param(
@@ -1518,7 +1526,7 @@ def test_a_walked_row_exists_only_where_its_relation_has_a_row(patch, where):
 INVESTED = {
     'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}
     | {'bp': {'dtype': 'int', 'ordered': True}},
-    'relations': {'cost_of': {'dims': ['flow', 'effect']}},
+    'sets': {'cost_of': {'dims': ['flow', 'effect']}},
     'maps': {'cost_of': {'cost_curve': {'dim': 'cost_curve'}}},
     'parameters': {
         'has_cost_curve': {'dims': ['cost_curve'], 'dtype': 'bool'},

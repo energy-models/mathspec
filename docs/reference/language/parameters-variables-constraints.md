@@ -315,7 +315,8 @@ A `str` parameter takes any label. A dimension with
 `missing:` sets the meaning of a coordinate of the `dims` at which the data has
 no row. It takes `refused` (the default), `absent`, or a value of the `dtype`
 of the parameter. On a parameter with a [`where:`](#where), `missing:` applies
-only where the condition is true.
+only where the condition is true. On a parameter over a
+[set](#a-set-in-dims), it applies only where the set has a row.
 
 ```yaml
 dimensions:
@@ -404,7 +405,7 @@ dimensions:
   bus: { dtype: str }
   role: { dtype: str }
   snapshot: { dtype: int }
-relations:
+sets:
   connection: { dims: [entity, bus], missing: absent }
 maps:
   connection: { role: { dim: role } }
@@ -449,17 +450,26 @@ snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
 data. An [assumption](assumptions.md) on the parameter does not test that row
-either, because the parameter has no row there.
+either, because the parameter has no row there. To have a tool refuse a row at
+a pair that is not wired, name the set in `dims:`
+([a set in `dims`](#a-set-in-dims)). A set name alone in the `where:` would
+state the same rows a second time, so mathspec refuses it. For
+`where: connection` on `efficiency`, the message is:
+
+```text
+Parameter 'efficiency': `where: connection` tests the rows of 'connection', which dims: states. Name it in dims: in place of the dimensions, and delete the `where:`.
+```
 
 A tool evaluates the condition from the data alone, before it reads the
 parameter. So the condition may contain [dimensions](dimensions.md),
-[relations](relations.md) and parameters without a `where:`.
+[sets](relations.md) and parameters with neither a `where:` nor a set in
+`dims:`.
 
 mathspec refuses four conditions at load:
 
 - a condition that contains a variable
 - a condition that contains the parameter itself
-- a condition that contains a parameter with a `where:` of its own
+- a condition that contains a parameter with a `where:` or a set in its `dims:`
 - a condition over a dimension that the parameter does not have
 
 For a `where:` on `efficiency` that contains the variable `p`, the message
@@ -474,6 +484,127 @@ mathspec suggests a parameter or a map as the rewrite.
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
 `only where` $\mathrm{role}(b,\ e) = \text{'}\mathrm{output}\text{'}$.
+
+### A set in `dims`
+
+A [set](relations.md) named in `dims:` stands for its dimensions, at the
+combinations it lists. The parameter has coordinates only there, and a tool
+refuses a row of the data anywhere else. A [`where:`](#where) drops that row
+instead. In this example, `efficiency` and `p_nom_max` have values only at the
+pairs that `connection` lists:
+
+```yaml
+dimensions:
+  entity: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+sets:
+  connection: { dims: [entity, bus], missing: absent }
+parameters:
+  efficiency: { dims: [connection, snapshot], missing: 1 }
+  p_nom_max: { dims: [connection], missing: .inf }
+  distance: { dims: [entity, bus] }
+variables:
+  p: { dims: [entity, snapshot] }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * p, over=entity) == 0
+```
+
+`efficiency` is over `entity`, `bus` and `snapshot`: `connection` stands for
+`entity` and `bus`. `distance` names the two dimensions themselves, so it is
+over every pair and needs a row at each.
+
+With data attached, a tool decides the coordinates of `efficiency` in three
+steps:
+
+1. Where `connection` has no row, `efficiency` is [absent](absence.md), and
+   the tool refuses any row of the data of `efficiency` there.
+2. Where the [`where:`](#where) of `efficiency` is false, the tool drops the
+   row. `efficiency` has no `where:`, so the tool drops nothing.
+3. At each remaining coordinate with no row, `missing: 1` sets the value.
+
+So `missing: 1` fills only the wired pairs, and a data row for an entity at a
+bus it is not wired to is refused.
+
+An entry over two sets that share a dimension, such as
+`dims: [connection, active]`, has coordinates only where both list them. A
+sum over a set, `sum(x, over=connection)`, sums over its dimensions, as
+`over=[entity, bus]` does.
+
+A set in `dims:` gives its rows, and its [maps](relations.md#maps) play no
+part. They stay readable as `connection[bus]` in a `where:` and in a call. In
+this example, `connection` has a row per port of a unit, and its maps `bus` and
+`role` give each port a bus and a role:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: int }
+  bus: { dtype: str }
+  role: { dtype: str }
+  snapshot: { dtype: int }
+sets:
+  connection: { dims: [unit, port], missing: absent }
+maps:
+  connection: { bus: { dim: bus }, role: { dim: role } }
+parameters:
+  efficiency:
+    dims: [connection, snapshot]
+    where: "connection[role] == 'output'"
+    missing: 1
+variables:
+  flow: { dims: [unit, snapshot], bounds: { lower: 0 } }
+constraints:
+  delivered:
+    dims: [bus, snapshot]
+    expression: sum(efficiency * flow, over=connection, by=connection[bus]) >= 0
+```
+
+`efficiency` has coordinates at each port that `connection` lists, and a tool
+refuses a data row for a port that `connection` does not list. The `where:`
+then drops the input ports. `efficiency` is not over `bus` or `role`, the
+dimensions that the maps refer to.
+
+mathspec refuses three sets in `dims:` at load:
+
+- a set named twice
+- a set under `missing: refused`, which has a row at every combination and so
+  leaves nothing out
+- a set with two columns over one dimension, because an entry is over each
+  dimension once
+
+For `p_nom_max: { dims: [connection] }` with `connection` under
+`missing: refused`, the message is:
+
+```text
+Parameter 'p_nom_max': dims: names 'connection', which under missing: refused has a row at every combination, so it leaves nothing out. Write missing: absent on 'connection', or name its dimensions in its place.
+```
+
+A `where:` on a parameter over a set narrows the coordinates inside the set,
+and the tool drops the rows outside it, as in step 2. Inside the set, its bare
+name is true. So mathspec refuses a `where:` that reads it, and names what the
+`where:` is left with. `where: connection` on `efficiency` in the first example
+is always true:
+
+```text
+Parameter 'efficiency': dims: names 'connection', so 'efficiency' has coordinates only where it has a row, and `where: connection` narrows nothing. Delete the `where:`, or the set from it.
+```
+
+A `where:` that is always false, such as `where: NOT connection`, leaves the
+parameter no coordinate, and mathspec suggests a `where:` that holds somewhere
+inside the set. For `where: "connection AND active"`, where `active` is a
+`bool` parameter, the message ends in
+`` `where: connection AND active` repeats the set. Delete the set from it. ``
+A test of a map, such as `connection[role] == 'output'`, is not the bare name
+of the set, so it loads.
+
+The typeset legend prints the set as the domain of the parameter, after
+`over`. For `efficiency` in the first example, the legend entry starts with
+`efficiency` over $(b, e) \in \mathrm{connection},\ t \in \mathcal{T}$. In
+the second example, it starts with `efficiency` over
+$(p, u) \in \mathrm{connection},\ t \in \mathcal{T}$, without the maps.
 
 ## `variables`
 
@@ -526,6 +657,51 @@ Equal
 bounds pin a variable to one value
 ([fix a quantity](../../howto/pin-a-variable.md)), and a pinned variable is
 still a variable.
+
+### A set in a variable's `dims`
+
+A variable names a [set](#a-set-in-dims) in `dims:` as a parameter does: it
+exists only where the set has a row. In this example, `flow` exists at the
+pairs that `connection` lists, at every snapshot:
+
+```yaml
+dimensions:
+  generator: { dtype: str }
+  bus: { dtype: str }
+  snapshot: { dtype: int }
+sets:
+  connection: { dims: [generator, bus], missing: absent }
+parameters:
+  load: { dims: [bus, snapshot] }
+variables:
+  flow:
+    dims: [connection, snapshot]
+    bounds: { lower: 0 }
+constraints:
+  balance:
+    dims: [bus, snapshot]
+    expression: sum(flow, over=generator) == load
+```
+
+$$\mathit{flow}_{b,g,t} \ge 0 \qquad \forall\, \left( b,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}$$
+
+A variable has no data, so nothing is refused. mathspec refuses the same sets
+at load as on a parameter, and a `where:` on the variable narrows inside the
+set. A `missing:` number stands for the variable outside its set, as outside a
+`where:`. A constraint names a set in `dims:` the same way, and has rows only
+where the set has one.
+
+mathspec refuses a `where:` that tests the rows of a set, as on a parameter,
+because `dims:` states them. For `where: connection` on `flow`, the message
+is:
+
+```text
+Variable 'flow': `where: connection` tests the rows of 'connection', which dims: states. Name it in dims: in place of the dimensions, and delete the `where:`.
+```
+
+Under `OR` or `NOT`, `dims:` cannot state the rows, and mathspec suggests a
+`bool` parameter in their place. A [map](relations.md#maps) tested alone, such
+as `connection[bus]`, asks for a label rather than a row, so it loads.
 
 ## `objective`
 

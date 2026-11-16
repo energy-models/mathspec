@@ -33,6 +33,7 @@ from pydantic import (
     model_serializer,
     model_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 
 from mathspec._expression_parser import NAME, Sense
 from mathspec._frozen import Frozen
@@ -79,7 +80,7 @@ __all__ = [
     'ParameterSpec',
     'PiecewiseLinkSpec',
     'PiecewiseSpec',
-    'RelationSpec',
+    'SetSpec',
     'SosSpec',
     'Spec',
     'VariableSpec',
@@ -133,7 +134,8 @@ class _StrictSpec(BaseModel):
         The canonical form dumps with ``exclude_defaults``, which leaves a
         default out whether the input set it or not.
         """
-        return _as_set(self, cast('dict[str, object]', handler(self)))
+        keys = _written_keys(type(self))
+        return {keys[k]: v for k, v in _as_set(self, cast('dict[str, object]', handler(self))).items()}
 
     @model_validator(mode='before')
     @classmethod
@@ -145,7 +147,7 @@ class _StrictSpec(BaseModel):
         """
         if not isinstance(data, dict):
             return data
-        known = set(cls.model_fields)
+        known = set(_written_keys(cls).values())
         unknown = [k for k in data if isinstance(k, str) and k not in known]
         if unknown:
             raise ValueError(
@@ -182,6 +184,11 @@ _MISSING_SCHEMA: dict[str, object] = {
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
 _WORDS = ', '.join(get_args(RelationMissing))
+
+
+def _written_keys(cls: type[BaseModel]) -> dict[str, str]:
+    """Each field of *cls* by name, mapped to the key a file writes it under: its alias where the name is a keyword."""
+    return {name: field.alias or name for name, field in cls.model_fields.items()}
 
 
 def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
@@ -243,25 +250,25 @@ def relation_columns(written: str | Sequence[str] | Mapping[str, str]) -> tuple[
     return tuple((d, d) for d in ((written,) if isinstance(written, str) else written))
 
 
-class RelationSpec(_StrictSpec):
+class SetSpec(_StrictSpec):
     """A named relation: the combinations of its dimensions that exist, one row each.
 
     ``dims:`` is a list of dimensions, or a mapping of column name to
     dimension where two columns share one. A row is its own identity, so the
     relation is a subset of the product of its dimensions::
 
-        relations:
+        sets:
           connection: {dims: [unit, port], missing: absent}
           corridor: {dims: {from: bus, to: bus}}
 
-    A relation is not a dimension. Its name stands in a condition, where it
-    is true at the rows it lists, and before a
+    A relation is not a dimension. Its name stands under an entry's ``in:``,
+    in a condition, where it is true at the rows it lists, and before a
     bracket, where it reads one of its maps (``maps:``, [`MapSpec`][]). The
     rows are data, and arrive under the relation's name, one column per
     column name, with a column per map beside them.
     """
 
-    _label: ClassVar[str] = 'a relation entry'
+    _label: ClassVar[str] = 'a set entry'
 
     dims: str | Dims | ByName[str]
     """The relation's columns: a list of dimensions, each a column named after it, or a mapping of column name to
@@ -277,7 +284,7 @@ class RelationSpec(_StrictSpec):
     @classmethod
     def _refused_or_absent(cls, v: object) -> object:
         """A row is data, so no value fills a gap in a relation."""
-        return _refused_or_absent(v, 'a relation', 'Write absent where a combination may have no row, or leave it out.')
+        return _refused_or_absent(v, 'a set', 'Write absent where a combination may have no row, or leave it out.')
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -402,9 +409,14 @@ class ParameterSpec(_StrictSpec):
 
     dims: Dims
     dtype: ParameterDtype = 'float'
+    in_: Annotated[Dims, SkipJsonSchema()] = ()
+    """The relations named in the parameter's ``dims:``, which the load replaces there by their dimensions. The parameter
+    has coordinates only where each of them has a row, and a tool refuses a row of its data anywhere else. A map of the
+    relation plays no part. A file writes the relation in ``dims:``, never this field.
+    """
     where: str | None = None
-    """The condition that limits the coordinates of the parameter, in the condition grammar. Where it is false, the
-    parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
+    """The condition that limits the coordinates of the parameter inside its ``in:``, in the condition grammar. Where it
+    is false, the parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
@@ -498,7 +510,10 @@ class VariableSpec(_StrictSpec):
     _label: ClassVar[str] = 'a variable entry'
 
     dims: Dims
+    in_: Annotated[Dims, SkipJsonSchema()] = ()
+    """The relations named in the variable's ``dims:``, as on a parameter: it exists only where each has a row."""
     where: str | None = None
+    """The condition that limits where the variable exists inside its ``in:``, in the condition grammar."""
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
     missing: Annotated[Literal['absent'] | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
@@ -512,7 +527,7 @@ class VariableSpec(_StrictSpec):
         The number stands for the variable where its mask leaves it out, so a mask must leave something out. The number
         lies in the variable's domain. The bounds hold only inside the mask, so the number may lie outside them. It
         loads as a float, as a bound does, so ``0`` and ``0.0`` are one spec. The checks run on the number as written,
-        so a refusal quotes it, and skip a ``where:`` or ``domain:`` that failed to load.
+        so a refusal quotes it, and skip an ``in:``, ``where:`` or ``domain:`` that failed to load.
         """
         if v is None:
             raise _missing_null('a variable', 'Write a number, or leave the key out for absent.')
@@ -523,10 +538,11 @@ class VariableSpec(_StrictSpec):
                 f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no '
                 f'data, so refused and a flag apply only to a parameter.'
             )
-        elif 'where' in info.data and info.data['where'] is None:
+        elif {'in_', 'where'} <= info.data.keys() and info.data['where'] is None and not info.data['in_']:
             msg = (
-                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no `where:` exists at every '
-                f'coordinate of its dimensions, so no coordinate is missing. Add a `where:`, or delete `missing:`.'
+                f'missing: {_as_yaml(v)} needs a `where:` or an `in:`. A variable with neither exists at every '
+                f'coordinate of its dimensions, so no coordinate is missing. Add a `where:` or an `in:`, or delete '
+                f'`missing:`.'
             )
         elif info.data.get('domain') == 'binary' and v not in (0, 1):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
@@ -652,6 +668,8 @@ class ConstraintSpec(_StrictSpec):
     _label: ClassVar[str] = 'a constraint entry'
 
     dims: Dims
+    in_: Annotated[Dims, SkipJsonSchema()] = ()
+    """The relations named in the constraint's ``dims:``, as on a parameter: it has rows only where each has a row."""
     where: str | None = None
     expression: str
     description: str | None = None
@@ -1058,7 +1076,7 @@ class PiecewiseSpec(_StrictSpec):
             msg = (
                 'a piecewise entry declares dims:, the dimensions with one curve per coordinate, as a variable '
                 'declares its own. Write the dimensions its links are over, without any that a link adds through '
-                'a relation: dims: [generator, snapshot] for a link on p over [generator, snapshot].'
+                'a set: dims: [generator, snapshot] for a link on p over [generator, snapshot].'
             )
             raise ValueError(msg)
         return data
@@ -1109,7 +1127,7 @@ class PiecewiseSpec(_StrictSpec):
         if len(v) < 2 and not any(link.walks for link in v.values()):
             msg = (
                 'piecewise needs at least two links ([expression, values, sign?]), or one link that walks a '
-                'relation. One quantity on a curve is a bound, not a curve.'
+                'set. One quantity on a curve is a bound, not a curve.'
             )
             raise ValueError(msg)
         if all(link.sign != '==' for link in v.values()):
@@ -1200,7 +1218,7 @@ class Spec(_StrictSpec):
     given: GivenSpec = GivenSpec()
     """What this file uses and does not build ([`GivenSpec`][]). It is empty when the file has no ``given:``."""
     dimensions: ByName[DimensionSpec] = Frozen({})
-    relations: ByName[RelationSpec] = Frozen({})
+    sets: ByName[SetSpec] = Frozen({})
     maps: ByName[ByName[MapSpec]] = Frozen({})
     """Each subject's maps, by subject, a dimension or a relation, and then by map ([`MapSpec`][])."""
     parameters: ByName[ParameterSpec] = Frozen({})
@@ -1286,7 +1304,19 @@ class Spec(_StrictSpec):
         the file wrote it or not, so a written file states the language it is
         read in.
         """
-        return {'version': self.version, **_as_set(self, cast('dict[str, object]', handler(self)))}
+        written = _as_set(self, cast('dict[str, object]', handler(self)))
+        return {'version': self.version, **_sets_written_back(written, self.sets)}
+
+    @model_validator(mode='before')
+    @classmethod
+    def _sets_in_dims(cls, data: object) -> object:
+        """A relation named in the ``dims:`` of a parameter, a variable or a constraint stands for its dimensions.
+
+        The entry is over those dimensions, at the rows the relation lists,
+        so every check after this one sees plain dimensions. ``in_`` keeps
+        the relations, and the serializer writes them back into ``dims:``.
+        """
+        return _over_sets(data) if isinstance(data, dict) else data
 
     def to_dict(self) -> dict[str, object]:
         """The spec as plain data. ``to_spec(m.to_dict())`` reproduces it."""
@@ -1388,6 +1418,76 @@ class Spec(_StrictSpec):
         return self
 
 
+_SET_SECTIONS = ('parameters', 'variables', 'constraints')
+
+
+def _members(relation: object) -> tuple[str, ...] | None:
+    """The dimensions a relation stands for in an entry's ``dims:``, or ``None`` where it lists one twice.
+
+    An entry over a dimension has it once, so a relation with two columns over
+    one dimension stays a name the dimension check refuses.
+    """
+    dims = relation.get('dims') if isinstance(relation, Mapping) else getattr(relation, 'dims', None)
+    listed = [dims] if isinstance(dims, str) else list(dims.values()) if isinstance(dims, Mapping) else dims
+    if not isinstance(listed, (list, tuple)) or len(set(listed)) != len(listed):
+        return None
+    return tuple(listed)
+
+
+def _over_sets(data: dict[str, object]) -> dict[str, object]:
+    """*data* with each relation in an entry's ``dims:`` replaced by its dimensions and recorded under ``in_``."""
+    relations = data.get('sets')
+    sets = {
+        name: members
+        for name, entry in (relations.items() if isinstance(relations, Mapping) else ())
+        if (members := _members(entry)) is not None
+    }
+    out = dict(data)
+    for section in _SET_SECTIONS:
+        if isinstance(entries := data.get(section), Mapping):
+            out[section] = {name: _entry_over_sets(entry, sets, section) for name, entry in entries.items()}
+    return out
+
+
+def _entry_over_sets(entry: object, sets: Mapping[str, tuple[str, ...]], section: str) -> object:
+    """One entry with the relations in its ``dims:`` replaced by their dimensions, each dimension once."""
+    if not isinstance(entry, Mapping):
+        return entry
+    if 'in_' in entry:
+        kind = section.removesuffix('s')
+        msg = f"unknown key 'in_' in a {kind} entry. Name the set in dims: in place of its dimensions."
+        raise ValueError(msg)
+    dims = entry.get('dims')
+    named: list[str] = [d for d in dims if isinstance(d, str) and d in sets] if isinstance(dims, (list, tuple)) else []
+    if not named:
+        return entry
+    flat = list(dict.fromkeys(m for d in cast('list[str]', dims) for m in (sets[d] if d in named else (d,))))
+    return {**entry, 'dims': flat, 'in_': named}
+
+
+def _sets_written_back(written: dict[str, object], relations: Mapping[str, SetSpec]) -> dict[str, object]:
+    """*written* with each entry's ``in_`` folded back into its ``dims:``, as the file writes it."""
+    out = dict(written)
+    for section in _SET_SECTIONS:
+        if isinstance(entries := written.get(section), Mapping):
+            out[section] = {name: _entry_written_back(entry, relations) for name, entry in entries.items()}
+    return out
+
+
+def _entry_written_back(entry: object, relations: Mapping[str, SetSpec]) -> object:
+    """One entry's ``dims:`` with the dimensions of each relation in ``in_`` written as the relation, at its first."""
+    if not isinstance(entry, Mapping) or not (named := entry.get('in_')):
+        return entry
+    owner = {m: r for r in reversed(cast('list[str]', named)) for _, m in relations[r].pairs}
+    dims: list[str] = []
+    for d in cast('list[str]', entry['dims']):
+        name = owner.get(d, d)
+        if name not in dims:
+            dims.append(name)
+    dims.extend(r for r in cast('list[str]', named) if r not in dims)
+    return {key: dims if key == 'dims' else value for key, value in entry.items() if key != 'in_'}
+
+
 def subject_tables(spec: Spec) -> dict[str, Relation]:
     """Each table the data supplies, by name: a relation with its maps as columns beside its own, and a dimension with maps.
 
@@ -1398,9 +1498,9 @@ def subject_tables(spec: Spec) -> dict[str, Relation]:
     A subject the file does not declare is left out, which the load refuses.
     """
     tables: dict[str, Relation] = {}
-    for name in sorted({*spec.relations, *spec.maps}):
+    for name in sorted({*spec.sets, *spec.maps}):
         maps = spec.maps.get(name, Frozen({}))
-        if (relation := spec.relations.get(name)) is not None:
+        if (relation := spec.sets.get(name)) is not None:
             key, missing, description = relation.pairs, relation.missing, relation.description
         elif name in spec.dimensions:
             key, missing, description = ((name, name),), cast('RelationMissing', 'refused'), None

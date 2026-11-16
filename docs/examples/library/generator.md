@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 This [fragment](../../reference/glossary.md#fragment) states `Generator` from
 an open-source power system framework ([PyPSA](https://pypsa.org)). The file declares its three dimensions, the
-relation `Generator_port`, two parameters and the variable `Generator_p`. The file
+set `Generator_port`, two parameters and the variable `Generator_p`. The file
 lists `Port_p` and `total_cost` under [`given`](../../reference/language/parameters-variables-constraints.md#given), and
 [the surface](surface.md) declares them. `Generator_cost` is a
 [named expression](../../reference/language/named.md#expressions) that adds to

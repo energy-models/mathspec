@@ -67,7 +67,7 @@ BASE = {
         'bus': {'dtype': 'str'},
         'zone': {'dtype': 'str'},
     },
-    'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
+    'sets': {'gen_zone': {'dims': ['generator', 'snapshot']}},
     'maps': {
         'generator': {'bus': {'dim': 'bus'}, 'zone': {'dim': 'zone'}, 'b0': {'dim': 'bus'}, 'b1': {'dim': 'bus'}},
         'snapshot': {'bus': {'dim': 'bus'}, 'rep': {'dim': 'snapshot'}},
@@ -253,7 +253,7 @@ def _dims_with(expr: str, **overrides) -> frozenset[str]:
 )
 def test_a_bare_relation_is_summed_between_its_key_columns(expr, expected):
     """A bare relation holds no value column, so the column a sum groups by is a key column."""
-    assert _dims_with(expr, **{'relations.connection': {'dims': ['generator', 'bus']}}) == expected
+    assert _dims_with(expr, **{'sets.connection': {'dims': ['generator', 'bus']}}) == expected
 
 
 def test_a_value_column_added_to_a_relation_changes_no_call():
@@ -441,7 +441,7 @@ def test_an_ill_dimensioned_expression_is_rejected(expr, error, match):
 def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
     """The operand carries one coordinate per dimension, so the `over=` column and an unnamed key column cannot share one."""
     with pytest.raises(DimensionError, match=r"joins 'diag' on \[.*\] through more than one column"):
-        _dims_with(expr, **{'relations.diag': diag})
+        _dims_with(expr, **{'sets.diag': diag})
 
 
 @pytest.mark.parametrize(
@@ -695,7 +695,7 @@ def test_a_condition_names_the_entries_its_leaves_test(namespace, condition, exp
 )
 def test_names_read_takes_both_sides_of_a_map_pair(condition, expected):
     """The one leaf that can name two entries — two maps compared row by row on the key their subjects share."""
-    home_of = {'relations.home_of': {'dims': ['generator', 'snapshot']}, 'maps.home_of': {'zone': {'dim': 'zone'}}}
+    home_of = {'sets.home_of': {'dims': ['generator', 'snapshot']}, 'maps.home_of': {'zone': {'dim': 'zone'}}}
     where = where_of(condition, Namespace(_spec(**home_of)), 'test')
 
     assert where is not None, 'a condition the connectives cannot settle survives the fold'
@@ -899,9 +899,7 @@ def test_the_order_a_file_writes_a_list_in_reaches_no_value_of_the_spec(path):
     one spec loaded to two specs, and wrote back two texts."""
     spec = to_spec(path)
     backwards = to_spec(sets_reversed(spec.to_dict()))
-    assert backwards == spec, (
-        'every dims:, one_of: and kwargs: list and each side of a relation is sorted as the spec loads'
-    )
+    assert backwards == spec, 'every dims:, one_of: and kwargs: list and each side of a set is sorted as the spec loads'
     assert backwards.to_yaml() == spec.to_yaml(), 'so the spec writes back one text'
 
 
@@ -969,7 +967,7 @@ def test_every_dims_of_the_program_is_sorted_by_name(path):
 @pytest.mark.parametrize(
     'entry',
     [
-        pytest.param({'where': 'zone_of'}, id='the-rows-of-the-relation'),
+        pytest.param({'dims': ['zone_of']}, id='the-rows-of-the-relation'),
         pytest.param({'where': "zone_of[zone] == 'north'"}, id='a-column-against-a-label'),
         pytest.param({'where': 'zone_of[zone] == home_of[zone]'}, id='a-column-against-another-relation'),
     ],
@@ -979,8 +977,8 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(entry):
     keyed_backwards = {'dims': ['snapshot', 'generator'], 'missing': 'absent'}
     spec = _spec(
         **{
-            'relations.zone_of': keyed_backwards,
-            'relations.home_of': keyed_backwards,
+            'sets.zone_of': keyed_backwards,
+            'sets.home_of': keyed_backwards,
             'maps.zone_of': {'zone': {'dim': 'zone'}},
             'maps.home_of': {'zone': {'dim': 'zone'}},
         }
@@ -989,5 +987,5 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(entry):
     where = to_spec(varied(spec.to_dict(), **patch)).program.variables['p'].where
     assert where is not None
     assert [dims for _, dims in _dims_tuples(where.root)] == [('generator', 'snapshot')], (
-        'the condition states the relation key dims, sorted by name'
+        'the condition states the set key dims, sorted by name'
     )

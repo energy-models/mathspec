@@ -23,9 +23,9 @@ understand a rule before you rely on it.
     added to the language, and which requests mathspec refuses and why.
 - **[Versions](versions.md)** describes how the version of the package and the
     version of the language relate, and why there are two.
-- **[Relations as linear maps](relations-as-linear-maps.md)** describes a sum
+- **[Sets as linear maps](relations-as-linear-maps.md)** describes a sum
     through a table that pairs labels
-    ([a relation](../reference/language/relations.md)) as the product of a matrix and a vector.
+    ([a set](../reference/language/relations.md)) as the product of a matrix and a vector.
 - **[Understanding a spec in SQL and dataframe terms](sql-and-dataframes.md)**
     describes each declaration and operator of a spec as a table or a query, in
     SQL and in polars.

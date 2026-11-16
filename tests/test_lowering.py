@@ -720,11 +720,11 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     program = to_spec(
         {
             'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'ordered': True}, 'zone': {}},
-            'relations': {'zone_of': {'dims': ['generator', 'snapshot'], 'missing': 'absent'}},
+            'sets': {'zone_of': {'dims': ['generator', 'snapshot'], 'missing': 'absent'}},
             'maps': {'zone_of': {'zone': {'dim': 'zone'}}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
-                'p': {'dims': ['snapshot', 'generator'], 'where': "zone_of AND zone_of[zone] == 'A'"},
+                'p': {'dims': ['zone_of'], 'where': "zone_of[zone] == 'A'"},
                 'first': {
                     'dims': ['snapshot', 'generator'],
                     'where': 'position(generator, within=zone_of[zone]) == 0',
@@ -749,7 +749,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
 
     columns = (('generator', 'generator'), ('snapshot', 'snapshot'), ('zone', 'zone'))
     declared = Relation(columns, ('generator', 'snapshot'), missing='absent')
-    assert program.relations == {'zone_of': declared}, 'the relation sits once in the program, under its name'
+    assert program.relations == {'zone_of': declared}, 'the set sits once in the program, under its name'
     zonal = program.constraints['zonal'].lhs
     columns = JoinColumns('zone_of', declared, ('generator', 'snapshot'), ('snapshot', 'zone'))
     assert zonal == Sum(
@@ -796,7 +796,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert [(type(a).__name__, a.dims) for a in p_where.atoms] == [
         ('RelationDefined', ('generator', 'snapshot')),
         ('RelationComparison', ('generator', 'snapshot')),
-    ], 'a row and a comparison are both read at the key of a keyed relation'
+    ], 'the rows `dims:` names and a comparison are both read at the key of a keyed set'
     first_where = program.variables['first'].where
     assert first_where is not None
     assert first_where.dims == ('generator', 'snapshot'), 'a position within a group is read at every key column'
@@ -805,14 +805,14 @@ def test_a_relation_lowers_with_the_join_each_call_names():
 @pytest.mark.parametrize(
     ('variable', 'entry', 'atom'),
     [
-        pytest.param('q', {'where': 'link'}, RelationDefined('link', ('g', 'h')), id='a-bare-relation-tests-a-row'),
+        pytest.param('q', {'dims': ['link']}, RelationDefined('link', ('g', 'h')), id='a-relation-in-dims-tests-a-row'),
         pytest.param('p', {'where': 'g[h]'}, RelationDefined('g', ('g',), 'h'), id='a-map-alone-tests-a-label'),
     ],
 )
 def test_a_condition_tests_a_row_or_a_label_by_how_it_is_written(variable, entry, atom):
     """A relation's bare name asks for a row, and `subject[map]` alone asks whether the map gives the row a label."""
     patch = {
-        'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
+        'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'},
         'maps.g.h': {'dim': 'h', 'missing': 'absent'},
         **{f'variables.{variable}.{key}': value for key, value in entry.items()},
     }
@@ -897,7 +897,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
         varied(
             TINY,
             dimensions={'g': {}, 'bus': {}, 'season': {}},
-            relations={'link': {'dims': ['g', 'bus'], 'missing': 'absent'}},
+            sets={'link': {'dims': ['g', 'bus'], 'missing': 'absent'}},
             maps={'g': {'season': {'dim': 'season'}, 'bus': {'dim': 'bus', 'missing': 'absent'}}},
         )
     ).program
@@ -907,7 +907,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
         'link': Relation((('bus', 'bus'), ('g', 'g')), ('bus', 'g'), missing='absent'),
     }, 'a table per subject, its own columns first, then one column per map'
     assert program.relations['g'].values == ('bus', 'season'), 'the maps are what a row of the subject determines'
-    assert program.relations['link'].values == (), 'a relation with no maps determines nothing'
+    assert program.relations['link'].values == (), 'a set with no maps determines nothing'
     assert program.dimensions['g'] == Dimension(dtype='str'), 'a dimension carries its dtype and no map'
 
 

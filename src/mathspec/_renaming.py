@@ -120,8 +120,8 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
             raise LanguageError(msg)
     changed = {old: new for old, new in names.items() if new is not None and new != old}
     columns = {
-        column: f"a column of the relation '{relation}'"
-        for relation, entry in spec.relations.items()
+        column: f"a column of the set '{relation}'"
+        for relation, entry in spec.sets.items()
         for column, dimension in entry.pairs
         if column != dimension
     } | {

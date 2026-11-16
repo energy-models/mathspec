@@ -1581,7 +1581,7 @@ parameters:
     dims: [global_constraint, process]
     missing: absent
 
-relations:
+sets:
   Generator_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in,

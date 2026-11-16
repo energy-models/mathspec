@@ -28,7 +28,7 @@ dimensions:
   generator:
     description: generating units, each on one bus
 
-relations:
+sets:
   Generator_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in,

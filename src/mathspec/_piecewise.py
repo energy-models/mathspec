@@ -449,7 +449,7 @@ def leaves_ungated(gate: VariableSpec | Variable, walk: JoinColumns | None = Non
     Under ``missing: refused`` every curve has one.
     """
     absent = walk is not None and walk.relation.missing_at(walk.dropped) == 'absent'
-    return absent or (gate.where is not None and gate.missing != 0)
+    return absent or ((gate.where is not None or bool(gate.in_)) and gate.missing != 0)
 
 
 def gate_of(text: str) -> str | None:

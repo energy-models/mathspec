@@ -78,7 +78,7 @@ def _check_sum(node: Sum, inner: frozenset[str], context: str) -> None:
     every one, and the join's own rules are the sum's.
     """
     if isinstance(node.operand, Join) and node.operand.columns.axes:
-        assert node.over == node.operand.columns.axes, 'a sum through a relation closes exactly the axes its join opens'
+        assert node.over == node.operand.columns.axes, 'a sum through a set closes exactly the axes its join opens'
         return
     for summed in node.over:
         if summed.dimension not in inner:
@@ -171,7 +171,7 @@ def _check_joined(call: str, use: JoinColumns | Partition, inner: frozenset[str]
     if twice := sorted({d for d in dims if dims.count(d) > 1}):
         raise DimensionError(
             f"{context}: {call} joins '{use.name}' on {twice} through more than one column. Join on "
-            f'different dimensions, or use a relation whose columns are over different dimensions.'
+            f'different dimensions, or use a set whose columns are over different dimensions.'
         )
 
 
@@ -347,7 +347,7 @@ def _check_condition_dims(
             case DimensionComparison() | DimensionPosition():
                 leaf = f"where-dimension '{atom.name}'"
             case RelationDefined(column=None):
-                leaf = f"where-relation '{atom.name}'"
+                leaf = f"where-set '{atom.name}'"
             case RelationComparison() | RelationPairComparison() | RelationDefined():
                 leaf = f"where-map '{atom.name}[{atom.column}]'"
             case ExpressionComparison():

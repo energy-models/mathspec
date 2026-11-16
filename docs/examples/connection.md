@@ -9,7 +9,7 @@ Units with ports is a specification of an optimisation model
 ([a spec](../reference/glossary.md#spec)) in which each unit attaches to buses
 through numbered ports. Each port number matches one of the `bus0`, `bus1`, …
 columns of an open-source power system modelling framework
-([PyPSA](https://pypsa.org)). The [relation](../reference/language/relations.md)
+([PyPSA](https://pypsa.org)). The [set](../reference/language/relations.md)
 `connection` lists the bus and the role of each port. Its key is the unit and
 the port, not the bus, so two ports of one unit may attach to the same bus.
 
@@ -32,7 +32,7 @@ dimensions:
   port: { dtype: int, description: "an attachment of a unit, numbered as PyPSA's bus0, bus1, ..." }
   role: { description: input or output }
 
-relations:
+sets:
   connection:
     description: the bus each port of a unit attaches to, and whether the port draws or delivers
     dims: [unit, port]

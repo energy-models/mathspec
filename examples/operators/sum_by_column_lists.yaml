@@ -12,7 +12,7 @@ dimensions:
   bus: { dtype: str }
   technology: { dtype: str }
 
-relations:
+sets:
   slot_of: { dims: [generator, period] }
 
 maps:

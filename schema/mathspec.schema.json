@@ -882,9 +882,9 @@
       "title": "PiecewiseSpec",
       "type": "object"
     },
-    "RelationSpec": {
+    "SetSpec": {
       "additionalProperties": false,
-      "description": "A named relation: the combinations of its dimensions that exist, one row each.\n\n``dims:`` is a list of dimensions, or a mapping of column name to\ndimension where two columns share one. A row is its own identity, so the\nrelation is a subset of the product of its dimensions::\n\n    relations:\n      connection: {dims: [unit, port], missing: absent}\n      corridor: {dims: {from: bus, to: bus}}\n\nA relation is not a dimension. Its name stands in a condition, where it\nis true at the rows it lists, and before a\nbracket, where it reads one of its maps (``maps:``, [`MapSpec`][]). The\nrows are data, and arrive under the relation's name, one column per\ncolumn name, with a column per map beside them.",
+      "description": "A named relation: the combinations of its dimensions that exist, one row each.\n\n``dims:`` is a list of dimensions, or a mapping of column name to\ndimension where two columns share one. A row is its own identity, so the\nrelation is a subset of the product of its dimensions::\n\n    sets:\n      connection: {dims: [unit, port], missing: absent}\n      corridor: {dims: {from: bus, to: bus}}\n\nA relation is not a dimension. Its name stands under an entry's ``in:``,\nin a condition, where it is true at the rows it lists, and before a\nbracket, where it reads one of its maps (``maps:``, [`MapSpec`][]). The\nrows are data, and arrive under the relation's name, one column per\ncolumn name, with a column per map beside them.",
       "properties": {
         "description": {
           "anyOf": [
@@ -931,7 +931,7 @@
       "required": [
         "dims"
       ],
-      "title": "RelationSpec",
+      "title": "SetSpec",
       "type": "object"
     },
     "SosSpec": {
@@ -1152,12 +1152,12 @@
       "title": "Piecewise",
       "type": "object"
     },
-    "relations": {
+    "sets": {
       "additionalProperties": {
-        "$ref": "#/$defs/RelationSpec"
+        "$ref": "#/$defs/SetSpec"
       },
       "default": {},
-      "title": "Relations",
+      "title": "Sets",
       "type": "object"
     },
     "sos": {

@@ -25,7 +25,7 @@ from mathspec.errors import LanguageError
 #: `unit_` entries. Every place a name can stand appears once.
 UNIT = {
     'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'unit': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'relations': {'unit_link': {'dims': ['bus', 'unit'], 'missing': 'absent'}},
+    'sets': {'unit_link': {'dims': ['bus', 'unit'], 'missing': 'absent'}},
     'maps': {'unit': {'bus': {'dim': 'bus'}, 'bus0': {'dim': 'bus'}}},
     'given': {'expressions': {'total_cost': {'dims': []}}},
     'parameters': {
@@ -61,11 +61,7 @@ UNIT = {
 
 #: The placeholder names, as a class takes them.
 PLACEHOLDERS = (
-    *(
-        name
-        for section in ('relations', 'parameters', 'conditions', 'variables', 'expressions')
-        for name in UNIT[section]
-    ),
+    *(name for section in ('sets', 'parameters', 'conditions', 'variables', 'expressions') for name in UNIT[section]),
     'unit_ramp',
     'unit_bounded',
     'unit_twice',
@@ -93,7 +89,7 @@ COST = {
     [
         pytest.param(lambda s: list(s['dimensions']), ['bus', 'generator', 'snapshot'], id='dimension'),
         pytest.param(
-            lambda s: s['relations']['Generator_link'],
+            lambda s: s['sets']['Generator_link'],
             {'dims': ['bus', 'generator'], 'missing': 'absent'},
             id='relation',
         ),
@@ -348,14 +344,14 @@ def test_a_map_the_spec_cannot_take_is_refused(names, message):
     ('old', 'message'),
     [
         pytest.param('bus0', "'bus0' is also a map of 'line'", id='a-map'),
-        pytest.param('from_bus', "'from_bus' is also a column of the relation 'corridor'", id='a-relation-column'),
+        pytest.param('from_bus', "'from_bus' is also a column of the set 'corridor'", id='a-relation-column'),
     ],
 )
 def test_a_name_that_is_also_a_map_or_a_relation_column_is_refused(old, message):
     """`line[bus0]` reads a map, and a rename of the parameter `bus0` would change it too."""
     spec = {
         'dimensions': {'line': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-        'relations': {'corridor': {'dims': {'from_bus': 'bus', 'to_bus': 'bus'}}},
+        'sets': {'corridor': {'dims': {'from_bus': 'bus', 'to_bus': 'bus'}}},
         'maps': {'line': {'bus0': {'dim': 'bus'}, 'bus1': {'dim': 'bus'}}},
         'parameters': {'bus0': {'dims': ['bus']}, 'from_bus': {'dims': ['bus']}},
         'variables': {'flow': {'dims': ['line']}},

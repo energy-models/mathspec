@@ -111,6 +111,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_frame_dimensions(spec),
         *_relation_targets(spec),
         *_map_targets(spec),
+        *_index_sets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -121,23 +122,24 @@ def reference_errors(spec: Spec) -> list[str]:
 
 def undeclared_dimension(kind: str, name: str, dimension: str, spec: Spec, *, along: bool = False) -> str:
     """The one wording for an entry naming a dimension the file does not declare, or naming a relation as one."""
-    if (relation := spec.relations.get(dimension)) is None:
+    if (relation := spec.sets.get(dimension)) is None:
         return f"{kind} '{name}' references undeclared dimension '{dimension}'. Declare it under 'dimensions:'."
     dims = sorted({d for _, d in relation.pairs})
-    if along:
-        rewrite = f'Name one of its dimensions, {dims}.'
-    elif kind in ('Parameter', 'Variable'):
-        rewrite = f'Name its dimensions, {dims}, under dims:, and confine the entry with where: {dimension}.'
-    else:
-        rewrite = f'Name its dimensions, {dims}.'
-    return f"{kind} '{name}' names the relation '{dimension}', and a relation is not a dimension. {rewrite}"
+    if not along and kind in ('Parameter', 'Variable', 'Constraint') and len(dims) < len(relation.pairs):
+        return (
+            f"{kind} '{name}' names the set '{dimension}', which has two columns over one dimension, and an "
+            f'entry is over each dimension once. Name its dimensions, {dims}, with a second name for the one it '
+            f'repeats.'
+        )
+    rewrite = f'Name one of its dimensions, {dims}.' if along else f'Name its dimensions, {dims}.'
+    return f"{kind} '{name}' names the set '{dimension}', and a set is not a dimension. {rewrite}"
 
 
 def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
     """Each kind of entry whose names share the one namespace an expression reads."""
     return [
         ('dimension', spec.dimensions),
-        ('relation', spec.relations),
+        ('set', spec.sets),
         ('parameter', spec.parameters),
         ('given parameter', spec.given.parameters),
         ('variable', spec.variables),
@@ -200,28 +202,28 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
 
 def _relation_targets(spec: Spec) -> Iterator[str]:
     """A relation has at least two columns, over declared dimensions, each named once."""
-    for lname, lk in spec.relations.items():
+    for lname, lk in spec.sets.items():
         if len(lk.pairs) < 2:
             dim = lk.pairs[0][1] if lk.pairs else '<dimension>'
             yield (
-                f"Relation '{lname}' has {'one column' if lk.pairs else 'no column'} under 'dims:', and a relation "
+                f"Set '{lname}' has {'one column' if lk.pairs else 'no column'} under 'dims:', and a set "
                 f'needs at least two. To give each {dim} a label, declare a map under maps: {dim}:. To mark some '
                 f'of them, declare a bool parameter or a condition.'
             )
         if not isinstance(lk.dims, Mapping):
             yield from (
-                f"Relation '{lname}' names dimension '{d}' twice under 'dims:'. Give the two columns names: "
+                f"Set '{lname}' names dimension '{d}' twice under 'dims:'. Give the two columns names: "
                 f'dims: {{{d}0: {d}, {d}1: {d}}}.'
                 for d, count in Counter(lk.dims if isinstance(lk.dims, tuple) else (lk.dims,)).items()
                 if count > 1
             )
         yield from (
-            undeclared_dimension('Relation', lname, d, spec)
+            undeclared_dimension('Set', lname, d, spec)
             for d in dict.fromkeys(d for _, d in lk.pairs)
             if d not in spec.dimensions
         )
         yield from (
-            f"Relation '{lname}' names column '{role}' after dimension '{role}', but the column is over "
+            f"Set '{lname}' names column '{role}' after dimension '{role}', but the column is over "
             f"'{dim}'. Rename the column after what it holds."
             for role, dim in lk.pairs
             if role in spec.dimensions and role != dim
@@ -236,19 +238,19 @@ def _map_targets(spec: Spec) -> Iterator[str]:
     """
     for subject, maps in spec.maps.items():
         head = f"maps: '{subject}'"
-        if subject in spec.relations:
-            pairs = spec.relations[subject].pairs
+        if subject in spec.sets:
+            pairs = spec.sets[subject].pairs
             if twice := [d for d, count in Counter(d for _, d in pairs).items() if count > 1]:
                 yield (
-                    f"{head} is a relation with two columns over '{twice[0]}', and a map reads one row per "
-                    f'combination of its dimensions. Declare the maps on a relation over each dimension once.'
+                    f"{head} is a set with two columns over '{twice[0]}', and a map reads one row per "
+                    f'combination of its dimensions. Declare the maps on a set over each dimension once.'
                 )
         elif subject in spec.dimensions:
             pairs = ((subject, subject),)
         else:
-            subjects = [*spec.dimensions, *spec.relations]
+            subjects = [*spec.dimensions, *spec.sets]
             yield (
-                f'{head} is neither a dimension nor a relation, and a map gives each row of one a label. '
+                f'{head} is neither a dimension nor a set, and a map gives each row of one a label. '
                 f'{did_you_mean(subject, subjects, label="Subjects")}'
             )
             continue
@@ -263,10 +265,10 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                     f"{head}: map '{role}' has the name of a column of '{subject}', which holds the row, not a "
                     f'label of it. Rename the map after what it holds.'
                 )
-            if m.dim in spec.relations:
+            if m.dim in spec.sets:
                 yield (
-                    f"{head}: map '{role}' refers to the relation '{m.dim}', and a map gives a label of one "
-                    f"dimension. Refer to one of its dimensions, or declare '{role}' on the relation instead."
+                    f"{head}: map '{role}' refers to the set '{m.dim}', and a map gives a label of one "
+                    f"dimension. Refer to one of its dimensions, or declare '{role}' on the set instead."
                 )
             elif m.dim not in spec.dimensions:
                 yield (
@@ -276,6 +278,24 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                 yield (
                     f"{head}: map '{role}' is named after dimension '{role}', but refers to '{m.dim}'. Rename the "
                     f'map after what it holds.'
+                )
+
+
+def _index_sets(spec: Spec) -> Iterator[str]:
+    """Each relation an entry names in ``dims:`` is named once and leaves a combination out."""
+    entries = [
+        *((f"Parameter '{name}'", p.in_) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", v.in_) for name, v in spec.variables.items()),
+        *((f"Constraint '{name}'", c.in_) for name, c in spec.constraints.items()),
+    ]
+    for context, in_ in entries:
+        head = f'{context}: dims: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(in_).items() if count > 1)
+        for rname in dict.fromkeys(in_):
+            if spec.sets[rname].missing == 'refused':
+                yield (
+                    f"{head} '{rname}', which under missing: refused has a row at every combination, so it "
+                    f"leaves nothing out. Write missing: absent on '{rname}', or name its dimensions in its place."
                 )
 
 

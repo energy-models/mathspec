@@ -71,6 +71,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'spare': 'Unbounded integer domain',
         'reserve': 'Scalar variable',
         'headroom': 'Scalar variable with a condition',
+        'flow': 'Variable over the rows of a relation',
         'weight': 'Variable in a special ordered set',
         'fuel': 'Second axis of a curve',
         'heat': 'Third axis of a curve',
@@ -295,7 +296,7 @@ def legend() -> str:
 
 #: What the legend is made of. No equation comes from these, so they are shown
 #: once, together, above the tables they turn into.
-DECLARED = ('dimensions', 'relations', 'maps', 'parameters')
+DECLARED = ('dimensions', 'sets', 'maps', 'parameters')
 
 
 def preamble(text: str) -> str:

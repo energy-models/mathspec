@@ -28,7 +28,7 @@ dimensions:
   process:
     description: generalised multi-port converters, each with an internal power that every port draws or delivers at its own rate
 
-relations:
+sets:
   Process_maintenance_cover:
     description: >-
       the snapshots a maintenance event covers, by the snapshot it starts in,

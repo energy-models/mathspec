@@ -157,6 +157,7 @@ class ConditionResolver:
                     and declared.missing == 'refused'
                     and declared.where is None
                     and declared.dtype in ('int', 'str')
+                    and not declared.in_
                 ):
                     rewrite = (
                         f'Declare `missing: absent`, or compare the label: where: "{node.name} == \'...\'".'
@@ -552,13 +553,13 @@ class ConditionResolver:
         shape = ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{context}: '{spelling}' compares the relation '{name}', which has no map, so its rows hold no "
+                f"{context}: '{spelling}' compares the set '{name}', which has no map, so its rows hold no "
                 f"label. Test the bare name '{name}' for whether a row exists, or declare a map under maps: {name}:."
             )
             return None
         if column is None:
             self.errors.append(
-                f"{context}: '{spelling}' compares the relation '{name}' itself, and a comparison reads a label. "
+                f"{context}: '{spelling}' compares the set '{name}' itself, and a comparison reads a label. "
                 f'Name one of its maps: {name}[{shape.values[0]}].'
             )
             return None

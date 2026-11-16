@@ -159,7 +159,7 @@ dimensions:
   period: { dtype: int }
   zone: { dtype: str }
 
-relations:
+sets:
   zone_of: { dims: [generator, period] }
 
 maps:
@@ -198,7 +198,7 @@ dimensions:
   bus: { dtype: str }
   technology: { dtype: str }
 
-relations:
+sets:
   slot_of: { dims: [generator, period] }
 
 maps:

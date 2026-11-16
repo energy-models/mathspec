@@ -88,7 +88,7 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {
-                    'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
+                    'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'},
                     'constraints': {'cap': {'dims': ['g'], 'where': 'lnk', 'expression': 'p <= c'}},
                 },
                 ("'lnk' not found", "'link']"),
@@ -329,7 +329,7 @@ class TestDimensionKwargs:
             ),
             pytest.param(
                 'sum(p, over=generator, by=generatr[zone]) == load',
-                ("'generatr' is not a relation or a dimension with maps", "Did you mean 'generator'?"),
+                ("'generatr' is not a set or a dimension with maps", "Did you mean 'generator'?"),
                 id='by-relation-typo',
             ),
             pytest.param(
@@ -779,7 +779,7 @@ class TestPositionResolves:
             (
                 'position(snapshot, within=load[snapshot]) == 0',
                 [
-                    "position(within=load[...]): 'load' is not a relation or a dimension with maps",
+                    "position(within=load[...]): 'load' is not a set or a dimension with maps",
                     'Write within=<subject>[<map>]',
                 ],
             ),
@@ -788,7 +788,7 @@ class TestPositionResolves:
                 ["'period' has no column of its own over 'snapshot'", "Its own columns are ['period']"],
             ),
         ],
-        ids=['a parameter', 'undeclared', 'within= is not a relation', 'within= is over another dim'],
+        ids=['a parameter', 'undeclared', 'within= is not a set', 'within= is over another dim'],
     )
     def test_it_refuses(self, mask: str, fragments: list[str]):
         with pytest.raises(LanguageError) as excinfo:
@@ -1054,7 +1054,7 @@ class TestAConditionIsAnOperand:
         spec = to_spec(
             {
                 'dimensions': {name: {'dtype': 'str'} for name in ('curve', 'effect', 'flow')},
-                'relations': {'cost_of': {'dims': ['flow', 'effect']}},
+                'sets': {'cost_of': {'dims': ['flow', 'effect']}},
                 'maps': {
                     'cost_of': {'curve': {'dim': 'curve'}},
                     'curve': {'flow': {'dim': 'flow'}, 'effect': {'dim': 'effect'}},
@@ -1071,7 +1071,7 @@ class TestAConditionIsAnOperand:
         mask = spec.program.constraints['k'].where
         assert mask is not None
         assert sorted(mask.dims) == dims, 'the read lands on the columns the other end names'
-        assert mask.names_read == reads, 'a consumer attaches the relation as well as the operand'
+        assert mask.names_read == reads, 'a consumer attaches the set as well as the operand'
         assert to_spec(spec.to_yaml()).program == spec.program, 'the where string reads back to the same mask'
         for fmt in ('markdown', 'latex', 'typst'):
             assert all(name in typeset_line(spec, 'k', fmt).replace('\\_', '_') for name in printed), (
@@ -1198,7 +1198,7 @@ class TestAConditionIsAnOperand:
             ),
             pytest.param(
                 'at(r, by=nope[h])',
-                ("at(by=nope[...]): 'nope' is not a relation or a dimension with maps",),
+                ("at(by=nope[...]): 'nope' is not a set or a dimension with maps",),
                 id='a-read-through-no-relation',
             ),
             pytest.param(
@@ -1435,41 +1435,41 @@ class TestRulesDecidedWithoutData:
                 id='sos-whose-expansion-collides-with-an-entry',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h'], 'dtype': 'str'}},
-                ("unknown key 'dtype' in a relation entry. Valid keys: description, dims, missing.",),
+                {'sets.link': {'dims': ['g', 'h'], 'dtype': 'str'}},
+                ("unknown key 'dtype' in a set entry. Valid keys: description, dims, missing.",),
                 id='relation-with-a-dtype-of-its-own',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g']}},
+                {'sets.link': {'dims': ['g']}},
                 (
-                    "Relation 'link' has one column under 'dims:', and a relation needs at least two",
+                    "Set 'link' has one column under 'dims:', and a set needs at least two",
                     'To give each g a label, declare a map under maps: g:.',
                 ),
                 id='relation-with-one-column',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'z']}},
-                ("Relation 'link' references undeclared dimension 'z'",),
+                {'sets.link': {'dims': ['g', 'z']}},
+                ("Set 'link' references undeclared dimension 'z'",),
                 id='relation-over-undeclared',
             ),
             pytest.param(
-                {'relations.odd': {'dims': {'h': 'g', 'x': 'h'}}},
+                {'sets.odd': {'dims': {'h': 'g', 'x': 'h'}}},
                 ("names column 'h' after dimension 'h', but the column is over 'g'",),
                 id='relation-column-named-after-a-dimension-it-is-not-over',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'g']}},
+                {'sets.link': {'dims': ['g', 'g']}},
                 ("names dimension 'g' twice under 'dims:'", 'dims: {g0: g, g1: g}'),
                 id='relation-naming-a-dim-twice-without-names',
             ),
             pytest.param(
-                {'relations.link': {'dims': []}},
-                ("Relation 'link' has no column under 'dims:', and a relation needs at least two",),
+                {'sets.link': {'dims': []}},
+                ("Set 'link' has no column under 'dims:', and a set needs at least two",),
                 id='relation-with-no-columns',
             ),
             pytest.param(
                 {'maps.nope': {'h': {'dim': 'h'}}},
-                ("maps: 'nope' is neither a dimension nor a relation", 'Subjects: g, h.'),
+                ("maps: 'nope' is neither a dimension nor a set", 'Subjects: g, h.'),
                 id='map-of-no-subject',
             ),
             pytest.param(
@@ -1478,13 +1478,13 @@ class TestRulesDecidedWithoutData:
                 id='map-whose-name-is-not-a-name',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'g': {'dim': 'g'}}},
+                {'sets.link': {'dims': ['g', 'h']}, 'maps.link': {'g': {'dim': 'g'}}},
                 ("maps: 'link': map 'g' has the name of a column of 'link'", 'Rename the map after what it holds'),
                 id='map-named-after-a-column-of-its-subject',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.g': {'x': {'dim': 'link'}}},
-                ("maps: 'g': map 'x' refers to the relation 'link', and a map gives a label of one dimension",),
+                {'sets.link': {'dims': ['g', 'h']}, 'maps.g': {'x': {'dim': 'link'}}},
+                ("maps: 'g': map 'x' refers to the set 'link', and a map gives a label of one dimension",),
                 id='map-referring-to-a-relation',
             ),
             pytest.param(
@@ -1498,8 +1498,8 @@ class TestRulesDecidedWithoutData:
                 id='map-named-after-another-dimension',
             ),
             pytest.param(
-                {'relations.pair': {'dims': {'g0': 'g', 'g1': 'g'}}, 'maps.pair': {'x': {'dim': 'h'}}},
-                ("maps: 'pair' is a relation with two columns over 'g'", 'Declare the maps on a relation over each'),
+                {'sets.pair': {'dims': {'g0': 'g', 'g1': 'g'}}, 'maps.pair': {'x': {'dim': 'h'}}},
+                ("maps: 'pair' is a set with two columns over 'g'", 'Declare the maps on a set over each'),
                 id='map-on-a-relation-with-two-columns-over-one-dimension',
             ),
             pytest.param(
@@ -1525,7 +1525,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'relations.bare': {'dims': {'a': 'g', 'b': 'g', 'm': 'z'}},
+                    'sets.bare': {'dims': {'a': 'g', 'b': 'g', 'm': 'z'}},
                     'objective': {'expression': 'sum(sum(p, over=g, by=bare[m]))'},
                 },
                 (
@@ -1537,7 +1537,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'relations.gz': {'dims': ['g', 'z']},
+                    'sets.gz': {'dims': ['g', 'z']},
                     'objective': {'expression': 'sum(sum(q, over=h, by=gz[z]))'},
                 },
                 ("over=h names no column of 'gz', so the sum reads nothing through 'gz'", "its columns are ['g', 'z']"),
@@ -1607,8 +1607,8 @@ class TestRulesDecidedWithoutData:
                 id='a-selection-in-over-without-by',
             ),
             pytest.param(
-                {'relations.rel': {'dims': ['g', 'h']}, 'objective': {'expression': 'sum(sum(p, by=rel[h]))'}},
-                ('sum() through a relation does not name over=', 'names in over= the columns it sums away'),
+                {'sets.rel': {'dims': ['g', 'h']}, 'objective': {'expression': 'sum(sum(p, by=rel[h]))'}},
+                ('sum() through a set does not name over=', 'names in over= the columns it sums away'),
                 id='a-sum-through-a-relation-names-what-leaves',
             ),
             pytest.param(
@@ -1632,7 +1632,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'relations.rel': {'dims': ['g', 'h']},
+                    'sets.rel': {'dims': ['g', 'h']},
                     'objective': {'expression': 'sum(at(r, by=rel[h]))'},
                 },
                 ("'rel' has no map for at() to read. Sum through it instead, or declare a map under maps: rel:.",),
@@ -1649,16 +1649,16 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'relations.rel': {'dims': ['g', 'h']},
+                    'sets.rel': {'dims': ['g', 'h']},
                     'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=0, within=rel[h]))'},
                 },
                 ("'rel' has no map, so it makes no groups", 'under maps: g:'),
                 id='a-partition-through-a-relation-with-no-map',
             ),
             pytest.param(
-                {'relations.rel': {'dims': ['g', 'h']}, 'variables.q.where': "rel[h] == 'x'"},
+                {'sets.rel': {'dims': ['g', 'h']}, 'variables.q.where': "rel[h] == 'x'"},
                 (
-                    "compares the relation 'rel', which has no map, so its rows hold no label",
+                    "compares the set 'rel', which has no map, so its rows hold no label",
                     "Test the bare name 'rel' for whether a row exists, or declare a map under maps: rel:.",
                 ),
                 id='where-compares-a-relation-with-no-map',
@@ -1670,25 +1670,25 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'relations.pair': {'dims': {'g0': 'g', 'g1': 'g'}},
+                    'sets.pair': {'dims': {'g0': 'g', 'g1': 'g'}},
                     'variables.q.where': 'pair',
                 },
                 ("'pair' has two columns over one dimension (['g0', 'g1']), so a bare name is ambiguous",),
                 id='where-bare-name-of-a-relation-with-two-columns-over-one-dim',
             ),
             pytest.param(
-                {'relations.h': {'dims': ['g', 'h']}},
-                ("Relation 'h' collides with the dimension",),
+                {'sets.h': {'dims': ['g', 'h']}},
+                ("Set 'h' collides with the dimension",),
                 id='relation-named-after-a-dimension',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h'], 'rows': {'g1': 'h1'}}},
-                ("unknown key 'rows' in a relation entry", 'Valid keys'),
+                {'sets.link': {'dims': ['g', 'h'], 'rows': {'g1': 'h1'}}},
+                ("unknown key 'rows' in a set entry", 'Valid keys'),
                 id='a-relation-declaring-its-rows',
             ),
             pytest.param(
-                {'relations.link': {'dim': ['g', 'h']}},
-                ("unknown key 'dim' in a relation entry", "Did you mean 'dims'?"),
+                {'sets.link': {'dim': ['g', 'h']}},
+                ("unknown key 'dim' in a set entry", "Did you mean 'dims'?"),
                 id='a-relation-with-a-misspelt-key',
             ),
             pytest.param({'variables.p.missing': 0}, ('missing: 0 needs a `where:`',), id='zero-without-a-mask'),
@@ -1767,8 +1767,8 @@ class TestRulesDecidedWithoutData:
                 id='a-dimension-as-a-value',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'objective': {'expression': 'sum(link + p, over=g)'}},
-                ("'link' is a relation, and a relation is not a value",),
+                {'sets.link': {'dims': ['g', 'h']}, 'objective': {'expression': 'sum(link + p, over=g)'}},
+                ("'link' is a set, and a set is not a value",),
                 id='a-relation-as-a-value',
             ),
             pytest.param(
@@ -1816,7 +1816,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'relations.bare': {'dims': {'k': 'g', 'j0': 'h', 'j1': 'h', 'm': 'z'}},
+                    'sets.bare': {'dims': {'k': 'g', 'j0': 'h', 'j1': 'h', 'm': 'z'}},
                     'objective': {'expression': 'sum(sum(q, over=k, by=bare[m]))'},
                 },
                 ("joins 'bare' on ['h'] through more than one column",),
@@ -1825,7 +1825,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'relations.gz': {'dims': ['g', 'z']},
+                    'sets.gz': {'dims': ['g', 'z']},
                     'maps.gz': {'h': {'dim': 'h'}},
                     'variables.q.where': 'g[h] != gz[h]',
                 },
@@ -1838,7 +1838,7 @@ class TestRulesDecidedWithoutData:
                 id='where-against-a-variable',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'variables.p.where': 'c > link'},
+                {'sets.link': {'dims': ['g', 'h']}, 'variables.p.where': 'c > link'},
                 ("compares 'c' against 'link', which is no label", 'Compare against a literal'),
                 id='where-against-a-relation',
             ),
@@ -1921,11 +1921,11 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'relations.link': {'dims': ['g', 'h']},
+                    'sets.link': {'dims': ['g', 'h']},
                     'maps.link': {'y': {'dim': 'h'}, 'z': {'dim': 'h'}},
                     'variables.q.where': "link == 'x'",
                 },
-                ("'link' compares the relation 'link' itself, and a comparison reads a label", 'link[y]'),
+                ("'link' compares the set 'link' itself, and a comparison reads a label", 'link[y]'),
                 id='where-a-relation-compared-bare',
             ),
             pytest.param(
@@ -1986,7 +1986,7 @@ class TestRulesDecidedWithoutData:
         ('patch', 'where'),
         [
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'y': {'dim': 'h'}, 'z': {'dim': 'h'}}},
+                {'sets.link': {'dims': ['g', 'h']}, 'maps.link': {'y': {'dim': 'h'}, 'z': {'dim': 'h'}}},
                 "link == 'x'",
                 id='a-relation-with-two-maps-read-bare',
             ),
@@ -2004,57 +2004,130 @@ class TestRulesDecidedWithoutData:
         _spec(**{'variables.q.where': where.replace('link', named.group(1), 1)}, **patch)
 
 
-_LINKED = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
+_LINKED = {'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
 
 
 @pytest.mark.parametrize(
     ('patch', 'message'),
     [
         pytest.param(
-            {'variables.x': {'dims': ['link']}},
-            "Variable 'x' names the relation 'link', and a relation is not a dimension. Name its dimensions, "
-            "['g', 'h'], under dims:, and confine the entry with where: link.",
-            id='dims-of-a-variable',
-        ),
-        pytest.param(
-            {'constraints.c': {'dims': ['link'], 'expression': 'k >= 0'}},
-            "Constraint 'c' names the relation 'link', and a relation is not a dimension. Name its dimensions, "
-            "['g', 'h'].",
-            id='dims-of-a-constraint',
-        ),
-        pytest.param(
-            {'constraints.c': {'dims': [], 'expression': 'sum(q, over=link) >= 0'}},
-            "Constraint 'c': sum(over=link) names the relation 'link', and a relation is not a dimension. Name its "
-            "dimensions, ['g', 'h'].",
-            id='over',
+            {
+                'sets.next': {'dims': {'from': 'g', 'to': 'g'}, 'missing': 'absent'},
+                'variables.x': {'dims': ['next']},
+            },
+            "Variable 'x' names the set 'next', which has two columns over one dimension, and an entry is over "
+            "each dimension once. Name its dimensions, ['g'], with a second name for the one it repeats.",
+            id='dims-of-a-relation-over-one-dimension-twice',
         ),
         pytest.param(
             {'constraints.c': {'dims': ['g'], 'expression': 'p <= shift(p, along=link, offset=1)'}},
-            "Constraint 'c': shift(along=link) names the relation 'link', and a relation is not a dimension. Name "
+            "Constraint 'c': shift(along=link) names the set 'link', and a set is not a dimension. Name "
             "one of its dimensions, ['g', 'h'].",
             id='along',
         ),
     ],
 )
 def test_a_relation_named_where_a_dimension_belongs_is_refused(patch: dict[str, Any], message: str):
-    """mathspec told the writer to declare the relation under `dimensions:`, which makes a second, unrelated name."""
+    """A relation stands for its dimensions in `dims:` and `over=`, and nowhere it would have to be one dimension."""
     assert message in _refusal(**_LINKED, **patch)
+
+
+@pytest.mark.parametrize(
+    ('patch', 'kind', 'name'),
+    [
+        pytest.param({'variables.x': {'dims': ['link']}}, 'variables', 'x', id='dims-of-a-variable'),
+        pytest.param({'parameters.k': {'dims': ['link']}}, 'parameters', 'k', id='dims-of-a-parameter'),
+        pytest.param(
+            {'constraints.c': {'dims': ['link'], 'expression': 'q >= 0'}}, 'constraints', 'c', id='dims-of-a-constraint'
+        ),
+    ],
+)
+def test_a_relation_in_dims_stands_for_its_dimensions_at_its_rows(patch: dict[str, Any], kind: str, name: str):
+    """An entry over a relation is over its dimensions, and has coordinates only where the relation has a row."""
+    spec = to_spec(varied(SMALL_MODEL, **_LINKED, **patch))
+    entry = getattr(spec.program, kind)[name]
+    assert entry.dims == ('g', 'h'), 'the set stands for its dimensions'
+    assert entry.where is not None and entry.where.names_read == {'link'}, 'the entry exists at the rows of link'
+    assert spec.to_dict()[kind][name]['dims'] == ['link'], 'the file writes the set back, not its dimensions'
+
+
+def test_a_sum_over_a_relation_sums_over_its_dimensions():
+    spec = to_spec(
+        varied(SMALL_MODEL, **_LINKED, **{'constraints.c': {'dims': [], 'expression': 'sum(q, over=link) >= 0'}})
+    )
+    assert spec.program.constraints['c'].dims == (), 'over=link sums g and h away'
 
 
 #: `p` over the pairs of `g` and `h`, with two relations that list some of them.
 ON_A_RELATION: dict[str, Any] = {
     'dimensions': {'g': {}, 'h': {}},
-    'relations': {'pair': {'dims': ['g', 'h'], 'missing': 'absent'}, 'link': {'dims': ['g', 'h'], 'missing': 'absent'}},
+    'sets': {'pair': {'dims': ['g', 'h'], 'missing': 'absent'}, 'link': {'dims': ['g', 'h'], 'missing': 'absent'}},
     'parameters': {'flag': {'dims': ['g', 'h'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['g', 'h'], 'where': 'pair'}},
 }
 
 
 @pytest.mark.parametrize(
+    ('patch', 'message'),
+    [
+        pytest.param(
+            {},
+            "Variable 'p': `where: pair` tests the rows of 'pair', which dims: states. Name it in dims: in place of "
+            'the dimensions, and delete the `where:`.',
+            id='a-relation',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND link'},
+            "tests the rows of 'link' and 'pair', which dims: states. Name them in dims: in place of the "
+            'dimensions, and delete the `where:`.',
+            id='two-relations',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND flag'},
+            'Name it in dims: in place of the dimensions, and keep the rest in the `where:`.',
+            id='a-relation-beside-a-test',
+        ),
+        pytest.param(
+            {'variables.p': {'dims': ['link'], 'where': 'pair AND flag'}},
+            'Name it in dims: in place of the dimensions, and keep the rest in the `where:`.',
+            id='a-relation-beside-a-relation-in-dims',
+        ),
+        pytest.param(
+            {'variables.p': {'dims': ['g', 'h']}, 'parameters.cap': {'dims': ['g', 'h'], 'where': 'pair'}},
+            "Parameter 'cap': `where: pair` tests the rows of 'pair', which dims: states.",
+            id='a-parameter',
+        ),
+        pytest.param(
+            {
+                'variables.p': {'dims': ['g', 'h']},
+                'constraints.c': {'dims': ['g', 'h'], 'where': 'pair', 'expression': 'p >= 0'},
+            },
+            "Constraint 'c': `where: pair` tests the rows of 'pair', which dims: states.",
+            id='a-constraint',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair OR flag'},
+            "tests the rows of 'pair' under OR or NOT, which dims: cannot state. Declare those rows as a bool "
+            'parameter, and test that in its place.',
+            id='under-an-or',
+        ),
+        pytest.param({'variables.p.where': 'NOT pair'}, "rows of 'pair' under OR or NOT", id='under-a-not'),
+        pytest.param(
+            {'sets.pair.missing': 'refused'},
+            "under missing: refused 'pair' has a row everywhere. Delete it from the `where:`.",
+            id='a-relation-with-a-row-everywhere',
+        ),
+    ],
+)
+def test_a_where_that_tests_the_rows_of_a_relation_is_refused(patch: dict[str, Any], message: str):
+    """`where: pair` and `pair` in `dims:` said one thing twice, and a parameter's `where:` dropped what `dims:` refuses."""
+    assert message in _refusal(ON_A_RELATION, **patch)
+
+
+@pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({}, id='the-rows-of-a-relation'),
-        pytest.param({'variables.p.where': 'pair AND NOT link'}, id='the-rows-of-two-relations'),
+        pytest.param({'variables.p': {'dims': ['pair']}}, id='the-rows-in-dims'),
         pytest.param({'variables.p.where': 'flag'}, id='a-test-of-a-value'),
         pytest.param(
             {'maps.g.zone': {'dim': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
@@ -2064,16 +2137,9 @@ ON_A_RELATION: dict[str, Any] = {
             {'maps.pair.zone': {'dim': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
             id='a-label-of-a-map-of-the-relation',
         ),
-        pytest.param(
-            {
-                'variables.p': {'dims': ['g', 'h']},
-                'constraints.c': {'dims': ['g', 'h'], 'where': 'pair', 'expression': 'p >= 0'},
-            },
-            id='on-a-constraint',
-        ),
     ],
 )
-def test_a_where_that_reads_a_relation_or_a_map_loads(patch: dict[str, Any]):
+def test_a_where_that_reads_a_map_or_a_value_loads(patch: dict[str, Any]):
     to_spec(varied(ON_A_RELATION, **patch))
 
 
@@ -2285,7 +2351,7 @@ def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
 #: columns written as a mapping, and the maps of a subject.
 _PROBED = {
     **DISPATCH_MODEL,
-    'relations': {'pair': {'dims': {'from_gen': 'generator', 'to_gen': 'generator'}}},
+    'sets': {'pair': {'dims': {'from_gen': 'generator', 'to_gen': 'generator'}}},
     'maps': {'generator': {'peer': {'dim': 'generator'}}},
     'expressions': {
         'price': {
@@ -2562,7 +2628,7 @@ class TestAnEntryIsNamed:
         'section',
         [
             'dimensions',
-            'relations',
+            'sets',
             'parameters',
             'variables',
             'expressions',
@@ -2575,7 +2641,7 @@ class TestAnEntryIsNamed:
     def test_a_name_no_expression_could_write_is_refused(self, section: str, name: str):
         entries: dict[str, Any] = {
             'dimensions': {'dtype': 'str'},
-            'relations': {'dims': ['g', 'h']},
+            'sets': {'dims': ['g', 'h']},
             'parameters': {'dims': ['g']},
             'variables': {'dims': ['g']},
             'expressions': {'expression': 'c'},
@@ -2871,6 +2937,14 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str', 'missing': 'absent'}}, id='a-label-under-absent'),
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
+        pytest.param(
+            {
+                'parameters.n': {'dims': ['link'], 'dtype': 'int'},
+                'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'},
+                'variables.p.dims': ['g', 'h'],
+            },
+            id='an-int-on-a-relation',
+        ),
     ],
 )
 def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
@@ -2881,17 +2955,103 @@ def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
 
 #: A parameter over the pairs of `g` and `h` that a relation lists, with a fill.
 _MASKED = {
-    'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
+    'sets.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
     'maps.pair.kind': {'dim': 'h', 'missing': 'absent'},
     'parameters.w': {'dims': ['g', 'h'], 'where': 'pair[kind]', 'missing': 1},
 }
+
+
+#: The same parameter, over the rows of the relation rather than masked by it.
+_IN = {
+    'sets.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
+    'parameters.w': {'dims': ['pair'], 'missing': 1},
+}
+
+_LINK = {'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
+
+#: Each kind of entry that names a relation in `dims:`, as the label its refusals open with and `w` of that kind over `pair`.
+_IN_KINDS = {
+    'parameters': ('Parameter', _IN),
+    'variables': (
+        'Variable',
+        {'sets.pair': _IN['sets.pair'], 'variables.w': {'dims': ['pair']}},
+    ),
+}
+
+
+def _in(kind: str, *relations: str, **entry: Any) -> dict[str, Any]:
+    """`w` of *kind* over the rows of *relations*, *entry* laid over it."""
+    _, patch = _IN_KINDS[kind]
+    return {**patch, f'{kind}.w': {**patch[f'{kind}.w'], 'dims': list(relations), **entry}}
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize(
+    ('patch', 'in_'),
+    [
+        pytest.param(
+            {'parameters.v': {'dims': ['g', 'h'], 'missing': 'absent'}}, {'w': ('pair',)}, id='only-the-named'
+        ),
+        pytest.param(
+            {
+                'dimensions.t': {'dtype': 'int'},
+                'parameters.v': {'dims': ['pair', 't'], 'missing': 'absent'},
+            },
+            {'w': ('pair',), 'v': ('pair',)},
+            id='a-parameter-over-one-more-dimension',
+        ),
+        pytest.param(
+            {'sets.pair': {'dims': {'a': 'g', 'b': 'h'}, 'missing': 'absent'}},
+            {'w': ('pair',)},
+            id='columns-named-apart-from-their-dimensions',
+        ),
+        pytest.param({**_LINK, 'w.in': ['pair', 'link']}, {'w': ('link', 'pair')}, id='two-relations-sorted-by-name'),
+        pytest.param(
+            {'maps.pair': {'to': {'dim': 'g'}}},
+            {'w': ('pair',)},
+            id='a-relation-with-a-map-over-one-of-its-dimensions',
+        ),
+    ],
+)
+def test_an_entry_has_the_index_set_it_names(kind: str, patch: dict[str, Any], in_: dict[str, tuple[str, ...]]):
+    """A tool reads an entry's index set off the program, inside its `where`, and an entry that names none stays free."""
+    rest = {key: value for key, value in patch.items() if key != 'w.in'}
+    spec = _spec(**{**_in(kind, *patch.get('w.in', ['pair'])), **rest})
+    entries = {**spec.program.parameters, **spec.program.variables}
+    assert {name: entry.in_ for name, entry in entries.items() if entry.in_} == in_, (
+        'exactly the entries that name a set have it as their index set, and it alone'
+    )
+    where = entries['w'].where
+    assert where is not None and where.names_read == set(in_['w']), 'the index set is part of where the entry exists'
+    assert to_spec(spec.to_yaml()).program == spec.program, 'a set in dims: survives a round trip through YAML'
+
+
+@pytest.mark.parametrize(
+    ('path', 'entry'),
+    [
+        pytest.param('parameters.efficiency', {'missing': 1}, id='a-parameter'),
+        pytest.param('variables.delivered', {}, id='a-variable'),
+    ],
+)
+def test_a_relation_with_maps_is_an_index_set_by_its_own_columns(path: str, entry: dict[str, Any]):
+    """`connection` is over unit and port; its maps bus and role are labels a `where:` still tests beside it."""
+    raw = read_yaml(EXAMPLES / 'connection.yaml')
+    written = {'dims': ['connection', 'snapshot'], 'where': "connection[role] == 'output'"}
+    spec = to_spec(varied(raw, **{path: {**written, **entry}}))
+    kind, name = path.split('.')
+    indexed = getattr(spec.program, kind)[name]
+    assert indexed.in_ == ('connection',), 'the set with maps is the index set'
+    assert indexed.where is not None and indexed.where.dims == ('port', 'unit'), 'by its own columns, not its maps'
+    assert indexed.where.within(indexed.in_) == to_spec(raw).program.parameters['efficiency'].where, (
+        'inside the index set, the `where:` on the role is what the file wrote'
+    )
 
 
 def test_a_parameter_mask_is_part_of_the_program():
     """A tool reads where a parameter has coordinates off the program, and the file writes the mask back."""
     spec = _spec(**_MASKED)
     assert spec.program.parameters['w'].where is not None, 'the mask reaches the program'
-    assert spec.program.parameters['w'].where.names_read == {'pair'}, 'the mask reads the relation and nothing else'
+    assert spec.program.parameters['w'].where.names_read == {'pair'}, 'the mask reads the set and nothing else'
     assert spec.program.parameters['c'].where is None, 'a parameter with no `where:` has every coordinate'
     assert to_spec(spec.to_yaml()).program == spec.program, 'the mask survives a round trip through YAML'
 
@@ -2922,8 +3082,14 @@ def test_a_parameter_mask_is_part_of_the_program():
         pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': "g[h] == 'x'"},
             "Parameter 'c': its `where:` contains 'flag', which has a `where:` of its own. Test the condition in "
-            "the `where:` of 'flag', or a relation.",
+            "the `where:` of 'flag', or a set.",
             id='a-mask-that-reads-a-masked-parameter',
+        ),
+        pytest.param(
+            {**_IN, 'parameters.u': {'dims': ['g', 'h'], 'where': 'w > 0.5'}},
+            "Parameter 'u': its `where:` contains 'w', which names a set in its dims:. Test a set that "
+            "the dims: of 'w' names instead.",
+            id='a-mask-that-reads-a-parameter-with-an-index-set',
         ),
         pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
@@ -2939,6 +3105,66 @@ def test_a_parameter_mask_is_part_of_the_program():
 )
 def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
     assert fragment in _refusal(**patch)
+
+
+_HEAD = "{entry} 'w': dims: names 'pair', so 'w' has coordinates only where it has a row, and "
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize(
+    ('sets', 'patch', 'fragment'),
+    [
+        pytest.param(
+            ['pair'],
+            {'where': 'pair'},
+            _HEAD + '`where: pair` narrows nothing. Delete the `where:`, or the set from it.',
+            id='a-where-that-repeats-the-relation',
+        ),
+        pytest.param(
+            ['pair'],
+            {'where': 'pair OR flag'},
+            '`where: pair OR flag` narrows nothing.',
+            id='a-where-the-relation-satisfies',
+        ),
+        pytest.param(
+            ['pair'],
+            {'where': 'NOT pair'},
+            "`where: NOT pair` leaves 'w' no coordinate. Write a `where:` that holds somewhere inside the set.",
+            id='a-where-the-relation-leaves-empty',
+        ),
+        pytest.param(
+            ['pair'],
+            {'where': 'pair AND flag'},
+            _HEAD + '`where: pair AND flag` repeats the set. Delete the set from it.',
+            id='a-where-that-repeats-the-relation-beside-a-test',
+        ),
+        pytest.param(
+            ['pair', 'pair'], {}, "{entry} 'w': dims: names 'pair' twice. Delete one.", id='a-relation-named-twice'
+        ),
+        pytest.param(
+            ['next'],
+            {'sets.next': {'dims': {'from': 'g', 'to': 'g'}, 'missing': 'absent'}},
+            "{entry} 'w' names the set 'next', which has two columns over one dimension, and an entry is over "
+            'each dimension once.',
+            id='a-relation-with-two-columns-over-one-dimension',
+        ),
+        pytest.param(
+            ['every'],
+            {'sets.every': {'dims': ['g', 'h']}},
+            "{entry} 'w': dims: names 'every', which under missing: refused has a row at every combination, so it "
+            "leaves nothing out. Write missing: absent on 'every', or name its dimensions in its place.",
+            id='a-relation-with-a-row-everywhere',
+        ),
+    ],
+)
+def test_a_relation_in_dims_that_says_nothing_is_refused(
+    kind: str, sets: list[str], patch: dict[str, Any], fragment: str
+):
+    """Each refusal names the rewrite, alike on a parameter and on a variable."""
+    entry, _ = _IN_KINDS[kind]
+    declared = {key: value for key, value in patch.items() if key.startswith(('sets.', 'maps.'))}
+    fields = {key: value for key, value in patch.items() if key not in declared}
+    assert fragment.format(entry=entry) in _refusal(**_in(kind, *sets, **fields), **declared)
 
 
 def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
@@ -2960,6 +3186,14 @@ def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
     assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
     masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair[kind]'}}
     assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**masked)
+    indexed = {
+        **patch,
+        'sets.pair': _IN['sets.pair'],
+        'parameters.cost': {**patch['parameters.cost'], 'dims': ['pair']},
+    }
+    assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**indexed), (
+        'outside its index set a parameter is absent too, so it has no fill there'
+    )
 
 
 @pytest.mark.parametrize('fmt', FORMATS)
@@ -2969,6 +3203,18 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName):
     row = next(line for line in typeset(spec, fmt).splitlines() if 'only where' in line)
     assert 'kind' in row, 'the legend row names the map the mask reads'
     assert row.index('only where') < row.index('where the data has no row'), 'the mask comes before the fill'
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_legend_prints_an_index_set_as_the_domain(fmt: FormatName, kind: str):
+    """A relation in `dims:` is where the entry has coordinates, so the legend prints its rows after `over`, not as a mask."""
+    spec = _spec(**_in(kind, 'pair', where='flag'), **{'variables.q.bounds': {'upper': 'c'}})
+    (row,) = [line for line in typeset(spec, fmt).splitlines() if re.search(r'w[`}] over ', line)]
+    assert 'pair' in row[: row.index(' over ') + 60], 'the domain is the rows of the set'
+    if kind == 'parameters':
+        assert row.index('pair') < row.index('only where') < row.index('flag'), 'the domain, then the mask inside it'
+        assert 'pair' not in row[row.index('only where') :], 'the set is not printed again as a mask'
 
 
 def test_a_given_parameter_has_no_missing():
@@ -2987,7 +3233,7 @@ def test_a_given_parameter_has_no_missing():
 )
 def test_a_relation_says_whether_every_combination_needs_a_row(declared, read):
     """A relation takes `missing:`, and reads `refused` where it is left out."""
-    spec = to_spec(varied(SMALL_MODEL, **{'relations.pair': declared}))
+    spec = to_spec(varied(SMALL_MODEL, **{'sets.pair': declared}))
     assert spec.program.relations['pair'].missing == read
 
 
@@ -3010,23 +3256,23 @@ def test_a_map_says_whether_every_row_needs_a_label(declared, partial):
     ('patch', 'fragment'),
     [
         pytest.param(
-            {'relations.link': {'dims': ['g', 'h'], 'missing': 0}},
-            'missing: 0 on a relation, which takes refused or absent',
+            {'sets.link': {'dims': ['g', 'h'], 'missing': 0}},
+            'missing: 0 on a set, which takes refused or absent',
             id='a-number-on-a-relation',
         ),
         pytest.param(
-            {'relations.link': {'dims': ['g', 'h'], 'missing': 'h1'}},
-            'missing: h1 on a relation',
+            {'sets.link': {'dims': ['g', 'h'], 'missing': 'h1'}},
+            'missing: h1 on a set',
             id='a-label-on-a-relation',
         ),
         pytest.param(
-            {'relations.link': {'dims': ['g', 'h'], 'missing': True}},
-            'missing: true on a relation',
+            {'sets.link': {'dims': ['g', 'h'], 'missing': True}},
+            'missing: true on a set',
             id='a-flag-on-a-relation',
         ),
         pytest.param(
-            {'relations.link': {'dims': ['g', 'h'], 'missing': None}},
-            'missing: null on a relation says nothing',
+            {'sets.link': {'dims': ['g', 'h'], 'missing': None}},
+            'missing: null on a set says nothing',
             id='null-on-a-relation',
         ),
         pytest.param(
@@ -3077,6 +3323,11 @@ def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
 def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared, fragment):
     """The number stands for the variable where the mask leaves it out, so the file contradicted itself."""
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
+
+
+def test_a_number_stands_for_a_variable_outside_its_index_set():
+    """Outside its `in:` a variable does not exist, so `missing:` has coordinates to stand for, as outside a `where:`."""
+    assert _spec(**_in('variables', 'pair', missing=0)).program.variables['w'].missing == 0
 
 
 def test_a_variable_missing_is_not_blamed_for_a_where_that_failed_to_load():

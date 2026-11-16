@@ -208,7 +208,7 @@ class ExpressionResolver:
                 return None
             case 'relation':
                 self.errors.append(
-                    f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Sum through it "
+                    f"{self.context}: '{node.name}' is a set, and a set is not a value. Sum through it "
                     f'as sum(x, over=<column>, by={node.name}[<column>]), test it in a condition, or declare a '
                     f'parameter to carry numbers.'
                 )
@@ -502,7 +502,7 @@ class ExpressionResolver:
                 f"'{value.relation}', or a dimension."
             )
             return None
-        names = names_in(value)
+        names = names_in(value) if relation else _members_of_sets(names_in(value), self.ns)
         if not names:
             self.errors.append(
                 f'{self.context}: {operator}(over=...) is not a name. Write a declared dimension, or a list of them.'
@@ -709,9 +709,9 @@ class ExpressionResolver:
                 f'under maps: {name}:, or read a subject that has it: {key}=<subject>[<map>].'
             )
         kinds = (
-            'a relation, a dimension with maps or a formal argument of this macro'
+            'a set, a dimension with maps or a formal argument of this macro'
             if self.formals
-            else 'a relation or a dimension with maps'
+            else 'a set or a dimension with maps'
         )
         return (
             f'{context}: {operator}({key}={name}[...]): {name!r} is not {kinds}. '
@@ -733,13 +733,26 @@ def not_a_number(name: str, dtype: str, context: str) -> str:
     return f"{context}: '{name}' is declared dtype: {dtype}, and an expression reads only float and int. {instead}"
 
 
+def _members_of_sets(names: tuple[str, ...], ns: Namespace) -> tuple[str, ...]:
+    """*names* with each relation over distinct dimensions replaced by them, as in an entry's ``dims:``.
+
+    A relation with two columns over one dimension stays a name, which the
+    dimension check then refuses.
+    """
+    out: list[str] = []
+    for name in names:
+        relation = None if name in ns.dimensions else ns.spec.sets.get(name)
+        dims: list[str] = [d for _, d in relation.pairs] if relation is not None else []
+        out.extend(dims if dims and len(set(dims)) == len(dims) else [name])
+    return tuple(out)
+
+
 def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Namespace, formals: frozenset[str]) -> str:
     if name in ns.relations and name not in ns.dimensions:
         dims = list(ns.relations[name].dims)
         which = 'its dimensions' if call.startswith('over=') else 'one of its dimensions'
         return (
-            f"{context}: {operator}({call}) names the relation '{name}', and a relation is not a dimension. "
-            f'Name {which}, {dims}.'
+            f"{context}: {operator}({call}) names the set '{name}', and a set is not a dimension. Name {which}, {dims}."
         )
     return (
         f'{context}: {operator}({call}) does not name a declared dimension{_or_a_formal(formals)}. '

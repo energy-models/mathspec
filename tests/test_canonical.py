@@ -153,7 +153,7 @@ SECTIONS = [
     'description',
     'given',
     'dimensions',
-    'relations',
+    'sets',
     'maps',
     'parameters',
     'conditions',

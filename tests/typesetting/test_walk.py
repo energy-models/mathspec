@@ -669,7 +669,7 @@ UNREAD = {
         'bus': {'dtype': 'str'},
         'technology': {'dtype': 'str'},
     },
-    'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
+    'sets': {'gen_zone': {'dims': ['generator', 'snapshot']}},
     'maps': {
         'gen_zone': {'zone': {'dim': 'zone'}},
         'generator': {'bus': {'dim': 'bus'}, 'technology': {'dim': 'technology'}},
@@ -700,7 +700,7 @@ def test_a_sum_that_reads_no_map_asks_only_that_the_relation_has_the_row():
     """
     row = _grouped(['snapshot'], 'sum(u, over=generator, by=gen_zone[snapshot]) <= cap')
     assert r'\sum_{g \in \mathcal{G} \,:\, \left( g,\ t \right) \in \mathrm{gen\_zone}}' in row, (
-        'the condition is that the row is in the relation, and the unread map is written nowhere'
+        'the condition is that the row is in the set, and the unread map is written nowhere'
     )
 
 
@@ -911,7 +911,7 @@ def test_an_assumption_prints_under_its_own_heading(name: FormatName, fmt: Forma
     text = typeset(model, name, legend=False)
     section = text[text.index('Assumptions') :]
     assert fmt.subscript(fmt.upright('cost'), ['g']) in section
-    assert f'{fmt.operators["gt"]} 0' in section, 'the line aligns on the relation, which leads the right side'
+    assert f'{fmt.operators["gt"]} 0' in section, 'the line aligns on the set, which leads the right side'
     assert 'Assumptions' not in typeset(DISPATCH_MODEL, name, legend=False), (
         'a model that assumes nothing of its data prints no heading for it'
     )

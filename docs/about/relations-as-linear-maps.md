@@ -19,7 +19,7 @@ dimensions:
   snapshot: { dtype: int }
   generator: { dtype: str }
   zone: { dtype: str }
-relations:
+sets:
   zone_of: { dims: [generator, snapshot], missing: absent }
 maps:
   zone_of: { zone: { dim: zone } }
@@ -70,7 +70,7 @@ generators, snapshots and zones, `zone_of[zone]` in the spec above is
 a partial $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, because the relation
 `zone_of` declares `missing: absent`.
 
-A [relation](../reference/language/relations.md#relations) with no map is a
+A [relation](../reference/language/relations.md#sets) with no map is a
 subset with no function behind it. So one generator may sit in several
 rows, each with its own bus. By default a relation also lists every key tuple, so one
 that does not must declare `missing: absent`.

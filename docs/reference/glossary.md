@@ -55,7 +55,7 @@ line](cli.md)).
 ## Column
 
 A column is one variable at one coordinate, so a variable indexed over
-`generator` has one column per generator. In a data table or a relation, a
+`generator` has one column per generator. In a data table or a set, a
 column is one named field of the table.
 
 ## Compile
@@ -85,7 +85,7 @@ and a constraint has one row at each coordinate.
 ## Data preparation
 
 Before the data is attached, data preparation is the work of turning raw data
-into the tables that a spec declares as parameters and relations. You compute
+into the tables that a spec declares as parameters and sets. You compute
 in data preparation anything that the mathspec language cannot state
 ([what counts as data preparation](../about/limits.md#data-preparation)).
 
@@ -142,7 +142,7 @@ does not build](reading.md#what-a-program-does-not-build)).
 
 ## Group
 
-A group is the set of rows of a dimension or a relation to which one
+A group is the set of rows of a dimension or a set to which one
 [map](#map) gives one label. `within=<subject>[<map>]` makes `shift`,
 `sum_back` or `position()` work separately in each group, such as each season
 of a year ([partitions](language/relations.md#partitions)).
@@ -169,14 +169,14 @@ expression before any tool reads it. A file declares its own macros under
 
 ## Map
 
-A map gives each row of a dimension or a relation (its
+A map gives each row of a dimension or a set (its
 [subject](#subject)) one label of a dimension, such as the bus of each
 generator. A condition or an operator reads it as `subject[map]`, as in
 `generator[bus]` ([maps](language/relations.md#maps)).
 
 ## Missing row
 
-A missing row is a coordinate for which the table of a parameter or a relation
+A missing row is a coordinate for which the table of a parameter or a set
 has no row. The `missing:` key of the entry sets how a tool treats that
 coordinate ([`missing` on a
 parameter](language/absence.md#missing-on-a-parameter)).
@@ -233,7 +233,7 @@ program in this sense.
 ## Row
 
 A row is one constraint at one coordinate, so a constraint indexed over
-`snapshot` has one row per snapshot. In a data table or a relation, a row is
+`snapshot` has one row per snapshot. In a data table or a set, a row is
 one line of the table ([missing row](#missing-row)).
 
 ## Rung
@@ -273,7 +273,7 @@ most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Subject
 
-The subject of a map is a dimension or a relation, such as `generator` in
+The subject of a map is a dimension or a set, such as `generator` in
 `generator[bus]` ([maps](language/relations.md#maps)).
 
 ## Surface

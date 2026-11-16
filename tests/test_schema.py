@@ -59,7 +59,7 @@ def test_no_definition_refers_only_to_itself():
         pytest.param('ObjectiveSpec', 'sense', spec.ObjectiveSense, id='sense'),
         pytest.param('VariableSpec', 'domain', spec.VariableDomain, id='domain'),
         pytest.param('VariableSpec', 'missing', Literal['absent'], id='variable-missing'),
-        pytest.param('RelationSpec', 'missing', spec.RelationMissing, id='relation-missing'),
+        pytest.param('SetSpec', 'missing', spec.RelationMissing, id='relation-missing'),
         pytest.param('ParameterSpec', 'missing', spec.RelationMissing, id='parameter-missing'),
         pytest.param('ParameterSpec', 'dtype', spec.ParameterDtype, id='parameter-dtype'),
         pytest.param('DimensionSpec', 'dtype', spec.DimensionDtype, id='dimension-dtype'),
@@ -80,7 +80,7 @@ def test_a_closed_vocabulary_is_published_as_an_enum(entry, field, alias):
     ('entry', 'default'),
     [
         pytest.param('ParameterSpec', 'refused', id='parameter'),
-        pytest.param('RelationSpec', 'refused', id='relation'),
+        pytest.param('SetSpec', 'refused', id='relation'),
         pytest.param('VariableSpec', 'absent', id='variable'),
     ],
 )

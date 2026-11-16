@@ -35,7 +35,8 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
 
     Returns:
         The never-an-axis advice sorted by dimension name, then one note per
-        entry the program reads and does not build, then the
+        entry the program reads and does not build, then one per variable
+        whose ``where:`` names a relation ``in:`` could name, then the
         unboundedness advice; ``str()`` of each is its sentence.
 
     Raises:
@@ -116,7 +117,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
             'never-an-axis',
             name,
             f"dimension '{name}' is never used: nothing is indexed by it, nothing "
-            f'sums into it, and no relation or map is over it. Remove it, or keep it '
+            f'sums into it, and no set or map is over it. Remove it, or keep it '
             f'if the entries that use it are still to be written.',
         )
         for name in program.dimensions

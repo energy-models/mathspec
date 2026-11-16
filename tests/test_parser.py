@@ -340,7 +340,7 @@ def test_a_relation_column_is_named_in_brackets():
 )
 def test_a_column_selection_names_one_relation_and_its_columns(text, columns):
     """The relation is written once, before its columns, so a kwarg cannot name columns of two tables."""
-    assert parse_expression(text).kwargs['by'] == columns, 'one relation, its columns in the order written'
+    assert parse_expression(text).kwargs['by'] == columns, 'one set, its columns in the order written'
 
 
 @pytest.mark.parametrize(

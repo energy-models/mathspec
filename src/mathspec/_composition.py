@@ -116,11 +116,11 @@ if TYPE_CHECKING:
     from mathspec.program import Program
     from mathspec.spec import DimensionSpec
 
-SHARED_SECTIONS = ('dimensions', 'relations', 'maps')
+SHARED_SECTIONS = ('dimensions', 'sets', 'maps')
 
 SETTINGS: dict[str, frozenset[str]] = {
     'dimensions': frozenset({'ordered'}),
-    'relations': frozenset({'missing'}),
+    'sets': frozenset({'missing'}),
     'maps': frozenset({'missing'}),
 }
 """The fields of a dimension, a relation or a map, other than ``description``, that a patch may change. A patch may
@@ -191,7 +191,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     merged: dict[str, object] = {'version': _one_version(read)}
     if description is not None:
         merged['description'] = description
-    for section in ('dimensions', 'relations'):
+    for section in ('dimensions', 'sets'):
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
     flat: dict[str, dict[str, object]] = {

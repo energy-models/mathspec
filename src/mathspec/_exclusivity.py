@@ -375,7 +375,7 @@ def _subject_of(node: TypedCondition) -> Subject:
         case TranslatedCondition():
             return Subject('expression', 'a condition read at a neighbouring coordinate')
         case JoinedCondition():
-            return Subject('expression', 'a condition read through a relation')
+            return Subject('expression', 'a condition read through a set')
         case _:
             assert_never(node)
 
@@ -598,7 +598,7 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid) -> bool:
             raise AssertionError(msg)
         case CountComparison() | TranslatedCondition() | JoinedCondition():
             msg = (
-                'a condition read as a count, at a neighbour or through a relation is refused as undecidable '
+                'a condition read as a count, at a neighbour or through a set is refused as undecidable '
                 'before any cell is read'
             )
             raise AssertionError(msg)

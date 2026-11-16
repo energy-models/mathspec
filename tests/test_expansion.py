@@ -290,7 +290,7 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=nope[h])'}},
-            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a relation",
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a set",
             id='a-typo-in-a-relation-kwarg',
         ),
         pytest.param(
@@ -300,7 +300,7 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'grouped': {'args': ['x', 'a', 'b'], 'template': 'sum(x, over=a, by=nope[b])'}},
-            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a relation, a dimension with maps or a formal argument of this macro",
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a set, a dimension with maps or a formal argument of this macro",
             id='a-typo-in-a-relation-beside-formal-columns',
         ),
         pytest.param(

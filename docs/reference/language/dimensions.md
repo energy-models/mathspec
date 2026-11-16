@@ -101,7 +101,7 @@ Variable 'p': 'gnrtr' is not a label of 'carrier', which allows only ['ccgt', 'o
 mathspec lists the allowed labels and suggests two rewrites.
 
 With data attached, a tool refuses a label
-outside the list: in the table of the dimension, in every column of a relation
+outside the list: in the table of the dimension, in every column of a set
 over it, and in the column of every map into it.
 
 Only a dimension takes `one_of`, and a `one_of` key on a parameter is refused
@@ -159,5 +159,5 @@ the dimension still needs `ordered: true`.
 
 !!! info "See also"
 
-    - [choose between a dimension, a relation, a map and a parameter](../../howto/declare-a-column.md)
+    - [choose between a dimension, a set, a map and a parameter](../../howto/declare-a-column.md)
       for a column of data.

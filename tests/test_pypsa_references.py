@@ -180,7 +180,7 @@ def test_a_patch_keeps_the_pypsa_name_of_what_it_changes(page: str):
     """A patch rewrites entries of the base; a rewritten name keeps its PyPSA name and its dtype, or it has drifted."""
     own = SPECS[page]
     drifted = []
-    for section in ('parameters', 'relations', 'variables', 'constraints'):
+    for section in ('parameters', 'sets', 'variables', 'constraints'):
         theirs, ours = getattr(BASE, section), getattr(own, section)
         for name in set(theirs) & set(ours):
             if (theirs[name].description or '').split(' — ')[0] != (ours[name].description or '').split(' — ')[0]:
