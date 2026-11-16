@@ -389,7 +389,7 @@ dimensions:
     dtype: str
 maps:
   entity:
-    component: component
+    component: { dim: component }
 parameters:
   sign:
     dims: [entity]

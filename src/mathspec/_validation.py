@@ -336,7 +336,7 @@ def _missing_by(spec: Spec) -> Iterator[str]:
         if isinstance(selected, str):
             yield selected
             continue
-        dimension = spec.dimensions.get(spec.maps[selected.relation][selected.columns[0]].refers_to)
+        dimension = spec.dimensions.get(spec.maps[selected.relation][selected.columns[0]].dim)
         if dimension is None or dimension.one_of is None:
             continue
         yield from (

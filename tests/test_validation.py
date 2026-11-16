@@ -3266,7 +3266,7 @@ def test_a_parameter_reads_a_missing_row_by_one_of_several_maps():
     spec = _spec(
         **{
             'dimensions.technology': {'dtype': 'str', 'one_of': ['solar', 'wind']},
-            'maps.g.technology': 'technology',
+            'maps.g.technology': {'dim': 'technology'},
             'parameters.c.missing': {'by': 'g[technology]', 'fill': {'wind': 0}},
         }
     )
@@ -3277,7 +3277,7 @@ def test_a_parameter_reads_a_missing_row_by_one_of_several_maps():
 #: `c` over the rows of `pair`, which gives each row a label of `h` through its map `zone`.
 _C_IN_PAIR = {
     'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
-    'maps.pair': {'zone': 'h'},
+    'maps.pair': {'zone': {'dim': 'h'}},
     'parameters.c.dims': ['g', 'h'],
     'parameters.c.in': ['pair'],
 }
@@ -3387,7 +3387,7 @@ def test_a_values_table_refused_at_some_label_under_a_ragged_where_is_refused():
     """`otherwise:` left out reads `refused`, which a ragged `where:` contradicts at that label as a plain `refused` does."""
     patch = {
         'dimensions.kind': {},
-        'maps.bp': {'kind': 'kind'},
+        'maps.bp': {'kind': {'dim': 'kind'}},
         'parameters.x_bp.missing': {'by': 'bp[kind]', 'fill': {'end': 0}},
     }
     assert "parameter 'x_bp' is refused where a row is missing" in _refusal(read_yaml(CURVE_UNDER_WHERE), **patch)

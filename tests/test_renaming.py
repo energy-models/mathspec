@@ -373,7 +373,7 @@ def test_a_missing_row_read_by_a_map_follows_the_rename():
     """
     spec = {
         'dimensions': {'g': {}, 'h': {'one_of': ['north', 'south']}, 'north': {}},
-        'maps': {'g': {'h': 'h'}},
+        'maps': {'g': {'h': {'dim': 'h'}}},
         'parameters': {'c': {'dims': ['g'], 'missing': {'by': 'g[h]', 'fill': {'north': 0}, 'otherwise': 'absent'}}},
     }
     renamed = rename(spec, {'g': 'gen', 'h': 'zone', 'north': 'n'})
