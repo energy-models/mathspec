@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+# How `examples/times/capacity.yaml` prints: TIMES' own letters for its indices.
+notation: latex
+dimensions:
+  region: { index: r, set: '\mathcal{R}' }
+  period: { index: t, set: '\mathcal{T}' }
+  vintage: { index: v, set: '\mathcal{V}' }
+  process: { index: p, set: '\mathcal{P}' }
+  timeslice: { index: s, set: '\mathcal{S}' }
