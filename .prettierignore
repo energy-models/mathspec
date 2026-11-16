@@ -18,6 +18,7 @@ CHANGELOG.md
 docs/examples/dispatch.md
 docs/examples/commitment.md
 docs/examples/connection.md
+docs/examples/sparse.md
 docs/examples/operators.md
 docs/examples/piecewise.md
 docs/examples/piecewise_adjacency.md
