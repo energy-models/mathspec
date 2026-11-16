@@ -144,6 +144,7 @@
 \text{crossed} && p_{g + 1,t \ominus 1} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{edges} && p_{g,t \boxminus_{0} 1} & \le p_{g,t \boxplus_{0} 1} + \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{efficiency} && p_{g,t} & \le \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
+\text{exchanged} && \theta_{u} & = \sum_{u' \in \mathcal{U} \,:\, u' = u} \sum_{u'' \in \mathcal{U}} \mathrm{susceptance}_{u'',u'} && \forall\, u \in \mathcal{U} \\
 \text{first} && \mathit{on}_{g,t} & = 1 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = 0 \vee \mathrm{pos}_{\mathrm{season}(t)}(t) = 0 \\
 \text{flow\_angle} && \theta_{u} & = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} && \forall\, u \in \mathcal{U} \\
 \text{grouped\_once} && \sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = u \wedge \mathrm{technology}(g) = e} p_{g,t} & \le \mathrm{tech\_cap}_{u,e} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T},\ e \in \mathcal{E} \\
