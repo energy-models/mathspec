@@ -11,16 +11,17 @@ commodity `C`. The parameter names the region twice and the commodity twice,
 which TIMES writes with a second name for each set, `ALIAS(REG,R)` in
 `initsys.mod`.
 
-!!! warning "A workaround"
+The spec does the same with an [alias](../../reference/language/dimensions.md#alias):
+`from_region` has the labels of `region`, and `from_commodity` those of
+`commodity`. The relation `top_ire` lists the links that exist, and
+`ire_flo`, `trade_cost` and `export` exist only at its rows. The data of
+`ire_flo` has the four columns that the TIMES data already has, and no label
+is invented.
 
-    mathspec refuses an entry over one dimension twice. This spec declares a
-    dimension `trade_link`, whose labels the data invents, one per link, and
-    the maps of `trade_link` give each link its two regions and two
-    commodities. Nothing refuses two labels for the same link. Issue
-    [#969](https://github.com/energy-models/mathspec/issues/969) (gap 1) and
-    [#1019](https://github.com/energy-models/mathspec/issues/1019) track the
-    designs that would state `IRE_FLO` over the regions and commodities
-    themselves.
+`balance` adds the imports of each region and commodity over the far end of
+each link. It reads the exports at the near end: it sums them to each
+`from_region` and `from_commodity`, and reads those back onto `region` and
+`commodity` through the map of each alias.
 
 The vintage, the process and the timeslice of `IRE_FLO` are left out, so the
 spec shows only the two ends of each link.
@@ -29,29 +30,39 @@ spec shows only the two ends of each link.
 ```yaml
 description: >-
   Trade between regions from TIMES: IRE_FLO, the efficiency of a flow from one
-  region and commodity to another, with each link a label of its own.
+  region and commodity to another, over each region and commodity twice.
 
 dimensions:
   region: { description: a region of the model }
   commodity: { description: an energy carrier or a material }
-  trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
+  from_region: { alias: region, description: the region an export leaves }
+  from_commodity: { alias: commodity, description: the commodity an export leaves as }
 
-maps:
-  trade_link: # the region and commodity at each end of a link
-    from_commodity: { dim: commodity }
-    from_region: { dim: region }
-    to_commodity: { dim: commodity }
-    to_region: { dim: region }
+relations:
+  top_ire:
+    description: the links that exist, from a region and commodity to another (TOP_IRE)
+    dims: [from_region, from_commodity, region, commodity]
+    missing: absent
 
 parameters:
-  ire_flo: { dims: [trade_link], description: the share of an export that arrives as an import (IRE_FLO) }
+  ire_flo:
+    description: the share of an export that arrives as an import (IRE_FLO)
+    dims: [from_region, from_commodity, region, commodity]
+    where: top_ire
   demand: { dims: [commodity, region], description: what a region needs of a commodity }
   supply_cost: { dims: [commodity, region], description: the cost of a unit produced in a region }
-  trade_cost: { dims: [trade_link], description: the cost of a unit exported along a link }
+  trade_cost:
+    description: the cost of a unit exported along a link
+    dims: [from_region, from_commodity, region, commodity]
+    where: top_ire
 
 variables:
   supply: { dims: [commodity, region], bounds: { lower: 0 }, description: what a region produces of a commodity }
-  export: { dims: [trade_link], bounds: { lower: 0 }, description: what leaves along a link (VAR_IRE) }
+  export:
+    description: what leaves along a link (VAR_IRE)
+    dims: [from_region, from_commodity, region, commodity]
+    where: top_ire
+    bounds: { lower: 0 }
 
 constraints:
   balance:
@@ -59,8 +70,9 @@ constraints:
     dims: [commodity, region]
     expression: >-
       supply
-      + sum(ire_flo * export, over=trade_link, by=trade_link[to_commodity, to_region])
-      - sum(export, over=trade_link, by=trade_link[from_commodity, from_region])
+      + sum(ire_flo * export, over=[from_region, from_commodity])
+      - sum(sum(sum(export, over=[region, commodity]), over=from_region, by=from_region[region]),
+        over=from_commodity, by=from_commodity[commodity])
       >= demand
 
 objective:
@@ -68,30 +80,31 @@ objective:
   expression: sum(supply_cost * supply) + sum(trade_cost * export)
 ```
 
-Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one region and commodity to another, with each link a label of its own.
+Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one region and commodity to another, over each region and commodity twice.
 
 #### Sets
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{C}`$ | index $`c`$ — `commodity` with $`\mathrm{from\_commodity}: \mathcal{L} \to \mathcal{C},\ \mathrm{to\_commodity}: \mathcal{L} \to \mathcal{C}`$ — an energy carrier or a material |
-| $`\mathcal{R}`$ | index $`r`$ — `region` with $`\mathrm{from\_region}: \mathcal{L} \to \mathcal{R},\ \mathrm{to\_region}: \mathcal{L} \to \mathcal{R}`$ — a region of the model |
-| $`\mathcal{L}`$ | index $`l`$ — `trade_link` with $`\mathrm{from\_commodity}: \mathcal{L} \to \mathcal{C},\ \mathrm{from\_region}: \mathcal{L} \to \mathcal{R},\ \mathrm{to\_commodity}: \mathcal{L} \to \mathcal{C},\ \mathrm{to\_region}: \mathcal{L} \to \mathcal{R}`$ — one link from a region and commodity to another, a label the data invents |
+| $`\mathcal{C}`$ | index $`c`$ — `commodity` with $`\mathrm{top\_ire} \subseteq \mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, `top_ire` is `absent` where the data has no row — an energy carrier or a material |
+| $`\mathcal{C}`$ | index $`c'`$ — `from_commodity`, an alias of `commodity` with $`\mathrm{top\_ire} \subseteq \mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, `top_ire` is `absent` where the data has no row — the commodity an export leaves as |
+| $`\mathcal{R}`$ | index $`r'`$ — `from_region`, an alias of `region` with $`\mathrm{top\_ire} \subseteq \mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, `top_ire` is `absent` where the data has no row — the region an export leaves |
+| $`\mathcal{R}`$ | index $`r`$ — `region` with $`\mathrm{top\_ire} \subseteq \mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, `top_ire` is `absent` where the data has no row — a region of the model |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{demand}`$ | `demand` over $`\mathcal{C} \times \mathcal{R}`$ — what a region needs of a commodity |
-| $`\mathrm{ire\_flo}`$ | `ire_flo` over $`\mathcal{L}`$ — the share of an export that arrives as an import (IRE\_FLO) |
+| $`\mathrm{ire\_flo}`$ | `ire_flo` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, only where $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the share of an export that arrives as an import (IRE\_FLO) |
 | $`\mathrm{supply}^{\mathrm{cost}}`$ | `supply_cost` over $`\mathcal{C} \times \mathcal{R}`$ — the cost of a unit produced in a region |
-| $`\mathrm{trade\_cost}`$ | `trade_cost` over $`\mathcal{L}`$ — the cost of a unit exported along a link |
+| $`\mathrm{trade\_cost}`$ | `trade_cost` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, only where $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the cost of a unit exported along a link |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{export}`$ | `export` over $`\mathcal{L}`$ — what leaves along a link (VAR\_IRE) |
+| $`\mathit{export}`$ | `export` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$ — what leaves along a link (VAR\_IRE) |
 | $`\mathit{supply}`$ | `supply` over $`\mathcal{C} \times \mathcal{R}`$ — what a region produces of a commodity |
 
 #### Variable domains
@@ -99,7 +112,7 @@ Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one re
 **`export`**
 
 ```math
-\mathit{export}_{l} \ge 0 \qquad \forall\, l \in \mathcal{L}
+\mathit{export}_{c,c',r',r} \ge 0 \qquad \forall\, c \in \mathcal{C},\ c' \in \mathcal{C},\ r' \in \mathcal{R},\ r \in \mathcal{R} \,:\, \left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}
 ```
 
 **`supply`**
@@ -111,7 +124,7 @@ Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one re
 #### Objective
 
 ```math
-\min \sum_{c \in \mathcal{C},\ r \in \mathcal{R}} \mathrm{supply}^{\mathrm{cost}}_{c,r} \cdot \mathit{supply}_{c,r} + \sum_{l \in \mathcal{L}} \mathrm{trade\_cost}_{l} \cdot \mathit{export}_{l}
+\min \sum_{c \in \mathcal{C},\ r \in \mathcal{R}} \mathrm{supply}^{\mathrm{cost}}_{c,r} \cdot \mathit{supply}_{c,r} + \sum_{c \in \mathcal{C},\ c' \in \mathcal{C},\ r' \in \mathcal{R},\ r \in \mathcal{R}} \mathrm{trade\_cost}_{c,c',r',r} \cdot \mathit{export}_{c,c',r',r}
 ```
 
 #### Subject to
@@ -119,6 +132,6 @@ Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one re
 **`balance`**
 
 ```math
-\mathit{supply}_{c,r} + \sum_{l \in \mathcal{L} \,:\, \mathrm{to\_commodity}(l) = c \wedge \mathrm{to\_region}(l) = r} \mathrm{ire\_flo}_{l} \cdot \mathit{export}_{l} - \left( \sum_{l \in \mathcal{L} \,:\, \mathrm{from\_commodity}(l) = c \wedge \mathrm{from\_region}(l) = r} \mathit{export}_{l} \right) \ge \mathrm{demand}_{c,r} \qquad \forall\, c \in \mathcal{C},\ r \in \mathcal{R}
+\mathit{supply}_{c,r} + \sum_{c' \in \mathcal{C},\ r' \in \mathcal{R}} \mathrm{ire\_flo}_{c,c',r',r} \cdot \mathit{export}_{c,c',r',r} - \left( \sum_{c' \in \mathcal{C} \,:\, c' = c} \sum_{r' \in \mathcal{R} \,:\, r' = r} \sum_{c'' \in \mathcal{C},\ r'' \in \mathcal{R}} \mathit{export}_{c'',c',r',r''} \right) \ge \mathrm{demand}_{c,r} \qquad \forall\, c \in \mathcal{C},\ r \in \mathcal{R}
 ```
 <!-- gallery:end -->
