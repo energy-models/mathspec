@@ -96,3 +96,23 @@ def test_an_alias_that_says_more_or_less_than_its_dimension_is_refused(patch: di
     with pytest.raises(LanguageError) as caught:
         to_spec(varied(SMALL_MODEL, **patch))
     assert message in str(caught.value)
+
+
+def test_a_sum_inside_an_entry_over_the_alias_takes_an_index_of_its_own():
+    """A sum over `g` inside a sum over its alias printed `w_{g',g'}`: its dummy took the alias's own index.
+
+    The alias prints as `g'`, and a reduction primes its dummy once per
+    enclosing use of the dimension, so the sum over `g` under `∀ g` also
+    printed `g'`, and the two indices of `w` read as one.
+    """
+    spec = to_spec(
+        varied(
+            SMALL_MODEL,
+            **{
+                'dimensions.from_g': {'alias': 'g'},
+                'variables.w': {'dims': ['from_g', 'g']},
+                'constraints.out': {'dims': ['g'], 'expression': 'p == sum(sum(w, over=g), over=from_g, by=from_g[g])'},
+            },
+        )
+    )
+    assert "w_{g',g''}" in typeset(spec, 'markdown'), 'the inner sum takes g, primed past the alias'
