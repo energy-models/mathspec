@@ -171,8 +171,8 @@ expression before any tool reads it. A file declares its own macros under
 
 A map gives each row of a dimension or a relation (its
 [subject](#subject)) one label of a dimension, such as the bus of each
-generator. A condition or an operator reads it as `subject[map]`, as in `generator[bus]`
-([maps](language/relations.md#maps)).
+generator. A condition or an operator reads it as `subject[map]`, as in
+`generator[bus]` ([maps](language/relations.md#maps)).
 
 ## Missing row
 
