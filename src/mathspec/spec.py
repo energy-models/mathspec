@@ -368,21 +368,25 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
-    over: Dims | ByName[str] | None = None
-    """The members of the dimension: a list of dimensions, or a mapping of role to dimension where two members are over
-    one dimension. A label of the dimension is then one tuple of member labels, and each member is a map of the dimension,
-    read as ``dimension[member]``. The order of the members has no meaning.
+    over: Dims | None = None
+    """The members of the dimension, each a dimension listed once. A label of the dimension is then one tuple of member
+    labels, and each member is a map of the dimension, read as ``dimension[member]``. Where a tuple holds two labels of
+    one dimension, one member is an alias of it. The order of the members has no meaning.
     """
     missing: RelationMissing = 'absent'
     """Whether every combination of member labels needs a tuple. Under ``absent``, the data lists the tuples that exist.
     Under ``refused``, a tool refuses data that leaves a combination out.
     """
+    alias: str | None = None
+    """The dimension whose labels this one has, under a second name, so an entry can be over the same labels twice. It
+    takes that dimension's dtype, labels and order, and has the map ``<this>[<that>]`` from each label to itself.
+    """
     description: str | None = None
 
     @property
     def members(self) -> tuple[tuple[str, str], ...]:
-        """``(role, dimension)`` per member, sorted by role; empty for a dimension without ``over:``."""
-        return () if self.over is None else tuple(sorted(relation_columns(self.over)))
+        """``(member, dimension)`` per member, sorted by name, each a map named after its dimension; empty without ``over:``."""
+        return () if self.over is None else tuple((d, d) for d in sorted(self.over))
 
     @field_validator('over', mode='after')
     @classmethod
@@ -426,6 +430,18 @@ class DimensionSpec(_StrictSpec):
                     f'`{key}:` is on a dimension with `over:`, where the label is the tuple of its members. Delete '
                     f'`{key}:` here, and write the {key}: of a member on that member.'
                 )
+        return self
+
+    @model_validator(mode='after')
+    def _alias_takes_the_rest(self) -> DimensionSpec:
+        """An alias has the labels of its dimension, so a key that would set its own is refused."""
+        if self.alias is not None and (own := sorted(self.model_fields_set & {'dtype', 'one_of', 'ordered'})):
+            listed = ', '.join(f'{key}:' for key in own)
+            msg = (
+                f"is an alias of '{self.alias}', and takes its dtype, labels and order from it. Delete {listed}, or "
+                f"set it on '{self.alias}'."
+            )
+            raise ValueError(msg)
         return self
 
     @field_validator('one_of', mode='before')
@@ -1446,12 +1462,19 @@ class Spec(_StrictSpec):
         return self
 
 
+def labels_of(spec: Spec, name: str) -> DimensionSpec:
+    """The declaration that sets the dtype, labels and order of dimension *name*: its own, or that of the one it aliases."""
+    declared = spec.dimensions[name]
+    return spec.dimensions.get(declared.alias, declared) if declared.alias is not None else declared
+
+
 def subject_tables(spec: Spec) -> dict[str, Relation]:
     """Each table the data supplies, by name: a relation with its maps as columns beside its own, and a dimension with maps.
 
     A relation's table has one row per row of the relation, keyed by all of its
     own columns. A dimension's table has one row per label, keyed by the
-    dimension. Each map is a column of its subject's table, and a map under
+    dimension, and an alias has the map to the dimension it aliases. Each map is
+    a column of its subject's table, and a map under
     ``missing: absent`` is listed as [`partial`][mathspec.program.Relation.partial].
     A dimension with members has a table whether or not the file declares maps
     of it: each member is a map that every label has, listed as
@@ -1460,8 +1483,11 @@ def subject_tables(spec: Spec) -> dict[str, Relation]:
     """
     tables: dict[str, Relation] = {}
     tuples = {d: dd.members for d, dd in spec.dimensions.items() if dd.over}
-    for name in sorted({*spec.relations, *spec.maps, *tuples}):
+    aliases = {name: d.alias for name, d in spec.dimensions.items() if d.alias in spec.dimensions}
+    for name in sorted({*spec.relations, *spec.maps, *tuples, *aliases}):
         maps = spec.maps.get(name, Frozen({}))
+        if name in aliases:
+            maps = {aliases[name]: MapSpec(dim=aliases[name]), **maps}
         if (relation := spec.relations.get(name)) is not None:
             key, missing, description = relation.pairs, relation.missing, relation.description
         elif name in spec.dimensions:

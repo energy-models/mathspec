@@ -46,6 +46,7 @@ $`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` first.
 | `ordered`     | whether the order of the labels is part of the spec ([`ordered`](#ordered)) | `false`  |
 | `over`        | [the dimensions whose labels a label combines](#over)                       | `null`   |
 | `missing`     | [whether every combination of the members needs a label](#missing)          | `absent` |
+| `alias`       | [the dimension whose labels this one has](#alias)                           | `null`   |
 | `description` | free text, which the typeset legend lists                                   | `null`   |
 
 The file does not list the labels themselves. They arrive with the data, in
@@ -203,16 +204,18 @@ $`\mathcal{C} \subseteq \mathcal{P} \times \mathcal{U}`$, and `limit` prints as:
 \mathit{flow}_{c,t} \le \mathrm{capacity}_{\mathrm{unit}(c)} \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
 ```
 
-`over` takes a list of dimensions, or a mapping of name to dimension where two
-members are over one dimension:
+`over` takes a list of dimensions, each once. Where a tuple holds two labels of
+one dimension, such as the two regions of a trade link, one member is an
+[alias](#alias) of that dimension:
 
 ```yaml
 dimensions:
   region: { dtype: str }
-  trade: { over: { source: region, target: region } }
+  from_region: { alias: region }
+  trade: { over: [from_region, region] }
 ```
 
-A member in the list form has the name of its dimension. The order of the
+A member has the name of its dimension. The order of the
 members changes nothing, because mathspec sorts them by name at load.
 
 ### The maps of the dimension
@@ -285,8 +288,7 @@ At load, mathspec also refuses each of these, and prints the rewrite:
 | Refused                                                                                  | What you write instead                                                    |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | a member that has members of its own                                                     | the members themselves, in one list                                       |
-| a dimension twice in the list form, as in `over: [region, region]`                       | the mapping form, with a name for each member                             |
-| a member named after a dimension that it is not over                                     | another name for the member                                               |
+| a dimension twice, as in `over: [region, region]`                                        | an [alias](#alias) of the dimension as one of the members                 |
 | `ordered: true`, `dtype:` or `one_of:` beside `over:`                                    | the key on a member                                                       |
 | `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension | an entry over the members, with `where:` a relation that lists the tuples |
 | a comparison of the dimension with a label, as in `connection == 'a'`                    | a comparison of a member, as in `connection[unit] == 'u1'`                |
@@ -325,6 +327,44 @@ them. A tool requires three things of the column:
 
 mathspec declares no type for the tuple, so a tool may store the label in any
 form that keeps the fields.
+
+## `alias`
+
+An entry is over each dimension once. An alias is the same labels under a
+second name, so an entry can be over them twice, such as an efficiency for
+each pair of regions that trade:
+
+```yaml
+dimensions:
+  region: { dtype: str }
+  from_region: { alias: region }
+relations:
+  trade: { dims: [from_region, region], missing: absent }
+parameters:
+  ire_flo: { dims: [from_region, region], where: trade }
+variables:
+  exp: { dims: [region] }
+  imp: { dims: [region] }
+constraints:
+  eq_ire:
+    dims: [region]
+    expression: imp == sum(ire_flo * at(exp, by=from_region[region]), over=from_region)
+```
+
+`from_region` has the labels, the `dtype` and the order of `region`, so it
+takes no `dtype:`, `one_of:` or `ordered:` of its own. The data of `ire_flo`
+has the columns `from_region`, `region` and `value`, and the data has no table
+for `from_region`. An alias has the map `from_region[region]`, which sends
+each label to itself, so `at(exp, by=from_region[region])` reads `exp` at the
+region a row comes from. The typesetter prints the alias as the index of
+`region`, primed, over the same set:
+
+```math
+\mathit{imp}_{r} = \sum_{r' \in \mathcal{R}} \mathrm{ire\_flo}_{r',r} \cdot \mathit{exp}_{r'} \qquad \forall\, r \in \mathcal{R}
+```
+
+An alias names a declared dimension that is no alias itself. A second alias of
+`region` prints with two primes.
 
 !!! info "See also"
 

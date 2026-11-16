@@ -680,6 +680,11 @@ class Dimension:
     """Whether the order of the labels is part of the spec. When it is, a tool keeps the labels in the order the data gives
     them.
     """
+    alias: str | None = None
+    """The dimension whose labels this one has, or ``None``. A tool reads no labels for an alias: it has the labels,
+    dtype and order of that dimension, which ``dtype``, ``one_of`` and ``ordered`` repeat, and its map to that
+    dimension sends each label to itself.
+    """
     description: str | None = None
     over: tuple[tuple[str, str], ...] = ()
     """The members of the dimension as ``(role, dimension)``, sorted by role, or empty when the file lists none. A label

@@ -22,7 +22,7 @@ from mathspec.program import JoinedCondition, Relation, RelationComparison
 from tests.fixtures import varied
 
 #: The example of #1011: `connection` lists (unit, port) pairs and maps each to a
-#: bus, `trade` lists two regions by role, and `active` is a sparse set with an
+#: bus, `trade` lists a region and its alias, and `active` is a sparse set with an
 #: ordered member.
 MODEL: dict[str, Any] = {
     'dimensions': {
@@ -30,10 +30,11 @@ MODEL: dict[str, Any] = {
         'port': {},
         'bus': {},
         'region': {},
+        'from_region': {'alias': 'region'},
         'snapshot': {'dtype': 'int', 'ordered': True},
         'period': {'dtype': 'int', 'ordered': True},
         'connection': {'over': ['unit', 'port']},
-        'trade': {'over': {'src': 'region', 'dst': 'region'}},
+        'trade': {'over': ['from_region', 'region']},
     },
     'relations': {'active': {'dims': ['unit', 'period'], 'missing': 'absent'}},
     'maps': {'connection': {'bus': {'dim': 'bus'}}},
@@ -86,8 +87,12 @@ def test_each_member_is_a_map_of_the_dimension():
         'refused',
         members=('port', 'unit'),
     ), 'the table of the dimension has a map per member beside the maps the file declares'
-    assert program.relations['trade'].members == ('dst', 'src'), 'a dimension with no declared map has its members'
-    assert program.dimensions['trade'].over == (('dst', 'region'), ('src', 'region')), 'a role names each member'
+    assert program.relations['trade'].members == ('from_region', 'region'), (
+        'a dimension with no declared map has its members'
+    )
+    assert program.dimensions['trade'].over == (('from_region', 'from_region'), ('region', 'region')), (
+        'a member is named after its dimension, an alias where the tuple holds one dimension twice'
+    )
     assert program.dimensions['unit'].over == (), 'a plain dimension has no members'
 
 
@@ -109,7 +114,7 @@ def test_missing_says_whether_the_full_product_is_required(missing):
     [
         pytest.param('flow <= at(capacity, by=connection[unit])', ['connection', 'snapshot'], id='one-member'),
         pytest.param('flow <= at(rating, by=connection[unit, port])', ['connection', 'snapshot'], id='every-member'),
-        pytest.param('shipped <= at(tariff, by=trade[src])', ['trade'], id='a-member-by-role'),
+        pytest.param('shipped <= at(tariff, by=trade[region])', ['trade'], id='a-member-beside-its-alias'),
         pytest.param(
             'sum(flow, over=connection, by=connection[port]) >= 0', ['port', 'snapshot'], id='sum-to-a-member'
         ),
@@ -253,14 +258,9 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='no-member',
         ),
         pytest.param(
-            {'dimensions.pair': {'over': {'port': 'unit', 'bus': 'bus'}}},
-            ("Dimension 'pair' names member 'port' after dimension 'port', but the member is over 'unit'", 'Rename'),
-            id='a-role-named-after-another-dimension',
-        ),
-        pytest.param(
             {'dimensions.pair': {'over': ['region', 'region']}},
-            ("Dimension 'pair' lists 'region' twice under 'over:'", 'over: {region0: region, region1: region}'),
-            id='a-dimension-twice-in-the-list-form',
+            ("Dimension 'pair' lists 'region' twice under 'over:'", "Declare an alias of 'region'"),
+            id='a-dimension-twice',
         ),
         pytest.param(
             {'relations.connection': {'dims': ['unit', 'port']}},
@@ -340,8 +340,8 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
         ),
         pytest.param(
             _constraint('sum(shipped, over=region) >= 0', ['trade']),
-            ("'region' is a member of 'trade'", 'by=trade[<the members to keep>]'),
-            id='over-names-a-dimension-two-roles-are-over',
+            ("'region' is a member of 'trade'", 'Write sum(..., over=trade, by=trade[from_region]).'),
+            id='over-names-a-member-beside-its-alias',
         ),
         pytest.param(
             _constraint('flow <= capacity', ['connection', 'snapshot']),
@@ -530,7 +530,6 @@ def test_fragments_that_agree_on_the_members_merge():
     'connection',
     [
         pytest.param({'over': ['unit']}, id='other-members'),
-        pytest.param({'over': {'unit': 'unit', 'side': 'port'}}, id='other-roles'),
         pytest.param({'over': ['unit', 'port'], 'missing': 'refused'}, id='other-missing'),
         pytest.param({}, id='no-members'),
     ],
@@ -553,19 +552,9 @@ def test_a_patch_cannot_change_the_members():
 def test_rename_reaches_the_members_and_their_reads():
     renamed = rename(MODEL, {'unit': 'plant', 'connection': 'link', 'region': 'zone'})
     assert renamed.dimensions['link'].over == ('plant', 'port')
-    assert dict(renamed.dimensions['trade'].over) == {'src': 'zone', 'dst': 'zone'}, 'a role keeps its name'
+    assert set(renamed.dimensions['trade'].over) == {'from_region', 'zone'}, 'a member follows its dimension'
     assert renamed.constraints['limit'].expression == 'flow <= at(capacity, by=link[plant])'
     assert rename(renamed, {'plant': 'unit', 'link': 'connection', 'zone': 'region'}) == to_spec(MODEL)
-
-
-@pytest.mark.parametrize(
-    'names', [pytest.param({'src': 'origin'}, id='from-a-role'), pytest.param({'bus': 'src'}, id='to-a-role')]
-)
-def test_rename_refuses_a_name_that_is_a_role(names):
-    """A token is renamed wherever it is spelt, so a role named after no dimension would change with an entry of its name."""
-    model = varied(MODEL, **{'parameters.src': {'dims': []}}) if 'src' in names else MODEL
-    with pytest.raises(LanguageError, match=r"'src' is also a member of the dimension 'trade'"):
-        rename(model, names)
 
 
 @pytest.mark.parametrize('canonical', [False, True])

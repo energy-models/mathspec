@@ -105,11 +105,8 @@ def _sum_through(summed: str, over: set[str], inner: frozenset[str], spec: Spec)
         dims = [dim for _, dim in members]
         if summed not in dims:
             continue
-        kept = [role for role, dim in members if dim not in over]
-        if len(set(dims)) < len(dims):
-            by = f', by={name}[<the members to keep>]'
-        else:
-            by = f', by={name}[{", ".join(kept)}]' if kept else ''
+        kept = [dim for dim in dims if dim not in over]
+        by = f', by={name}[{", ".join(kept)}]' if kept else ''
         return f"'{summed}' is a member of '{name}', which is one dimension here. Write sum(..., over={name}{by})"
     return None
 
@@ -286,10 +283,9 @@ def _bound_member(
 
 def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
     """The maps of *name* that its members over the dims *wanted* are, as a call writes them, or ``None`` where one is no member."""
-    members = spec.dimensions[name].members
-    if not set(wanted) <= {dim for _, dim in members}:
+    if not set(wanted) <= {dim for _, dim in spec.dimensions[name].members}:
         return None
-    return ', '.join(' or '.join(role for role, dim in members if dim == d) for d in wanted)
+    return ', '.join(wanted)
 
 
 def operand_over(operands: Iterable[Expression], over: Iterable[str], without: str) -> str:

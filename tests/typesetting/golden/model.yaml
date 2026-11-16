@@ -16,12 +16,13 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
+  from_bus: { alias: bus } # the buses under a second index: a primed index over the same set
   zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
   site: { over: [generator, bus] } # a dimension that lists its members: the legend prints it as a subset of their product
-  corridor: { over: { from_bus: bus, to_bus: bus }, missing: refused } # members by role, and every combination required: the product itself
+  corridor: { over: [from_bus, bus], missing: refused } # a member and its alias, and every combination required: the product itself
 
 relations:
   gen_zone: { dims: [generator, snapshot] } # a relation over two dimensions, with a map: a call sums one away and joins on the other
@@ -47,6 +48,7 @@ parameters:
   corridor_cap: { dims: [corridor] } # over a dimension whose two members are over one dimension
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  susceptance: { dims: [from_bus, bus], missing: 0 } # over one set twice, through its alias
   area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
@@ -207,6 +209,12 @@ conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 
 constraints:
+  flow_angle: # an alias read back into its dimension: the value at the other end prints at the primed index
+    dims: [bus]
+    expression: theta == sum(susceptance * at(theta, by=from_bus[bus]), over=from_bus)
+  exchanged: # a sum over a dimension inside a sum over its alias: the inner dummy primes past the alias's index
+    dims: [bus]
+    expression: theta == sum(sum(susceptance, over=bus), over=from_bus, by=from_bus[bus])
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
     expression: spend <= budget

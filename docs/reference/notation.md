@@ -30,12 +30,13 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
+  from_bus: { alias: bus } # the buses under a second index: a primed index over the same set
   zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
   site: { over: [generator, bus] } # a dimension that lists its members: the legend prints it as a subset of their product
-  corridor: { over: { from_bus: bus, to_bus: bus }, missing: refused } # members by role, and every combination required: the product itself
+  corridor: { over: [from_bus, bus], missing: refused } # a member and its alias, and every combination required: the product itself
 
 relations:
   gen_zone: { dims: [generator, snapshot] } # a relation over two dimensions, with a map: a call sums one away and joins on the other
@@ -61,6 +62,7 @@ parameters:
   corridor_cap: { dims: [corridor] } # over a dimension whose two members are over one dimension
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  susceptance: { dims: [from_bus, bus], missing: 0 } # over one set twice, through its alias
   area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
@@ -80,6 +82,7 @@ parameters:
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U}`$, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label |
 | $`\mathcal{C}`$ | index $`c`$ — `corridor`, $`\mathcal{C} = \mathcal{U} \times \mathcal{U}`$ |
+| $`\mathcal{U}`$ | index $`u'`$ — `from_bus`, an alias of `bus` |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{technology}: \mathcal{G} \to \mathcal{E}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{I}`$ | index $`i`$ — `site`, $`\mathcal{I} \subseteq \mathcal{U} \times \mathcal{G}`$ |
@@ -108,6 +111,7 @@ parameters:
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
+| $`\mathrm{susceptance}`$ | `susceptance` over $`\mathcal{U} \times \mathcal{U}`$, $`0`$ where the data has no row |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 
@@ -538,6 +542,36 @@ constraints:
 
 ```math
 \sum_{t' \in \mathcal{T} \,:\, \mathrm{rep}(t') = t} \mathit{spill}_{t'} \le \mathit{spill}_{\mathrm{rep}(t)} \qquad \forall\, t \in \mathcal{T}
+```
+
+#### Alias of a dimension
+
+an alias read back into its dimension: the value at the other end prints at the primed index
+
+```yaml
+constraints:
+  flow_angle:
+    dims: [bus]
+    expression: theta == sum(susceptance * at(theta, by=from_bus[bus]), over=from_bus)
+```
+
+```math
+\theta_{u} = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} \qquad \forall\, u \in \mathcal{U}
+```
+
+#### Sum under an alias of its dimension
+
+a sum over a dimension inside a sum over its alias: the inner dummy primes past the alias's index
+
+```yaml
+constraints:
+  exchanged:
+    dims: [bus]
+    expression: theta == sum(sum(susceptance, over=bus), over=from_bus, by=from_bus[bus])
+```
+
+```math
+\theta_{u} = \sum_{u' \in \mathcal{U} \,:\, u' = u} \sum_{u'' \in \mathcal{U}} \mathrm{susceptance}_{u'',u'} \qquad \forall\, u \in \mathcal{U}
 ```
 
 #### Sum through a map of a relation
