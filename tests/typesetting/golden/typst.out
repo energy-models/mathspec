@@ -20,6 +20,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("bp_x")$: `bp_x` over $cal(B) times cal(G)$, $0$ where the data has no row
 / $upright("bp_y")$: `bp_y` over $cal(B) times cal(G)$, $0$ where the data has no row
 / $upright("budget")$: `budget` (scalar)
+/ $upright("corridor_cap")$: `corridor_cap` over $cal(C)$
 / $upright("cost")$: `cost` over $cal(G)$, $0$ where the data has no row
 / $upright("eta")$: `eta` over $cal(G)$
 / $upright("growth")$: `growth` (scalar)

@@ -275,8 +275,8 @@ costs exists.
 ## Special ordered set (SOS)
 
 A special ordered set (SOS) is an `sos:` entry over one dimension of one
-variable. With `type: 1`, at most one member is non-zero. With `type: 2`, at
-most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
+variable. With `type: 1`, at most one element is non-zero. With `type: 2`, at
+most two consecutive elements are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Surface
 

@@ -27,6 +27,7 @@
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{budget}$}] \texttt{budget} (scalar)
+\item[{$\mathrm{corridor\_cap}$}] \texttt{corridor\_cap} over $\mathcal{C}$
 \item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{growth}$}] \texttt{growth} (scalar)

@@ -200,7 +200,7 @@ def _members(spec: Spec) -> Iterator[str]:
         yield from (undeclared_dimension('Dimension', name, d) for d in dict.fromkeys(dims) if d not in spec.dimensions)
         for d in dict.fromkeys(dims):
             if d in spec.dimensions and (inner := spec.dimensions[d].members):
-                flat = sorted({*(m for m in dims if m != d), *(dim for _, dim in inner)})
+                flat = sorted({*dims, *(dim for _, dim in inner)} - {d, name})
                 yield (
                     f"Dimension '{name}' lists '{d}' under 'over:', and '{d}' has members of its own. A member is "
                     f'a dimension without `over:`. List the members themselves: over: {flat}.'
@@ -319,15 +319,8 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
-        elif members := spec.dimensions[entry.along].members:
-            over = sorted({dim for _, dim in members})
-            yield (
-                f'{context}: along: {entry.along} is a dimension that lists its members, and a set runs along a '
-                f"dimension without `over:`. Declare '{entry.variable}' over {over}, with `where:` a relation that "
-                f'lists the tuples, and run the set along one member.'
-            )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
-            yield unordered(context, f'type: 2 along {entry.along}', entry.along)
+            yield unordered(context, f'type: 2 along {entry.along}', entry.along, spec.dimensions[entry.along].members)
         elif entry.variable in claimed:
             yield (
                 f"{context}: variable '{entry.variable}' already carries the set declared by "
@@ -339,10 +332,10 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
 
 
 def _sos_bounds(spec: Spec) -> Iterator[str]:
-    """A set states what the binaries it expands to state: each side of a member carries a coefficient.
+    """A set states what the binaries it expands to state: each side of an element carries a coefficient.
 
-    The rewrite holds an unpicked member at zero from both sides, so a side
-    the spec leaves open leaves the member free of it. Either coefficient
+    The rewrite holds an unpicked element at zero from both sides, so a side
+    the spec leaves open leaves the element free of it. Either coefficient
     may be a parameter, because a row multiplies by it rather than reading
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
@@ -355,13 +348,13 @@ def _sos_bounds(spec: Spec) -> Iterator[str]:
         if below is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no lower bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from below as well as above. Declare bounds.lower, '
+                f'that hold an unpicked element at zero from below as well as above. Declare bounds.lower, '
                 f'as a number or a parameter.'
             )
         if above is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no upper bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from above as well as below. Declare bounds.upper, '
+                f'that hold an unpicked element at zero from above as well as below. Declare bounds.upper, '
                 f'as a number or a parameter.'
             )
 

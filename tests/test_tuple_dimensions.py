@@ -15,7 +15,8 @@ from typing import Any
 
 import pytest
 
-from mathspec import merge, rename, to_spec
+from mathspec import merge, override, rename, to_spec
+from mathspec._advising import advice
 from mathspec._typesetting import FORMATS, typeset
 from mathspec.errors import LanguageError
 from mathspec.program import JoinedCondition, Relation, RelationComparison
@@ -110,6 +111,7 @@ def test_missing_says_whether_the_full_product_is_required(missing):
             'sum(flow, over=connection, by=connection[port]) >= 0', ['port', 'snapshot'], id='sum-to-a-member'
         ),
         pytest.param('sum(flow, over=connection) >= 0', ['snapshot'], id='sum-the-tuples-away'),
+        pytest.param('both <= capacity', ['connection', 'unit'], id='an-entry-over-the-dimension-and-a-member'),
     ],
 )
 def test_a_member_is_read_through_the_implied_relation(expression, dims):
@@ -214,14 +216,6 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='position',
         ),
         pytest.param(
-            _constraint(
-                "shift(flow, along=snapshot, offset=1, edge='wrap', within=connection[unit]) >= 0",
-                ['connection', 'snapshot'],
-            ),
-            ("shift(within=connection[unit]) reads the order of 'connection'", 'no order'),
-            id='within',
-        ),
-        pytest.param(
             {
                 'parameters.xs': {'dims': ['connection']},
                 'parameters.ys': {'dims': ['connection']},
@@ -235,10 +229,10 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
         pytest.param(
             {
                 'variables.flow.bounds.upper': 1,
-                'sos.pick': {'variable': 'flow', 'along': 'connection', 'type': 1},
+                'sos.pick': {'variable': 'flow', 'along': 'connection', 'type': 2},
             },
-            ("Sos 'pick': along: connection", 'lists its members', "over ['port', 'unit']"),
-            id='sos',
+            ("Sos 'pick': type: 2 along connection reads the order of 'connection'", "over ['port', 'unit']"),
+            id='sos-of-type-2',
         ),
         pytest.param(
             _constraint('at(both, by=connection[unit]) >= 0', ['connection']),
@@ -279,8 +273,62 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
         ),
         pytest.param(
             _constraint('flow <= capacity', ['connection', 'snapshot']),
-            ("carries dims ['unit'] that are not in its dims", 'at(capacity, by=connection[unit])'),
+            (
+                "an operand over ['unit'] meets one over 'connection'",
+                'at(capacity, by=connection[unit])',
+                'sum(flow, over=connection, by=connection[unit])',
+            ),
             id='a-member-operand-meets-the-tuple',
+        ),
+        pytest.param(
+            _constraint('flow <= capacity', ['unit', 'snapshot']),
+            ("meets one over 'connection'", 'sum(flow, over=connection, by=connection[unit])'),
+            id='a-member-operand-meets-the-tuple-in-a-frame-over-the-member',
+        ),
+        pytest.param(
+            {'objective': {'sense': 'minimize', 'expression': 'sum(flow * capacity)'}},
+            (
+                "The objective: an operand over ['unit'] meets one over 'connection'",
+                'at(capacity, by=connection[unit])',
+            ),
+            id='a-member-operand-meets-the-tuple-in-a-product',
+        ),
+        pytest.param(
+            _constraint('sum(flow * capacity, over=unit) <= 1', ['connection', 'snapshot']),
+            ("meets one over 'connection'", 'at(capacity, by=connection[unit])'),
+            id='a-member-operand-meets-the-tuple-under-a-sum',
+        ),
+        pytest.param(
+            {'variables.flow.where': 'at(rating, by=connection[unit, port]) > capacity'},
+            ("Variable 'flow': an operand over ['unit'] meets one over 'connection'",),
+            id='a-member-operand-meets-the-tuple-in-a-condition',
+        ),
+        pytest.param(
+            {'expressions.e': {'dims': ['unit'], 'expression': '2 * capacity'}}
+            | _constraint('flow <= e', ['connection', 'snapshot']),
+            ('at(e, by=connection[unit])',),
+            id='a-named-expression-over-a-member-meets-the-tuple',
+        ),
+        pytest.param(
+            {'expressions.e': {'dims': ['connection', 'snapshot'], 'expression': 'capacity'}},
+            ("the body carries dims ['unit']", 'at(capacity, by=connection[unit])'),
+            id='a-named-expression-body-over-a-member',
+        ),
+        pytest.param(
+            {
+                'expressions.e': {
+                    'dims': ['connection', 'snapshot'],
+                    'cases': {'a': {'when': "connection[unit] == 'u'", 'expression': 'capacity'}},
+                    'otherwise': 'flow',
+                }
+            },
+            ("the value carries dims ['unit']", 'at(capacity, by=connection[unit])'),
+            id='a-case-value-over-a-member',
+        ),
+        pytest.param(
+            {'variables.u': {'dims': ['unit']}} | _constraint('sum(u, over=unit, by=connection[port]) >= 0', ['port']),
+            ('sum(at(u, by=connection[unit]), over=connection, by=connection[port])',),
+            id='over-names-a-member-of-an-operand-without-the-dimension',
         ),
         pytest.param(
             {'variables.flow.bounds.upper': 'capacity'},
@@ -289,13 +337,23 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
         ),
         pytest.param(
             {'variables.flow.where': 'capacity > 0'},
-            ("reads dims ['unit'] outside the declared dims", 'at(..., by=connection[unit])'),
+            ("reads dims ['unit'] outside the declared dims", 'at(capacity, by=connection[unit])'),
             id='a-where-over-a-member',
         ),
         pytest.param(
             {'variables.flow.where': "connection == 'a'"},
             ("'connection' lists its members", 'no label to compare', "connection[port] == 'a'"),
             id='a-label-comparison',
+        ),
+        pytest.param(
+            {'variables.flow.where': 'connection'},
+            ('a bare dimension name is true at every coordinate', 'where: "connection[port] == \'...\'"'),
+            id='a-bare-dimension-with-members',
+        ),
+        pytest.param(
+            {'dimensions.ring': {'over': ['loop', 'unit']}, 'dimensions.loop': {'over': ['ring', 'port']}},
+            ("Dimension 'ring' lists 'loop'", "over: ['port', 'unit']"),
+            id='two-dimensions-as-members-of-each-other',
         ),
     ],
 )
@@ -322,7 +380,31 @@ def test_the_legend_prints_the_members(fmt, missing, relation):
     ops = FORMATS[fmt].operators
     c, p, u = ((r'cal(%s)' if fmt == 'typst' else r'\mathcal{%s}') % letter for letter in 'CPU')
     assert f'{c} {ops[relation]} {p} {ops["times"]} {u}' in typeset(spec, fmt), f'{fmt} prints the product'
-    assert 'connection}:' not in typeset(spec, fmt), 'the implied relation has no row of its own beside the product'
+    relation = r'upright("connection")' if fmt == 'typst' else r'\mathrm{connection}'
+    assert relation not in typeset(spec, fmt), 'the implied relation has no row of its own beside the product'
+
+
+def test_a_set_of_type_1_runs_along_a_dimension_with_members():
+    """A type-1 set uses no order, so a dimension without one carries it."""
+    sos = {'variables.flow.bounds.upper': 1, 'sos.pick': {'variable': 'flow', 'along': 'connection', 'type': 1}}
+    assert to_spec(varied(MODEL, **sos)).sos['pick'].along == 'connection'
+
+
+@pytest.mark.parametrize(
+    ('variables', 'unused'),
+    [
+        pytest.param({'x': {'dims': ['snapshot']}}, ['connection', 'port', 'unit'], id='nothing-is-over-the-dimension'),
+        pytest.param({'x': {'dims': ['connection']}}, ['snapshot'], id='an-entry-is-over-the-dimension'),
+    ],
+)
+def test_the_implied_relation_does_not_count_as_a_use(variables, unused):
+    """The relation the entry implies has a column over the dimension and each member, so it counted as reaching them."""
+    spec = {
+        'dimensions': {'unit': {}, 'port': {}, 'snapshot': {}, 'connection': {'over': ['unit', 'port']}},
+        'variables': variables,
+    }
+    notes = sorted(note.subject for note in advice(spec) if note.kind == 'never-an-axis')
+    assert notes == unused, 'an entry over the dimension reaches its members, and the implied relation reaches nothing'
 
 
 def test_fragments_that_agree_on_the_members_merge():
@@ -353,8 +435,6 @@ def test_fragments_that_disagree_on_the_members_are_refused(connection):
 
 
 def test_a_patch_cannot_change_the_members():
-    from mathspec import override
-
     with pytest.raises(LanguageError, match=r"declares the dimension 'connection'"):
         override(FRAGMENT, [{'dimensions': {'connection': {'over': ['unit']}}}])
 

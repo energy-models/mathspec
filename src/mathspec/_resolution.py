@@ -453,7 +453,7 @@ def resolve_constraint_text(
     found = len(errors)
     resolver = ExpressionResolver(ns, context, errors)
     left, right = resolver.build(ast.left), resolver.build(ast.right)
-    if len(errors) > found or left is None or right is None:
+    if len(errors) > found or left is None or right is None or resolver.met(left, right):
         return None
     if any(_over_the_ceiling(side, context, errors, ceiling=2) for side in (left, right)):
         return None

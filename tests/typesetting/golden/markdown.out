@@ -25,6 +25,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
+| $`\mathrm{corridor\_cap}`$ | `corridor_cap` over $`\mathcal{C}`$ |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{growth}`$ | `growth` (scalar) |

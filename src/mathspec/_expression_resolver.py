@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
-from mathspec._dimensions import check_node, joined, sorted_dims
+from mathspec._dimensions import check_meeting, check_node, joined, operand_over, sorted_dims
 from mathspec._expression_parser import (
     MAX_DEPTH,
     ArithmeticNode,
@@ -155,7 +155,7 @@ class ExpressionResolver:
     def _binary(self, node: BinaryOperatorNode) -> Expression | None:
         """A subtraction is an addition of the negation, so a program has one additive node."""
         left, right = self.arith(node.left), self.arith(node.right)
-        if left is None or right is None:
+        if left is None or right is None or self.met(left, right):
             return None
         dims = sorted_dims(left.dims, right.dims)
         match node.op:
@@ -171,6 +171,15 @@ class ExpressionResolver:
                 return Power(left, right, dims=dims)
             case _:
                 assert_never(node.op)
+
+    def met(self, left: Expression, right: Expression) -> bool:
+        """Whether *left* and *right* meet a member against the dimension that lists it, the refusal appended."""
+        try:
+            check_meeting(left, right, self.ns.spec, self.context)
+        except DimensionError as e:
+            self.errors.append(self.ns.refused_dims(e))
+            return True
+        return False
 
     def _name(self, node: NameNode) -> Expression | None:
         """A bare name as the variable, parameter or named expression it declares; a dimension or relation is not a value.
@@ -286,7 +295,7 @@ class ExpressionResolver:
                 return self._bare_sum(operand)
             return self._summed(operand, tuple(Axis(d) for d in over))
         assert over is not None, 'the call shape requires over= beside by='
-        grouping = self._grouping(columns, over)
+        grouping = self._grouping(columns, over, operand)
         if grouping is None:
             return None
         join, plain = grouping
@@ -579,7 +588,9 @@ class ExpressionResolver:
             f'relation[column, ...].'
         )
 
-    def _grouping(self, columns: ColumnsNode, over: tuple[str, ...]) -> tuple[JoinColumns, tuple[str, ...]] | None:
+    def _grouping(
+        self, columns: ColumnsNode, over: tuple[str, ...], operand: Expression
+    ) -> tuple[JoinColumns, tuple[str, ...]] | None:
         """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
@@ -614,9 +625,14 @@ class ExpressionResolver:
             )
             return None
         if name in ns.dimensions and name not in (*from_roles, *into_roles):
+            if name in operand.dims:
+                rewrite = f'sum(..., over={name}, by={columns})'
+            else:
+                read = operand_over((operand,), (shape.dim(r) for r in from_roles), name)
+                rewrite = f'sum(at({read}, by={name}[{", ".join(from_roles)}]), over={name}, by={columns})'
             self.errors.append(
                 f"{self.context}: {call}: over={shown(from_roles)} names a member of '{name}', which is one "
-                f'dimension here. Write sum(..., over={name}, by={columns}).'
+                f'dimension here. Write {rewrite}.'
             )
             return None
         join = self._checked_join(name, call, from_roles, into_roles)

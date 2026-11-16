@@ -8,7 +8,7 @@ variables:
   pick_seg:
     dims: [g]
     domain: binary
-    description: a binary per segment, 1 where the two members it spans may be nonzero
+    description: a binary per segment, 1 where the two elements it spans may be nonzero
 
 constraints:
   pick_pick:

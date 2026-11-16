@@ -54,6 +54,7 @@ parameters:
   load: { dims: [snapshot, bus] }
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
+  corridor_cap: { dims: [corridor] } # over a dimension whose two members are over one dimension
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
   min_up: { dims: [generator], dtype: int }
@@ -90,6 +91,7 @@ parameters:
 | $`\mathrm{bp\_x}`$ | `bp_x` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{bp\_y}`$ | `bp_y` over $`\mathcal{B} \times \mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{budget}`$ | `budget` (scalar) |
+| $`\mathrm{corridor\_cap}`$ | `corridor_cap` over $`\mathcal{C}`$ |
 | $`\mathrm{cost}`$ | `cost` over $`\mathcal{G}`$, $`0`$ where the data has no row |
 | $`\mathrm{eta}`$ | `eta` over $`\mathcal{G}`$ |
 | $`\mathrm{growth}`$ | `growth` (scalar) |

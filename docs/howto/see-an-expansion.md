@@ -214,7 +214,7 @@ every `sos:` entry. Then write out both with `spec.expand()`:
           curve_seg:
             dims: [bp]
             domain: binary
-            description: a binary per segment, 1 where the two members it spans may be nonzero
+            description: a binary per segment, 1 where the two elements it spans may be nonzero
 
         constraints:
           curve_convexity:
@@ -347,7 +347,7 @@ math without the symbol tables.
 
 Save the spec in the "Before" tab below as `sos.yaml`, and write it out with
 `ms.to_spec('sos.yaml').expand()`. In this spec, the `sos:` entry `pick`
-requires at most one member of `p` to be non-zero:
+requires at most one element of `p` to be non-zero:
 
 <!-- prettier-ignore-start -->
 <!-- expansion:set:begin -->
@@ -405,7 +405,7 @@ requires at most one member of `p` to be non-zero:
           pick_seg:
             dims: [g]
             domain: binary
-            description: a binary per member, 1 where that member may be nonzero
+            description: a binary per element, 1 where that element may be nonzero
 
         constraints:
           pick_pick:

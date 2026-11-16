@@ -1144,6 +1144,10 @@ class Program:
     """
     dimensions: Mapping[str, Dimension] = Frozen({})
     relations: Mapping[str, Relation] = Frozen({})
+    """Each relation under ``relations:``, and the one each dimension with members implies under the name of that
+    dimension. A tool takes the rows of an implied relation from the labels of its dimension, one field per member, and
+    reads no table of its own for it.
+    """
     sos: Mapping[str, Sos] = Frozen({})
     piecewise: Mapping[str, Piecewise] = Frozen({})
     """Each ``piecewise:`` entry of the spec, as the curve it states. It is empty for the program of a spec whose curves

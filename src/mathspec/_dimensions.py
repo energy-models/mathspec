@@ -24,6 +24,7 @@ from mathspec.program import (
     DimensionPosition,
     Expression,
     ExpressionComparison,
+    ExpressionReference,
     Join,
     JoinColumns,
     JoinedCondition,
@@ -273,29 +274,71 @@ def _bound_outside(
 
 
 def _at_member(
-    stray: Iterable[str], frame: frozenset[str], spec: Spec, operands: Iterable[Expression] = ()
+    stray: Iterable[str],
+    frame: frozenset[str],
+    spec: Spec,
+    operands: Iterable[Expression] = (),
+    read: str | None = None,
 ) -> str | None:
     """The rewrite for dims in *stray* that are members of a dimension in *frame*, or ``None`` where one is not.
 
     An operand over a member does not align with the dimension that lists the
     member, so the file reads it at each tuple with ``at``. The rewrite names
-    the parameter or variable in *operands* that is over the members, where
-    one is.
+    *read*, or else the operand in *operands* that is over the members.
     """
     wanted = sorted(stray)
     for name in sorted(frame):
-        members = spec.dimensions[name].members
-        if not set(wanted) <= {dim for _, dim in members}:
+        if (columns := _member_columns(name, wanted, spec)) is None:
             continue
-        columns = [' or '.join(role for role, dim in members if dim == d) for d in wanted]
-        leaves = (n for n in walk(*operands) if isinstance(n, ParameterReference | VariableReference))
-        read = next((n.name for n in leaves if set(wanted) <= set(n.dims) and name not in n.dims), '...')
+        read = read or operand_over(operands, wanted, name)
         return (
             f'{", ".join(map(repr, wanted))} {"is a member" if len(wanted) == 1 else "are members"} of '
-            f"'{name}', which is one dimension here. Read the operand at each tuple: "
-            f'at({read}, by={name}[{", ".join(columns)}])'
+            f"'{name}', which is one dimension here. Read the operand at each tuple: at({read}, by={name}[{columns}])"
         )
     return None
+
+
+def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
+    """The columns of the relation *name* implies over the dims *wanted*, as a call writes them, or ``None`` where one is no member."""
+    members = spec.dimensions[name].members
+    if not set(wanted) <= {dim for _, dim in members}:
+        return None
+    return ', '.join(' or '.join(role for role, dim in members if dim == d) for d in wanted)
+
+
+def operand_over(operands: Iterable[Expression], over: Iterable[str], without: str) -> str:
+    """The outermost name in *operands* over every dim in *over* and not over *without*, or ``...`` where none is.
+
+    A named expression is a name the file wrote, so the walk takes it before
+    the body it stands for.
+    """
+    wanted, named = set(over), ParameterReference | VariableReference | ExpressionReference
+    found = (n for n in walk(*operands) if isinstance(n, named) and wanted <= set(n.dims) and without not in n.dims)
+    return next((n.name for n in found), '...')
+
+
+def check_meeting(left: Expression, right: Expression, spec: Spec, context: str) -> None:
+    """Two operands meet only where neither carries a member of a dimension the other carries without it.
+
+    A dimension with members is one plain dimension, so an operand over a
+    member does not align with one over the dimension. The two would meet as
+    their cross product, and a sum or the objective would then add it up
+    without a frame that names it.
+
+    Raises:
+        DimensionError: One operand carries a dimension with members, and the
+            other carries a member of it but not the dimension.
+    """
+    for one, other in ((left, right), (right, left)):
+        for name in sorted(set(one.dims) - set(other.dims)):
+            members = {dim for _, dim in spec.dimensions[name].members}
+            if stray := sorted((members & set(other.dims)) - set(one.dims)):
+                summed = operand_over((one,), (name,), stray[0])
+                raise DimensionError(
+                    f"{context}: an operand over {stray} meets one over '{name}'. "
+                    f'{_at_member(stray, frozenset({name}), spec, (other,))}, or sum {summed} to the member: '
+                    f'sum({summed}, over={name}, by={name}[{_member_columns(name, stray, spec)}]).'
+                )
 
 
 def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expression | None, Expression | None]]) -> None:
@@ -325,7 +368,7 @@ def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expressi
             continue
         frame = frozenset(declared.dims)
         if not isinstance(entry.expression, Cases):
-            indexed = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
+            indexed = _check_value_dims(entry.expression, frame, f"Named expression '{ename}'", spec, 'body')
             _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
             continue
         indexed = frozenset[str]()
@@ -333,7 +376,7 @@ def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expressi
             context = case_context(ename, label)
             if label is not None:
                 _check_condition_dims(region.when, frame, context, spec)
-            indexed |= _check_value_dims(region.value, frame, context) | frozenset(region.when.dims)
+            indexed |= _check_value_dims(region.value, frame, context, spec, 'value') | frozenset(region.when.dims)
         _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
 
     for ename, entry in program.expressions.items():
@@ -374,28 +417,17 @@ def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expressi
             )
 
 
-def _check_value_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
-    """A region's value may only carry dims the frame does — the ``otherwise:`` included.
+def _check_value_dims(node: Expression, frame: frozenset[str], context: str, spec: Spec, noun: str) -> frozenset[str]:
+    """A named expression's body, or a region's value, carries only dims its ``dims:`` gives; those it carries come back.
 
     A wider one would give the quantity dims its entry does not, which is
     the second answer a ``dims:`` exists to avoid.
     """
     got = frozenset(node.dims)
-    if not got <= frame:
+    if stray := sorted(got - frame):
+        rewrite = _at_member(stray, frame, spec, (node,)) or f'Add them to dims:, or take them out of the {noun}'
         raise DimensionError(
-            f'{context}: the value carries dims {sorted(got - frame)} outside the dims: '
-            f'{sorted(frame)}. Add them to dims:, or take them out of the value.'
-        )
-    return got
-
-
-def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> frozenset[str]:
-    """A plain entry's expression is indexed only over dims its ``dims:`` gives; the dims it is indexed over come back."""
-    got = frozenset(node.dims)
-    if not got <= frame:
-        raise DimensionError(
-            f'{context}: the body carries dims {sorted(got - frame)} outside the dims: {sorted(frame)}. '
-            f'Add them to dims:, or take them out of the body.'
+            f'{context}: the {noun} carries dims {stray} outside the dims: {sorted(frame)}. {rewrite}.'
         )
     return got
 
@@ -447,7 +479,10 @@ def _check_condition_dims(mask: Mask | None, frame: frozenset[str], context: str
                 leaf = f"a condition read through '{atom.columns.name}'"
             case _:
                 assert_never(atom)
-        rewrite = _at_member(outside, frame, spec) or 'Add them to dims:, or test a name over the declared dims'
+        read = atom.name if isinstance(atom, ParameterDefined | ParameterComparison | VariableDefined) else None
+        rewrite = (
+            _at_member(outside, frame, spec, read=read) or 'Add them to dims:, or test a name over the declared dims'
+        )
         raise DimensionError(
             f'{context}: {leaf} reads dims {outside} outside the declared dims {sorted(frame)}. {rewrite}.'
         )

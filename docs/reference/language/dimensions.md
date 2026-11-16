@@ -243,10 +243,14 @@ entry over the dimension. With `flow <= capacity` in `limit` above, mathspec
 prints:
 
 ```text
-Constraint 'limit': the expression carries dims ['unit'] that are not in its dims: ['connection', 'snapshot']. 'unit' is a member of 'connection', which is one dimension here. Read the operand at each tuple: at(capacity, by=connection[unit]).
+Constraint 'limit': an operand over ['unit'] meets one over 'connection'. 'unit' is a member of 'connection', which is one dimension here. Read the operand at each tuple: at(capacity, by=connection[unit]), or sum flow to the member: sum(flow, over=connection, by=connection[unit]).
 ```
 
-mathspec suggests the lookup through the relation of the dimension. A sum over
+mathspec suggests the lookup through the relation of the dimension, or the sum
+of `flow` to the member. The same refusal applies wherever the two operands
+meet: in a product, in a sum, and in the objective, as in
+`sum(flow * capacity)`. An entry over both, such as a variable over
+`[connection, unit]`, still loads. A sum over
 a member is refused the same way. With `sum(flow, over=unit)`, mathspec prints:
 
 ```text
@@ -267,7 +271,7 @@ At load, mathspec also refuses each of these, and prints the rewrite:
 | a dimension twice in the list form, as in `over: [region, region]`                              | the mapping form, with a name for each member                             |
 | a member named after a dimension that it is not over                                            | another name for the member                                               |
 | `ordered: true`, `dtype:` or `one_of:` beside `over:`                                           | the key on a member                                                       |
-| `shift`, `sum_back`, `position`, `within=`, `piecewise:` or `sos:` along the dimension          | an entry over the members, with `where:` a relation that lists the tuples |
+| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension        | an entry over the members, with `where:` a relation that lists the tuples |
 | a comparison of the dimension with a label, as in `connection == 'a'`                           | a comparison of a member, as in `connection[unit] == 'u1'`                |
 | a call through the relation of the dimension on an operand over both the dimension and a member | the member summed out of the operand first                                |
 
@@ -294,6 +298,8 @@ $`\subseteq`$. mathspec refuses `missing:` on a dimension without `over:`.
 
 With data attached, the labels of `connection` are one column whose values
 have one field per member, named after the member: `{unit: u1, port: out}`.
+The [relation of the dimension](#the-relation-of-the-dimension) takes its rows
+from this column, so a tool reads no table of its own for it.
 A tool requires three things of the column:
 
 - Each tuple appears once.
