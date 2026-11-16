@@ -51,6 +51,11 @@ Relation 'zp' names column 'period' after dimension 'period', but the column is 
 
 mathspec suggests one rewrite, which is to rename the column.
 
+A dimension that lists its members under
+[`over:`](dimensions.md#over) already declares a relation of its own name,
+keyed by the dimension with one value column per member. Every call on this
+page reads that relation as it reads a relation under `relations:`.
+
 The order of the columns under `key:` and under `values:` changes nothing. The
 key's columns come first, and each side is sorted by column name. The
 typesetter prints the columns in that order, so `connection` above prints as
