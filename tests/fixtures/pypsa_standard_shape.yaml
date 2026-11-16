@@ -931,20 +931,20 @@ parameters:
   snapshot_weightings_stores:
     - snapshot
   transmission_losses: []
-relations:
-  - Generator_bus
-  - Line_bus0
-  - Line_bus1
-  - Link_bus0
-  - Link_output_bus
-  - Link_output_link
-  - Load_bus
-  - Process_output_bus
-  - Process_output_process
-  - StorageUnit_bus
-  - Store_bus
-  - Transformer_bus0
-  - Transformer_bus1
+maps:
+  - generator[bus]
+  - line[bus0]
+  - line[bus1]
+  - link[bus0]
+  - link_output[bus]
+  - link_output[link]
+  - load[bus]
+  - process_output[bus]
+  - process_output[process]
+  - storage_unit[bus]
+  - store[bus]
+  - transformer[bus0]
+  - transformer[bus1]
 variables:
   Generator_n_mod:
     - generator

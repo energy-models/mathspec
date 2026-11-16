@@ -28,7 +28,7 @@ To learn the language from the start, follow the
 <div class="grid cards" markdown>
 
 <!-- prettier-ignore -->
-- **[Choose between a dimension, a relation and a parameter](declare-a-column.md)**
+- **[Choose between a dimension, a relation, a map and a parameter](declare-a-column.md)**
     for a column of your data.
 - **[State a rule that differs by case](cases.md)**, such as committable and
     non-committable generators, in one spec.

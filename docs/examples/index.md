@@ -23,8 +23,8 @@ like yours, and what each line of the file means.
     inequality covers a running unit and a starting unit.
     [Open →](commitment.md)
 - **Units with ports**
-    One relation lists the ports of each unit, and a parameter with
-    `where:` keeps only the output ports.
+    One relation lists the ports of each unit, maps give each port a bus and
+    a role, and a parameter with `where:` keeps only the output ports.
     [Open →](connection.md)
 - **One construct per spec**
     Each form of the four operators and `dual` has its smallest file, beside

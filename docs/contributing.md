@@ -182,8 +182,8 @@ only when it meets these conditions:
   Everything a modeller passes to the operator is the value of a keyword
   argument, such as `over=snapshot`.
 - It reads a bounded number of rows for each row of its result. It may filter
-  rows on a column they already have, or join each row against a parameter or
-  a relation. It may also read neighbouring rows at a fixed offset, or only
+  rows on a column they already have, or join each row against a parameter, a
+  relation or a map. It may also read neighbouring rows at a fixed offset, or only
   the coordinate labels.
 - If it reads every row, it reads them in one pass over the data. That pass
   ends before a tool that builds the model

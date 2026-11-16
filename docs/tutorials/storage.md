@@ -44,8 +44,8 @@ Check the file:
     ```
 
 ```text
-dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
-dimension 'store' is never used: nothing is indexed by it, nothing sums into it, and no relation has a column over it. Remove it, or keep it if the entries that use it are still to be written.
+dimension 'snapshot' is never used: nothing is indexed by it, nothing sums into it, and no relation or map is over it. Remove it, or keep it if the entries that use it are still to be written.
+dimension 'store' is never used: nothing is indexed by it, nothing sums into it, and no relation or map is over it. Remove it, or keep it if the entries that use it are still to be written.
 ```
 
 mathspec accepts the file. `check` prints one remark that is not a refusal (a line of

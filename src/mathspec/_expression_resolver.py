@@ -146,8 +146,8 @@ class ExpressionResolver:
             return None
         if isinstance(node, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {node} names columns of a relation, which is allowed only as an operator '
-                f'argument, such as at(x, by={node}). A relation is not a value.'
+                f'{self.context}: {node} names a map of a subject, which is allowed only as an operator '
+                f'argument, such as at(x, by={node}). A map is not a value.'
             )
             return None
         assert_never(node)
@@ -208,8 +208,8 @@ class ExpressionResolver:
                 return None
             case 'relation':
                 self.errors.append(
-                    f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Use its "
-                    f'columns as sum(x, over=<column>, by={node.name}[<column>]) or in a condition, or declare a '
+                    f"{self.context}: '{node.name}' is a relation, and a relation is not a value. Sum through it "
+                    f'as sum(x, over=<column>, by={node.name}[<column>]), test it in a condition, or declare a '
                     f'parameter to carry numbers.'
                 )
                 return None
@@ -314,7 +314,7 @@ class ExpressionResolver:
         return node
 
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
-        """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
+        """``at(x, by=subject[map])``: *operand* read at the value of *columns* each row of the relation holds."""
         join = self.lookup(columns, frozenset(operand.dims))
         return None if join is None else self._joined(operand, join)
 
@@ -497,7 +497,7 @@ class ExpressionResolver:
             return None
         if isinstance(value, ColumnsNode):
             self.errors.append(
-                f'{self.context}: {operator}(over={value}) names a relation, and over= takes bare names. Write '
+                f'{self.context}: {operator}(over={value}) names maps of a subject, and over= takes bare names. Write '
                 f'over={shown(value.columns)}. Beside by={value.relation}[...], a name in over= is a column of '
                 f"'{value.relation}', or a dimension."
             )
@@ -540,9 +540,10 @@ class ExpressionResolver:
             return None
         shape = self.ns.relations[value.relation]
         if unknown := [c for c in value.columns if c not in shape.roles and c not in self.formals]:
+            word, named = ('map', shape.values) if value.relation in self.ns.dimensions else ('column', shape.roles)
             self.errors.append(
-                f'{self.context}: {operator}({key}={value}) names {unknown}, which is no column of '
-                f"'{value.relation}'. Name one of its columns, {list(shape.roles)}."
+                f'{self.context}: {operator}({key}={value}) names {unknown}, which is no {word} of '
+                f"'{value.relation}'. Name one of its {word}s, {list(named)}."
             )
             return None
         if any(c in self.formals for c in value.columns):
@@ -556,31 +557,27 @@ class ExpressionResolver:
         """Why *value* is not a column selection, with the selection it most likely meant."""
         ns, context = self.ns, self.context
         if isinstance(value, NameNode) and value.name in ns.relations:
+            shape = ns.relations[value.name]
+            word, named = ('map', shape.values) if value.name in ns.dimensions else ('column', shape.roles)
             return (
-                f'{context}: {operator}({key}={value.name}) names the relation and none of its columns. Write '
-                f"{key}={value.name}[<column>], with a column of '{value.name}': "
-                f'{list(ns.relations[value.name].roles)}.'
+                f'{context}: {operator}({key}={value.name}) names the subject and none of its {word}s. Write '
+                f"{key}={value.name}[<{word}>], with a {word} of '{value.name}': {list(named)}."
             )
         if isinstance(value, NameNode) and value.name in ns.dimensions:
             over_here = [
                 f'{n}[{r}]' for n, shape in ns.relations.items() for r, dim in shape.columns if dim == value.name
             ]
-            hint = (
-                f'Columns over {value.name!r}: {over_here}'
-                if over_here
-                else f'No relation has a column over {value.name!r}.'
-            )
+            hint = f'Columns over {value.name!r}: {over_here}' if over_here else f'No map refers to {value.name!r}.'
             return (
-                f"{context}: {operator}({key}={value.name}): '{value.name}' is a dimension, and {key}= takes "
-                f'columns of a relation, written relation[column]. {hint}'
+                f"{context}: {operator}({key}={value.name}): '{value.name}' is a dimension with no maps, and {key}= "
+                f'takes columns of a subject, written subject[map]. {hint}'
             )
         return (
-            f'{context}: {operator}({key}=...) takes columns of one relation. Write relation[column] or '
-            f'relation[column, ...].'
+            f'{context}: {operator}({key}=...) takes columns of one subject. Write subject[map] or subject[map, ...].'
         )
 
     def _grouping(self, columns: ColumnsNode, over: tuple[str, ...]) -> tuple[JoinColumns, tuple[str, ...]] | None:
-        """How ``sum(x, over=..., by=relation[...])`` joins the relation, and the dims it sums away with no column.
+        """How ``sum(x, over=..., by=subject[...])`` joins the relation, and the dims it sums away with no column.
 
         A name in *over* is a column of the relation where it has one, and a
         dimension otherwise, summed away after the group-by. The entry
@@ -614,7 +611,7 @@ class ExpressionResolver:
             self.errors.append(
                 f'{self.context}: {call}: the columns this sum groups by, {list(join.grouped)}, hold the whole key '
                 f'{list(shape.key)}, so every group is one row and the sum adds nothing. Write '
-                f'{_lookup_rewrite(name, from_roles, plain)}, or group by a value column.'
+                f'{_lookup_rewrite(name, from_roles, plain)}, or group by a map.'
             )
             return None
         return join, plain
@@ -631,14 +628,15 @@ class ExpressionResolver:
         shape = self.ns.relations[name]
         if not shape.values:
             self.errors.append(
-                f"{self.context}: {call}: '{name}' has every column in its key, so it has no value column for at() "
-                f'to read. Sum through it instead.'
+                f"{self.context}: {call}: '{name}' has no map for at() to read. Sum through it instead, or declare "
+                f'a map under maps: {name}:.'
             )
             return None
         if keyed := [r for r in columns.columns if r in shape.key]:
+            through = '' if name in self.ns.dimensions else ', or sum through the column'
             self.errors.append(
-                f"{self.context}: {call} names {keyed}, a key column of '{name}'. A lookup reads value columns "
-                f'at the key. Name one of the value columns, {list(shape.values)}, or sum through the key column.'
+                f"{self.context}: {call} names {keyed}, a column of '{name}' itself. A lookup reads maps at the "
+                f'row. Name one of its maps, {list(shape.values)}{through}.'
             )
             return None
         matched = inner - {shape.dim(r) for r in columns.columns}
@@ -679,20 +677,21 @@ class ExpressionResolver:
         call = f'{operator}(within={columns})'
         if not shape.values:
             self.errors.append(
-                f"{context}: {call}: '{name}' has every column in its key, so it makes no groups. Move the group "
-                f'columns under values:, and keep under key: the column {operator} steps along.'
+                f"{context}: {call}: '{name}' has no map, so it makes no groups. Declare the group as a map of "
+                f'the dimension {operator} steps along, under maps: {along_dim}:.'
             )
             return None
         over_keys = [r for r in shape.key if shape.dim(r) == along_dim]
         if not over_keys:
             self.errors.append(
-                f"{context}: {call}: '{name}' has no key column over '{along_dim}'. Its key is {list(shape.key)}."
+                f"{context}: {call}: '{name}' has no column of its own over '{along_dim}'. Its own columns are "
+                f'{list(shape.key)}.'
             )
             return None
         if keyed := [r for r in within_roles if r in shape.key]:
             self.errors.append(
-                f"{context}: {call}: within= names {keyed}, a key column of '{name}'. Name one of its value "
-                f'columns, {list(shape.values)}.'
+                f"{context}: {call}: within= names {keyed}, a column of '{name}' itself. Name one of its maps, "
+                f'{list(shape.values)}.'
             )
             return None
         (along,) = over_keys
@@ -706,14 +705,18 @@ class ExpressionResolver:
             return None
         if name in ns.dimensions:
             return (
-                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension, not a relation. Write the "
-                f'relation first and its columns after it: {key}=<relation>[<column>].'
+                f"{context}: {operator}({key}={name}[...]): '{name}' is a dimension with no maps. Declare the map "
+                f'under maps: {name}:, or read a subject that has it: {key}=<subject>[<map>].'
             )
+        kinds = (
+            'a relation, a dimension with maps or a formal argument of this macro'
+            if self.formals
+            else 'a relation or a dimension with maps'
+        )
         return (
-            f'{context}: {operator}({key}={name}[...]) does not name a relation{_or_a_formal(self.formals)}. '
-            f'{did_you_mean(name, ns.relations, label="Relations")}\n'
-            f"Declare it under 'relations:' as {name}: {{key: <the columns a row is identified by>, "
-            f'values: <the columns they determine>}}.'
+            f'{context}: {operator}({key}={name}[...]): {name!r} is not {kinds}. '
+            f'{did_you_mean(name, ns.relations, label="Subjects")}\n'
+            f'Write {key}=<subject>[<map>], and declare a missing map under maps:.'
         )
 
 
@@ -731,6 +734,13 @@ def not_a_number(name: str, dtype: str, context: str) -> str:
 
 
 def _undeclared_dim(context: str, operator: str, call: str, name: str, ns: Namespace, formals: frozenset[str]) -> str:
+    if name in ns.relations and name not in ns.dimensions:
+        dims = list(ns.relations[name].dims)
+        which = 'its dimensions' if call.startswith('over=') else 'one of its dimensions'
+        return (
+            f"{context}: {operator}({call}) names the relation '{name}', and a relation is not a dimension. "
+            f'Name {which}, {dims}.'
+        )
     return (
         f'{context}: {operator}({call}) does not name a declared dimension{_or_a_formal(formals)}. '
         f'{did_you_mean(name, ns.dimensions, label="Dimensions")}\n'

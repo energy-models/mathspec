@@ -326,7 +326,7 @@ def test_a_relation_column_is_named_in_brackets():
     )
     with pytest.raises(SchemaError, match='Cannot parse the condition'):
         parse_condition('ends[bus0] + 1 > 0')
-    with pytest.raises(SchemaError, match=r'Compare each column on its own: ends\[bus0\] == … AND ends\[bus1\] == …'):
+    with pytest.raises(SchemaError, match=r'Compare each map on its own: ends\[bus0\] == … AND ends\[bus1\] == …'):
         parse_condition("ends[bus0, bus1] == 'x'")
 
 

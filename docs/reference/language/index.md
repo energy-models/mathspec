@@ -18,7 +18,7 @@ _entry_, _coordinate_ and _absent_, in one fixed sense.
 - **[File shape](file.md)** lists the top-level keys of a spec file, and how mathspec reads the YAML.
 - **[Given, parameters, variables, objective and constraints](parameters-variables-constraints.md)** lists the keys of the data, the decisions, the goal and the rules, and of the `given:` section.
 - **[Dimensions](dimensions.md)** lists the keys of a dimension, the set of labels that entries are indexed over.
-- **[Relations](relations.md)** lists the keys of a relation, a table that maps one dimension onto another, and how each operator uses a relation.
+- **[Relations and maps](relations.md)** lists the keys of a relation, a set of combinations of labels, and of a map, which gives each row one label, and how each operator uses them.
 - **[Expressions](expressions.md)** defines the grammar of arithmetic and of conditions, and how dimensions combine.
 - **[Named expressions, conditions and macros](named.md)** lists the keys of the three kinds of named piece of an expression.
 - **[Operators](operators.md)** lists every operator, such as `sum` and `shift`, and the math each one prints.
@@ -91,7 +91,7 @@ rewrite.
 
 | #   | Rule                                                                                                                                                                                                                          | Stated in full                                                            |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1   | A file has thirteen section keys, plus `version` and `description`. mathspec refuses an unknown key, and suggests the nearest valid key.                                                                                      | [File shape](file.md)                                                     |
+| 1   | A file has fourteen section keys, plus `version` and `description`. mathspec refuses an unknown key, and suggests the nearest valid key.                                                                                      | [File shape](file.md)                                                     |
 | 2   | `to_spec` checks at load every rule that needs no data.                                                                                                                                                                       | [Errors and advice](errors.md)                                            |
 | 3   | Every name is declared once. mathspec refuses a parameter and a dimension that are both called `snapshot`.                                                                                                                    | [Names](expressions.md#name-resolution)                                   |
 | 4   | The kind of a name sets where the name may appear. A dimension follows `over=` or `along=`, and is never multiplied.                                                                                                          | [Names](expressions.md#name-resolution)                                   |

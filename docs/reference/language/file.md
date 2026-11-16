@@ -10,15 +10,16 @@ rules by which mathspec reads the YAML.
 
 ## Top-level keys
 
-The top level of a spec file has **thirteen section keys**, plus `version` and
-`description`. mathspec accepts any subset of the thirteen, so a file that
+The top level of a spec file has **fourteen section keys**, plus `version` and
+`description`. mathspec accepts any subset of the fourteen, so a file that
 declares only `dimensions:` loads.
 
 | Key           | What the section declares                                                                                          |
 | ------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `given`       | what this file uses and another file declares ([given](parameters-variables-constraints.md#given))                 |
 | `dimensions`  | the sets of labels that entries are indexed over ([dimensions](dimensions.md))                                     |
-| `relations`   | named tables that map one dimension onto another ([relations](relations.md))                                       |
+| `relations`   | named sets of combinations of labels of two or more dimensions ([relations](relations.md#relations))               |
+| `maps`        | the label of a dimension that each row of a dimension or a relation has ([maps](relations.md#maps))                |
 | `parameters`  | the data the spec expects ([parameters](parameters-variables-constraints.md#parameters))                           |
 | `conditions`  | named conditions, used by name in a `where:`, a `when:` or a `holds:` ([conditions](named.md#conditions))          |
 | `variables`   | what the solver decides ([variables](parameters-variables-constraints.md#variables))                               |

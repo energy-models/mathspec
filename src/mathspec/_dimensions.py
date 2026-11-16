@@ -116,8 +116,7 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
     if clash := sorted((added & inner) - dropped):
         raise DimensionError(
             f'{context}: {call} groups by {clash}, which the expression already carries.\n'
-            f'Move the factor carrying {clash} outside the operator, or group by a column over another '
-            f'dimension.'
+            f'Move the factor carrying {clash} outside the operator, or group by a map into another dimension.'
         )
     _check_joined(call, columns, inner, context)
     return joined(columns, inner)
@@ -172,7 +171,7 @@ def _check_joined(call: str, use: JoinColumns | Partition, inner: frozenset[str]
     if twice := sorted({d for d in dims if dims.count(d) > 1}):
         raise DimensionError(
             f"{context}: {call} joins '{use.name}' on {twice} through more than one column. Join on "
-            f'different dimensions, or use a relation whose key columns are over different dimensions.'
+            f'different dimensions, or use a relation whose columns are over different dimensions.'
         )
 
 
@@ -196,7 +195,7 @@ def _check_named_amount(
         raise DimensionError(
             f"{context}: {verb}({kwarg}={amount}): '{amount}' varies over {stray}, which the expression does "
             f"not carry (dims {sorted(inner)}). Declare '{amount}' over dims the expression carries, or group "
-            f'by a relation into one of {stray}.'
+            f'by a map into one of {stray}.'
         )
 
 
@@ -347,8 +346,10 @@ def _check_condition_dims(
                 leaf = f"where-variable '{atom.name}'"
             case DimensionComparison() | DimensionPosition():
                 leaf = f"where-dimension '{atom.name}'"
-            case RelationComparison() | RelationPairComparison() | RelationDefined():
+            case RelationDefined(column=None):
                 leaf = f"where-relation '{atom.name}'"
+            case RelationComparison() | RelationPairComparison() | RelationDefined():
+                leaf = f"where-map '{atom.name}[{atom.column}]'"
             case ExpressionComparison():
                 leaf = 'a comparison of expressions'
             case CountComparison():

@@ -24,8 +24,9 @@ optimisation model ([a spec](glossary.md#spec)).
     `given:` section.
 - **[Dimensions](language/dimensions.md)** lists the keys of a named set of
     labels (a dimension).
-- **[Relations](language/relations.md)** lists the keys of a table between two
-    dimensions (a relation), and how an expression uses a relation.
+- **[Relations and maps](language/relations.md)** lists the keys of a set of
+    combinations of labels (a relation) and of the label each row has (a map),
+    and how an expression uses them.
 - **[Expressions](language/expressions.md)** defines the grammar of arithmetic and of
     conditions, and how dimensions combine.
 - **[Named expressions, conditions and macros](language/named.md)** describes the
