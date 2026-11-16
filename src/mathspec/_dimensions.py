@@ -285,8 +285,9 @@ def _at_member(
         leaves = (n for n in walk(*operands) if isinstance(n, ParameterReference | VariableReference))
         read = next((n.name for n in leaves if set(wanted) <= set(n.dims) and name not in n.dims), '...')
         return (
-            f"{wanted} {'is a member' if len(wanted) == 1 else 'are members'} of '{name}', which is one dimension "
-            f'here. Read the operand at each tuple: at({read}, by={name}[{", ".join(columns)}])'
+            f'{", ".join(map(repr, wanted))} {"is a member" if len(wanted) == 1 else "are members"} of '
+            f"'{name}', which is one dimension here. Read the operand at each tuple: "
+            f'at({read}, by={name}[{", ".join(columns)}])'
         )
     return None
 

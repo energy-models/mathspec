@@ -601,10 +601,22 @@ class ExpressionResolver:
             )
             return None
         if not from_roles:
+            listing = [
+                f"{n!r} is a member of '{r}', which is one dimension here, so write over={r}"
+                for n in plain
+                for r in shape.roles
+                if n in {dim for _, dim in ns.spec.dimensions[shape.dim(r)].members}
+            ]
             self.errors.append(
                 f"{self.context}: {call}: over={shown(over)} names no column of '{name}', so the sum reads nothing "
                 f"through '{name}'. Name in over= the column that the operand is joined on: "
-                f'{_columns_over(shape, plain)}.'
+                f'{listing[0] if listing else _columns_over(shape, plain)}.'
+            )
+            return None
+        if name in ns.dimensions and name not in (*from_roles, *into_roles):
+            self.errors.append(
+                f"{self.context}: {call}: over={shown(from_roles)} names a member of '{name}', which is one "
+                f'dimension here. Write sum(..., over={name}, by={columns}).'
             )
             return None
         join = self._checked_join(name, call, from_roles, into_roles)

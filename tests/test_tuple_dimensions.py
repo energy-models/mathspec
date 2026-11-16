@@ -258,6 +258,16 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='over-names-a-member',
         ),
         pytest.param(
+            _constraint('sum(flow, over=unit, by=connection[port]) >= 0', ['port', 'snapshot']),
+            ("over=unit names a member of 'connection'", 'sum(..., over=connection, by=connection[port])'),
+            id='over-names-a-member-beside-by',
+        ),
+        pytest.param(
+            _constraint('sum(flow, over=unit, by=connection_bus[bus]) >= 0', ['bus', 'snapshot']),
+            ("'unit' is a member of 'connection'", 'write over=connection.'),
+            id='over-names-a-member-beside-another-relation',
+        ),
+        pytest.param(
             _constraint('sum(flow, over=[unit, port]) >= 0', ['snapshot']),
             ("'unit' is a member of 'connection'", 'Write sum(..., over=connection).'),
             id='over-names-every-member',
