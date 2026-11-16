@@ -669,6 +669,15 @@ class Dimension:
     them.
     """
     description: str | None = None
+    over: tuple[tuple[str, str], ...] = ()
+    """The members of the dimension as ``(role, dimension)``, sorted by role, or empty when the file lists none. A label
+    is then one tuple of member labels, which ``dtype`` does not describe. The relation of the same name in
+    [`Program.relations`][mathspec.program.Program.relations] has one value column per member.
+    """
+    missing: RelationMissing = 'absent'
+    """Whether every combination of member labels needs a tuple: ``absent`` or ``refused``. It has no meaning for a
+    dimension without members.
+    """
 
 
 @dataclass(frozen=True)

@@ -108,6 +108,7 @@ def reference_errors(spec: Spec) -> list[str]:
     return [
         *_name_collisions(spec),
         *_frame_dimensions(spec),
+        *_members(spec),
         *_relation_targets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
@@ -184,6 +185,38 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
             f"{kind} '{name}' names dimension '{d}' twice. Delete one."
             for d, count in Counter(dims).items()
             if count > 1
+        )
+
+
+def _members(spec: Spec) -> Iterator[str]:
+    """A dimension lists plain, declared dimensions as its members, each once or under a role of its own.
+
+    The relation the entry implies names a column after each role, so a role
+    is held to the rule of a relation column: it is named after its own
+    dimension or after none.
+    """
+    for name, entry in spec.dimensions.items():
+        dims = [dim for _, dim in entry.members]
+        yield from (undeclared_dimension('Dimension', name, d) for d in dict.fromkeys(dims) if d not in spec.dimensions)
+        for d in dict.fromkeys(dims):
+            if d in spec.dimensions and (inner := spec.dimensions[d].members):
+                flat = sorted({*(m for m in dims if m != d), *(dim for _, dim in inner)})
+                yield (
+                    f"Dimension '{name}' lists '{d}' under 'over:', and '{d}' has members of its own. A member is "
+                    f'a dimension without `over:`. List the members themselves: over: {flat}.'
+                )
+        if not isinstance(entry.over, Mapping):
+            yield from (
+                f"Dimension '{name}' lists '{d}' twice under 'over:'. Give the two members roles: "
+                f'over: {{{d}0: {d}, {d}1: {d}}}.'
+                for d, count in Counter(dims).items()
+                if count > 1
+            )
+        yield from (
+            f"Dimension '{name}' names member '{role}' after dimension '{role}', but the member is over "
+            f"'{dim}'. Rename the member after what it holds."
+            for role, dim in entry.members
+            if role in spec.dimensions and role != dim
         )
 
 
@@ -291,6 +324,13 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
+        elif members := spec.dimensions[entry.along].members:
+            over = sorted({dim for _, dim in members})
+            yield (
+                f'{context}: along: {entry.along} is a dimension that lists its members, and a set runs along a '
+                f"dimension without `over:`. Declare '{entry.variable}' over {over}, with `where:` a relation that "
+                f'lists the tuples, and run the set along one member.'
+            )
         elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
             yield unordered(context, f'type: 2 along {entry.along}', entry.along)
         elif entry.variable in claimed:
@@ -346,7 +386,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield undeclared_dimension('piecewise', name, pw.along)
             continue
         if not spec.dimensions[pw.along].ordered:
-            yield unordered(context, f'along: {pw.along}', pw.along)
+            yield unordered(context, f'along: {pw.along}', pw.along, spec.dimensions[pw.along].members)
         for d in pw.dims:
             if d not in spec.dimensions:
                 yield undeclared_dimension('piecewise', name, d)

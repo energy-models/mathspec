@@ -35,7 +35,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed, unordered
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -112,7 +112,8 @@ class Namespace:
             p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str) and pd.where is None
         }
         self.relations: dict[str, Relation] = {
-            n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()
+            **{n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()},
+            **{d: Relation(((d, d), *dd.members), (d,)) for d, dd in spec.dimensions.items() if dd.over},
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: pd.dims for p, pd in parameters.items()},
@@ -255,6 +256,10 @@ class Namespace:
     def unordered(self, name: str) -> bool:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
         return not self.spec.dimensions[name].ordered
+
+    def unordered_refusal(self, context: str, construct: str, name: str) -> str:
+        """The refusal for *construct* reading the order of the dimension *name*, with the rewrite its entry allows."""
+        return unordered(context, construct, name, self.spec.dimensions[name].members)
 
     def kind(self, name: str) -> NameKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""

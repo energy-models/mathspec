@@ -37,7 +37,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed
 from mathspec.program import (
     Add,
     And,
@@ -247,7 +247,9 @@ class ConditionResolver:
             )
             return node
         if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
+            self.errors.append(
+                self.ns.unordered_refusal(context, f'shift(<condition>, along={along.name})', along.name)
+            )
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
@@ -455,7 +457,7 @@ class ConditionResolver:
             )
             return node
         if ns.unordered(dimension):
-            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            self.errors.append(ns.unordered_refusal(context, f'position({dimension})', dimension))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -487,7 +489,7 @@ class ConditionResolver:
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
-        kind = ns.kind(left_name)
+        kind = 'relation' if left_column and left_name in ns.relations else ns.kind(left_name)
         if kind is None:
             self.errors.append(ns.unknown(left_name, context, allow_dims=True))
             return node
@@ -509,6 +511,13 @@ class ConditionResolver:
         elif kind in ('parameter', 'dimension'):
             dtype = ns.dtypes[left_name]
             labelled = left_name if kind == 'dimension' else None
+        if labelled is not None and (members := ns.spec.dimensions[labelled].members):
+            self.errors.append(
+                f"{context}: '{plain.name}' compares a label of '{labelled}', and '{labelled}' lists its members, "
+                f"so it has no label to compare. In an entry over '{labelled}', compare a member: "
+                f'{labelled}[{members[0][0]}] {plain.op} {plain.value!r}.'
+            )
+            return node
         if dtype is not None:
             typed = self._typed_literal(plain, dtype)
             if typed is None:

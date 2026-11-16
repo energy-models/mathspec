@@ -347,7 +347,65 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
+    over: Dims | ByName[str] | None = None
+    """The members of the dimension: a list of dimensions, or a mapping of role to dimension where two members are over
+    one dimension. A label of the dimension is then one tuple of member labels, and the entry implies a relation of the
+    same name with one value column per member. The order of the members has no meaning.
+    """
+    missing: RelationMissing = 'absent'
+    """Whether every combination of member labels needs a tuple. Under ``absent``, the data lists the tuples that exist.
+    Under ``refused``, a tool refuses data that leaves a combination out.
+    """
     description: str | None = None
+
+    @property
+    def members(self) -> tuple[tuple[str, str], ...]:
+        """``(role, dimension)`` per member, sorted by role; empty for a dimension without ``over:``."""
+        return tuple(sorted(side_columns(self.over)))
+
+    @field_validator('over', mode='after')
+    @classmethod
+    def _lists_a_member(cls, v: object) -> object:
+        if v is not None and not v:
+            raise ValueError('lists no member. List at least one dimension, or leave `over:` out.')
+        return v
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _absent_or_refused(cls, v: object) -> object:
+        """A tuple is a label, so no value fills a combination the data leaves out."""
+        if v not in get_args(RelationMissing):
+            msg = (
+                f'missing: {_as_yaml(v)} on a dimension, which takes absent or refused. A combination of member '
+                f'labels with no tuple is not in the dimension, or is refused.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _members_or_labels(self) -> Self:
+        """A label of a dimension with members is a tuple, so the keys that describe one plain label do not apply."""
+        if self.over is None:
+            if 'missing' in self.model_fields_set:
+                raise ValueError(
+                    '`missing:` is on a dimension without `over:`, and it states whether every combination of the '
+                    'members needs a tuple. Delete `missing:`, or list the members under `over:`.'
+                )
+            return self
+        members = sorted({dim for _, dim in self.members})
+        if self.ordered:
+            raise ValueError(
+                f'`ordered: true` is on a dimension with `over:`, and a tuple of member labels has no order. '
+                f'Declare the entry that steps over {members}, with `where:` a relation that lists the tuples, and '
+                f'declare the member it steps along `ordered: true`.'
+            )
+        for key in ('dtype', 'one_of'):
+            if key in self.model_fields_set and getattr(self, key) is not None:
+                raise ValueError(
+                    f'`{key}:` is on a dimension with `over:`, where the label is the tuple of its members. Delete '
+                    f'`{key}:` here, and write the {key}: of a member on that member.'
+                )
+        return self
 
     @field_validator('one_of', mode='before')
     @classmethod

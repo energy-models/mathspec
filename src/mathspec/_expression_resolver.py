@@ -40,7 +40,7 @@ from mathspec._operators import (
     edge_error,
     unknown_operator_message,
 )
-from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
+from mathspec.errors import DimensionError, SchemaError, did_you_mean
 from mathspec.program import (
     Add,
     Axis,
@@ -329,7 +329,7 @@ class ExpressionResolver:
     ) -> Expression | None:
         """``shift`` or ``sum_back`` from its read arguments, or ``None`` with the refusal appended."""
         if self.ns.unordered(along):
-            self.errors.append(unordered(self.context, f'{operator}(along={along})', along))
+            self.errors.append(self.ns.unordered_refusal(self.context, f'{operator}(along={along})', along))
             return None
         wrap, fill = edge if edge is not None else (False, None)
         if operator == 'shift':
@@ -677,6 +677,9 @@ class ExpressionResolver:
         name, within_roles = columns.relation, columns.columns
         shape = self.ns.relations[name]
         call = f'{operator}(within={columns})'
+        if name in self.ns.dimensions:
+            self.errors.append(self.ns.unordered_refusal(context, call, name))
+            return None
         if not shape.values:
             self.errors.append(
                 f"{context}: {call}: '{name}' has every column in its key, so it makes no groups. Move the group "

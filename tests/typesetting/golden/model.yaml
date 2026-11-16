@@ -20,6 +20,8 @@ dimensions:
   season: { dtype: str }
   technology: { dtype: str }
   bp: { dtype: int, ordered: true } # the breakpoints every curve below runs through
+  site: { over: [generator, bus] } # a dimension that lists its members: the legend prints it as a subset of their product
+  corridor: { over: { from_bus: bus, to_bus: bus }, missing: refused } # members by role, and every combination required: the product itself
 
 relations:
   gen_bus: { key: generator, values: bus }
@@ -66,6 +68,9 @@ variables:
   bus_out: # an upper bound read through a relation: the limit of the zone of each bus
     dims: [snapshot, bus]
     bounds: { lower: 0, upper: "at(zone_cap, by=zone_of[zone])" }
+  site_out: # over a dimension with members, bounded by a parameter of one member
+    dims: [snapshot, site]
+    bounds: { lower: 0, upper: "at(p_max, by=site[generator])" }
   on: # a binary domain, which is a set rather than a pair of bounds
     dims: [snapshot, generator]
     domain: binary
