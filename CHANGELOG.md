@@ -12,7 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- feat(language)!: an entry or a sum may range over a set ([#0000](https://github.com/energy-models/mathspec/pull/0000))
+- feat(language)!: an entry or a sum may range over a set ([#1018](https://github.com/energy-models/mathspec/pull/1018))
   - Breaks a file: `relations:` is `sets:`. A set named in the `dims:` of a parameter, a variable or a constraint, or in `over=`, stands for its dimensions at the combinations it lists.
   - Breaks a file: the `where:` of a parameter, a variable or a constraint no longer takes a set's bare name. Name the set in `dims:`.
 - feat(language)!: maps give labels, relations give rows ([#1015](https://github.com/energy-models/mathspec/pull/1015))
