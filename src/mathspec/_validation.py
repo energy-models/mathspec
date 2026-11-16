@@ -34,7 +34,7 @@ from mathspec.errors import SchemaError, did_you_mean, unordered
 from mathspec.spec import NUMERIC_DTYPES, Spec
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
     from pathlib import Path
 
     from mathspec.program import Program
@@ -111,6 +111,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_frame_dimensions(spec),
         *_relation_targets(spec),
         *_map_targets(spec),
+        *_index_sets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -127,7 +128,7 @@ def undeclared_dimension(kind: str, name: str, dimension: str, spec: Spec, *, al
     if along:
         rewrite = f'Name one of its dimensions, {dims}.'
     elif kind in ('Parameter', 'Variable'):
-        rewrite = f'Name its dimensions, {dims}, under dims:, and confine the entry with where: {dimension}.'
+        rewrite = f'Name its dimensions, {dims}, under dims:, and confine the entry with in: [{dimension}].'
     else:
         rewrite = f'Name its dimensions, {dims}.'
     return f"{kind} '{name}' names the relation '{dimension}', and a relation is not a dimension. {rewrite}"
@@ -277,6 +278,51 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                     f"{head}: map '{role}' is named after dimension '{role}', but refers to '{m.dim}'. Rename the "
                     f'map after what it holds.'
                 )
+
+
+def _index_sets(spec: Spec) -> Iterator[str]:
+    """Each entry of an ``in:`` is a relation over dimensions of the entry, leaves a combination out, and is named once."""
+    entries = [
+        *((f"Parameter '{name}'", name, p.dims, p.in_) for name, p in spec.parameters.items()),
+        *((f"Variable '{name}'", name, v.dims, v.in_) for name, v in spec.variables.items()),
+    ]
+    for context, name, dims, in_ in entries:
+        head = f'{context}: in: names'
+        yield from (f"{head} '{r}' twice. Delete one." for r, count in Counter(in_).items() if count > 1)
+        for rname in dict.fromkeys(in_):
+            if (lk := spec.relations.get(rname)) is None:
+                yield _not_a_relation(head, rname, spec, dims)
+                continue
+            if lk.missing == 'refused':
+                yield (
+                    f"{head} '{rname}', which under missing: refused has a row at every combination, so it "
+                    f"leaves nothing out. Write missing: absent on '{rname}', or delete it from in:."
+                )
+            over = Counter(d for _, d in lk.pairs)
+            if twice := [d for d, count in over.items() if count > 1]:
+                yield (
+                    f"{head} '{rname}', which has two columns over '{twice[0]}', and '{name}' has "
+                    f"'{twice[0]}' once. Name a relation over each dimension once."
+                )
+            elif outside := [d for d in over if d not in dims]:
+                yield (
+                    f"{head} '{rname}', over {sorted(over)}, and '{name}' is not over {outside}. Add "
+                    f"{outside} to its dims:, or delete '{rname}' from in:."
+                )
+
+
+def _not_a_relation(head: str, written: str, spec: Spec, dims: Sequence[str]) -> str:
+    """The refusal for an ``in:`` entry that names no relation: a map, or a subject with maps, apart."""
+    column = re.fullmatch(r'(\w+)\[(.+)\]', written)
+    if column is not None and column[1] in spec.maps:
+        return (
+            f"{head} '{written}', a map of '{column[1]}', and an index set is a relation. To keep the rows the map "
+            f'gives a label, write where: {written}.'
+        )
+    if written in spec.dimensions:
+        rewrite = f"Delete '{written}' from in:, since dims: lists it." if written in dims else 'List it under dims:.'
+        return f"{head} '{written}', which is a dimension, and an index set is a relation. {rewrite}"
+    return f"{head} '{written}', which is not a relation. {did_you_mean(written, spec.relations, label='Relations')}"
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

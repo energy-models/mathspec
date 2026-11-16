@@ -58,7 +58,7 @@ A relation is not a dimension, so its name does not go in `dims:`, `over=` or
 `along=`. With `flow: { dims: [connection] }`, mathspec prints:
 
 ```text
-Variable 'flow' names the relation 'connection', and a relation is not a dimension. Name its dimensions, ['bus', 'generator'], under dims:, and confine the entry with where: connection.
+Variable 'flow' names the relation 'connection', and a relation is not a dimension. Name its dimensions, ['bus', 'generator'], under dims:, and confine the entry with in: [connection].
 ```
 
 The order of the columns under `dims:` changes nothing. The typesetter sorts
@@ -198,6 +198,13 @@ map. So the data for the maps of `line` is a table `line` with the columns
 A relation and a map have no `where:`, so their rows and labels come from the
 data alone. A tool therefore knows them before it evaluates any condition,
 such as the [`where:` of a parameter](parameters-variables-constraints.md#where).
+
+The rows of a relation can also be the coordinates of a parameter or a
+variable, its [index set](../glossary.md#index-set). An entry with
+`in: [connection]` has coordinates only at the pairs that `connection` lists,
+and a tool refuses a row of the data of a parameter at any other pair
+([`in`](parameters-variables-constraints.md#in)). A map is not an index set,
+because it adds no row to its subject.
 
 An [assumption](assumptions.md) can require rows of a relation or labels of a
 map. For `line[bus1]` [above](#missing), `{holds: "line[bus1]", where: "closed"}`
@@ -382,8 +389,9 @@ Expected end of text, found '['  (at char 8), (line:1, col:9)
 
 A map alone in a condition, such as `line[bus1]`, is true where the map gives
 the row a label. A relation name alone is true where the relation has a row.
-On a variable, the condition leaves the variable absent at every pair that the
-relation does not list:
+On a parameter or a variable, [`in:`](parameters-variables-constraints.md#in)
+states those rows, so mathspec refuses the name in its `where:`. With `in:`, a
+variable is absent at every pair that the relation does not list:
 
 ```yaml title="flow.yaml"
 dimensions:
@@ -397,7 +405,7 @@ parameters:
 variables:
   flow:
     dims: [generator, bus, snapshot]
-    where: connection
+    in: [connection]
     bounds: { lower: 0 }
 constraints:
   balance:
@@ -409,8 +417,13 @@ constraints:
 --8<-- "docs/static/relations-where-bare.svg"
 </figure>
 
-`flow` exists at the pairs that `connection` lists and is [absent](absence.md)
-at every other pair, so `balance` adds up the generators wired to each bus.
+`flow` exists at the pairs that `connection` lists and is
+[absent](absence.md) at every other pair, so `balance` adds up the generators
+wired to each bus. `where: connection` in place of the `in:` is refused:
+
+```text
+Variable 'flow': `where: connection` tests the rows of 'connection', which `in:` states. Write `in: [connection]` in place of the `where:`.
+```
 
 `python -m mathspec markdown flow.yaml` prints the domain of `flow` and the
 constraint:

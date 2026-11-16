@@ -38,6 +38,7 @@ dimensions:
 relations:
   gen_zone: { dims: [generator, snapshot] } # a relation over two dimensions, with a map: a call sums one away and joins on the other
   connection: { dims: [generator, bus], missing: absent } # a relation with no map: many-to-many, read only by sum with both ends named
+  bus_zone: { dims: [bus, zone], missing: absent } # the pairs that exist
 
 maps:
   generator: { bus: { dim: bus }, technology: { dim: technology } } # two maps of one subject, read to both at once
@@ -57,7 +58,8 @@ parameters:
   is_flexible: { dims: [generator], dtype: bool, missing: false }
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
-  link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  link_eff: { dims: [generator, bus], in: [connection], missing: 1 } # over the pairs a relation lists; a `where:` may not test them
+  zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
   area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
@@ -75,12 +77,12 @@ parameters:
 | Symbol | Meaning |
 |---|---|
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
-| $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U}`$, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label |
+| $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U}`$, `bus_zone` is `absent` where the data has no row, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{technology}: \mathcal{G} \to \mathcal{E}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{rep}: \mathcal{T} \to \mathcal{T},\ \mathrm{season}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{E}`$ | index $`e`$ — `technology` with $`\mathrm{technology}: \mathcal{G} \to \mathcal{E}`$ |
-| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z}`$, `bus[area]` is `absent` where the data gives no label |
+| $`\mathcal{Z}`$ | index $`z`$ — `zone` (labels `north`, `south`) with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z}`$, `bus_zone` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label |
 
 #### Parameters
 
@@ -97,13 +99,14 @@ parameters:
 | $`\mathrm{growth}`$ | `growth` (scalar) |
 | $`\mathrm{is\_flexible}`$ | `is_flexible` over $`\mathcal{G}`$, `false` where the data has no row |
 | $`\mathrm{lead}`$ | `lead` over $`\mathcal{G}`$ |
-| $`\mathrm{link\_eff}`$ | `link_eff` over $`\mathcal{U} \times \mathcal{G}`$, only where $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
+| $`\mathrm{link\_eff}`$ | `link_eff` over $`\left( u,\ g \right) \in \mathrm{connection}`$, $`1`$ where the data has no row |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
+| $`\mathrm{zone\_share}`$ | `zone_share` over $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
 
 #### Conditions
 
@@ -116,6 +119,7 @@ parameters:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{flow}`$ | `flow` over $`\left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -286,6 +290,23 @@ variables:
 
 ```math
 \mathit{headroom} \ge 0 \qquad \text{where } \mathrm{budget} \text{ is defined}
+```
+
+#### Variable over the rows of a relation
+
+a domain of the pairs `connection` lists, at every snapshot, and a `where:` inside it
+
+```yaml
+variables:
+  flow:
+    dims: [snapshot, generator, bus]
+    in: [connection]
+    where: "p_max > 0"
+    bounds: { lower: 0 }
+```
+
+```math
+\mathit{flow}_{u,g,t} \ge 0 \qquad \forall\, \left( u,\ g \right) \in \mathrm{connection},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0
 ```
 
 #### Variable in a special ordered set

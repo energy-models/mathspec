@@ -51,7 +51,7 @@ variables:
   dispatch: { dims: [snapshot, generator], bounds: { lower: 0, upper: availability } }
   reserve:
     dims: [snapshot, generator, bus]
-    where: connection
+    in: [connection]
     bounds: { lower: 0, upper: availability }
 
 constraints:

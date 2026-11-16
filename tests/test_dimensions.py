@@ -969,7 +969,7 @@ def test_every_dims_of_the_program_is_sorted_by_name(path):
 @pytest.mark.parametrize(
     'entry',
     [
-        pytest.param({'where': 'zone_of'}, id='the-rows-of-the-relation'),
+        pytest.param({'in': ['zone_of']}, id='the-rows-of-the-relation'),
         pytest.param({'where': "zone_of[zone] == 'north'"}, id='a-column-against-a-label'),
         pytest.param({'where': 'zone_of[zone] == home_of[zone]'}, id='a-column-against-another-relation'),
     ],

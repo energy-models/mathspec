@@ -35,7 +35,8 @@ def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Ad
 
     Returns:
         The never-an-axis advice sorted by dimension name, then one note per
-        entry the program reads and does not build, then the
+        entry the program reads and does not build, then one per variable
+        whose ``where:`` names a relation ``in:`` could name, then the
         unboundedness advice; ``str()`` of each is its sentence.
 
     Raises:

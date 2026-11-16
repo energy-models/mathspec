@@ -724,7 +724,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
             'maps': {'zone_of': {'zone': {'dim': 'zone'}}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
-                'p': {'dims': ['snapshot', 'generator'], 'where': "zone_of AND zone_of[zone] == 'A'"},
+                'p': {'dims': ['snapshot', 'generator'], 'in': ['zone_of'], 'where': "zone_of[zone] == 'A'"},
                 'first': {
                     'dims': ['snapshot', 'generator'],
                     'where': 'position(generator, within=zone_of[zone]) == 0',
@@ -796,7 +796,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
     assert [(type(a).__name__, a.dims) for a in p_where.atoms] == [
         ('RelationDefined', ('generator', 'snapshot')),
         ('RelationComparison', ('generator', 'snapshot')),
-    ], 'a row and a comparison are both read at the key of a keyed relation'
+    ], 'the rows `in:` names and a comparison are both read at the key of a keyed relation'
     first_where = program.variables['first'].where
     assert first_where is not None
     assert first_where.dims == ('generator', 'snapshot'), 'a position within a group is read at every key column'
@@ -805,7 +805,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
 @pytest.mark.parametrize(
     ('variable', 'entry', 'atom'),
     [
-        pytest.param('q', {'where': 'link'}, RelationDefined('link', ('g', 'h')), id='a-bare-relation-tests-a-row'),
+        pytest.param('q', {'in': ['link']}, RelationDefined('link', ('g', 'h')), id='in-tests-a-row'),
         pytest.param('p', {'where': 'g[h]'}, RelationDefined('g', ('g',), 'h'), id='a-map-alone-tests-a-label'),
     ],
 )

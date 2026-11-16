@@ -147,6 +147,14 @@ A group is the set of rows of a dimension or a relation to which one
 `sum_back` or `position()` work separately in each group, such as each season
 of a year ([partitions](language/relations.md#partitions)).
 
+## Index set
+
+The index set of a parameter or a variable is the coordinates its `in:` lists:
+the combinations of labels where each of its relations has a row. A map is
+not an index set. A tool refuses a row of the data of a parameter
+outside its index set
+([`in`](language/parameters-variables-constraints.md#in)).
+
 ## Label
 
 A label is one member of a dimension, such as `wind` in `generator`. The

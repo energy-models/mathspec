@@ -2013,7 +2013,7 @@ _LINKED = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
         pytest.param(
             {'variables.x': {'dims': ['link']}},
             "Variable 'x' names the relation 'link', and a relation is not a dimension. Name its dimensions, "
-            "['g', 'h'], under dims:, and confine the entry with where: link.",
+            "['g', 'h'], under dims:, and confine the entry with in: [link].",
             id='dims-of-a-variable',
         ),
         pytest.param(
@@ -2051,10 +2051,58 @@ ON_A_RELATION: dict[str, Any] = {
 
 
 @pytest.mark.parametrize(
+    ('patch', 'message'),
+    [
+        pytest.param(
+            {},
+            "Variable 'p': `where: pair` tests the rows of 'pair', which `in:` states. Write `in: [pair]` in place "
+            'of the `where:`.',
+            id='a-relation',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND link'},
+            "tests the rows of 'link' and 'pair', which `in:` states. Write `in: [link, pair]` in place of the "
+            '`where:`.',
+            id='two-relations',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair AND flag'},
+            'Write `in: [pair]`, and keep the rest in the `where:`.',
+            id='a-relation-beside-a-test',
+        ),
+        pytest.param(
+            {'variables.p.in': ['link'], 'variables.p.where': 'pair AND flag'},
+            'Write `in: [link, pair]`, and keep the rest in the `where:`.',
+            id='a-relation-beside-an-index-set',
+        ),
+        pytest.param(
+            {'variables.p': {'dims': ['g', 'h']}, 'parameters.cap': {'dims': ['g', 'h'], 'where': 'pair'}},
+            "Parameter 'cap': `where: pair` tests the rows of 'pair', which `in:` states.",
+            id='a-parameter',
+        ),
+        pytest.param(
+            {'variables.p.where': 'pair OR flag'},
+            "tests the rows of 'pair' under OR or NOT, which `in:` cannot state. Declare those rows as a bool "
+            'parameter, and test that in its place.',
+            id='under-an-or',
+        ),
+        pytest.param({'variables.p.where': 'NOT pair'}, "rows of 'pair' under OR or NOT", id='under-a-not'),
+        pytest.param(
+            {'relations.pair.missing': 'refused'},
+            "under missing: refused 'pair' has a row everywhere. Delete it from the `where:`.",
+            id='a-relation-with-a-row-everywhere',
+        ),
+    ],
+)
+def test_a_where_that_tests_the_rows_of_a_relation_is_refused(patch: dict[str, Any], message: str):
+    """`where: pair` and `in: [pair]` said one thing twice, and a parameter's `where:` dropped what `in:` refuses."""
+    assert message in _refusal(ON_A_RELATION, **patch)
+
+
+@pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({}, id='the-rows-of-a-relation'),
-        pytest.param({'variables.p.where': 'pair AND NOT link'}, id='the-rows-of-two-relations'),
+        pytest.param({'variables.p': {'dims': ['g', 'h'], 'in': ['pair']}}, id='the-rows-under-in'),
         pytest.param({'variables.p.where': 'flag'}, id='a-test-of-a-value'),
         pytest.param(
             {'maps.g.zone': {'dim': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
@@ -2069,11 +2117,11 @@ ON_A_RELATION: dict[str, Any] = {
                 'variables.p': {'dims': ['g', 'h']},
                 'constraints.c': {'dims': ['g', 'h'], 'where': 'pair', 'expression': 'p >= 0'},
             },
-            id='on-a-constraint',
+            id='a-constraint-has-no-in',
         ),
     ],
 )
-def test_a_where_that_reads_a_relation_or_a_map_loads(patch: dict[str, Any]):
+def test_a_where_that_in_cannot_state_loads(patch: dict[str, Any]):
     to_spec(varied(ON_A_RELATION, **patch))
 
 
@@ -2871,6 +2919,14 @@ def test_a_values_table_under_a_ragged_where_is_not_refused(parameter, declared)
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'str', 'missing': 'absent'}}, id='a-label-under-absent'),
         pytest.param({'given.parameters.n': {'dims': ['g'], 'dtype': 'int'}}, id='a-given-int'),
         pytest.param({'parameters.n': {'dims': ['g'], 'dtype': 'int', 'where': 'flag'}}, id='a-masked-int'),
+        pytest.param(
+            {
+                'parameters.n': {'dims': ['g', 'h'], 'dtype': 'int', 'in': ['link']},
+                'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
+                'variables.p.dims': ['g', 'h'],
+            },
+            id='an-int-on-a-relation',
+        ),
     ],
 )
 def test_a_bare_parameter_whose_answer_needs_the_data_loads(patch):
@@ -2885,6 +2941,92 @@ _MASKED = {
     'maps.pair.kind': {'dim': 'h', 'missing': 'absent'},
     'parameters.w': {'dims': ['g', 'h'], 'where': 'pair[kind]', 'missing': 1},
 }
+
+
+#: The same parameter, over the rows of the relation rather than masked by it.
+_IN = {
+    'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
+    'parameters.w': {'dims': ['g', 'h'], 'in': ['pair'], 'missing': 1},
+}
+
+_LINK = {'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
+
+#: Each kind of entry that takes `in:`, as the label its refusals open with and `w` of that kind over `pair`.
+_IN_KINDS = {
+    'parameters': ('Parameter', _IN),
+    'variables': (
+        'Variable',
+        {'relations.pair': _IN['relations.pair'], 'variables.w': {'dims': ['g', 'h'], 'in': ['pair']}},
+    ),
+}
+
+
+def _in(kind: str, *relations: str, **entry: Any) -> dict[str, Any]:
+    """`w` of *kind* over the rows of *relations*, *entry* laid over it."""
+    _, patch = _IN_KINDS[kind]
+    return {**patch, f'{kind}.w': {**patch[f'{kind}.w'], 'in': list(relations), **entry}}
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize(
+    ('patch', 'in_'),
+    [
+        pytest.param(
+            {'parameters.v': {'dims': ['g', 'h'], 'missing': 'absent'}}, {'w': ('pair',)}, id='only-the-named'
+        ),
+        pytest.param(
+            {
+                'dimensions.t': {'dtype': 'int'},
+                'parameters.v': {'dims': ['g', 'h', 't'], 'in': ['pair'], 'missing': 'absent'},
+            },
+            {'w': ('pair',), 'v': ('pair',)},
+            id='a-parameter-over-one-more-dimension',
+        ),
+        pytest.param(
+            {'relations.pair': {'dims': {'a': 'g', 'b': 'h'}, 'missing': 'absent'}},
+            {'w': ('pair',)},
+            id='columns-named-apart-from-their-dimensions',
+        ),
+        pytest.param({**_LINK, 'w.in': ['pair', 'link']}, {'w': ('link', 'pair')}, id='two-relations-sorted-by-name'),
+        pytest.param(
+            {'maps.pair': {'to': {'dim': 'g'}}},
+            {'w': ('pair',)},
+            id='a-relation-with-a-map-over-one-of-its-dimensions',
+        ),
+    ],
+)
+def test_an_entry_has_the_index_set_it_names(kind: str, patch: dict[str, Any], in_: dict[str, tuple[str, ...]]):
+    """A tool reads an entry's index set off the program, inside its `where`, and an entry that names none stays free."""
+    rest = {key: value for key, value in patch.items() if key != 'w.in'}
+    spec = _spec(**{**_in(kind, *patch.get('w.in', ['pair'])), **rest})
+    entries = {**spec.program.parameters, **spec.program.variables}
+    assert {name: entry.in_ for name, entry in entries.items() if entry.in_} == in_, (
+        'exactly the entries that name a relation have it as their index set, and it alone'
+    )
+    where = entries['w'].where
+    assert where is not None and where.names_read == set(in_['w']), 'the index set is part of where the entry exists'
+    assert to_spec(spec.to_yaml()).program == spec.program, 'in: survives a round trip through YAML'
+
+
+@pytest.mark.parametrize(
+    ('path', 'entry'),
+    [
+        pytest.param('parameters.efficiency', {'missing': 1}, id='a-parameter'),
+        pytest.param('variables.delivered', {}, id='a-variable'),
+    ],
+)
+def test_a_relation_with_maps_is_an_index_set_by_its_own_columns(path: str, entry: dict[str, Any]):
+    """`connection` is over unit and port; its maps bus and role are labels a `where:` still tests beside `in:`."""
+    raw = read_yaml(EXAMPLES / 'connection.yaml')
+    written = {'dims': ['unit', 'port', 'snapshot'], 'in': ['connection'], 'where': "connection[role] == 'output'"}
+    spec = to_spec(varied(raw, **{path: {**written, **entry}}))
+    kind, name = path.split('.')
+    indexed = getattr(spec.program, kind)[name]
+    assert indexed.in_ == ('connection',), 'the relation with maps is the index set'
+    assert indexed.where is not None and indexed.where.dims == ('port', 'unit'), 'by its own columns, not its maps'
+    assert indexed.where.within(indexed.in_) == to_spec(raw).program.parameters['efficiency'].where, (
+        'inside the index set, the `where:` on the role is what the file wrote'
+    )
 
 
 def test_a_parameter_mask_is_part_of_the_program():
@@ -2926,6 +3068,12 @@ def test_a_parameter_mask_is_part_of_the_program():
             id='a-mask-that-reads-a-masked-parameter',
         ),
         pytest.param(
+            {**_IN, 'parameters.u': {'dims': ['g', 'h'], 'where': 'w > 0.5'}},
+            "Parameter 'u': its `where:` contains 'w', which has an `in:` of its own. Test a relation that the "
+            "`in:` of 'w' names instead.",
+            id='a-mask-that-reads-a-parameter-with-an-index-set',
+        ),
+        pytest.param(
             {'parameters.c.where': 'flag', 'parameters.flag.where': 'c > 0'},
             "Parameter 'c': its `where:` contains 'flag', which has a `where:` of its own",
             id='two-masks-that-read-each-other',
@@ -2939,6 +3087,88 @@ def test_a_parameter_mask_is_part_of_the_program():
 )
 def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
     assert fragment in _refusal(**patch)
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize(
+    ('patch', 'fragment'),
+    [
+        pytest.param(
+            {'where': 'pair'},
+            "{entry} 'w': in: gives 'w' coordinates only where 'pair' has a row, so `where: pair` narrows nothing. "
+            'Delete the `where:`, or the relation from it.',
+            id='a-where-that-repeats-the-relation',
+        ),
+        pytest.param(
+            {'where': 'pair OR flag'}, '`where: pair OR flag` narrows nothing.', id='a-where-the-relation-satisfies'
+        ),
+        pytest.param(
+            {'where': 'NOT pair'},
+            "`where: NOT pair` leaves 'w' no coordinate. Write a `where:` that holds somewhere inside the relation.",
+            id='a-where-the-relation-leaves-empty',
+        ),
+        pytest.param(
+            {'where': 'pair AND flag'},
+            "{entry} 'w': in: gives 'w' coordinates only where 'pair' has a row, so `where: pair AND flag` repeats "
+            'the relation. Delete the relation from it.',
+            id='a-where-that-repeats-the-relation-beside-a-test',
+        ),
+        pytest.param(
+            {'in': ['pairs']},
+            "{entry} 'w': in: names 'pairs', which is not a relation. Did you mean 'pair'?",
+            id='a-name-that-is-not-a-relation',
+        ),
+        pytest.param(
+            {'in': ['c']},
+            "{entry} 'w': in: names 'c', which is not a relation. Relations: pair.",
+            id='a-parameter-in-place-of-a-relation',
+        ),
+        pytest.param(
+            {'in': ['pair', 'pair']}, "{entry} 'w': in: names 'pair' twice. Delete one.", id='a-relation-named-twice'
+        ),
+        pytest.param(
+            {'in': ['next'], 'relations.next': {'dims': {'from': 'g', 'to': 'g'}, 'missing': 'absent'}},
+            "{entry} 'w': in: names 'next', which has two columns over 'g', and 'w' has 'g' once. Name a "
+            'relation over each dimension once.',
+            id='a-relation-with-two-columns-over-one-dimension',
+        ),
+        pytest.param(
+            {'dims': ['g']},
+            "{entry} 'w': in: names 'pair', over ['g', 'h'], and 'w' is not over ['h']. Add ['h'] to its "
+            "dims:, or delete 'pair' from in:.",
+            id='a-dimension-the-entry-is-not-over',
+        ),
+        pytest.param(
+            {'in': ['every'], 'relations.every': {'dims': ['g', 'h']}},
+            "{entry} 'w': in: names 'every', which under missing: refused has a row at every combination, so it "
+            "leaves nothing out. Write missing: absent on 'every', or delete it from in:.",
+            id='a-relation-with-a-row-everywhere',
+        ),
+        pytest.param(
+            {'in': ['g[h]']},
+            "{entry} 'w': in: names 'g[h]', a map of 'g', and an index set is a relation. To keep the rows the map "
+            'gives a label, write where: g[h].',
+            id='a-map-of-a-dimension-in-place-of-a-relation',
+        ),
+        pytest.param(
+            {'in': ['pair[x]'], 'maps.pair': {'x': {'dim': 'h'}}},
+            "{entry} 'w': in: names 'pair[x]', a map of 'pair', and an index set is a relation. To keep the rows "
+            'the map gives a label, write where: pair[x].',
+            id='a-map-of-a-relation-in-place-of-the-relation',
+        ),
+        pytest.param(
+            {'in': ['g']},
+            "{entry} 'w': in: names 'g', which is a dimension, and an index set is a relation. Delete 'g' from in:, since dims: lists it.",
+            id='a-dimension-in-place-of-a-relation',
+        ),
+    ],
+)
+def test_an_index_set_that_leaves_nothing_out_is_refused(kind: str, patch: dict[str, Any], fragment: str):
+    """Each refusal names the rewrite, alike on a parameter and on a variable."""
+    entry, _ = _IN_KINDS[kind]
+    declared = {key: value for key, value in patch.items() if key.startswith(('relations.', 'maps.'))}
+    fields = {key: value for key, value in patch.items() if key not in declared}
+    assert fragment.format(entry=entry) in _refusal(**_in(kind, 'pair', **fields), **declared)
 
 
 def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
@@ -2960,6 +3190,14 @@ def test_a_masked_parameter_is_not_read_as_its_fill_outside_the_mask():
     assert _spec(**patch).program.expressions['level'] is not None, 'unmasked, a missing row reads 0 and no case holds'
     masked = {**patch, **_MASKED, 'parameters.cost': {**patch['parameters.cost'], 'where': 'pair[kind]'}}
     assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**masked)
+    indexed = {
+        **patch,
+        'relations.pair': _IN['relations.pair'],
+        'parameters.cost': {**patch['parameters.cost'], 'in': ['pair']},
+    }
+    assert "cases 'high' and 'low' both claim the value where cost has no row" in _refusal(**indexed), (
+        'outside its index set a parameter is absent too, so it has no fill there'
+    )
 
 
 @pytest.mark.parametrize('fmt', FORMATS)
@@ -2969,6 +3207,18 @@ def test_the_legend_says_where_a_parameter_has_coordinates(fmt: FormatName):
     row = next(line for line in typeset(spec, fmt).splitlines() if 'only where' in line)
     assert 'kind' in row, 'the legend row names the map the mask reads'
     assert row.index('only where') < row.index('where the data has no row'), 'the mask comes before the fill'
+
+
+@pytest.mark.parametrize('kind', _IN_KINDS)
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_legend_prints_an_index_set_as_the_domain(fmt: FormatName, kind: str):
+    """`in:` is where the entry has coordinates, so the legend prints the relation's rows after `over`, not as a mask."""
+    spec = _spec(**_in(kind, 'pair', where='flag'), **{'variables.q.bounds': {'upper': 'c'}})
+    (row,) = [line for line in typeset(spec, fmt).splitlines() if re.search(r'w[`}] over ', line)]
+    assert 'pair' in row[: row.index(' over ') + 60], 'the domain is the rows of the relation'
+    if kind == 'parameters':
+        assert row.index('pair') < row.index('only where') < row.index('flag'), 'the domain, then the mask inside it'
+        assert 'pair' not in row[row.index('only where') :], 'the relation is not printed again as a mask'
 
 
 def test_a_given_parameter_has_no_missing():
@@ -3077,6 +3327,11 @@ def test_a_variable_missing_that_reads_data_is_refused(written, fragment):
 def test_a_variable_missing_outside_what_the_variable_takes_is_refused(declared, fragment):
     """The number stands for the variable where the mask leaves it out, so the file contradicted itself."""
     assert fragment in _refusal(**{'variables.p': {'dims': ['g'], 'where': 'c', **declared}})
+
+
+def test_a_number_stands_for_a_variable_outside_its_index_set():
+    """Outside its `in:` a variable does not exist, so `missing:` has coordinates to stand for, as outside a `where:`."""
+    assert _spec(**_in('variables', 'pair', missing=0)).program.variables['w'].missing == 0
 
 
 def test_a_variable_missing_is_not_blamed_for_a_where_that_failed_to_load():

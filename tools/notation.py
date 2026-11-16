@@ -71,6 +71,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'spare': 'Unbounded integer domain',
         'reserve': 'Scalar variable',
         'headroom': 'Scalar variable with a condition',
+        'flow': 'Variable over the rows of a relation',
         'weight': 'Variable in a special ordered set',
         'fuel': 'Second axis of a curve',
         'heat': 'Third axis of a curve',

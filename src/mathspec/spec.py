@@ -133,7 +133,8 @@ class _StrictSpec(BaseModel):
         The canonical form dumps with ``exclude_defaults``, which leaves a
         default out whether the input set it or not.
         """
-        return _as_set(self, cast('dict[str, object]', handler(self)))
+        keys = _written_keys(type(self))
+        return {keys[k]: v for k, v in _as_set(self, cast('dict[str, object]', handler(self))).items()}
 
     @model_validator(mode='before')
     @classmethod
@@ -145,7 +146,7 @@ class _StrictSpec(BaseModel):
         """
         if not isinstance(data, dict):
             return data
-        known = set(cls.model_fields)
+        known = set(_written_keys(cls).values())
         unknown = [k for k in data if isinstance(k, str) and k not in known]
         if unknown:
             raise ValueError(
@@ -182,6 +183,11 @@ _MISSING_SCHEMA: dict[str, object] = {
 _VARIABLE_MISSING_SCHEMA: dict[str, object] = {'anyOf': [{'enum': ['absent']}, {'type': 'number'}]}
 
 _WORDS = ', '.join(get_args(RelationMissing))
+
+
+def _written_keys(cls: type[BaseModel]) -> dict[str, str]:
+    """Each field of *cls* by name, mapped to the key a file writes it under: its alias where the name is a keyword."""
+    return {name: field.alias or name for name, field in cls.model_fields.items()}
 
 
 def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
@@ -254,8 +260,8 @@ class RelationSpec(_StrictSpec):
           connection: {dims: [unit, port], missing: absent}
           corridor: {dims: {from: bus, to: bus}}
 
-    A relation is not a dimension. Its name stands in a condition, where it
-    is true at the rows it lists, and before a
+    A relation is not a dimension. Its name stands under an entry's ``in:``,
+    in a condition, where it is true at the rows it lists, and before a
     bracket, where it reads one of its maps (``maps:``, [`MapSpec`][]). The
     rows are data, and arrive under the relation's name, one column per
     column name, with a column per map beside them.
@@ -402,9 +408,14 @@ class ParameterSpec(_StrictSpec):
 
     dims: Dims
     dtype: ParameterDtype = 'float'
+    in_: Dims = Field((), alias='in')
+    """The parameter's index set, written ``in:``: relations, by name, each over dimensions of the parameter and leaving
+    some combination out. The parameter has coordinates only where each of them has a row, and a tool refuses a row of
+    its data anywhere else. A map of the relation plays no part.
+    """
     where: str | None = None
-    """The condition that limits the coordinates of the parameter, in the condition grammar. Where it is false, the
-    parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
+    """The condition that limits the coordinates of the parameter inside its ``in:``, in the condition grammar. Where it
+    is false, the parameter is absent and a tool drops its rows of data there. ``missing:`` applies where it is true.
     """
     missing: Annotated[RelationMissing | bool | int | float, WithJsonSchema(_MISSING_SCHEMA)] = 'refused'
     description: str | None = None
@@ -498,7 +509,10 @@ class VariableSpec(_StrictSpec):
     _label: ClassVar[str] = 'a variable entry'
 
     dims: Dims
+    in_: Dims = Field((), alias='in')
+    """The variable's index set, written ``in:`` as on a parameter: it exists only where each relation has a row."""
     where: str | None = None
+    """The condition that limits where the variable exists inside its ``in:``, in the condition grammar."""
     bounds: BoundsSpec = BoundsSpec()
     domain: VariableDomain = 'continuous'
     missing: Annotated[Literal['absent'] | float, WithJsonSchema(_VARIABLE_MISSING_SCHEMA)] = 'absent'
@@ -512,7 +526,7 @@ class VariableSpec(_StrictSpec):
         The number stands for the variable where its mask leaves it out, so a mask must leave something out. The number
         lies in the variable's domain. The bounds hold only inside the mask, so the number may lie outside them. It
         loads as a float, as a bound does, so ``0`` and ``0.0`` are one spec. The checks run on the number as written,
-        so a refusal quotes it, and skip a ``where:`` or ``domain:`` that failed to load.
+        so a refusal quotes it, and skip an ``in:``, ``where:`` or ``domain:`` that failed to load.
         """
         if v is None:
             raise _missing_null('a variable', 'Write a number, or leave the key out for absent.')
@@ -523,10 +537,11 @@ class VariableSpec(_StrictSpec):
                 f'missing: {_as_yaml(v)} on a variable, which takes absent or a finite number. A variable has no '
                 f'data, so refused and a flag apply only to a parameter.'
             )
-        elif 'where' in info.data and info.data['where'] is None:
+        elif {'in_', 'where'} <= info.data.keys() and info.data['where'] is None and not info.data['in_']:
             msg = (
-                f'missing: {_as_yaml(v)} needs a `where:`. A variable with no `where:` exists at every '
-                f'coordinate of its dimensions, so no coordinate is missing. Add a `where:`, or delete `missing:`.'
+                f'missing: {_as_yaml(v)} needs a `where:` or an `in:`. A variable with neither exists at every '
+                f'coordinate of its dimensions, so no coordinate is missing. Add a `where:` or an `in:`, or delete '
+                f'`missing:`.'
             )
         elif info.data.get('domain') == 'binary' and v not in (0, 1):
             msg = f'missing: {_as_yaml(v)} on a binary variable, which takes 0 or 1.'
