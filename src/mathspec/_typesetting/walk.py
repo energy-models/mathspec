@@ -1019,8 +1019,5 @@ class Walk:
         )
 
     def _bound(self, ctx: _Context, value: Expression) -> str:
-        """A bound as the file wrote it: a number, or a parameter indexed over its dims."""
-        if isinstance(value, ParameterReference):
-            return ctx.indexed(self.symbols.name[value.name], list(self._parameters[value.name].dims))
-        assert isinstance(value, Constant), 'a bound is a number or the name of a parameter'
-        return self._number(value.value)
+        """A bound as the file wrote it: a number, or a parameter or a lookup of one, read at the variable's index."""
+        return self._number(value.value) if isinstance(value, Constant) else self._expression(value, ctx)

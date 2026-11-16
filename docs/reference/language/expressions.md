@@ -227,7 +227,7 @@ The place of a name in a string sets which kinds of name it may be:
 | dimension argument (`over=`, `along=`) | a dimension, a list of them for `over=`, or with `by=` a column of the relation where one has that name       |
 | column argument (`by=`, `within=`)     | columns of one relation, written `relation[column]` or `relation[column, …]`                                  |
 | condition                              | a parameter, variable, dimension, relation or named condition ([conditions](#conditions))                     |
-| `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                 |
+| `bounds.lower` / `bounds.upper`        | a parameter name, a number, or `at(parameter, by=relation[column])`                                           |
 | the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                          |
 | `dual` argument (`dual(c)`)            | a constraint, resolved against the constraints alone ([named expressions](named.md#dual))                     |
 

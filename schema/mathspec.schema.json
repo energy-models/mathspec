@@ -48,7 +48,7 @@
     },
     "BoundsSpec": {
       "additionalProperties": false,
-      "description": "Variable bounds \u2014 each side is a finite number, a parameter name, or ``None`` where it is open.\n\nAn omitted bound leaves the variable unbounded on that side, not\nimplicitly non-negative. An infinity is refused: an open side is ``null``,\nand the other infinity leaves no value at all.",
+      "description": "Variable bounds \u2014 each side is a finite number, a parameter name, ``at(parameter, by=relation[column])``, or ``None`` where it is open.\n\nAn omitted bound leaves the variable unbounded on that side, not\nimplicitly non-negative. An infinity is refused: an open side is ``null``,\nand the other infinity leaves no value at all.",
       "properties": {
         "lower": {
           "anyOf": [

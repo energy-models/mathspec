@@ -1666,6 +1666,46 @@ class TestRulesDecidedWithoutData:
                 id='a-bound-that-is-an-expression',
             ),
             pytest.param(
+                {'parameters.ch': {'dims': ['h']}, 'variables.p.bounds.upper': 'at(2 * ch, by=lk[h])'},
+                ('at(parameter, by=relation[column])', "got 'at(2 * ch, by=lk[h])'", 'Precompute it as a parameter'),
+                id='a-bound-that-looks-up-an-expression',
+            ),
+            pytest.param(
+                {'variables.p.bounds.upper': 'sum(c)'},
+                ('not an expression', 'Precompute it as a parameter'),
+                id='a-bound-that-calls-another-operator',
+            ),
+            pytest.param(
+                {'variables.p.bounds.upper': 'at(r, by=lk[h])'},
+                ("bounds.upper: 'r' is not a declared parameter",),
+                id='a-bound-that-looks-up-a-variable',
+            ),
+            pytest.param(
+                {'parameters.ch': {'dims': ['h']}, 'variables.p.bounds.upper': 'at(ch, by=nope[h])'},
+                ("Variable 'p' bounds.upper: at(by=nope[...]) does not name a relation",),
+                id='a-bound-that-looks-up-through-no-relation',
+            ),
+            pytest.param(
+                {'parameters.ch': {'dims': ['h']}, 'variables.r.bounds.upper': 'at(ch, by=lk[h])'},
+                (
+                    "Variable 'r': bounds.upper 'at(ch, by=lk[h])' has dims ['g'] outside the variable's dims ['h']",
+                    "Look 'ch' up through a relation keyed by the variable's dims",
+                ),
+                id='a-looked-up-bound-over-a-relation-key-the-variable-lacks',
+            ),
+            pytest.param(
+                {
+                    'dimensions.t': {},
+                    'parameters.cht': {'dims': ['h', 't']},
+                    'variables.p.bounds.upper': 'at(cht, by=lk[h])',
+                },
+                (
+                    "Variable 'p': bounds.upper 'at(cht, by=lk[h])' has dims ['t'] outside the variable's dims ['g']",
+                    "Declare 'cht' without ['t']",
+                ),
+                id='a-looked-up-bound-over-a-parameter-dim-the-variable-lacks',
+            ),
+            pytest.param(
                 {'variables.p.bounds.upper': 'nope'},
                 ("'nope' is not a declared parameter",),
                 id='a-bound-naming-nothing',
@@ -2620,6 +2660,7 @@ def test_each_entry_is_resolved_once_however_many_readers(monkeypatch):
         ('resolve_expression', "Named expression 'headroom', case 'opening'"),
         ('resolve_expression', "Named expression 'headroom', otherwise"),
         ('resolve_expression', 'The objective'),
+        ('resolve_expression', "Variable 'p' bounds.upper"),
         ('resolve_expression', "piecewise 'curve' link 'op_cost'"),
         ('resolve_expression', "piecewise 'curve' link 'p'"),
     ], 'every expression and condition position once, under the context validation reads it in, and nothing after'
@@ -2654,6 +2695,31 @@ def test_an_open_bound_is_null_in_the_file_and_in_the_program(upper):
     assert spec.variables['p'].bounds.upper is None
     assert spec.program.variables['p'].upper is None, 'the program says the side is open rather than infinite'
     assert spec.to_dict()['variables']['p']['bounds'] == {'lower': 0}, 'an open bound is not written back out'
+
+
+@pytest.mark.parametrize(
+    ('written', 'node', 'dims'),
+    [
+        pytest.param(4, 'Constant', (), id='a-number'),
+        pytest.param('c', 'ParameterReference', ('g',), id='a-parameter'),
+        pytest.param('at(ch, by=lk[h])', 'Join', ('g',), id='a-parameter-looked-up-through-a-relation'),
+        pytest.param('at(cht, by=lk[h])', 'Join', ('g', 't'), id='a-lookup-that-keeps-a-dimension-of-the-variable'),
+    ],
+)
+def test_a_bound_is_a_number_a_parameter_or_a_lookup_of_one(written, node, dims):
+    """`upper: "at(ch, by=lk[h])"` was refused as an expression, so a bound per member had to be precomputed per unit."""
+    model = varied(
+        SMALL_MODEL,
+        **{
+            'dimensions.t': {},
+            'parameters.ch': {'dims': ['h']},
+            'parameters.cht': {'dims': ['h', 't']},
+            'variables.p': {'dims': ['g', 't'], 'bounds': {'lower': 0, 'upper': written}},
+        },
+    )
+    upper = to_spec(model).program.variables['p'].upper
+    assert type(upper).__name__ == node
+    assert upper.dims == dims, 'a bound spans the variable dims it is read over, and no other'
 
 
 @pytest.mark.parametrize(

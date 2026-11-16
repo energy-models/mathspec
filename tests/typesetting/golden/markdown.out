@@ -47,6 +47,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{bus\_out}`$ | `bus_out` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -100,6 +101,12 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 ```
 
 #### Variable domains
+
+**`bus_out`**
+
+```math
+0 \le \mathit{bus\_out}_{u,t} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
+```
 
 **`fuel`**
 

@@ -63,6 +63,9 @@ variables:
     bounds: { upper: 100 }
   theta: # unbounded
     dims: [bus]
+  bus_out: # an upper bound read through a relation: the limit of the zone of each bus
+    dims: [snapshot, bus]
+    bounds: { lower: 0, upper: "at(zone_cap, by=zone_of[zone])" }
   on: # a binary domain, which is a set rather than a pair of bounds
     dims: [snapshot, generator]
     domain: binary

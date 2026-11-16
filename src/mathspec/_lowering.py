@@ -55,7 +55,6 @@ from mathspec.program import (
     NamedExpression,
     Objective,
     Parameter,
-    ParameterReference,
     Program,
     Sos,
     Variable,
@@ -155,7 +154,9 @@ def lower(spec: Spec) -> Program:
         if vdef.domain == 'binary':
             lower_bound, upper_bound = Constant(0.0, dims=()), Constant(1.0, dims=())
         else:
-            lower_bound, upper_bound = _bound(vdef.bounds.lower, ns), _bound(vdef.bounds.upper, ns)
+            context = f"Variable '{vname}' bounds"
+            lower_bound = _bound(vdef.bounds.lower, ns, f'{context}.lower', errors)
+            upper_bound = _bound(vdef.bounds.upper, ns, f'{context}.upper', errors)
         variables[vname] = Variable(
             vdef.dims,
             where=mask_of(where),
@@ -375,11 +376,12 @@ def _zero_divisor_refusals(
     return list(dict.fromkeys(found))
 
 
-def _bound(value: float | str | None, ns: Namespace) -> Constant | ParameterReference | None:
+def _bound(value: float | str | None, ns: Namespace, context: str, errors: list[str]) -> Expression | None:
+    """A bound as the program holds it: a number, or the parameter or the lookup of one that the text names."""
     if value is None:
         return None
     if isinstance(value, str):
-        return ParameterReference(value, dims=ns.leaf_dims[value])
+        return resolve_expression_text(value, ns, context, errors, ceiling=None)
     return Constant(value, dims=())
 
 

@@ -490,13 +490,13 @@ A [`where:`](absence.md#where) leaves `dispatch` only at the generators whose
 capacity is above zero. The solver keeps each value between `0` and the
 capacity of its generator.
 
-| Key                             | What it sets                                                                                                            | Default      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `dims`                          | required. The dimensions it is indexed over                                                                             |              |
-| `where`                         | which coordinates exist ([absence](absence.md))                                                                         | `null`       |
-| `bounds.lower` / `bounds.upper` | a finite number, or the name of a `float` or `int` parameter. `null` leaves that side open                              | `null`       |
-| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                               | `continuous` |
-| `missing`                       | `absent` or a finite number: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable)) | `absent`     |
+| Key                             | What it sets                                                                                                                                         | Default      |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `dims`                          | required. The dimensions it is indexed over                                                                                                          |              |
+| `where`                         | which coordinates exist ([absence](absence.md))                                                                                                      | `null`       |
+| `bounds.lower` / `bounds.upper` | a finite number, the name of a `float` or `int` parameter, or a [lookup](#a-bound-looked-up-through-a-relation) of one. `null` leaves that side open | `null`       |
+| `domain`                        | `continuous`, `integer` or `binary`. `binary` has fixed bounds of 0 and 1                                                                            | `continuous` |
+| `missing`                       | `absent` or a finite number: what a coordinate outside the `where:` means ([absence](absence.md#missing-on-a-variable))                              | `absent`     |
 
 A bound is never infinite, so an open side is `null`. mathspec refuses `.inf`
 and `-.inf` at load, and gives `null` as the rewrite:
@@ -505,11 +505,12 @@ and `-.inf` at load, and gives `null` as the rewrite:
 variables.p.bounds.upper: bounds.upper is inf. For an open side, write upper: null or leave it out.
 ```
 
-A bound is a name or a number, and not an expression. So `upper: capacity` is
-accepted, and `lower: -rating` is refused:
+A bound is a number, a parameter, or a parameter looked up through a
+relation, and not an expression. So `upper: capacity` is accepted, and
+`lower: -rating` is refused:
 
 ```text
-Variable 'p' bounds.lower: bounds take a parameter name or a number, not an expression (got '-rating'). Precompute it as a parameter.
+Variable 'p' bounds.lower: bounds take a number, a parameter name or at(parameter, by=relation[column]), not an expression (got '-rating'). Precompute it as a parameter.
 ```
 
 mathspec suggests the rewrite: a parameter whose value is `-rating`.
@@ -518,6 +519,44 @@ Equal
 bounds pin a variable to one value
 ([fix a quantity](../../howto/pin-a-variable.md)), and a pinned variable is
 still a variable.
+
+### A bound looked up through a relation
+
+A bound may read a parameter through a relation with
+[`at`](operators.md#at), as `at(parameter, by=relation[column])`. Here each
+unit takes the capacity of its technology:
+
+```yaml
+dimensions:
+  snapshot: { dtype: int }
+  unit: { dtype: str }
+  technology: { dtype: str }
+relations:
+  technology_of: { key: unit, values: technology }
+parameters:
+  capacity: { dims: [technology] }
+variables:
+  dispatch:
+    dims: [snapshot, unit]
+    bounds: { lower: 0, upper: "at(capacity, by=technology_of[technology])" }
+```
+
+$$0 \le \mathit{dispatch}_{t,u} \le \mathrm{capacity}_{\mathrm{technology\_of}(u)} \qquad \forall\, t \in \mathcal{T},\ u \in \mathcal{U}$$
+
+The data has one capacity per technology, and the solver keeps the dispatch
+of each unit at or below the capacity of its technology. The operand of `at`
+is the name of a parameter, and mathspec refuses any other expression there.
+
+A looked-up bound, like a parameter bound, is over the dimensions of the
+variable or fewer. With `dims: [snapshot]` on `dispatch`, the lookup adds
+`unit`, and mathspec prints:
+
+```text
+Variable 'dispatch': bounds.upper 'at(capacity, by=technology_of[technology])' has dims ['unit'] outside the variable's dims ['snapshot']. Look 'capacity' up through a relation keyed by the variable's dims.
+```
+
+mathspec suggests the rewrite: a relation keyed by a dimension of the
+variable.
 
 ## `objective`
 

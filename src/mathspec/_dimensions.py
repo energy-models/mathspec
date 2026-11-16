@@ -30,6 +30,7 @@ from mathspec.program import (
     Mask,
     ParameterComparison,
     ParameterDefined,
+    ParameterReference,
     Partition,
     RelationComparison,
     RelationDefined,
@@ -205,6 +206,34 @@ def _check_named_amount(
 # ---------------------------------------------------------------------------
 
 
+def _bound_outside(
+    context: str, written: str, bound: Expression, outside: frozenset[str], frame: frozenset[str]
+) -> str:
+    """The refusal of a bound over dims the variable lacks, with the rewrite for where each dim comes from.
+
+    A looked-up bound gains a dim from the parameter it reads or from the key
+    of the relation it reads through, and each has its own rewrite.
+    """
+    if isinstance(bound, ParameterReference):
+        return (
+            f"{context} parameter '{bound.name}' has dims {sorted(outside)} outside the variable's dims "
+            f"{sorted(frame)}. Declare '{bound.name}' over the variable's dims."
+        )
+    assert isinstance(bound, Join) and isinstance(bound.operand, ParameterReference), (
+        'a bound is a number, a parameter, or a lookup of one'
+    )
+    name = bound.operand.name
+    kept = sorted(outside & set(bound.operand.dims))
+    rewrites = [
+        *([f"Declare '{name}' without {kept}"] if kept else []),
+        *([f"Look '{name}' up through a relation keyed by the variable's dims"] if outside - set(kept) else []),
+    ]
+    return (
+        f"{context} {written!r} has dims {sorted(outside)} outside the variable's dims {sorted(frame)}. "
+        f'{", or ".join(rewrites)}.'
+    )
+
+
 def check_spec(spec: Spec, program: Program) -> None:
     """Check every entry's dim rules, on the trees *program* holds for *spec*.
 
@@ -219,15 +248,10 @@ def check_spec(spec: Spec, program: Program) -> None:
         context = f"Variable '{vname}'"
         _check_condition_dims(program.variables[vname].where, frame, context)
         for side in ('lower', 'upper'):
-            bound = getattr(vdef.bounds, side)
-            if isinstance(bound, str):
-                bdims = frozenset({**spec.parameters, **spec.given.parameters}[bound].dims)
-                if not bdims <= frame:
-                    raise DimensionError(
-                        f"{context}: bounds.{side} parameter '{bound}' has dims "
-                        f"{sorted(bdims - frame)} outside the variable's dims "
-                        f"{sorted(frame)}. Declare '{bound}' over the variable's dims."
-                    )
+            bound = getattr(program.variables[vname], side)
+            if bound is not None and (outside := frozenset(bound.dims) - frame):
+                written = getattr(vdef.bounds, side)
+                raise DimensionError(_bound_outside(f'{context}: bounds.{side}', written, bound, outside, frame))
 
     for ename, entry in program.expressions.items():
         declared = spec.expressions[ename]

@@ -734,7 +734,8 @@ class Variable:
     dims: tuple[str, ...]
     where: Mask | None = None
     lower: Expression | None = None
-    """A number, a parameter, or ``None`` when that side is open. An engine decides how an open side enters the model.
+    """A number, a parameter, a [`Join`][] of a parameter that ``at`` reads through a relation, or ``None`` when that
+    side is open. An engine decides how an open side enters the model.
     """
     upper: Expression | None = None
     """As [`lower`][], for the upper side."""
