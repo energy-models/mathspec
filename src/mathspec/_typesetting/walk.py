@@ -255,9 +255,12 @@ class Walk:
 
         *at* maps each key role to the index it is read at. The function is
         named after the relation alone where the key determines one column, and
-        after the column read otherwise.
+        after the column read otherwise. The relation an alias implies sends
+        each label to itself, so its read is the index it is read at.
         """
         lk = self.program.relations[name]
+        if (dimension := self.program.dimensions.get(name)) is not None and dimension.alias == read:
+            return at[name]
         function = name if len(lk.values) == 1 else f'{name}.{read}'
         return self.format.apply(self.format.upright(function), self.format.joined([at[k] for k in lk.key], ''))
 

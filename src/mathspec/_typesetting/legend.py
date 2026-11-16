@@ -147,7 +147,8 @@ class Legend:
         sets = [
             self._item(
                 self.symbols.set[d],
-                f'index {fmt.math(self.symbols.index[d])} {fmt.dash} {fmt.mono(d)}{self._coords(d, noticed)}',
+                f'index {fmt.math(self.symbols.index[d])} {fmt.dash} {fmt.mono(d)}{self._alias_of(d)}'
+                f'{self._coords(d, noticed)}',
                 entry.description,
             )
             for d, entry in program.dimensions.items()
@@ -266,6 +267,11 @@ class Legend:
             return f'{self.format.upright(name)}: {product(lk.key)} {self._op("maps_to")} {product(lk.values)}'
         return f'{self.format.upright(name)} {self._op("subset_of")} {product(lk.roles)}'
 
+    def _alias_of(self, dim: str) -> str:
+        """``, an alias of region`` for an alias, which shares the set symbol of the dimension it aliases."""
+        alias = self.program.dimensions[dim].alias
+        return '' if alias is None else f', an alias of {self.format.mono(alias)}'
+
     def _coords(self, dim: str, noticed: Noticed) -> str:
         """The dimension's carried structure: the labels its ``one_of`` allows, each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
 
@@ -273,7 +279,8 @@ class Legend:
         number, the one place "position 3" and "the coordinate 3" are both
         readings of a line.
         """
-        carried = self.program.relations_of(dim)
+        dimensions = self.program.dimensions
+        carried = {c: lk for c, lk in self.program.relations_of(dim).items() if c not in dimensions}
         clauses = []
         if dim in noticed.numeric_coordinates:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')

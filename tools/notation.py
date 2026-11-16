@@ -90,6 +90,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'relational': 'Sum through a bare relation',
         'connected': 'Bare relation as a condition',
         'representative': 'Map into its own dimension',
+        'flow_angle': 'Alias of a dimension',
         'zonal': 'Sum through a two-key map',
         'zonal_history': 'Sum over the other key of a two-key map',
         'zonal_membership': 'Sum between the two keys of a map',

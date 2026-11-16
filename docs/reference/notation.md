@@ -30,6 +30,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
+  from_bus: { alias: bus } # the buses under a second index: a primed index over the same set
   zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
@@ -54,6 +55,7 @@ parameters:
   zone_cap: { dims: [zone] }
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], where: connection, missing: 1 }
+  susceptance: { dims: [from_bus, bus], missing: 0 } # over one set twice, through its alias
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
   lead: { dims: [generator], dtype: int }
@@ -71,6 +73,7 @@ parameters:
 |---|---|
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}`$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row |
+| $`\mathcal{U}`$ | index $`u'`$ — `from_bus`, an alias of `bus` |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}`$ |
@@ -96,6 +99,7 @@ parameters:
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
+| $`\mathrm{susceptance}`$ | `susceptance` over $`\mathcal{U} \times \mathcal{U}`$, $`0`$ where the data has no row |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 
@@ -509,6 +513,21 @@ constraints:
 
 ```math
 \sum_{t' \in \mathcal{T} \,:\, \mathrm{rep\_of}(t') = t} \mathit{spill}_{t'} \le \mathit{spill}_{\mathrm{rep\_of}(t)} \qquad \forall\, t \in \mathcal{T}
+```
+
+#### Alias of a dimension
+
+an alias read back into its dimension: the value at the other end prints at the primed index
+
+```yaml
+constraints:
+  flow_angle:
+    dims: [bus]
+    expression: theta == sum(susceptance * at(theta, by=from_bus[bus]), over=from_bus)
+```
+
+```math
+\theta_{u} = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} \qquad \forall\, u \in \mathcal{U}
 ```
 
 #### Sum through a two-key map
