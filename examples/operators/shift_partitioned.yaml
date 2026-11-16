@@ -12,7 +12,7 @@ dimensions:
   season: { dtype: str }
 
 maps:
-  snapshot: { season: season }
+  snapshot: { season: { dim: season } }
 
 variables:
   p:

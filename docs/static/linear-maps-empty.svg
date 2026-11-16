@@ -21,7 +21,7 @@ SPDX-License-Identifier: CC-BY-4.0
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
       <text x="16" y="28">relations: { zone_of: { dims: [generator, snapshot], <tspan font-weight="bold">missing: absent</tspan> } }</text>
-      <text x="16" y="46">maps: { zone_of: { zone: zone } }</text>
+      <text x="16" y="46">maps: { zone_of: { zone: { dim: zone } } }</text>
       <text x="16" y="70">sum(p, over=generator, by=zone_of[zone]) &lt;= zone_cap</text>
       <text x="16" y="88">at(zone_cap, by=zone_of[zone])</text>
     </g>

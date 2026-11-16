@@ -743,9 +743,9 @@ def _entries(source: Source) -> dict[str, object]:
 
 
 def _flat_maps(section: object) -> dict[str, object]:
-    """A ``maps:`` section keyed by ``subject[map]``, each map written as a mapping, as [`_Maps`][] reads it."""
+    """A ``maps:`` section keyed by ``subject[map]``, as [`_Maps`][] reads it."""
     return {
-        f'{subject}[{role}]': {'refers_to': entry} if isinstance(entry, str) else entry
+        f'{subject}[{role}]': entry
         for subject, maps in _mapping(section).items()
         for role, entry in _mapping(maps).items()
     }

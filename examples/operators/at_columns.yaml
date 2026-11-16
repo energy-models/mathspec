@@ -12,7 +12,7 @@ dimensions:
   bus: { dtype: str }
 
 maps:
-  line: { bus0: bus, bus1: bus }
+  line: { bus0: { dim: bus }, bus1: { dim: bus } }
 
 parameters:
   cap: { dims: [bus] }

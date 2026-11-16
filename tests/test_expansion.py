@@ -443,7 +443,7 @@ def test_a_use_of_a_refused_named_expression_names_it_rather_than_repeating_its_
 
 GROUPED_MODEL = {
     'dimensions': {'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'maps': {'generator': {'bus': 'bus'}},
+    'maps': {'generator': {'bus': {'dim': 'bus'}}},
     'parameters': {'cap': {'dims': ['bus']}},
     'variables': {'p': {'dims': ['generator']}},
     'objective': {'sense': 'minimize', 'expression': 'sum(p)'},

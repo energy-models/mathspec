@@ -378,7 +378,7 @@ dimensions:
   bus: { dtype: str }
   generator: { dtype: str }
 maps:
-  generator: { bus: bus }
+  generator: { bus: { dim: bus } }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 expressions:

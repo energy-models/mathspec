@@ -84,7 +84,7 @@ dimensions:
   bus: { dtype: str }
   generator: { dtype: str }
 maps:
-  generator: { bus: bus }
+  generator: { bus: { dim: bus } }
 parameters:
   Generator_p_nom: { dims: [generator] }
   Generator_marginal_cost: { dims: [generator] }
@@ -108,7 +108,7 @@ dimensions:
   bus: { dtype: str }
   load: { dtype: str }
 maps:
-  load: { bus: bus }
+  load: { bus: { dim: bus } }
 parameters:
   Load_p_set: { dims: [snapshot, load] }
 expressions:
@@ -135,8 +135,8 @@ dimensions:
   load: {dtype: str}
   snapshot: {dtype: int}
 maps:
-  generator: {bus: bus}
-  load: {bus: bus}
+  generator: {bus: { dim: bus }}
+  load: {bus: { dim: bus }}
 parameters:
   Generator_marginal_cost: {dims: [generator]}
   Generator_p_nom: {dims: [generator]}

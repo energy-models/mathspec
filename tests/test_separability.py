@@ -30,7 +30,7 @@ BASE: dict[str, Any] = {
         'zone': {'dtype': 'str'},
         'day': {'dtype': 'int'},
     },
-    'maps': {'u': {'zone': 'zone'}, 'h': {'day': 'day'}},
+    'maps': {'u': {'zone': {'dim': 'zone'}}, 'h': {'day': {'dim': 'day'}}},
     'parameters': {
         'cost': {'dims': ['u']},
         'budget': {'dims': []},

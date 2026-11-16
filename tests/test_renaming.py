@@ -26,7 +26,7 @@ from mathspec.errors import LanguageError
 UNIT = {
     'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'unit': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
     'relations': {'unit_link': {'dims': ['bus', 'unit'], 'missing': 'absent'}},
-    'maps': {'unit': {'bus': 'bus', 'bus0': 'bus'}},
+    'maps': {'unit': {'bus': {'dim': 'bus'}, 'bus0': {'dim': 'bus'}}},
     'given': {'expressions': {'total_cost': {'dims': []}}},
     'parameters': {
         'unit_p_max': {'dims': ['unit'], 'description': 'the most a unit_p reaches'},
@@ -97,7 +97,7 @@ COST = {
             {'dims': ['bus', 'generator'], 'missing': 'absent'},
             id='relation',
         ),
-        pytest.param(lambda s: s['maps'], {'generator': {'bus': 'bus', 'bus0': 'bus'}}, id='map'),
+        pytest.param(lambda s: s['maps'], {'generator': {'bus': {'dim': 'bus'}, 'bus0': {'dim': 'bus'}}}, id='map'),
         pytest.param(lambda s: s['parameters']['Generator_cost']['dims'], ['generator', 'snapshot'], id='dims'),
         pytest.param(lambda s: s['variables']['Generator_p']['where'], 'Generator_on', id='where'),
         pytest.param(lambda s: s['variables']['Generator_p']['bounds']['upper'], 'Generator_p_max', id='bound'),
@@ -167,7 +167,7 @@ def test_a_quoted_label_spelt_like_a_renamed_name_stays():
     """A label is data: `'gas'` names a coordinate, not the dimension `gas`."""
     spec = {
         'dimensions': {'gas': {'dtype': 'str'}, 'tech': {'dtype': 'str'}},
-        'maps': {'tech': {'gas': 'gas'}},
+        'maps': {'tech': {'gas': {'dim': 'gas'}}},
         'conditions': {'fossil': {'condition': "tech[gas] == 'gas'"}},
     }
     renamed = rename(spec, {'gas': 'fuel'})
@@ -356,7 +356,7 @@ def test_a_name_that_is_also_a_map_or_a_relation_column_is_refused(old, message)
     spec = {
         'dimensions': {'line': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
         'relations': {'corridor': {'dims': {'from_bus': 'bus', 'to_bus': 'bus'}}},
-        'maps': {'line': {'bus0': 'bus', 'bus1': 'bus'}},
+        'maps': {'line': {'bus0': {'dim': 'bus'}, 'bus1': {'dim': 'bus'}}},
         'parameters': {'bus0': {'dims': ['bus']}, 'from_bus': {'dims': ['bus']}},
         'variables': {'flow': {'dims': ['line']}},
         'expressions': {'sent': 'sum(flow, over=line, by=line[bus0])'},

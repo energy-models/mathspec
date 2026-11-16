@@ -155,7 +155,7 @@ def test_a_fill_and_a_group_take_the_operators_two_slots(name: FormatName, fmt: 
     """
     model = {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'maps': {'snapshot': {'season': 'season'}},
+        'maps': {'snapshot': {'season': {'dim': 'season'}}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
@@ -180,7 +180,7 @@ def test_a_translation_by_nothing_takes_no_legend_row(name: FormatName):
     translation as printed and explained a grouped operator the page never shows."""
     model = {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'maps': {'snapshot': {'season': 'season'}},
+        'maps': {'snapshot': {'season': {'dim': 'season'}}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
             'held': {
@@ -209,7 +209,7 @@ def test_a_translation_under_a_lookup_survives_it(name: FormatName, fmt: Format)
             'snapshot': {'dtype': 'int', 'ordered': True},
             'period': {'dtype': 'int', 'ordered': True},
         },
-        'maps': {'snapshot': {'period': 'period'}},
+        'maps': {'snapshot': {'period': {'dim': 'period'}}},
         'parameters': {'cap': {'dims': ['period']}},
         'variables': {'p': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {
@@ -318,7 +318,7 @@ def _selected(mask: str) -> dict[str, Any]:
     """One constraint carrying *mask*, over a dimension a relation groups."""
     return {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'season': {'dtype': 'str'}},
-        'maps': {'snapshot': {'season': 'season'}},
+        'maps': {'snapshot': {'season': {'dim': 'season'}}},
         'variables': {'soc': {'dims': ['snapshot'], 'bounds': {'lower': 0}}},
         'constraints': {'seed': {'dims': ['snapshot'], 'where': mask, 'expression': 'soc == 0'}},
     }
@@ -670,7 +670,10 @@ UNREAD = {
         'technology': {'dtype': 'str'},
     },
     'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
-    'maps': {'gen_zone': {'zone': 'zone'}, 'generator': {'bus': 'bus', 'technology': 'technology'}},
+    'maps': {
+        'gen_zone': {'zone': {'dim': 'zone'}},
+        'generator': {'bus': {'dim': 'bus'}, 'technology': {'dim': 'technology'}},
+    },
     'parameters': {'cap': {'dims': []}},
     'variables': {
         'p': {'dims': ['snapshot', 'generator']},
@@ -729,7 +732,7 @@ BUSES = {
         'generator': {'dtype': 'str', 'ordered': True},
         'bus': {'dtype': 'str'},
     },
-    'maps': {'generator': {'bus': 'bus'}},
+    'maps': {'generator': {'bus': {'dim': 'bus'}}},
     'parameters': {'load': {'dims': ['snapshot']}, 'k': {'dims': []}, 'flag': {'dims': ['snapshot'], 'dtype': 'bool'}},
     'variables': {'p': {'dims': ['snapshot', 'generator']}, 'q': {'dims': ['snapshot', 'generator']}},
 }

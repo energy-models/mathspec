@@ -37,14 +37,14 @@ if TYPE_CHECKING:
 #: each is a spec on its own as well as a piece of the composition.
 SURFACE = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'maps': {'port': {'bus': 'bus'}},
+    'maps': {'port': {'bus': {'dim': 'bus'}}},
     'variables': {'flow': {'dims': ['snapshot', 'port']}},
     'constraints': {'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port[bus]) == 0'}},
 }
 
 SUPPLY = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'maps': {'generator': {'port': 'port'}},
+    'maps': {'generator': {'port': {'dim': 'port'}}},
     'given': {'variables': {'flow': {'dims': ['snapshot', 'port']}}},
     'parameters': {'gen_cost': {'dims': ['generator']}, 'gen_p_max': {'dims': ['generator']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0, 'upper': 'gen_p_max'}}},
@@ -59,7 +59,7 @@ SUPPLY = {
 
 DEMAND = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'demand': {'dtype': 'str'}},
-    'maps': {'demand': {'port': 'port'}},
+    'maps': {'demand': {'port': {'dim': 'port'}}},
     'given': {'variables': {'flow': {'dims': ['snapshot', 'port']}}},
     'parameters': {'dem_load': {'dims': ['snapshot', 'demand']}},
     'constraints': {
@@ -118,7 +118,7 @@ def test_the_balance_does_not_grow_when_a_component_type_is_added():
     three = merge(LIBRARY).constraints['balance'].expression
     storage = {
         'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'store': {'dtype': 'str'}},
-        'maps': {'store': {'port': 'port'}},
+        'maps': {'store': {'port': {'dim': 'port'}}},
         'given': {'variables': {'flow': {'dims': ['snapshot', 'port']}}},
         'parameters': {'st_capacity': {'dims': ['store']}},
         'variables': {'st_p': {'dims': ['snapshot', 'store'], 'bounds': {'lower': 0, 'upper': 'st_capacity'}}},
@@ -223,10 +223,10 @@ def test_a_dimension_one_fragment_declares_ordered_is_ordered_in_the_composition
     assert merge(fragments).dimensions['snapshot'].ordered, 'ordered is a claim one fragment adds to the space'
 
 
-def _mapped(missing: str | None = None, refers_to: str = 'bus') -> dict[str, object]:
-    """A fragment that declares only the map `port[bus]` into *refers_to*, with *missing* written where it is not ``None``."""
-    entry = {'refers_to': refers_to} | ({} if missing is None else {'missing': missing})
-    return {'dimensions': {'port': {'dtype': 'str'}, refers_to: {'dtype': 'str'}}, 'maps': {'port': {'bus': entry}}}
+def _mapped(missing: str | None = None, dim: str = 'bus') -> dict[str, object]:
+    """A fragment that declares only the map `port[bus]` into *dim*, with *missing* written where it is not ``None``."""
+    entry = {'dim': dim} | ({} if missing is None else {'missing': missing})
+    return {'dimensions': {'port': {'dtype': 'str'}, dim: {'dtype': 'str'}}, 'maps': {'port': {'bus': entry}}}
 
 
 def _wired(missing: str | None = None) -> dict[str, object]:
@@ -238,7 +238,7 @@ def _wired(missing: str | None = None) -> dict[str, object]:
 #: A fragment that gives `port` a map of its own beside the one `SURFACE` gives it.
 CARRIER = {
     'dimensions': {'port': {'dtype': 'str'}, 'carrier': {'dtype': 'str'}},
-    'maps': {'port': {'carrier': 'carrier'}},
+    'maps': {'port': {'carrier': {'dim': 'carrier'}}},
 }
 
 
@@ -259,7 +259,7 @@ def test_two_fragments_join_the_maps_they_give_one_subject(fragments):
     [
         pytest.param([SURFACE, _mapped('refused')], 'refused', id='the-default-written-out'),
         pytest.param(
-            [varied(SURFACE, **{'maps.port.bus': {'refers_to': 'bus', 'missing': 'absent'}}), _mapped('absent')],
+            [varied(SURFACE, **{'maps.port.bus': {'dim': 'bus', 'missing': 'absent'}}), _mapped('absent')],
             'absent',
             id='both-absent',
         ),
@@ -275,7 +275,7 @@ def test_two_fragments_that_say_one_missing_agree(fragments, missing):
     [
         pytest.param([SURFACE, _mapped('absent')], "map 'port[bus]'", id='refused-against-absent'),
         pytest.param([_mapped('absent'), SURFACE], "map 'port[bus]'", id='absent-against-refused'),
-        pytest.param([SURFACE, _mapped(refers_to='node')], "map 'port[bus]'", id='two-dimensions-referred-to'),
+        pytest.param([SURFACE, _mapped(dim='node')], "map 'port[bus]'", id='two-dimensions-referred-to'),
         pytest.param([_wired(), _wired('absent')], "relation 'wired'", id='a-relation-refused-against-absent'),
     ],
 )
@@ -567,7 +567,7 @@ def test_a_later_patch_is_laid_on_what_the_earlier_ones_make(patches, field, val
 
 
 def test_a_patch_adds_a_map_to_a_subject_its_base_maps():
-    laid = override(SURFACE, [varied(CARRIER, **{'maps.port.bus': 'bus'})])
+    laid = override(SURFACE, [varied(CARRIER, **{'maps.port.bus': {'dim': 'bus'}})])
     assert sorted(laid.maps['port']) == ['bus', 'carrier'], (
         'the map the patch adds joins the one the base gives `port`, and the restated one is not doubled'
     )
@@ -620,8 +620,8 @@ WIRED = varied(SURFACE, **{'relations.wired': {'dims': ['port', 'bus']}})
             id='a-relation',
         ),
         pytest.param(
-            varied(SURFACE, **{'maps.port.bus': {'refers_to': 'bus', 'description': 'where a port connects'}}),
-            {'maps': {'port': {'bus': {'refers_to': 'bus', 'description': 'a port and its bus'}}}},
+            varied(SURFACE, **{'maps.port.bus': {'dim': 'bus', 'description': 'where a port connects'}}),
+            {'maps': {'port': {'bus': {'dim': 'bus', 'description': 'a port and its bus'}}}},
             lambda spec: spec.maps['port']['bus'].description,
             'a port and its bus',
             id='a-map',
@@ -648,7 +648,7 @@ WIRED = varied(SURFACE, **{'relations.wired': {'dims': ['port', 'bus']}})
             id='null-removes-a-relation-description',
         ),
         pytest.param(
-            varied(SURFACE, **{'maps.port.bus': {'refers_to': 'bus', 'description': 'where a port connects'}}),
+            varied(SURFACE, **{'maps.port.bus': {'dim': 'bus', 'description': 'where a port connects'}}),
             {'maps': {'port': {'bus': {'description': None}}}},
             lambda spec: spec.maps['port']['bus'].description,
             None,
@@ -752,8 +752,8 @@ def test_a_patch_that_restates_an_entry_in_part_is_refused_with_the_rewrite(patc
             id='a-relation',
         ),
         pytest.param(
-            {'maps': {'port': {'bus': {'refer': 'bus'}}}},
-            "unknown key 'refer' in a map entry. Did you mean 'refers_to'?",
+            {'maps': {'port': {'bus': {'dmi': 'bus'}}}},
+            "unknown key 'dmi' in a map entry. Did you mean 'dim'?",
             id='a-map',
         ),
     ],
@@ -768,7 +768,7 @@ def test_a_misspelled_key_in_a_restated_entry_names_the_key_it_meant(patch, says
     ('patch', 'says'),
     [
         pytest.param(
-            {'maps': {'port': {'bus': {'refers_to': 'port'}}}},
+            {'maps': {'port': {'bus': {'dim': 'port'}}}},
             'Restate the map as its base declares it',
             id='referred-to-another-dimension',
         ),
@@ -784,19 +784,18 @@ def test_a_patch_that_rewrites_or_drops_a_map_is_refused(patch, says):
 
 
 #: `SURFACE` with `port[bus]` declared `missing: absent`.
-ABSENT_SURFACE = varied(SURFACE, **{'maps.port.bus': {'refers_to': 'bus', 'missing': 'absent'}})
+ABSENT_SURFACE = varied(SURFACE, **{'maps.port.bus': {'dim': 'bus', 'missing': 'absent'}})
 
 
 @pytest.mark.parametrize(
     ('base', 'map_', 'missing'),
     [
         pytest.param(SURFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
-        pytest.param(SURFACE, {'refers_to': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
+        pytest.param(SURFACE, {'dim': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
         pytest.param(ABSENT_SURFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
         pytest.param(ABSENT_SURFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
-        pytest.param(SURFACE, {'refers_to': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
-        pytest.param(ABSENT_SURFACE, {'refers_to': 'bus'}, 'absent', id='restated-without-one'),
-        pytest.param(ABSENT_SURFACE, 'bus', 'absent', id='restated-in-the-short-form'),
+        pytest.param(SURFACE, {'dim': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
+        pytest.param(ABSENT_SURFACE, {'dim': 'bus'}, 'absent', id='restated-without-one'),
     ],
 )
 def test_a_patch_changes_what_a_row_the_map_gives_no_label_means(base, map_, missing):
@@ -829,7 +828,7 @@ def test_a_patch_changes_what_a_missing_row_of_a_parameter_means(base, written, 
     [
         pytest.param('parameters', 'c', {'dims': ['g']}, id='a-parameter'),
         pytest.param('relations', 'gh', {'dims': ['g', 'h']}, id='a-relation'),
-        pytest.param('maps', 'g.h', {'refers_to': 'h'}, id='a-map'),
+        pytest.param('maps', 'g.h', {'dim': 'h'}, id='a-map'),
     ],
 )
 def test_the_default_missing_written_out_is_the_spec_that_leaves_it_out(section, name, declared):

@@ -29,7 +29,7 @@ maps:
   load:
     bus:
       description: the bus a load sits on
-      refers_to: bus
+      dim: bus
 
 parameters:
   Load_p_set:

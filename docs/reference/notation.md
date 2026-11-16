@@ -41,14 +41,14 @@ relations:
   bus_zone: { dims: [bus, zone], missing: absent } # the pairs that exist
 
 maps:
-  generator: { bus: bus, technology: technology } # two maps of one subject, read to both at once
+  generator: { bus: { dim: bus }, technology: { dim: technology } } # two maps of one subject, read to both at once
   bus:
-    zone: zone
-    area: { refers_to: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
+    zone: { dim: zone }
+    area: { dim: zone, missing: absent } # a second map into the same set, to compare against; a bus may be in no area
   snapshot:
-    season: season
-    rep: snapshot # a map into its own dimension: the representative snapshot
-  gen_zone: { zone: zone }
+    season: { dim: season }
+    rep: { dim: snapshot } # a map into its own dimension: the representative snapshot
+  gen_zone: { zone: { dim: zone } }
 
 parameters:
   p_max: { dims: [generator], missing: .inf } # a value: the legend says what a missing row reads as

@@ -8,7 +8,7 @@ dimensions:
   g: { dtype: str }
   zone: { dtype: str }
 maps:
-  g: { zone: zone }
+  g: { zone: { dim: zone } }
 parameters:
   cost: { dims: [g] }
   load: { dims: [zone] }

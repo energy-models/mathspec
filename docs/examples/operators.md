@@ -123,7 +123,7 @@ dimensions:
   bus: { dtype: str }
 
 maps:
-  generator: { bus: bus }
+  generator: { bus: { dim: bus } }
 
 parameters:
   limit: { dims: [snapshot, bus] }
@@ -163,7 +163,7 @@ relations:
   zone_of: { dims: [generator, period] }
 
 maps:
-  zone_of: { zone: zone }
+  zone_of: { zone: { dim: zone } }
 
 parameters:
   demand: { dims: [zone, period] }
@@ -202,7 +202,7 @@ relations:
   slot_of: { dims: [generator, period] }
 
 maps:
-  slot_of: { bus: bus, technology: technology }
+  slot_of: { bus: { dim: bus }, technology: { dim: technology } }
 
 parameters:
   cap: { dims: [bus, technology] }
@@ -236,7 +236,7 @@ dimensions:
   period: { dtype: int }
 
 maps:
-  snapshot: { period: period }
+  snapshot: { period: { dim: period } }
 
 parameters:
   cap: { dims: [period] }
@@ -271,7 +271,7 @@ dimensions:
   bus: { dtype: str }
 
 maps:
-  line: { bus0: bus, bus1: bus }
+  line: { bus0: { dim: bus }, bus1: { dim: bus } }
 
 parameters:
   cap: { dims: [bus] }
@@ -420,7 +420,7 @@ dimensions:
   season: { dtype: str }
 
 maps:
-  snapshot: { season: season }
+  snapshot: { season: { dim: season } }
 
 variables:
   p:
@@ -553,7 +553,7 @@ dimensions:
   day: { dtype: str }
 
 maps:
-  hour: { day: day }
+  hour: { day: { dim: day } }
 
 variables:
   started:

@@ -52,7 +52,7 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers_to: period
+      dim: period
 
 parameters:
   Process_committable:
