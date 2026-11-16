@@ -11,9 +11,11 @@ Everything here asserts over the committed spec files, reference scripts and
 from __future__ import annotations
 
 import importlib
+import json
 import math
 import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -21,23 +23,22 @@ import pytest
 from mathspec import override, to_spec
 from mathspec._exclusivity import Special, Subject, _evaluate, _Grid, _subject_of
 from mathspec._piecewise import _UNGATED, Emitted
-from tools import gallery
-from tools.gallery import DECLARED, PATCHED, RECORDED, REFERENCES, _names_for, _stands_for
+from tools.gallery import PATCHED, _names_for, _stands_for
 
 if TYPE_CHECKING:
     from mathspec.program import Mask
     from mathspec.spec import Spec
 
+ROOT = Path(__file__).resolve().parent.parent
+REFERENCES = ROOT / 'examples' / 'references' / 'pypsa'
+RECORDED = json.loads((REFERENCES / 'references.json').read_text())
 RUNGS = sorted(path.stem for path in REFERENCES.glob('rung_*.py'))
 SCRIPT = REFERENCES / 'reference.py'
-PAGE_TEXTS = [(gallery.PAGES / page).read_text() for page in [*DECLARED, *PATCHED]]
+RUNG_TABLES = (REFERENCES / 'README.md').read_text()
 
-SPECS = {
-    **{page: to_spec(path) for page, path in DECLARED.items()},
-    **{page: override(base, [patch]) for page, (base, patch) in PATCHED.items()},
-}
+BASE = to_spec(ROOT / 'examples' / 'pypsa.yaml')
+SPECS = {'pypsa.yaml': BASE, **{page: override(base, [patch]) for page, (base, patch) in PATCHED.items()}}
 MODELS = list(SPECS.values())
-BASE = SPECS['pypsa_ladder.md']
 #: The linopy suffix of each row and column a `piecewise:` entry expands to, by the field of `Emitted` that names it.
 LINOPY_SUFFIX = {
     'chord': 'chord',
@@ -96,11 +97,8 @@ DIVERGED = {stem: record for stem, record in RECORDED.items() if 'diverges' in r
 
 
 @pytest.mark.parametrize('key', ['spine', *RUNGS])
-def test_every_reference_block_has_its_marker_pair_on_exactly_one_declared_page(key: str):
-    carrying = sum(f'<!-- reference:{key}:begin -->' in text for text in PAGE_TEXTS)
-    assert carrying == 1, (
-        'a reference block shows on one declared page — the generator skips a page without the marker pair'
-    )
+def test_the_rung_tables_link_every_reference_script_once(key: str):
+    assert RUNG_TABLES.count(f'({key}.py)') == 1, 'each script is linked under the one rung it solves'
 
 
 @pytest.mark.parametrize('rung', RUNGS)
@@ -156,9 +154,7 @@ def test_a_divergence_names_its_issue_and_what_pypsa_gives_instead(stem: str):
     diverges = recorded['diverges']
     module = (REFERENCES / f'{stem}.py').read_text()
     assert f'ISSUE = {diverges["issue"]}' in module, 'the record names the issue its rung script names'
-    assert any(f'PyPSA/PyPSA#{diverges["issue"]}' in text for text in PAGE_TEXTS), (
-        'the page links the issue a rung records'
-    )
+    assert f'PyPSA/PyPSA#{diverges["issue"]}' in RUNG_TABLES, 'the rung tables link the issue a rung records'
     assert 'raises' in diverges or not math.isclose(diverges['objective'], recorded['objective'], rel_tol=1e-9), (
         'a divergence records what PyPSA gives instead of the intended objective: an exception or another objective'
     )

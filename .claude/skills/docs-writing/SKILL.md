@@ -33,17 +33,16 @@ the same name. Each section opens with an `index.md` that lists its pages in
 one line each; a new page adds its line there. The example pages sit at the end of the Reference section, after
 the pages a reader looks things up in. A worked example is neither a tutorial
 nor a how-to: it teaches no path and names no task, it shows that the language
-says a spec.
+says a spec. The PyPSA pages are example pages too, in a group of their own at
+the end of the Examples section. The notation page, which renders the
+typesetting test spec, sits in Reference beside the language pages.
 
 The Development section, last in the nav, holds every page a spec writer does
-not need, in three groups:
+not need, in two groups:
 
 - **Building on mathspec** is for someone who writes a tool against `Spec`
   and `Program`: an engine such as specsolve, a renderer, a checker.
 - **Contributing** is for someone who changes mathspec itself.
-- **Proofs of concept** holds the notation page, which renders the typesetting
-  test spec, and the PyPSA pages. The PyPSA pages stay in `docs/examples/`,
-  where `tools/gallery.py` writes them.
 
 A page in Development keeps the folder of its kind.
 
@@ -77,12 +76,13 @@ math the typesetter prints from it. The block is written by `tools/gallery.py`
 between `<!-- gallery:begin -->` and `<!-- gallery:end -->`; the paragraph is
 the only prose on the page, and it says what the spec is and the one or two
 things worth reading for, which the `description:` line in the file does not.
-The PyPSA pages, in the Development section, add a generated block per rung,
-holding the reference script and what PyPSA solved it to. Every example is a
+The rung tables, which list each row PyPSA builds and its status in the PyPSA
+file, are not on a page. They are in `examples/references/pypsa/README.md`,
+beside the reference scripts. Every example is a
 file under `examples/`, loaded by the suite and compiled by the LaTeX gate,
 and `tests/test_docs.py` holds each block to its generator byte for byte. The catalogue in
-`docs/examples/index.md` is hand-written: one bullet per page in the Examples
-section, saying why a reader would open it.
+`docs/examples/index.md` is hand-written: one tile per page one level down in
+the Examples section, saying why a reader would open it.
 
 **The Python API is rendered from the docstrings.**
 `docs/reference/api.md` holds one `:::` entry per name in `mathspec.__all__`,
@@ -330,8 +330,8 @@ An entry in `docs/reference/` has three parts, in this order.
 - **A rule of an engine.** How data is attached to a spec, how it is solved, or read back
   is a consumer's page. Here a consumer is named only for what the file
   guarantees it.
-- **Generated content.** The spec and its math on every example page and the
-  rung blocks on the PyPSA pages (`tools/gallery.py`), the table on
+- **Generated content.** The spec and its math on every example page, and the
+  fragment tables on the PyPSA index (`tools/gallery.py`), the table on
   `docs/reference/notation.md` (`tools/notation.py`), the operator table on
   `docs/reference/language/operators.md` (`tools/spec_math.py`), and the home
   spec on `docs/index.md` and in the README (`tools/home_math.py`) are
@@ -361,6 +361,21 @@ An entry in `docs/reference/` has three parts, in this order.
   A relative link above `docs/` renders in the repo and fails the strict
   build. Anchors follow GitHub's slug rules on the site too, so an anchor that
   works in the repo works on the site.
+- **A landing page links its pages as tiles, not as a bullet list.** A page
+  whose job is to send the reader on, such as `docs/examples/index.md`, puts
+  each link in a card inside `<div class="grid cards tiles" markdown>`, under
+  `<!-- prettier-ignore -->`. The card opens on a bold title, then one or two
+  sentences on what the page contains, and ends on its link,
+  `[Open →](page.md)`. A rule in `docs/static/extras.css` stretches that link
+  over the whole card. A landing page links only the pages one level down. A deeper page is
+  linked from the index of its own section.
+
+  ```markdown
+  - **Least-cost dispatch**
+    The smallest spec has a balance, a bound and a cost to minimise.
+    [Open →](dispatch.md)
+  ```
+
 - **A card body is indented four spaces**, under `<!-- prettier-ignore -->`,
   or the card falls out of its list and `tests/test_docs.py` says so.
 - **A generated block lands with its plumbing**: the page in

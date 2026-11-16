@@ -122,5 +122,5 @@ f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\
       `given`
     - [The composed spec](composed.md), for the spec once `merge` joins this file
       with the surface and the loads
-    - [PyPSA in one file](../pypsa_ladder.md), for the generator with every attribute
-      PyPSA has
+    - [PyPSA](../pypsa/index.md), for the generator with every attribute PyPSA
+      has
