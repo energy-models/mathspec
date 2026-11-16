@@ -96,7 +96,7 @@ compares them with it, so the two always agree.
 | [process_commitment](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_commitment.yaml) | The commitment rows of PyPSA's `Process` | 18 | `scenario_opex` |
 | [process_maintenance](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_maintenance.yaml) | The maintenance rows of PyPSA's `Process` | 10 |  |
 | [process_ramping](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/process_ramping.yaml) | The ramping rows of PyPSA's `Process` | 15 |  |
-| [security](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/security.yaml) | The security-constrained flows over the outages | 10 |  |
+| [security](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/security.yaml) | The security-constrained flows over the outages | 12 |  |
 | [settings](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/settings.yaml) | The weightings, the risk preference and the flags that the other fragments use | 8 |  |
 | [storage_unit](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/storage_unit.yaml) | PyPSA's `StorageUnit` | 14 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |
 | [store](https://github.com/energy-models/mathspec/blob/main/examples/pypsa/store.yaml) | PyPSA's `Store` | 15 | `Carrier_additions`, `total_cost`, `Bus_injection`, `operational_limit`, `scenario_opex`, `primary_energy`, `tech_capacity_expansion` |

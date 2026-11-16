@@ -22,7 +22,7 @@ that record with the entries of the file, without an engine.
 Each name in the PyPSA column of a table is a row or a column that PyPSA
 builds. The entry of `examples/pypsa.yaml` that states it opens its description
 with the same name. The rows and the line numbers are those of PyPSA `master`
-at commit `72a12418`, under `pypsa/optimization/`.
+at commit `3625c816`, under `pypsa/optimization/`.
 [PyPSA: scope and refusals](../../../docs/examples/pypsa/scope.md) lists the
 networks that PyPSA refuses and what you compute in data prep.
 
@@ -276,7 +276,7 @@ Some parameters span no `scenario`. PyPSA (`constants.py:26-58`,
 fix the network's shape, such as `bus`, `carrier`, `lifetime`, `active`,
 `committable` or `p_nom_extendable`. It refuses one in `*_nom_set`, `delay` and
 `cyclic_delay` too. These parameters, and the values you derive from them in
-data prep, span no `scenario`. PyPSA (`components.py:1018-1021`,
+data prep, span no `scenario`. PyPSA (`components.py:1000-1003`,
 `constraints.py:477-482`, `global_constraints.py:239-243`) also reduces three
 quantities over the scenarios, so they span none:
 
@@ -725,9 +725,9 @@ The network: [`rung_34_committable_maintenance.py`](rung_34_committable_maintena
 
 This rung runs `n.optimize(multi_investment_periods=True)` with
 `primary_energy` and `operational_limit` rows that name an `investment_period`.
-PyPSA (`global_constraints.py:378-390`, `597-609`) sums such a row over the
+PyPSA (`global_constraints.py:378-390`, `601-613`) sums such a row over the
 snapshots of that period only, and over the whole horizon where the row specifies
-none. Each snapshot (`:333`, `:636`) counts with its generator weighting times the
+none. Each snapshot (`:333`, `:640`) counts with its generator weighting times the
 `years` weighting of its period. Storage closes in such a row as
 follows:
 
@@ -747,11 +747,10 @@ limits a hydro carrier with a per-period storage unit and store in the 2020
 period. The two periods weigh 5 and 10 years. With the same network and no
 `investment_period`, PyPSA solves to `10675.0`.
 
-| PyPSA                                                            | status  | note                                                                                                                                                                                                                         |
-| ---------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `primary_energy`, `operational_limit` over one investment period | done    | `GlobalConstraint_energy_weight`, zero outside the counted snapshots, with the years weighing each snapshot                                                                                                                  |
-| `primary_energy`, `operational_limit` over one investment period | done    | the closing level of storage as `StorageUnit_closing_weight` and `Store_closing_weight`, at each counted period's last snapshot where the storage reopens per period, at the last counted snapshot it is active in otherwise |
-| `primary_energy`                                                 | refused | over storage that reopens per period, on a network with scenarios, in [Refusals](../../../docs/examples/pypsa/scope.md#refusals)                                                                                             |
+| PyPSA                                                            | status | note                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `primary_energy`, `operational_limit` over one investment period | done   | `GlobalConstraint_energy_weight`, zero outside the counted snapshots, with the years weighing each snapshot                                                                                                                  |
+| `primary_energy`, `operational_limit` over one investment period | done   | the closing level of storage as `StorageUnit_closing_weight` and `Store_closing_weight`, at each counted period's last snapshot where the storage reopens per period, at the last counted snapshot it is active in otherwise |
 
 The network: [`rung_35_period_global_constraints.py`](rung_35_period_global_constraints.py).
 
@@ -853,7 +852,7 @@ The reference script calls `n.set_scenarios(...)` with `GlobalConstraint` rows w
 `GlobalConstraint-{name}` row per scenario for `primary_energy`,
 `operational_limit` and `transmission_volume_expansion_limit`. It reads each
 scenario's own sense and constant (`global_constraints.py:366-376`,
-`:572-573`, `:771-772`, `:806-814`, `:846-856`). The file states
+`:576-577`, `:779-780`, `:814-822`, `:854-864`). The file states
 `GlobalConstraint_constant` and `GlobalConstraint_sense` over `scenario` as
 well, so each row takes its own value in each future. A row with no scenario
 axis in its total, such as the transmission volume, repeats the same capacity
@@ -869,7 +868,7 @@ solves to `12943.333333333334`.
 | PyPSA                                                                                                               | status | note                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit` with a constant and sense per scenario | done   | The file states `GlobalConstraint_constant` and `GlobalConstraint_sense` over `scenario`.                                                                                                    |
-| `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`                                        | done   | PyPSA reads a `carrier_attribute` or `investment_period` per scenario (`global_constraints.py:815-822`). The file states the weights and `GlobalConstraint_counts_snapshot` over `scenario`. |
+| `primary_energy`, `operational_limit`, `transmission_volume_expansion_limit`                                        | done   | PyPSA reads a `carrier_attribute` or `investment_period` per scenario (`global_constraints.py:823-830`). The file states the weights and `GlobalConstraint_counts_snapshot` over `scenario`. |
 
 Rungs 52 and 53 extend these rows.
 
@@ -1147,7 +1146,7 @@ The reference script calls `n.set_scenarios(...)` with a
 `transmission_expansion_cost_limit` row. The file states the row in every
 scenario, as it states every global constraint. PyPSA builds one row per
 scenario too, with that scenario's capital cost
-(`global_constraints.py:806-856`, `:900`).
+(`global_constraints.py:814-864`, `:908`).
 
 The rung adds an extendable DC link to the spine under a cost limit of `150`,
 so the link builds `15`. The two futures are identical, and PyPSA solves to
@@ -1166,8 +1165,8 @@ The reference script calls `n.set_scenarios(...)` and runs
 `n.optimize(multi_investment_periods=True)` with a
 `transmission_volume_expansion_limit` row. The file states the row in every
 scenario. PyPSA builds one row per scenario too, over the lines active in the
-row's periods, with that scenario's length (`global_constraints.py:828`,
-`:874-875`).
+row's periods, with that scenario's length (`global_constraints.py:836`,
+`:882-883`).
 
 The rung is two periods with an extendable line of length `3` under a volume
 limit of `60`, so the line builds `20`. The two futures are identical, and
@@ -1455,7 +1454,7 @@ then not built, and the unit starts for free.
 A committed extendable unit has a big-M bound in its `com-ext-p-*` rows. Where
 `p_nom_max` is finite and positive, M is that cap times the highest
 `p_max_pu`. Where the cap is infinite, PyPSA takes the `committable_big_m`
-keyword (`components.py:1100-1171`). Without the keyword, M is ten times the
+keyword (`components.py:1082-1152`). Without the keyword, M is ten times the
 largest of the peak total load and the component's largest finite `p_nom` and
 `p_nom_max`. `Generator_big_m` is M by the same rule. An M below the output the
 solver chooses caps that output.
@@ -1544,7 +1543,7 @@ This rung runs `n.optimize(multi_investment_periods=True)` with a
 `primary_energy` row over storage that keeps its level across periods and
 retires before the last counted snapshot. PyPSA fills the level forward over
 the counted snapshots and takes the last value
-(`global_constraints.py:476-479`, `:528-531`, and `:682-685`, `:730-733` for
+(`global_constraints.py:476-479`, `:530-533`, and `:686-689`, `:736-739` for
 `operational_limit`). The level exists only where the storage is active.
 PyPSA's row therefore contains the level at the last counted snapshot where the
 storage is active.
@@ -1677,13 +1676,12 @@ This rung runs `n.optimize(multi_investment_periods=True)` with a
 that each reopen per period. PyPSA counts the storage change of the stated
 period only: its opening level less its closing level at the period's last
 snapshot, weighted by that period's years (`global_constraints.py:390-394`,
-`:489-493`, `:541-545`). Before PyPSA/PyPSA#2099, PyPSA took the last snapshot
+`:489-495`, `:543-549`). Before PyPSA/PyPSA#2099, PyPSA took the last snapshot
 of every period and raised `KeyError` (PyPSA/PyPSA#2093).
 
 The file states the closing level as `StorageUnit_closing_weight` and
 `Store_closing_weight`, which are the period's years at the last snapshot of
-each counted period. On a network with scenarios, PyPSA still raises: see
-[Refusals](../../../docs/examples/pypsa/scope.md#refusals).
+each counted period.
 
 The cap of `600` binds, and the row counts `10` years of each storage's
 opening level against it. PyPSA solves to `12900.0`. Without the cap, it solves
@@ -1880,7 +1878,7 @@ segment that ends there. PyPSA builds the column `Generator-marginal_cost_piecew
 above the curve at `Generator-p`, and puts it in the objective in place of
 `p` times `marginal_cost` (`optimize.py:308-348`). The curve runs over
 `p_pu` times `p_nom`, and its cost sums each segment's width times its
-marginal cost (`piecewise.py:298-305`). The model-building library linopy
+marginal cost (`piecewise.py:305-312`). The model-building library linopy
 chooses how to state the curve. Where every curve is convex and no generator
 with a curve is committable, it states each segment's line (`_chord`) and the
 curve's ends (`_domain_lo`, `_domain_hi`).
@@ -1907,7 +1905,7 @@ The network: [`rung_81_piecewise_marginal_cost.py`](rung_81_piecewise_marginal_c
 This rung adds a committable generator with a curve to the network of rung 81.
 PyPSA then gates every curve of the call: by `Generator-status` for a
 committable generator, and by 1 for any other (`optimize.py:314-318`,
-`piecewise.py:193-203`). linopy states no segment lines under a gate. It
+`piecewise.py:200-210`). linopy states no segment lines under a gate. It
 states each curve by increments instead: a share of each segment
 (`_delta`), filled in order (`_order_binary`, `_delta_bound`, `_fill_order`,
 `_binary_order`), at most the gate (`_active_bound`). Two rows tie the output
@@ -1937,6 +1935,53 @@ snapshot it runs at 100 MW. PyPSA solves to `26135.0`.
 | `Generator-marginal_cost_piecewise_active_bound`                                                                                    | split  | where `Generator_status` exists, and no row at gate 1                                                            |
 
 The network: [`rung_82_piecewise_marginal_cost_committable.py`](rung_82_piecewise_marginal_cost_committable.py).
+
+### Rung 85 — a global constraint for one period over storage that reopens per period, on a network with scenarios
+
+This rung takes the network of rung 75 over two futures, `calm` and `stormy`,
+and adds an `operational_limit` row on the gas carrier for 2030. PyPSA builds
+each row once per scenario, and closes the storage at that scenario's level
+(`global_constraints.py:490-495`, `:544-549`, `:700-705`, `:747-752`). Before
+PyPSA/PyPSA#2115, PyPSA read the closing level by snapshot alone and raised
+`KeyError` (PyPSA/PyPSA#2113).
+
+The file already states each row per scenario, over that scenario's storage
+level, so it needs no change.
+
+The clean unit costs `60` in the calm future and `90` in the stormy one.
+The gas limit of `1100` binds in both futures and leaves the CO2 cap slack.
+PyPSA solves to `14670.0`. Without the gas limit, the CO2 cap binds and PyPSA
+solves to `14460.0`. Without either row, it solves to `9000.0`.
+
+| PyPSA                                                                                      | status | note                                                                                       |
+| ------------------------------------------------------------------------------------------ | ------ | ------------------------------------------------------------------------------------------ |
+| `primary_energy`, `operational_limit` over storage that reopens per period, with scenarios | done   | the row per scenario, with `StorageUnit_closing_weight` and `Store_closing_weight` in each |
+
+The network: [`rung_85_scenario_period_storage.py`](rung_85_scenario_period_storage.py).
+
+### Rung 86 — a piecewise marginal cost curve over investment periods
+
+This rung runs `n.optimize(multi_investment_periods=True)` with the curve of
+rung 81 on a generator. PyPSA states the curve at every snapshot of every
+period, and weights its cost as it weights `p` times `marginal_cost`. Before
+PyPSA/PyPSA#2117, PyPSA handed linopy the snapshots as a two-level index, which
+linopy could not expand the breakpoints over, and raised `ValueError`
+(PyPSA/PyPSA#2116). PyPSA now flattens the index for the curve
+(`piecewise.py:173-177`).
+
+The file states the curve per `snapshot`, and the period weight comes in
+through the objective, so it needs no change.
+
+The load walks `curve86` into its dear third segment in both periods. In the
+last snapshot, `curve86` runs at its limit of 80 MW, and the backup unit covers
+the rest. The 2020 period costs `1980` and the 2030 period `4530`, which weighs
+half, so PyPSA solves to `4245.0`.
+
+| PyPSA                                                                               | status | note                                                                      |
+| ----------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------- |
+| `Generator-marginal_cost_piecewise_chord`, `_domain_lo`, `_domain_hi`, over periods | done   | `Generator_marginal_cost_lp` at every snapshot, weighted by the objective |
+
+The network: [`rung_86_piecewise_marginal_cost_periods.py`](rung_86_piecewise_marginal_cost_periods.py).
 
 ## The relaxed commitment
 

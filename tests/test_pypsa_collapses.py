@@ -9,8 +9,8 @@ axis and the CVaR rows. Fed one scenario, one period, all-active masks and unit
 weights, every addition is a no-op and the standard model returns. The repository
 runs no solver, so the reduction is guarded structurally: `tests/fixtures/
 pypsa_standard_shape.yaml` freezes the standard model's names and frames, and the
-only frame change a standard row may carry is a leading `scenario`, or for a
-parameter a leading `period`.
+only frame change a standard row may carry is a leading `scenario`, and for a
+parameter a leading `period` as well.
 """
 
 from __future__ import annotations
@@ -76,13 +76,15 @@ def test_a_standard_constraint_changes_frame_only_by_scenario():
     assert not wrong, f'a standard row may gain only scenario; these differ: {wrong}'
 
 
-def test_a_standard_parameter_changes_frame_only_by_scenario_or_period():
+def test_a_standard_parameter_changes_frame_only_by_scenario_and_period():
+    """A transformer's phase-shift cycle weight gains both: it is read per scenario, over each period's cycles."""
+    gains = ([], ['scenario'], ['period'], ['scenario', 'period'])
     wrong = {
         name: _dims(ALL.parameters[name])
         for name, dims in STANDARD['parameters'].items()
-        if _dims(ALL.parameters[name]) not in (sorted(dims), sorted(['scenario', *dims]), sorted(['period', *dims]))
+        if _dims(ALL.parameters[name]) not in [sorted([*gain, *dims]) for gain in gains]
     }
-    assert not wrong, f'a standard parameter may gain only scenario or period; these differ: {wrong}'
+    assert not wrong, f'a standard parameter may gain only scenario and period; these differ: {wrong}'
 
 
 #: PyPSA refuses a difference across scenarios in these attributes and in what is derived from them

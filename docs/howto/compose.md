@@ -13,8 +13,9 @@ component library. Use
 [`override`](../reference/composition.md#override) to lay files of changes
 ([patches](../reference/glossary.md#patch)) over a whole spec
 ([a base](../reference/glossary.md#base)), such as the spec a framework ships.
-You need mathspec [installed](installation.md), and Python to call the two
-functions.
+Use [`rename`](../reference/api.md#mathspec.rename) to give a fragment other
+names, so that one file states several components. You need mathspec
+[installed](installation.md), and Python to call the three functions.
 
 ## Build a spec from a library of components
 
@@ -194,6 +195,93 @@ spec = ms.merge([spec, 'store.yaml'])
 After this two-step merge, `Bus_injection` is the same sum as after the list
 of four files. Add a term with `merge` and not with a patch.
 
+## Use one fragment for several components
+
+To state two components with the same math, write the fragment once and give
+it other names with [`rename`](../reference/api.md#mathspec.rename).
+
+<!-- prettier-ignore -->
+1. Write the fragment with names that stand for any component. In
+    `unit.yaml`, the dimension is `unit` and the name of each entry starts
+    with `Unit_`. mathspec loads the file on its own.
+
+    ```yaml title="unit.yaml"
+    given:
+      expressions:
+        Bus_injection: { dims: [snapshot, bus] }
+        total_cost: { dims: [] }
+    dimensions:
+      snapshot: { dtype: int }
+      bus: { dtype: str }
+      unit: { dtype: str }
+    relations:
+      Unit_bus: { key: unit, values: bus }
+    parameters:
+      Unit_p_nom: { dims: [unit] }
+      Unit_marginal_cost: { dims: [unit] }
+    variables:
+      Unit_p: { dims: [snapshot, unit], bounds: { lower: 0, upper: Unit_p_nom } }
+    expressions:
+      Unit_injection:
+        expression: sum(Unit_p, over=unit, by=Unit_bus[bus])
+        adds_to: Bus_injection
+      Unit_cost:
+        expression: sum(Unit_p * Unit_marginal_cost)
+        adds_to: total_cost
+    ```
+
+2. Write the rule for the new names as a function. `rename` calls the function
+    once with each name that the fragment declares or lists under `given:`.
+    Return the new name, or `None` to keep the name.
+
+    ```python
+    def named(prefix, dim):
+        def new_name(name):
+            if name == 'unit':
+                return dim
+            if name.startswith('Unit_'):
+                return prefix + name.removeprefix('Unit')
+            return None
+
+        return new_name
+    ```
+
+3. Rename the fragment once for each component, and merge the results:
+
+    ```python
+    spec = ms.merge(
+        [
+            'network.yaml',
+            ms.rename('unit.yaml', named('Gas', 'gas')),
+            ms.rename('unit.yaml', named('Wind', 'wind')),
+            'load.yaml',
+        ]
+    )
+    print(spec.expressions['Bus_injection'].expression)
+    print(spec.expressions['total_cost'].expression)
+    print(sorted(spec.variables))
+    ```
+
+    ```text
+    Gas_injection + Wind_injection + Load_injection
+    Gas_cost + Wind_cost
+    ['Gas_p', 'Wind_p']
+    ```
+
+    Each renamed fragment adds its own terms to the two sums.
+
+To change only a few names, pass a map from each old name to its new name:
+
+```python
+spec = ms.rename('generator.yaml', {'Generator_p_nom': 'Generator_capacity'})
+```
+
+`Generator_capacity` is then the name of the parameter and the upper bound of
+`Generator_p`. `rename` replaces a name everywhere it occurs in the spec, and
+keeps each `description` as written.
+[What a rename changes](../reference/composition.md#what-a-rename-changes)
+lists what else `rename` keeps.
+
 ## Write part of the sum in the network file
 
 To put part of the sum in the network file itself, define `Bus_injection`
@@ -364,6 +452,8 @@ in the spec as a named expression that no sum includes.
       for why a term is added with `merge` and not with a patch
     - [refusals](../reference/composition.md#refusals), for each message that
       `merge` and `override` give
+    - [`rename`](../reference/composition.md#rename), for what a rename changes
+      and keeps, and each map that it refuses
     - [a spec in several files](../tutorials/several-files.md), for a lesson in which
       you build a library step by step
     - [a component library](../examples/library/index.md), for a larger library

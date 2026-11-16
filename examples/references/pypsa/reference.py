@@ -5,7 +5,7 @@
 
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["pypsa @ git+https://github.com/PyPSA/PyPSA@72a1241877aee2f37885834962224f9bf2240f0a", "linopy==0.10.1", "pandas>=2.2", "xarray==2026.7.0", "highspy==1.15.1"]
+# dependencies = ["pypsa @ git+https://github.com/PyPSA/PyPSA@3625c8168b0b45a7936ddcb3a4da99dd608125ca", "linopy==0.10.1", "pandas>=2.2", "xarray==2026.7.0", "highspy==1.15.1"]
 # ///
 """Solve every rung's network through PyPSA and record what it saw.
 

@@ -12,7 +12,11 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
-- docs: the PyPSA example prints one sample fragment and sits under Examples ([#TBD](https://github.com/energy-models/mathspec/pull/TBD))
+- docs: the PyPSA example prints one sample fragment and sits under Examples ([#1010](https://github.com/energy-models/mathspec/pull/1010))
+- feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
+- docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
+- docs(pypsa): component cites point at PyPSA 3625c816 ([#997](https://github.com/energy-models/mathspec/pull/997))
+- docs(pypsa): the reference pins PyPSA at 3625c816 ([#996](https://github.com/energy-models/mathspec/pull/996))
 - docs(pypsa): the file states a piecewise marginal cost ([#988](https://github.com/energy-models/mathspec/pull/988))
 - feat: an incremental curve takes an integer gate ([#987](https://github.com/energy-models/mathspec/pull/987))
 - docs(pypsa): the reference pins PyPSA at 72a12418 ([#986](https://github.com/energy-models/mathspec/pull/986))

@@ -499,7 +499,7 @@ Generator_marginal_cost_curve_is_not_committable:
   description: >-
     a generator with a piecewise `marginal_cost` curve is not committable.
     PyPSA gates such a curve by the status share (`optimize.py:314-318`,
-    `piecewise.py:193-203`), and a curve gate is binary or integer
+    `piecewise.py:200-210`), and a curve gate is binary or integer
 ```
 
 ```math
