@@ -12,7 +12,7 @@ dimensions:
   from_region: { alias: region, description: the region an export leaves }
   from_commodity: { alias: commodity, description: the commodity an export leaves as }
 
-relations:
+sets:
   top_ire:
     description: the links that exist, from a region and commodity to another (TOP_IRE)
     dims: [from_region, from_commodity, region, commodity]
@@ -21,21 +21,18 @@ relations:
 parameters:
   ire_flo:
     description: the share of an export that arrives as an import (IRE_FLO)
-    dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    dims: [top_ire]
   demand: { dims: [commodity, region], description: what a region needs of a commodity }
   supply_cost: { dims: [commodity, region], description: the cost of a unit produced in a region }
   trade_cost:
     description: the cost of a unit exported along a link
-    dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    dims: [top_ire]
 
 variables:
   supply: { dims: [commodity, region], bounds: { lower: 0 }, description: what a region produces of a commodity }
   export:
     description: what leaves along a link (VAR_IRE)
-    dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    dims: [top_ire]
     bounds: { lower: 0 }
 
 constraints:

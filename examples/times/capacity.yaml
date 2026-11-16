@@ -13,7 +13,7 @@ dimensions:
   process: { description: a technology }
   timeslice: { description: "a slice of the year, at any level of the timeslice tree" }
 
-relations:
+sets:
   rtp_vintyr:
     description: the vintages of a process that exist in a period (RTP_VINTYR)
     dims: [region, vintage, period, process]
@@ -41,8 +41,7 @@ variables:
   cap: { dims: [region, period, process], bounds: { lower: 0 }, description: installed capacity (VAR_CAP) }
   act:
     description: activity of a vintage of a process in a timeslice (VAR_ACT)
-    dims: [region, vintage, period, process, timeslice]
-    where: rtp_vintyr AND prc_ts
+    dims: [prc_ts, rtp_vintyr]
     bounds: { lower: 0 }
 
 constraints:
