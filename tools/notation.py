@@ -91,6 +91,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'connected': 'Bare relation as a condition',
         'representative': 'Map into its own dimension',
         'flow_angle': 'Alias of a dimension',
+        'exchanged': 'Sum under an alias of its dimension',
         'zonal': 'Sum through a two-key map',
         'zonal_history': 'Sum over the other key of a two-key map',
         'zonal_membership': 'Sum between the two keys of a map',
