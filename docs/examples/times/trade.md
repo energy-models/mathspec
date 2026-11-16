@@ -14,7 +14,8 @@ which TIMES writes with a second name for each set, `ALIAS(REG,R)` in
 The spec does the same with an [alias](../../reference/language/dimensions.md#alias):
 `from_region` has the labels of `region`, and `from_commodity` those of
 `commodity`. The relation `top_ire` lists the links that exist, and
-`ire_flo`, `trade_cost` and `export` exist only at its rows. The data of
+`ire_flo`, `trade_cost` and `export` name it under `in:`, so a data row at a
+link that does not exist is refused. The data of
 `ire_flo` has the four columns that the TIMES data already has, and no label
 is invented.
 
@@ -48,20 +49,20 @@ parameters:
   ire_flo:
     description: the share of an export that arrives as an import (IRE_FLO)
     dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    in: [top_ire]
   demand: { dims: [commodity, region], description: what a region needs of a commodity }
   supply_cost: { dims: [commodity, region], description: the cost of a unit produced in a region }
   trade_cost:
     description: the cost of a unit exported along a link
     dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    in: [top_ire]
 
 variables:
   supply: { dims: [commodity, region], bounds: { lower: 0 }, description: what a region produces of a commodity }
   export:
     description: what leaves along a link (VAR_IRE)
     dims: [from_region, from_commodity, region, commodity]
-    where: top_ire
+    in: [top_ire]
     bounds: { lower: 0 }
 
 constraints:
@@ -96,15 +97,15 @@ Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one re
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{demand}`$ | `demand` over $`\mathcal{C} \times \mathcal{R}`$ — what a region needs of a commodity |
-| $`\mathrm{ire\_flo}`$ | `ire_flo` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, only where $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the share of an export that arrives as an import (IRE\_FLO) |
+| $`\mathrm{ire\_flo}`$ | `ire_flo` over $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the share of an export that arrives as an import (IRE\_FLO) |
 | $`\mathrm{supply}^{\mathrm{cost}}`$ | `supply_cost` over $`\mathcal{C} \times \mathcal{R}`$ — the cost of a unit produced in a region |
-| $`\mathrm{trade\_cost}`$ | `trade_cost` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$, only where $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the cost of a unit exported along a link |
+| $`\mathrm{trade\_cost}`$ | `trade_cost` over $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — the cost of a unit exported along a link |
 
 #### Variables
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{export}`$ | `export` over $`\mathcal{C} \times \mathcal{C} \times \mathcal{R} \times \mathcal{R}`$ — what leaves along a link (VAR\_IRE) |
+| $`\mathit{export}`$ | `export` over $`\left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}`$ — what leaves along a link (VAR\_IRE) |
 | $`\mathit{supply}`$ | `supply` over $`\mathcal{C} \times \mathcal{R}`$ — what a region produces of a commodity |
 
 #### Variable domains
@@ -112,7 +113,7 @@ Trade between regions from TIMES: IRE\_FLO, the efficiency of a flow from one re
 **`export`**
 
 ```math
-\mathit{export}_{c,c',r',r} \ge 0 \qquad \forall\, c \in \mathcal{C},\ c' \in \mathcal{C},\ r' \in \mathcal{R},\ r \in \mathcal{R} \,:\, \left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}
+\mathit{export}_{c,c',r',r} \ge 0 \qquad \forall\, \left( c,\ c',\ r',\ r \right) \in \mathrm{top\_ire}
 ```
 
 **`supply`**

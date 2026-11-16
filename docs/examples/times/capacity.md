@@ -18,7 +18,8 @@ without storage, with the upper bound only.
 The GAMS conditions map to the spec as follows:
 
 - `RTP_VINTYR` and `PRC_TS` are [relations](../../reference/language/relations.md),
-  and `act` exists only at the coordinates that both list.
+  and `act` lists both under `in:`, so it exists only at the coordinates that
+  both list.
 - `TS_MAP(R,S,TS)` is the relation `ts_map`, which names `timeslice` twice
   under two column names.
 - `COEF_AF(…,'UP')` is the `where:` of `eq_capact_up`.
@@ -70,7 +71,7 @@ variables:
   act:
     description: activity of a vintage of a process in a timeslice (VAR_ACT)
     dims: [region, vintage, period, process, timeslice]
-    where: rtp_vintyr AND prc_ts
+    in: [prc_ts, rtp_vintyr]
     bounds: { lower: 0 }
 
 constraints:
@@ -121,7 +122,7 @@ Capacity transfer and capacity–activity from TIMES: EQ\_CPT and the upper form
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathit{act}`$ | `act` over $`\mathcal{T} \times \mathcal{P} \times \mathcal{R} \times \mathcal{S} \times \mathcal{V}`$ — activity of a vintage of a process in a timeslice (VAR\_ACT) |
+| $`\mathit{act}`$ | `act` over $`\left( p,\ r,\ s \right) \in \mathrm{prc\_ts},\ \left( t,\ p,\ r,\ v \right) \in \mathrm{rtp\_vintyr}`$ — activity of a vintage of a process in a timeslice (VAR\_ACT) |
 | $`\mathit{cap}`$ | `cap` over $`\mathcal{T} \times \mathcal{P} \times \mathcal{R}`$ — installed capacity (VAR\_CAP) |
 | $`\mathit{ncap}`$ | `ncap` over $`\mathcal{P} \times \mathcal{R} \times \mathcal{V}`$ — new capacity (VAR\_NCAP) |
 
@@ -130,7 +131,7 @@ Capacity transfer and capacity–activity from TIMES: EQ\_CPT and the upper form
 **`act`**
 
 ```math
-\mathit{act}_{t,p,r,s,v} \ge 0 \qquad \forall\, t \in \mathcal{T},\ p \in \mathcal{P},\ r \in \mathcal{R},\ s \in \mathcal{S},\ v \in \mathcal{V} \,:\, \left( t,\ p,\ r,\ v \right) \in \mathrm{rtp\_vintyr} \wedge \left( p,\ r,\ s \right) \in \mathrm{prc\_ts}
+\mathit{act}_{t,p,r,s,v} \ge 0 \qquad \forall\, \left( p,\ r,\ s \right) \in \mathrm{prc\_ts},\ \left( t,\ p,\ r,\ v \right) \in \mathrm{rtp\_vintyr}
 ```
 
 **`cap`**

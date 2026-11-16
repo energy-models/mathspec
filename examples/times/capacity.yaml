@@ -42,7 +42,7 @@ variables:
   act:
     description: activity of a vintage of a process in a timeslice (VAR_ACT)
     dims: [region, vintage, period, process, timeslice]
-    where: rtp_vintyr AND prc_ts
+    in: [prc_ts, rtp_vintyr]
     bounds: { lower: 0 }
 
 constraints:
