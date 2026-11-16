@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a dimension lists its members ([#1014](https://github.com/energy-models/mathspec/pull/1014))
 - feat(language): a bound reads a member's parameter ([#1013](https://github.com/energy-models/mathspec/pull/1013))
 - fix(language): cases read through one relation load ([#1012](https://github.com/energy-models/mathspec/pull/1012))
 - feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
