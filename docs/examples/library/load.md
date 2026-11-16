@@ -24,7 +24,7 @@ dimensions:
   port: { dtype: str, description: "the connections components make, one label per connection" }
   load: { dtype: str, description: "demands, each on one port" }
 maps:
-  load: { port: port }
+  load: { port: { dim: port } }
 parameters:
   Load_p_set: { dims: [snapshot, load], description: "`Load-p_set` — what a load takes in a snapshot" }
 constraints:

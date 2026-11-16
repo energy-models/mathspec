@@ -22,7 +22,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M340,211 H480 V229 A3,3 0 0 1 477,232 H343 A3,3 0 0 1 340,229 Z" fill="#56B4E9" fill-opacity="0.25"/>
   </g>
   <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-    <text x="16" y="22">maps: { snapshot: { <tspan font-weight="bold">season: season</tspan> } }</text>
+    <text x="16" y="22">maps: { snapshot: { <tspan font-weight="bold">season: { dim: season }</tspan> } }</text>
     <text x="16" y="42">shift(soc, along=snapshot, offset=1, edge='wrap', <tspan font-weight="bold">within=snapshot[season]</tspan>)</text>
   </g>
   <text x="16" y="62" font-weight="bold" fill="currentColor">soc</text>

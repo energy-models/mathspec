@@ -63,14 +63,14 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers_to: period
+      dim: period
   generator:
     carrier:
       description: the carrier a generator converts from
-      refers_to: carrier
+      dim: carrier
     bus:
       description: the bus a generator sits on
-      refers_to: bus
+      dim: bus
 
 parameters:
   Generator_p_nom:

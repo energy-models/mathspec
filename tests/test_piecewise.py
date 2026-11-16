@@ -901,7 +901,7 @@ WALKED = {
         'flow': {'dtype': 'str'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'flow': {'generator': 'generator'}},
+    'maps': {'flow': {'generator': {'dim': 'generator'}}},
     'parameters': {
         'load': {'dims': ['snapshot']},
         'bp_power': {'dims': ['flow', 'bp']},
@@ -983,7 +983,7 @@ def _walk(**written: object) -> dict[str, object]:
 
 def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
     """The `power` link walked through `generator_of`, a relation over *dims* that maps each row to a generator."""
-    return {'relations.generator_of': {'dims': dims}, 'maps.generator_of.generator': 'generator'} | _walk(
+    return {'relations.generator_of': {'dims': dims}, 'maps.generator_of.generator': {'dim': 'generator'}} | _walk(
         by='generator_of[generator]'
     )
 
@@ -1031,7 +1031,7 @@ def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
             id='a-walk-into-a-dim-the-block-has',
         ),
         pytest.param(
-            {'maps.bp.generator': 'generator'} | _walk(by='bp[generator]'),
+            {'maps.bp.generator': {'dim': 'generator'}} | _walk(by='bp[generator]'),
             r"link 'power': by: bp adds no dimension",
             id='a-walk-into-the-breakpoint-dim',
         ),
@@ -1070,7 +1070,7 @@ def test_a_walked_block_the_language_cannot_read_is_refused(patch, match):
 
 
 #: A map into the breakpoint dim that a walk can name.
-SLOT_OF = {'maps.flow.slot': 'bp'}
+SLOT_OF = {'maps.flow.slot': {'dim': 'bp'}}
 
 
 @pytest.mark.parametrize(
@@ -1260,7 +1260,7 @@ COMMITTED = {
         'snapshot': {'dtype': 'int'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'converter': {'status_entity': {'refers_to': 'status_entity', 'missing': 'absent'}}},
+    'maps': {'converter': {'status_entity': {'dim': 'status_entity', 'missing': 'absent'}}},
     'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
     'variables': {
         'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
@@ -1315,7 +1315,7 @@ dimensions:
   snapshot: {{dtype: int}}
   bp: {{dtype: int, ordered: true}}
 maps:
-  converter: {{status_entity: status_entity}}
+  converter: {{status_entity: {{ dim: status_entity }}}}
 parameters:
   bp_p: {{dims: [converter, bp]}}
   bp_fuel: {{dims: [converter, bp]}}
@@ -1491,7 +1491,7 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
 
 
 #: The map of the walk, which may give a flow no generator.
-PARTIAL = {'maps.flow.generator': {'refers_to': 'generator', 'missing': 'absent'}}
+PARTIAL = {'maps.flow.generator': {'dim': 'generator', 'missing': 'absent'}}
 
 
 @pytest.mark.parametrize(
@@ -1527,7 +1527,7 @@ INVESTED = {
     'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}
     | {'bp': {'dtype': 'int', 'ordered': True}},
     'relations': {'cost_of': {'dims': ['flow', 'effect']}},
-    'maps': {'cost_of': {'cost_curve': 'cost_curve'}},
+    'maps': {'cost_of': {'cost_curve': {'dim': 'cost_curve'}}},
     'parameters': {
         'has_cost_curve': {'dims': ['cost_curve'], 'dtype': 'bool'},
         'size_bp': {'dims': ['cost_curve', 'bp']},
@@ -1964,7 +1964,7 @@ PORTED = {
         'snapshot': {'dtype': 'int'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'link_output': {'link': 'link'}},
+    'maps': {'link_output': {'link': {'dim': 'link'}}},
     'parameters': {
         'bp_in': {'dims': ['link_output', 'bp']},
         'bp_out': {'dims': ['link_output', 'bp']},
@@ -1991,7 +1991,7 @@ FIRST = 'position(bp) == 0'
 #: A status per unit, which each generator reads through the unit it belongs to.
 UNITS = {
     'dimensions.unit': {'dtype': 'str'},
-    'maps.generator.unit': 'unit',
+    'maps.generator.unit': {'dim': 'unit'},
     'variables.status': {'dims': ['unit', 'snapshot'], 'domain': 'binary'},
     'piecewise.coupling.activity': 'at(status, by=generator[unit])',
 }
@@ -2016,7 +2016,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.generator.unit': {'refers_to': 'unit', 'missing': 'absent'}},
+            UNITS | {'maps.generator.unit': {'dim': 'unit', 'missing': 'absent'}},
             'coupling_power',
             f'({FIRST}) AND ({UNIT_STATUS})',
             f'bp_power * ({UNIT_STATUS})',
@@ -2024,7 +2024,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.flow.generator': {'refers_to': 'generator', 'missing': 'absent'}},
+            UNITS | {'maps.flow.generator': {'dim': 'generator', 'missing': 'absent'}},
             'coupling_power',
             f'(flow[generator]) AND ({FIRST})',
             f'bp_power * ({UNIT_STATUS})',
@@ -2044,7 +2044,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
                 **COMMITTABLE,
                 'piecewise.curve.method': 'incremental',
                 'dimensions.hour': {'dtype': 'int'},
-                'maps.hour.snapshot': 'snapshot',
+                'maps.hour.snapshot': {'dim': 'snapshot'},
                 'variables.heat': {'dims': ['converter', 'hour']},
                 'parameters.bp_heat': {'dims': ['converter', 'bp']},
                 'piecewise.curve.links.heat': {'expression': 'heat', 'values': 'bp_heat', 'by': 'hour[snapshot]'},

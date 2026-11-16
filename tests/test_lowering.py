@@ -96,7 +96,7 @@ SHAPES_MODEL = varied(
     SMALL_MODEL,
     **{
         'dimensions.z': {'dtype': 'str'},
-        'maps.g.z': 'z',
+        'maps.g.z': {'dim': 'z'},
         'parameters.lead': {'dims': [], 'dtype': 'int'},
     },
 )
@@ -688,7 +688,7 @@ def test_a_partition_keeps_its_group_when_the_subject_gains_a_map():
     next.
     """
     grouping = {}
-    for maps in ({'day': 'day'}, {'day': 'day', 'week': 'week'}):
+    for maps in ({'day': {'dim': 'day'}}, {'day': {'dim': 'day'}, 'week': {'dim': 'week'}}):
         program = to_spec(
             {
                 'dimensions': {'hour': {'dtype': 'int', 'ordered': True}, 'day': {}, 'week': {}},
@@ -721,7 +721,7 @@ def test_a_relation_lowers_with_the_join_each_call_names():
         {
             'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'generator': {'ordered': True}, 'zone': {}},
             'relations': {'zone_of': {'dims': ['generator', 'snapshot'], 'missing': 'absent'}},
-            'maps': {'zone_of': {'zone': 'zone'}},
+            'maps': {'zone_of': {'zone': {'dim': 'zone'}}},
             'parameters': {'price': {'dims': ['snapshot', 'zone']}},
             'variables': {
                 'p': {'dims': ['snapshot', 'generator'], 'in': ['zone_of'], 'where': "zone_of[zone] == 'A'"},
@@ -813,7 +813,7 @@ def test_a_condition_tests_a_row_or_a_label_by_how_it_is_written(variable, entry
     """A relation's bare name asks for a row, and `subject[map]` alone asks whether the map gives the row a label."""
     patch = {
         'relations.link': {'dims': ['g', 'h'], 'missing': 'absent'},
-        'maps.g.h': {'refers_to': 'h', 'missing': 'absent'},
+        'maps.g.h': {'dim': 'h', 'missing': 'absent'},
         **{f'variables.{variable}.{key}': value for key, value in entry.items()},
     }
     assert to_spec(varied(SMALL_MODEL, **patch)).program.variables[variable].where == Mask(atom)
@@ -898,7 +898,7 @@ def test_a_relation_is_declared_as_the_file_declares_it():
             TINY,
             dimensions={'g': {}, 'bus': {}, 'season': {}},
             relations={'link': {'dims': ['g', 'bus'], 'missing': 'absent'}},
-            maps={'g': {'season': 'season', 'bus': {'refers_to': 'bus', 'missing': 'absent'}}},
+            maps={'g': {'season': {'dim': 'season'}, 'bus': {'dim': 'bus', 'missing': 'absent'}}},
         )
     ).program
 

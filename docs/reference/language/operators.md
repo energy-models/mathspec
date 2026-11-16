@@ -64,8 +64,8 @@ dimensions:
   generator: { dtype: str }
   line: { dtype: str }
 maps:
-  generator: { bus: bus }
-  line: { bus0: bus, bus1: bus }
+  generator: { bus: { dim: bus } }
+  line: { bus0: { dim: bus }, bus1: { dim: bus } }
 parameters:
   load: { dims: [bus] }
   cost: { dims: [generator] }
@@ -128,7 +128,7 @@ dimensions:
   bus: { dtype: str }
   line: { dtype: str }
 maps:
-  line: { bus: bus }
+  line: { bus: { dim: bus } }
 parameters:
   cap: { dims: [line] }
 variables:
@@ -237,7 +237,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 maps:
-  snapshot: { season: season }
+  snapshot: { season: { dim: season } }
 parameters:
   inflow: { dims: [snapshot] }
 variables:
@@ -316,7 +316,7 @@ Constraint 'arrives_after_its_lead': shift(offset=lead) steps along 'month', and
 
 mathspec reads the offset over the dimensions of the shifted expression, and
 over the dimension that a [`within=`](#within) map groups into. At load, mathspec refuses an offset over any other dimension. With a dimension `period`, a map
-`month: { period: period }`, and `lead` declared over
+`month: { period: { dim: period } }`, and `lead` declared over
 `[period]`, the spec loads under `within=month[period]`, with one offset
 per period. Without the `within=` on the shift, mathspec refuses the file and
 prints:

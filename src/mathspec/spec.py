@@ -301,19 +301,18 @@ class RelationSpec(_StrictSpec):
 
 
 class MapSpec(_StrictSpec):
-    """A map: one label per row of its subject, a dimension or a relation, from the dimension that ``refers_to:`` names.
+    """A map: one label per row of its subject, a dimension or a relation, from the dimension that ``dim:`` names.
 
-    Written in YAML under its subject, as the dimension it refers to, or as a
-    mapping once it carries ``missing:`` or a ``description:``::
+    Written in YAML under its subject, with ``dim:`` always written::
 
         maps:
           unit:
-            carrier: {refers_to: carrier, missing: absent}
+            carrier: {dim: carrier, missing: absent}
           connection:
-            bus: bus
+            bus: {dim: bus}
           line:
-            bus0: bus
-            bus1: bus
+            bus0: {dim: bus}
+            bus1: {dim: bus}
 
     The map's name is a column of its subject's table, beside the subject's
     own columns. A call reads it as ``subject[map]``: ``sum(by=)`` totals
@@ -324,7 +323,7 @@ class MapSpec(_StrictSpec):
 
     _label: ClassVar[str] = 'a map entry'
 
-    refers_to: str
+    dim: str
     """The dimension whose label the map gives each row of its subject."""
     missing: RelationMissing = 'refused'
     """Whether every row of the subject has a label. Under ``refused``, a tool refuses data that leaves one out. Under
@@ -332,33 +331,11 @@ class MapSpec(_StrictSpec):
     """
     description: str | None = None
 
-    @model_validator(mode='before')
-    @classmethod
-    def _from_string(cls, data: object) -> object:
-        return {'refers_to': data} if isinstance(data, str) else data
-
     @field_validator('missing', mode='before')
     @classmethod
     def _refused_or_absent(cls, v: object) -> object:
         """A label is data, so no value fills a gap in a map."""
         return _refused_or_absent(v, 'a map', 'Write absent where a row may have no label, or leave it out.')
-
-    @classmethod
-    @override
-    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> dict[str, object]:
-        """The published schema admits the bare dimension name the one-line form is written as."""
-        return _also_written_as(core_schema, handler, {'type': 'string'})
-
-    @model_serializer
-    def _as_written(self) -> str | dict[str, object]:
-        if self.missing == 'refused' and self.description is None:
-            return self.refers_to
-        written: dict[str, object] = {'refers_to': self.refers_to}
-        if self.missing != 'refused':
-            written['missing'] = self.missing
-        if self.description is not None:
-            written['description'] = self.description
-        return written
 
 
 def _refused_or_absent(v: object, kind: str, rewrite: str) -> object:
@@ -1517,7 +1494,7 @@ def subject_tables(spec: Spec) -> dict[str, Relation]:
             key, missing, description = ((name, name),), cast('RelationMissing', 'refused'), None
         else:
             continue
-        values = tuple((role, m.refers_to) for role, m in maps.items())
+        values = tuple((role, m.dim) for role, m in maps.items())
         partial = tuple(role for role, m in maps.items() if m.missing == 'absent')
         tables[name] = Relation((*key, *values), tuple(r for r, _ in key), missing, description, partial)
     return tables

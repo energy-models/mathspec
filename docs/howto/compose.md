@@ -62,7 +62,7 @@ names, so that one file states several components. You need mathspec
       bus: { dtype: str }
       generator: { dtype: str }
     maps:
-      generator: { bus: bus }
+      generator: { bus: { dim: bus } }
     parameters:
       Generator_p_nom: { dims: [generator] }
       Generator_marginal_cost: { dims: [generator] }
@@ -86,7 +86,7 @@ names, so that one file states several components. You need mathspec
       bus: { dtype: str }
       load: { dtype: str }
     maps:
-      load: { bus: bus }
+      load: { bus: { dim: bus } }
     parameters:
       Load_p_set: { dims: [snapshot, load] }
     expressions:
@@ -159,7 +159,7 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
       bus: { dtype: str }
       store: { dtype: str }
     maps:
-      store: { bus: bus }
+      store: { bus: { dim: bus } }
     parameters:
       Store_e_nom: { dims: [store] }
     variables:
@@ -215,7 +215,7 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
       bus: { dtype: str }
       unit: { dtype: str }
     maps:
-      unit: { bus: bus }
+      unit: { bus: { dim: bus } }
     parameters:
       Unit_p_nom: { dims: [unit] }
       Unit_marginal_cost: { dims: [unit] }

@@ -18,7 +18,7 @@ dimensions:
   port: { dtype: str, description: "the connections components make, one label per connection" }
   generator: { dtype: str, description: "generating units, each on one port" }
 maps:
-  generator: { port: port }
+  generator: { port: { dim: port } }
 parameters:
   Generator_p_nom: { dims: [generator], description: nominal power }
   Generator_marginal_cost: { dims: [generator], description: cost of one unit of output }

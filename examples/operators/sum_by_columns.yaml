@@ -17,7 +17,7 @@ relations:
   zone_of: { dims: [generator, period] }
 
 maps:
-  zone_of: { zone: zone }
+  zone_of: { zone: { dim: zone } }
 
 parameters:
   demand: { dims: [zone, period] }

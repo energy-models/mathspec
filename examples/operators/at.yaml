@@ -11,7 +11,7 @@ dimensions:
   period: { dtype: int }
 
 maps:
-  snapshot: { period: period }
+  snapshot: { period: { dim: period } }
 
 parameters:
   cap: { dims: [period] }

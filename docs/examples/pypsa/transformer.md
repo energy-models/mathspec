@@ -50,14 +50,14 @@ maps:
   snapshot:
     period:
       description: the investment period a snapshot falls in
-      refers_to: period
+      dim: period
   transformer:
     bus0:
       description: the bus a transformer's flow is measured at
-      refers_to: bus
+      dim: bus
     bus1:
       description: the bus at a transformer's other end
-      refers_to: bus
+      dim: bus
 
 parameters:
   Transformer_active:

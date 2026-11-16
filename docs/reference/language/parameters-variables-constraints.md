@@ -143,7 +143,7 @@ dimensions:
   port: { dtype: str }
   generator: { dtype: str }
 maps:
-  generator: { port: port }
+  generator: { port: { dim: port } }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 constraints:
@@ -389,7 +389,7 @@ dimensions:
     dtype: str
 maps:
   entity:
-    component: component
+    component: { dim: component }
 parameters:
   sign:
     dims: [entity]
@@ -464,7 +464,7 @@ dimensions:
 relations:
   connection: { dims: [entity, bus], missing: absent }
 maps:
-  connection: { role: role }
+  connection: { role: { dim: role } }
 parameters:
   efficiency:
     dims: [entity, bus, snapshot]
@@ -600,7 +600,7 @@ dimensions:
 relations:
   connection: { dims: [unit, port], missing: absent }
 maps:
-  connection: { bus: bus, role: role }
+  connection: { bus: { dim: bus }, role: { dim: role } }
 parameters:
   efficiency:
     dims: [unit, port, snapshot]

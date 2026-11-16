@@ -128,7 +128,7 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
         name: f"a map of '{subject}'"
         for subject, maps in spec.maps.items()
         for name, entry in maps.items()
-        if name != entry.refers_to
+        if name != entry.dim
     }
     for old, new in changed.items():
         for macro, entry in spec.macros.items():

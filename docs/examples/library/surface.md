@@ -31,7 +31,7 @@ dimensions:
   bus: { dtype: str, description: network nodes }
   port: { dtype: str, description: "the connections components make, one label per connection" }
 maps:
-  port: { bus: bus }
+  port: { bus: { dim: bus } }
 variables:
   Port_p:
     dims: [snapshot, port]

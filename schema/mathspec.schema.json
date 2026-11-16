@@ -601,47 +601,40 @@
       "type": "object"
     },
     "MapSpec": {
-      "anyOf": [
-        {
-          "additionalProperties": false,
-          "description": "A map: one label per row of its subject, a dimension or a relation, from the dimension that ``refers_to:`` names.\n\nWritten in YAML under its subject, as the dimension it refers to, or as a\nmapping once it carries ``missing:`` or a ``description:``::\n\n    maps:\n      unit:\n        carrier: {refers_to: carrier, missing: absent}\n      connection:\n        bus: bus\n      line:\n        bus0: bus\n        bus1: bus\n\nThe map's name is a column of its subject's table, beside the subject's\nown columns. A call reads it as ``subject[map]``: ``sum(by=)`` totals\nalong it, ``at(by=)`` reads through it, ``within=`` works in each group\nof rows it sends to one label, and a condition compares it or tests that\na row has a label.",
-          "properties": {
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "default": null,
-              "title": "Description"
-            },
-            "missing": {
-              "default": "refused",
-              "enum": [
-                "refused",
-                "absent"
-              ],
-              "title": "Missing",
+      "additionalProperties": false,
+      "description": "A map: one label per row of its subject, a dimension or a relation, from the dimension that ``dim:`` names.\n\nWritten in YAML under its subject, with ``dim:`` always written::\n\n    maps:\n      unit:\n        carrier: {dim: carrier, missing: absent}\n      connection:\n        bus: {dim: bus}\n      line:\n        bus0: {dim: bus}\n        bus1: {dim: bus}\n\nThe map's name is a column of its subject's table, beside the subject's\nown columns. A call reads it as ``subject[map]``: ``sum(by=)`` totals\nalong it, ``at(by=)`` reads through it, ``within=`` works in each group\nof rows it sends to one label, and a condition compares it or tests that\na row has a label.",
+      "properties": {
+        "description": {
+          "anyOf": [
+            {
               "type": "string"
             },
-            "refers_to": {
-              "title": "Refers To",
-              "type": "string"
+            {
+              "type": "null"
             }
-          },
-          "required": [
-            "refers_to"
           ],
-          "title": "MapSpec",
-          "type": "object"
+          "default": null,
+          "title": "Description"
         },
-        {
+        "dim": {
+          "title": "Dim",
+          "type": "string"
+        },
+        "missing": {
+          "default": "refused",
+          "enum": [
+            "refused",
+            "absent"
+          ],
+          "title": "Missing",
           "type": "string"
         }
-      ]
+      },
+      "required": [
+        "dim"
+      ],
+      "title": "MapSpec",
+      "type": "object"
     },
     "MissingBySpec": {
       "additionalProperties": false,

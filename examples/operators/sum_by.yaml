@@ -13,7 +13,7 @@ dimensions:
   bus: { dtype: str }
 
 maps:
-  generator: { bus: bus }
+  generator: { bus: { dim: bus } }
 
 parameters:
   limit: { dims: [snapshot, bus] }

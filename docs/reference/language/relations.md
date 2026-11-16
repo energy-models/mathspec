@@ -69,7 +69,7 @@ $`\mathrm{connection} \subseteq \mathcal{B} \times \mathcal{G}`$.
 
 Each key under `maps:` names a **subject**, which is a dimension or a relation.
 Each key under the subject declares one map, which gives every row of the
-subject one label of the dimension that `refers_to:` names.
+subject one label of the dimension that `dim:` names.
 
 ```yaml
 dimensions:
@@ -78,20 +78,18 @@ dimensions:
   line: { dtype: str }
 maps:
   generator:
-    bus: bus # each generator is on one bus
+    bus: { dim: bus } # each generator is on one bus
   line:
-    bus0: bus
-    bus1: { refers_to: bus, missing: absent } # a line may have an open end
+    bus0: { dim: bus }
+    bus1: { dim: bus, missing: absent } # a line may have an open end
 ```
 
-`bus: bus` is the short form of `bus: { refers_to: bus }`, and mathspec writes a
-map back in the short form when `refers_to:` is its only key. A condition or an
-operator reads a map as `subject[map]`, so `generator[bus]` is the bus of a
-generator.
+A map always writes `dim:`, and has no shorter form. A condition or an operator
+reads a map as `subject[map]`, so `generator[bus]` is the bus of a generator.
 
 | Key           | What it sets                                                                      | Default   |
 | ------------- | --------------------------------------------------------------------------------- | --------- |
-| `refers_to`   | required. The dimension whose labels the map gives                                |           |
+| `dim`         | required. The dimension whose labels the map gives                                |           |
 | `missing`     | [`refused` or `absent`](#missing): whether every row of the subject needs a label | `refused` |
 | `description` | free text                                                                         | `null`    |
 
@@ -101,11 +99,11 @@ typesetter prints a map as a function from its subject into that dimension, so
 mathspec refuses a map at load in four cases:
 
 - The subject is neither a dimension nor a relation.
-- `refers_to:` names a relation, or names no dimension.
+- `dim:` names a relation, or names no dimension.
 - The map is named after a dimension that it does not refer to.
 - The map has the name of a column of its subject.
 
-With `generator: { period: zone }`, mathspec prints:
+With `generator: { period: { dim: zone } }`, mathspec prints:
 
 ```text
 maps: 'generator': map 'period' is named after dimension 'period', but refers to 'zone'. Rename the map after what it holds.
@@ -119,15 +117,15 @@ gives one label per combination of the dimensions of its subject.
 How many labels a row may have (the cardinality) decides whether a fact is a
 map or a relation:
 
-| What the file states                         | Written                                                                                         | Cardinality                 |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------- |
-| each generator has one bus                   | `maps: { generator: { bus: bus } }`                                                             | many-to-one                 |
-| a generator may connect to several buses     | `relations: { connection: { dims: [generator, bus], missing: absent } }`                        | many-to-many                |
-| a generator has one zone in each period      | `relations: { zone_of: { dims: [generator, period] } }` and `maps: { zone_of: { zone: zone } }` | many-to-one, from a pair    |
-| a snapshot has a month, a week and a weekday | `maps: { snapshot: { month: month, week: week, weekday: weekday } }`                            | three maps of one subject   |
-| a line has two ends, both buses              | `maps: { line: { bus0: bus, bus1: bus } }`                                                      | two maps into one dimension |
-| a snapshot has a representative snapshot     | `maps: { snapshot: { rep: snapshot } }`                                                         | many-to-one, onto itself    |
-| a snapshot has neighbours                    | `relations: { neighbour: { dims: { from: snapshot, to: snapshot }, missing: absent } }`         | many-to-many, onto itself   |
+| What the file states                         | Written                                                                                                  | Cardinality                 |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------- |
+| each generator has one bus                   | `maps: { generator: { bus: { dim: bus } } }`                                                             | many-to-one                 |
+| a generator may connect to several buses     | `relations: { connection: { dims: [generator, bus], missing: absent } }`                                 | many-to-many                |
+| a generator has one zone in each period      | `relations: { zone_of: { dims: [generator, period] } }` and `maps: { zone_of: { zone: { dim: zone } } }` | many-to-one, from a pair    |
+| a snapshot has a month, a week and a weekday | `maps: { snapshot: { month: { dim: month }, week: { dim: week }, weekday: { dim: weekday } } }`          | three maps of one subject   |
+| a line has two ends, both buses              | `maps: { line: { bus0: { dim: bus }, bus1: { dim: bus } } }`                                             | two maps into one dimension |
+| a snapshot has a representative snapshot     | `maps: { snapshot: { rep: { dim: snapshot } } }`                                                         | many-to-one, onto itself    |
+| a snapshot has neighbours                    | `relations: { neighbour: { dims: { from: snapshot, to: snapshot }, missing: absent } }`                  | many-to-many, onto itself   |
 
 ## `missing`
 
@@ -144,10 +142,10 @@ relations:
   connection: { dims: [generator, bus], missing: absent } # most pairs are not wired
 maps:
   generator:
-    bus: bus # refused: every generator is on a bus
+    bus: { dim: bus } # refused: every generator is on a bus
   line:
-    bus0: bus
-    bus1: { refers_to: bus, missing: absent } # an open end is meant
+    bus0: { dim: bus }
+    bus1: { dim: bus, missing: absent } # an open end is meant
 ```
 
 <figure class="diagram">

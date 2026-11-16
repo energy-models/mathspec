@@ -223,7 +223,7 @@ def _kwarg_model(expression: str, dims: list[str] | None = None) -> dict[str, An
             'bus': {'dtype': 'str'},
             'generator': {'dtype': 'str'},
         },
-        'maps': {'generator': {'zone': 'bus'}},
+        'maps': {'generator': {'zone': {'dim': 'bus'}}},
         'parameters': {'load': {'dims': ['snapshot']}},
         'variables': {'p': {'dims': ['snapshot', 'generator']}},
         'constraints': {'c': {'dims': ['snapshot'] if dims is None else dims, 'expression': expression}},
@@ -445,7 +445,7 @@ class TestDimensionKwargs:
                 id='named-condition',
             ),
             pytest.param(
-                {'maps.g.h2': 'h', 'variables.p.where': 'g[h] < g[h2]'},
+                {'maps.g.h2': {'dim': 'h'}, 'variables.p.where': 'g[h] < g[h2]'},
                 [
                     "compares two columns over 'h', of dtype 'str', on which < is not defined",
                     'Compare them with == or !=, or precompute the comparison as a boolean parameter.',
@@ -739,7 +739,7 @@ class TestVersion:
 POSITION_SPEC = to_spec(
     {
         'dimensions': {'snapshot': {'dtype': 'int', 'ordered': True}, 'period': {'dtype': 'int'}},
-        'maps': {'snapshot': {'period': 'period'}, 'period': {'start': 'snapshot'}},
+        'maps': {'snapshot': {'period': {'dim': 'period'}}, 'period': {'start': {'dim': 'snapshot'}}},
         'parameters': {'load': {'dims': ['snapshot']}},
         'variables': {'p': {'dims': ['snapshot']}},
     }
@@ -1055,7 +1055,10 @@ class TestAConditionIsAnOperand:
             {
                 'dimensions': {name: {'dtype': 'str'} for name in ('curve', 'effect', 'flow')},
                 'relations': {'cost_of': {'dims': ['flow', 'effect']}},
-                'maps': {'cost_of': {'curve': 'curve'}, 'curve': {'flow': 'flow', 'effect': 'effect'}},
+                'maps': {
+                    'cost_of': {'curve': {'dim': 'curve'}},
+                    'curve': {'flow': {'dim': 'flow'}, 'effect': {'dim': 'effect'}},
+                },
                 'parameters': {
                     'has_curve': {'dims': ['curve'], 'dtype': 'bool'},
                     'has_cost': {'dims': ['flow', 'effect'], 'dtype': 'bool'},
@@ -1252,7 +1255,7 @@ class TestAConditionIsAnOperand:
         Before, the refusal said that two relations have no order, which is false for two int columns.
         """
         message = _refusal(
-            **{'dimensions.h': {'dtype': 'int'}, 'maps.g.h2': 'h'},
+            **{'dimensions.h': {'dtype': 'int'}, 'maps.g.h2': {'dim': 'h'}},
             expressions={
                 'pick': {
                     'dims': ['g'],
@@ -1281,7 +1284,7 @@ class TestAConditionIsAnOperand:
         Before, both maps were read as one value, and two cases that a row can satisfy together loaded.
         """
         message = _refusal(
-            **{'dimensions.n': {'dtype': 'int'}, 'maps.g': {'a': 'n', 'b': 'n'}},
+            **{'dimensions.n': {'dtype': 'int'}, 'maps.g': {'a': {'dim': 'n'}, 'b': {'dim': 'n'}}},
             expressions={
                 'pick': {
                     'dims': ['g'],
@@ -1465,43 +1468,48 @@ class TestRulesDecidedWithoutData:
                 id='relation-with-no-columns',
             ),
             pytest.param(
-                {'maps.nope': {'h': 'h'}},
+                {'maps.nope': {'h': {'dim': 'h'}}},
                 ("maps: 'nope' is neither a dimension nor a relation", 'Subjects: g, h.'),
                 id='map-of-no-subject',
             ),
             pytest.param(
-                {'maps.g': {'two words': 'h'}},
+                {'maps.g': {'two words': {'dim': 'h'}}},
                 ("maps: 'g': 'two words' is not a name",),
                 id='map-whose-name-is-not-a-name',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'g': 'g'}},
+                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'g': {'dim': 'g'}}},
                 ("maps: 'link': map 'g' has the name of a column of 'link'", 'Rename the map after what it holds'),
                 id='map-named-after-a-column-of-its-subject',
             ),
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.g': {'x': 'link'}},
+                {'relations.link': {'dims': ['g', 'h']}, 'maps.g': {'x': {'dim': 'link'}}},
                 ("maps: 'g': map 'x' refers to the relation 'link', and a map gives a label of one dimension",),
                 id='map-referring-to-a-relation',
             ),
             pytest.param(
-                {'maps.g': {'x': 'z'}},
+                {'maps.g': {'x': {'dim': 'z'}}},
                 ("maps: 'g': map 'x' refers to undeclared dimension 'z'",),
                 id='map-referring-to-an-undeclared-dimension',
             ),
             pytest.param(
-                {'maps.g': {'h': 'g'}},
+                {'maps.g': {'h': {'dim': 'g'}}},
                 ("maps: 'g': map 'h' is named after dimension 'h', but refers to 'g'",),
                 id='map-named-after-another-dimension',
             ),
             pytest.param(
-                {'relations.pair': {'dims': {'g0': 'g', 'g1': 'g'}}, 'maps.pair': {'x': 'h'}},
+                {'relations.pair': {'dims': {'g0': 'g', 'g1': 'g'}}, 'maps.pair': {'x': {'dim': 'h'}}},
                 ("maps: 'pair' is a relation with two columns over 'g'", 'Declare the maps on a relation over each'),
                 id='map-on-a-relation-with-two-columns-over-one-dimension',
             ),
             pytest.param(
-                {'maps.g.h': {'refers_to': 'h', 'value': 'x'}},
-                ("unknown key 'value' in a map entry. Valid keys: description, missing, refers_to.",),
+                {'maps.g.h': 'h'},
+                ('maps.g.h: Input should be a valid dictionary',),
+                id='map-written-as-a-bare-dimension-name',
+            ),
+            pytest.param(
+                {'maps.g.h': {'dim': 'h', 'value': 'x'}},
+                ("unknown key 'value' in a map entry. Valid keys: description, dim, missing.",),
                 id='map-with-an-unknown-key',
             ),
             pytest.param(
@@ -1538,7 +1546,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'maps.g.z': 'z',
+                    'maps.g.z': {'dim': 'z'},
                     'objective': {'expression': 'sum(sum(p, over=g[z], by=g[h]))'},
                 },
                 ('sum(over=g[z]) names maps of a subject, and over= takes bare names. Write over=z',),
@@ -1557,7 +1565,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'maps.g.z': 'z',
+                    'maps.g.z': {'dim': 'z'},
                     'objective': {'expression': 'sum(sum(p, over=g, by=g[h, h]))'},
                 },
                 ('sum(by=g[h, h]) names a column twice',),
@@ -1565,7 +1573,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'maps.g': {'h0': 'h', 'h1': 'h'},
+                    'maps.g': {'h0': {'dim': 'h'}, 'h1': {'dim': 'h'}},
                     'objective': {'expression': 'sum(sum(p, over=[h0, h1], by=g[g]))'},
                 },
                 ("['h0', 'h1'] are columns over one dimension, ['h'], and the operand carries each dimension once",),
@@ -1582,7 +1590,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'dimensions.z': {},
-                    'maps.g.z': 'z',
+                    'maps.g.z': {'dim': 'z'},
                     'objective': {'expression': 'sum(shift(p, along=g, offset=1, edge=0, within=g[g]))'},
                 },
                 ("within= names ['g'], a column of 'g' itself. Name one of its maps, ['h', 'z']",),
@@ -1793,7 +1801,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {
-                    'maps.h': {'z': 'z'},
+                    'maps.h': {'z': {'dim': 'z'}},
                     'dimensions.z': {},
                     'objective': {'expression': 'sum(sum(p, over=g, by=[g, h]))'},
                 },
@@ -1818,7 +1826,7 @@ class TestRulesDecidedWithoutData:
                 {
                     'dimensions.z': {},
                     'relations.gz': {'dims': ['g', 'z']},
-                    'maps.gz': {'h': 'h'},
+                    'maps.gz': {'h': {'dim': 'h'}},
                     'variables.q.where': 'g[h] != gz[h]',
                 },
                 ("compares maps of subjects over different dimensions ('g' over ['g'], 'gz' over ['g', 'z'])",),
@@ -1914,7 +1922,7 @@ class TestRulesDecidedWithoutData:
             pytest.param(
                 {
                     'relations.link': {'dims': ['g', 'h']},
-                    'maps.link': {'y': 'h', 'z': 'h'},
+                    'maps.link': {'y': {'dim': 'h'}, 'z': {'dim': 'h'}},
                     'variables.q.where': "link == 'x'",
                 },
                 ("'link' compares the relation 'link' itself, and a comparison reads a label", 'link[y]'),
@@ -1926,7 +1934,7 @@ class TestRulesDecidedWithoutData:
                 id='where-a-map-the-subject-lacks',
             ),
             pytest.param(
-                {'dimensions.z': {}, 'maps.g.z': 'z', 'variables.p.where': 'g[h] == g[z]'},
+                {'dimensions.z': {}, 'maps.g.z': {'dim': 'z'}, 'variables.p.where': 'g[h] == g[z]'},
                 (
                     "compares 'g[h]' (a column over 'h') with 'g[z]' (a column over 'z')",
                     'Compare two columns over the same dimension',
@@ -1978,7 +1986,7 @@ class TestRulesDecidedWithoutData:
         ('patch', 'where'),
         [
             pytest.param(
-                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'y': 'h', 'z': 'h'}},
+                {'relations.link': {'dims': ['g', 'h']}, 'maps.link': {'y': {'dim': 'h'}, 'z': {'dim': 'h'}}},
                 "link == 'x'",
                 id='a-relation-with-two-maps-read-bare',
             ),
@@ -2110,11 +2118,11 @@ def test_a_where_that_tests_the_rows_of_a_relation_is_refused(patch: dict[str, A
         pytest.param({'variables.p': {'dims': ['g', 'h'], 'in': ['pair']}}, id='the-rows-under-in'),
         pytest.param({'variables.p.where': 'flag'}, id='a-test-of-a-value'),
         pytest.param(
-            {'maps.g.zone': {'refers_to': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
+            {'maps.g.zone': {'dim': 'h', 'missing': 'absent'}, 'variables.p.where': 'g[zone]'},
             id='a-label-of-a-map-of-a-dimension',
         ),
         pytest.param(
-            {'maps.pair.zone': {'refers_to': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
+            {'maps.pair.zone': {'dim': 'h', 'missing': 'absent'}, 'variables.p.where': 'pair[zone]'},
             id='a-label-of-a-map-of-the-relation',
         ),
         pytest.param(
@@ -2467,7 +2475,7 @@ def _cased(cases: dict[str, Any] | None = None, **entry: Any) -> dict[str, Any]:
 _PROBED = {
     **DISPATCH_MODEL,
     'relations': {'pair': {'dims': {'from_gen': 'generator', 'to_gen': 'generator'}}},
-    'maps': {'generator': {'peer': 'generator'}},
+    'maps': {'generator': {'peer': {'dim': 'generator'}}},
     'expressions': {
         'price': {
             'dims': ['generator'],
@@ -3087,7 +3095,7 @@ def test_a_bare_parameter_refused_at_every_label_is_refused(dtype: str):
 #: A parameter over the pairs of `g` and `h` that a relation lists, with a fill.
 _MASKED = {
     'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
-    'maps.pair.kind': {'refers_to': 'h', 'missing': 'absent'},
+    'maps.pair.kind': {'dim': 'h', 'missing': 'absent'},
     'parameters.w': {'dims': ['g', 'h'], 'where': 'pair[kind]', 'missing': 1},
 }
 
@@ -3138,7 +3146,7 @@ def _in(kind: str, *relations: str, **entry: Any) -> dict[str, Any]:
         ),
         pytest.param({**_LINK, 'w.in': ['pair', 'link']}, {'w': ('link', 'pair')}, id='two-relations-sorted-by-name'),
         pytest.param(
-            {'maps.pair': {'to': 'g'}},
+            {'maps.pair': {'to': {'dim': 'g'}}},
             {'w': ('pair',)},
             id='a-relation-with-a-map-over-one-of-its-dimensions',
         ),
@@ -3300,7 +3308,7 @@ def test_a_parameter_mask_that_nothing_can_evaluate_is_refused(patch, fragment):
             id='a-map-of-a-dimension-in-place-of-a-relation',
         ),
         pytest.param(
-            {'in': ['pair[x]'], 'maps.pair': {'x': 'h'}},
+            {'in': ['pair[x]'], 'maps.pair': {'x': {'dim': 'h'}}},
             "{entry} 'w': in: names 'pair[x]', a map of 'pair', and an index set is a relation. To keep the rows "
             'the map gives a label, write where: pair[x].',
             id='a-map-of-a-relation-in-place-of-the-relation',
@@ -3399,7 +3407,7 @@ def test_a_parameter_reads_a_missing_row_by_one_of_several_maps():
     spec = _spec(
         **{
             'dimensions.technology': {'dtype': 'str', 'one_of': ['solar', 'wind']},
-            'maps.g.technology': 'technology',
+            'maps.g.technology': {'dim': 'technology'},
             'parameters.c.missing': {'by': 'g[technology]', 'fill': {'wind': 0}},
         }
     )
@@ -3410,7 +3418,7 @@ def test_a_parameter_reads_a_missing_row_by_one_of_several_maps():
 #: `c` over the rows of `pair`, which gives each row a label of `h` through its map `zone`.
 _C_IN_PAIR = {
     'relations.pair': {'dims': ['g', 'h'], 'missing': 'absent'},
-    'maps.pair': {'zone': 'h'},
+    'maps.pair': {'zone': {'dim': 'h'}},
     'parameters.c.dims': ['g', 'h'],
     'parameters.c.in': ['pair'],
 }
@@ -3520,7 +3528,7 @@ def test_a_values_table_refused_at_some_label_under_a_ragged_where_is_refused():
     """`otherwise:` left out reads `refused`, which a ragged `where:` contradicts at that label as a plain `refused` does."""
     patch = {
         'dimensions.kind': {},
-        'maps.bp': {'kind': 'kind'},
+        'maps.bp': {'kind': {'dim': 'kind'}},
         'parameters.x_bp.missing': {'by': 'bp[kind]', 'fill': {'end': 0}},
     }
     assert "parameter 'x_bp' is refused where a row is missing" in _refusal(read_yaml(CURVE_UNDER_WHERE), **patch)
@@ -3570,9 +3578,9 @@ def test_a_relation_says_whether_every_combination_needs_a_row(declared, read):
 @pytest.mark.parametrize(
     ('declared', 'partial'),
     [
-        pytest.param('h', (), id='left-out-is-refused'),
-        pytest.param({'refers_to': 'h', 'missing': 'refused'}, (), id='refused'),
-        pytest.param({'refers_to': 'h', 'missing': 'absent'}, ('h',), id='absent'),
+        pytest.param({'dim': 'h'}, (), id='left-out-is-refused'),
+        pytest.param({'dim': 'h', 'missing': 'refused'}, (), id='refused'),
+        pytest.param({'dim': 'h', 'missing': 'absent'}, ('h',), id='absent'),
     ],
 )
 def test_a_map_says_whether_every_row_needs_a_label(declared, partial):
@@ -3606,13 +3614,13 @@ def test_a_map_says_whether_every_row_needs_a_label(declared, partial):
             id='null-on-a-relation',
         ),
         pytest.param(
-            {'maps.g.h': {'refers_to': 'h', 'missing': 0}},
+            {'maps.g.h': {'dim': 'h', 'missing': 0}},
             'maps.g.h.missing: missing: 0 on a map, which takes refused or absent',
             id='a-number-on-a-map',
         ),
-        pytest.param({'maps.g.h': {'refers_to': 'h', 'missing': 'h1'}}, 'missing: h1 on a map', id='a-label-on-a-map'),
+        pytest.param({'maps.g.h': {'dim': 'h', 'missing': 'h1'}}, 'missing: h1 on a map', id='a-label-on-a-map'),
         pytest.param(
-            {'maps.g.h': {'refers_to': 'h', 'missing': None}},
+            {'maps.g.h': {'dim': 'h', 'missing': None}},
             'missing: null on a map says nothing',
             id='null-on-a-map',
         ),

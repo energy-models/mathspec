@@ -11,7 +11,7 @@ dimensions:
   day: { dtype: str }
 
 maps:
-  hour: { day: day }
+  hour: { day: { dim: day } }
 
 variables:
   started:

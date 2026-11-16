@@ -494,7 +494,7 @@ dimensions:
   converter: { dtype: str }
   flow: { dtype: str }
 maps:
-  flow: { converter: converter }
+  flow: { converter: { dim: converter } }
 parameters:
   has_curve: { dims: [converter], dtype: bool }
   cap: { dims: [flow] }
@@ -696,7 +696,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   period: { dtype: int }
 maps:
-  snapshot: { period: period }
+  snapshot: { period: { dim: period } }
 parameters:
   soc_initial: { dims: [period] }
 variables:

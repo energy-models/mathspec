@@ -408,7 +408,7 @@ dimensions:
   flow: { dtype: str }
   bp: { dtype: int, ordered: true }
 maps:
-  flow: { converter: converter }
+  flow: { converter: { dim: converter } }
 parameters:
   bp_rate: { dims: [flow, bp] }
   price: { dims: [flow] }
@@ -798,7 +798,7 @@ dimensions:
   bp: { dtype: int, ordered: true }
 maps:
   generator:
-    unit: { refers_to: unit, missing: absent }
+    unit: { dim: unit, missing: absent }
 parameters:
   power_bp: { dims: [generator, bp] }
   fuel_bp: { dims: [generator, bp] }

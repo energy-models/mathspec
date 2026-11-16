@@ -36,7 +36,7 @@ STORAGE: dict[str, Any] = {
         'storage': {'ordered': True},
         'period': {'dtype': 'int'},
     },
-    'maps': {'snapshot': {'period': 'period'}},
+    'maps': {'snapshot': {'period': {'dim': 'period'}}},
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
@@ -53,13 +53,13 @@ STORAGE: dict[str, Any] = {
 #: A line has one label in each map, or none, and each comparison on `line[...]` reads that one row.
 NETWORK: dict[str, Any] = {
     'dimensions': {'line': {}, 'bus': {}},
-    'maps': {'line': {'bus0': 'bus', 'bus1': 'bus'}},
+    'maps': {'line': {'bus0': {'dim': 'bus'}, 'bus1': {'dim': 'bus'}}},
     'variables': {'flow': {'dims': ['line']}},
     'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
 }
 
 #: The same network with a third end, so two pairs of columns can share one.
-THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'maps.line.bus2': 'bus'})
+THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'maps.line.bus2': {'dim': 'bus'}})
 
 
 @pytest.fixture(scope='module')
@@ -426,7 +426,7 @@ class TestAMapWithNoLabel:
         The prover then asserted that a label or a date reached a magnitude,
         and the file did not load.
         """
-        spec = to_spec(varied(STORAGE, **{'dimensions.season': {}, 'maps.snapshot.season': 'season'}))
+        spec = to_spec(varied(STORAGE, **{'dimensions.season': {}, 'maps.snapshot.season': {'dim': 'season'}}))
         cases = {'winter': "snapshot[season] == 'winter'", 'rest': "snapshot[season] != 'winter'"}
         assert refusals(spec, cases) == [], 'a label is equal to winter or not, whatever dtype the subject has'
 

@@ -25,7 +25,7 @@ SPDX-License-Identifier: CC-BY-4.0
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
       <text x="16" y="28">maps:</text>
-      <text x="31" y="46">generator: { bus: bus }</text>
+      <text x="31" y="46">generator: { bus: { dim: bus } }</text>
       <text x="16" y="64">variables:</text>
       <text x="31" y="82">p: { dims: [generator] }</text>
       <text x="16" y="106" font-weight="bold">sum(p, over=generator, by=generator[bus])</text>
