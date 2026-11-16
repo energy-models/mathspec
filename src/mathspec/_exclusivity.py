@@ -324,8 +324,6 @@ def _rows_read(node: TypedCondition) -> tuple[str, ...]:
     match node:
         case RelationComparison(name=name):
             return (name,)
-        case JoinedCondition(columns=columns):
-            return (columns.name,)
         case RelationPairComparison(name=name, other=other):
             return (name, other)
         case _:
@@ -575,7 +573,7 @@ def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid, via: Via
     value = _read(node, cell[subject], grid)
     match node:
         case JoinedCondition(operand=operand, columns=columns):
-            return _evaluate(operand.root, cell, grid, (*via, Hop.of(columns)))
+            return value is not Special.NULL and _evaluate(operand.root, cell, grid, (*via, Hop.of(columns)))
         case ParameterDefined() | RelationDefined():
             if isinstance(value, bool):
                 return value
