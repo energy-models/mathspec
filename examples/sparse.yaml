@@ -11,12 +11,9 @@ dimensions:
   port: { description: an output of a unit }
   bus: { description: a node of the network }
   period: { dtype: int, ordered: true, description: a step of the horizon }
+  connection: { over: [unit, port], description: the ports a unit has }
 
 relations:
-  connection:
-    description: the ports a unit has
-    dims: [unit, port]
-    missing: absent
   active:
     description: the periods a unit runs in
     dims: [unit, period]
@@ -27,24 +24,24 @@ maps:
     bus: { dim: bus, description: the bus a port feeds }
 
 parameters:
-  efficiency: { dims: [unit, port, period], where: connection, missing: 1, description: share of the output a port delivers }
+  efficiency: { dims: [connection, period], missing: 1, description: share of the output a port delivers }
   capacity: { dims: [unit], description: the most a unit produces in a period }
   ramp: { dims: [unit], description: the most a unit's output rises from one period to the next }
   load: { dims: [bus, period], description: demand to be met }
 
 variables:
   output: { dims: [unit, period], where: active, bounds: { lower: 0 }, description: what a unit produces }
-  flow: { dims: [unit, port, period], where: connection, bounds: { lower: 0 }, description: what a port takes of it }
+  flow: { dims: [connection, period], bounds: { lower: 0 }, description: what a port takes of it }
 
 constraints:
   port_limit:
     description: a port takes no more than the unit's capacity
-    dims: [unit, port, period]
-    expression: flow <= capacity
+    dims: [connection, period]
+    expression: flow <= at(capacity, by=connection[unit])
   split:
     description: the ports of a unit take what it produces
     dims: [unit, period]
-    expression: sum(flow, over=port) == output
+    expression: sum(flow, over=connection, by=connection[unit]) == output
   ramp_up:
     description: output rises by at most the ramp from one active period to the next
     dims: [unit, period]
@@ -52,7 +49,7 @@ constraints:
   balance:
     description: what the ports deliver to a bus meets its load
     dims: [bus, period]
-    expression: sum(efficiency * flow, over=[unit, port], by=connection[bus]) >= load
+    expression: sum(efficiency * flow, over=connection, by=connection[bus]) >= load
 
 objective:
   sense: minimize
