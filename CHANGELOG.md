@@ -15,7 +15,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - feat(language)!: maps give labels, relations give rows ([#1015](https://github.com/energy-models/mathspec/pull/1015))
   - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, with `dim:` naming its dimension and always written, and is read as `subject[map]`, such as `generator[bus]`.
   - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, `Reach.name` names `subject[map]`.
-- docs(times): TIMES capacity and trade as example specs ([#1021](https://github.com/energy-models/mathspec/pull/1021))
+- docs(examples): TIMES examples and a sparse-set example ([#1021](https://github.com/energy-models/mathspec/pull/1021))
 - docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))
 - feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
 - docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
