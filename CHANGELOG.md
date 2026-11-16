@@ -15,6 +15,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - feat(language)!: an entry or a sum may range over a set ([#1018](https://github.com/energy-models/mathspec/pull/1018))
   - Breaks a file: `relations:` is `sets:`. A set named in the `dims:` of a parameter, a variable or a constraint, or in `over=`, stands for its dimensions at the combinations it lists.
   - Breaks a file: the `where:` of a parameter, a variable or a constraint no longer takes a set's bare name. Name the set in `dims:`.
+- feat(language): a dimension may alias another's labels ([#1020](https://github.com/energy-models/mathspec/pull/1020))
 - feat(language)!: maps give labels, relations give rows ([#1015](https://github.com/energy-models/mathspec/pull/1015))
   - Breaks a file: `relations:` takes `dims:`, `missing:` and `description` only. Each value column becomes a map under `maps:`, keyed by its subject, with `dim:` naming its dimension and always written, and is read as `subject[map]`, such as `generator[bus]`.
   - Breaks the program API: `Program.relations` holds one table per subject, `Relation` gains `partial`, `RelationDefined` gains `column`, `Reach.name` names `subject[map]`.

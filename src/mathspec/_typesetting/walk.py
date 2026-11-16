@@ -131,6 +131,20 @@ class _Step:
         return replace(self, by=self.by + other.by) if same else None
 
 
+def _unclaimed(index: Mapping[str, str], dim: str, primes: int) -> str:
+    """The index of *dim* with *primes* primes, and more until no other dimension prints with it.
+
+    An alias prints as its dimension's index primed, so a reduction over the
+    dimension inside an entry over the alias would take the alias's own index
+    as its dummy and read two indices as one.
+    """
+    taken = {symbol for other, symbol in index.items() if other != dim}
+    dummy = index[dim] + "'" * primes
+    while dummy in taken:
+        dummy += "'"
+    return dummy
+
+
 @dataclass(frozen=True)
 class _Context:
     """What a subscript means at this point in the tree.
@@ -163,8 +177,7 @@ class _Context:
         once per enclosing use of the same dimension, so ``sum(q, over=generator, by=bus_of[bus])``
         under ``∀ g`` sums over ``g'`` and its condition can still name ``g``.
         """
-        primes = "'" * self.bound.count(dim)
-        dummy = f'{self.walk.symbols.index[dim]}{primes}'
+        dummy = _unclaimed(self.walk.symbols.index, dim, self.bound.count(dim))
         body = _Context(self.walk, self.offsets, {**self.lookups, dim: dummy}, (*self.bound, dim))
         return dummy, body
 
@@ -265,6 +278,8 @@ class Walk:
         named after the map alone, as the legend lists it.
         """
         lk = self.program.relations[name]
+        if (dimension := self.program.dimensions.get(name)) is not None and dimension.alias == read:
+            return at[name]
         return self.format.apply(self.format.upright(read), self.format.joined([at[k] for k in lk.key], ''))
 
     def _relation_row(self, name: str, at: Mapping[str, str], column: str | None = None) -> str:

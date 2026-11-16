@@ -2015,8 +2015,8 @@ _LINKED = {'sets.link': {'dims': ['g', 'h'], 'missing': 'absent'}}
                 'sets.next': {'dims': {'from': 'g', 'to': 'g'}, 'missing': 'absent'},
                 'variables.x': {'dims': ['next']},
             },
-            "Variable 'x' names the set 'next', which has two columns over one dimension, and an entry is over "
-            "each dimension once. Name its dimensions, ['g'], with a second name for the one it repeats.",
+            "Variable 'x' names the set 'next', which has two columns over 'g', and an entry is over each "
+            "dimension once. Declare an alias of 'g' under dimensions:, and one column of the set over it.",
             id='dims-of-a-relation-over-one-dimension-twice',
         ),
         pytest.param(
@@ -3144,7 +3144,7 @@ _HEAD = "{entry} 'w': dims: names 'pair', so 'w' has coordinates only where it h
         pytest.param(
             ['next'],
             {'sets.next': {'dims': {'from': 'g', 'to': 'g'}, 'missing': 'absent'}},
-            "{entry} 'w' names the set 'next', which has two columns over one dimension, and an entry is over "
+            "{entry} 'w' names the set 'next', which has two columns over 'g', and an entry is over "
             'each dimension once.',
             id='a-relation-with-two-columns-over-one-dimension',
         ),

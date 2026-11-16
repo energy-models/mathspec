@@ -66,8 +66,13 @@ does not go in `dims:` either, because an entry is over each dimension once.
 With `flow: { dims: [neighbour] }`, mathspec prints:
 
 ```text
-Variable 'flow' names the set 'neighbour', which has two columns over one dimension, and an entry is over each dimension once. Name its dimensions, ['snapshot'], with a second name for the one it repeats.
+Variable 'flow' names the set 'neighbour', which has two columns over 'snapshot', and an entry is over each dimension once. Declare an alias of 'snapshot' under dimensions:, and one column of the set over it.
 ```
+
+With `from_snapshot: { alias: snapshot }` and
+`neighbour: { dims: [from_snapshot, snapshot] }`, the set names each
+dimension once, and an entry may be over it
+([`alias`](dimensions.md#alias)).
 
 The order of the columns under `dims:` changes nothing. The typesetter sorts
 the columns by name, so `connection` above prints as
