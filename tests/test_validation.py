@@ -3796,3 +3796,10 @@ def test_a_divisor_a_shift_fills_with_zero_is_refused(divisor, patch):
 def test_a_divisor_a_shift_fills_with_another_value_loads(divisor):
     spec = to_spec(varied(SMALL_MODEL, **{'constraints.cap': {'dims': ['g'], 'expression': f'p / ({divisor}) <= 1'}}))
     assert 'cap' in spec.program.constraints
+
+
+def test_a_misspelled_key_is_not_told_of_the_field_the_load_writes():
+    """`in:` was told "Did you mean 'in_'?": a field the load fills from `dims:`, which a file may not write."""
+    message = _refusal(**{'parameters.c.in': ['g']})
+    assert "unknown key 'in'" in message
+    assert 'in_' not in message, 'the field the load writes is no key a file may use'

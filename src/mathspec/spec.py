@@ -149,10 +149,12 @@ class _StrictSpec(BaseModel):
             return data
         known = set(_written_keys(cls).values())
         unknown = [k for k in data if isinstance(k, str) and k not in known]
+        written = known - {'in_'}  # the load writes `in_` from `dims:`; a file never does
         if unknown:
             raise ValueError(
                 '\n'.join(
-                    f"unknown key '{k}' in {cls._label}. {did_you_mean(k, known, label='Valid keys')}" for k in unknown
+                    f"unknown key '{k}' in {cls._label}. {did_you_mean(k, written, label='Valid keys')}"
+                    for k in unknown
                 )
             )
         return data
