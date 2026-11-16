@@ -169,9 +169,9 @@ expression before any tool reads it. A file declares its own macros under
 
 ## Map
 
-A map gives each row of a dimension or a relation (its subject) one label of a
-dimension, such as the bus of each generator. A condition or an
-operator reads it as `subject[map]`, as in `generator[bus]`
+A map gives each row of a dimension or a relation (its
+[subject](#subject)) one label of a dimension, such as the bus of each
+generator. A condition or an operator reads it as `subject[map]`, as in `generator[bus]`
 ([maps](language/relations.md#maps)).
 
 ## Missing row
@@ -270,6 +270,13 @@ costs exists.
 A special ordered set (SOS) is an `sos:` entry over one dimension of one
 variable. With `type: 1`, at most one member is non-zero. With `type: 2`, at
 most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
+
+## Subject
+
+A subject is the dimension or the relation that a map gives a label to, one
+label per row. It is the key under `maps:`, and the part before the bracket in
+`subject[map]`, such as `generator` in `generator[bus]`
+([maps](language/relations.md#maps)).
 
 ## Surface
 
