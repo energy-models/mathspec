@@ -265,6 +265,8 @@ class Walk:
         named after the map alone, as the legend lists it.
         """
         lk = self.program.relations[name]
+        if (dimension := self.program.dimensions.get(name)) is not None and dimension.alias == read:
+            return at[name]
         return self.format.apply(self.format.upright(read), self.format.joined([at[k] for k in lk.key], ''))
 
     def _relation_row(self, name: str, at: Mapping[str, str], column: str | None = None) -> str:

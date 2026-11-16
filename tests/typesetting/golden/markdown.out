@@ -8,6 +8,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 |---|---|
 | $`\mathcal{B}`$ | index $`b`$ — `bp` |
 | $`\mathcal{U}`$ | index $`u`$ — `bus` with $`\mathrm{area}: \mathcal{U} \to \mathcal{Z},\ \mathrm{zone}: \mathcal{U} \to \mathcal{Z},\ \mathrm{bus\_zone} \subseteq \mathcal{U} \times \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U}`$, `bus_zone` is `absent` where the data has no row, `connection` is `absent` where the data has no row, `bus[area]` is `absent` where the data gives no label |
+| $`\mathcal{U}`$ | index $`u'`$ — `from_bus`, an alias of `bus` |
 | $`\mathcal{G}`$ | index $`g`$ — `generator` with $`\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{technology}: \mathcal{G} \to \mathcal{E}`$, `connection` is `absent` where the data has no row |
 | $`\mathcal{S}`$ | index $`s`$ — `season` with $`\mathrm{season}: \mathcal{T} \to \mathcal{S}`$ |
 | $`\mathcal{T}`$ | index $`t`$ — `snapshot` (`int` coordinates) with $`\mathrm{gen\_zone} \subseteq \mathcal{G} \times \mathcal{T},\ \mathrm{zone}: \mathrm{gen\_zone} \to \mathcal{Z},\ \mathrm{rep}: \mathcal{T} \to \mathcal{T},\ \mathrm{season}: \mathcal{T} \to \mathcal{S}`$ |
@@ -34,6 +35,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 | $`\mathrm{min\_up}`$ | `min_up` over $`\mathcal{G}`$ |
 | $`\mathrm{p}^{\mathrm{max}}`$ | `p_max` over $`\mathcal{G}`$, $`\infty`$ where the data has no row |
 | $`\mathrm{p}^{\mathrm{min}}`$ | `p_min` over $`\mathcal{G}`$ |
+| $`\mathrm{susceptance}`$ | `susceptance` over $`\mathcal{U} \times \mathcal{U}`$, $`0`$ where the data has no row |
 | $`\mathrm{tech\_cap}`$ | `tech_cap` over $`\mathcal{U} \times \mathcal{E}`$, `absent` where the data has no row |
 | $`\mathrm{zone\_cap}`$ | `zone_cap` over $`\mathcal{Z}`$ |
 | $`\mathrm{zone\_share}`$ | `zone_share` over $`\left( u,\ z \right) \in \mathrm{bus\_zone}`$, $`1`$ where the data has no row |
@@ -340,6 +342,12 @@ p_{g,t} \le \mathrm{eta}_{g} \cdot \mathrm{p}^{\mathrm{max}}_{g} \qquad \forall\
 
 ```math
 \mathit{on}_{g,t} = 1 \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(t) = 0 \vee \mathrm{pos}_{\mathrm{season}(t)}(t) = 0
+```
+
+**`flow_angle`**
+
+```math
+\theta_{u} = \sum_{u' \in \mathcal{U}} \mathrm{susceptance}_{u,u'} \cdot \theta_{u'} \qquad \forall\, u \in \mathcal{U}
 ```
 
 **`grouped_once`**

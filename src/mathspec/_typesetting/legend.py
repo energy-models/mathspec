@@ -150,7 +150,8 @@ class Legend:
         sets = [
             self._item(
                 self.symbols.set[d],
-                f'index {fmt.math(self.symbols.index[d])} {fmt.dash} {fmt.mono(d)}{self._coords(d, noticed)}',
+                f'index {fmt.math(self.symbols.index[d])} {fmt.dash} {fmt.mono(d)}{self._alias_of(d)}'
+                f'{self._coords(d, noticed)}',
                 entry.description,
             )
             for d, entry in program.dimensions.items()
@@ -277,12 +278,18 @@ class Legend:
         if not dimension and dim in own:
             product = self.format.joined([self.symbols.set[lk.dim(r)] for r in lk.key], self._op('times'))
             signatures.append(f'{self.format.upright(name)} {self._op("subset_of")} {product}')
+        alias = self.program.dimensions[name].alias if dimension else None
         signatures.extend(
             f'{self.format.upright(role)}: {subject} {self._op("maps_to")} {self.symbols.set[lk.dim(role)]}'
             for role in lk.values
-            if dim in own or lk.dim(role) == dim
+            if (dim in own or lk.dim(role) == dim) and role != alias
         )
         return signatures
+
+    def _alias_of(self, dim: str) -> str:
+        """``, an alias of region`` for an alias, which shares the set symbol of the dimension it aliases."""
+        alias = self.program.dimensions[dim].alias
+        return '' if alias is None else f', an alias of {self.format.mono(alias)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
         """The dimension's carried structure: the labels its ``one_of`` allows, each relation over it and map from or into it, and each that may leave a row out.
@@ -297,9 +304,10 @@ class Legend:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')
         if (labels := self.program.dimensions[dim].one_of) is not None:
             clauses.append(f' (labels {", ".join(self.format.mono(m) for m in labels)})')
-        if carried:
-            signatures = [part for c, lk in carried.items() for part in self._signatures(c, lk, dim)]
+        signatures = [part for c, lk in carried.items() for part in self._signatures(c, lk, dim)]
+        if signatures:
             clauses.append(f' with {self.format.math(self.format.joined(signatures, ""))}')
+        if carried:
             own = {c: {lk.dim(r) for r in lk.key} for c, lk in carried.items()}
             clauses.extend(
                 f', {self.format.mono(c)} is {self.format.mono("absent")} {_NO_ROW}'

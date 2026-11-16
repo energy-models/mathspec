@@ -16,6 +16,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str, ordered: true }
   bus: { dtype: str }
+  from_bus: { alias: bus } # the buses under a second index: a primed index over the same set
   zone: { dtype: str, one_of: [north, south] } # the labels a condition may name: the legend lists them
   season: { dtype: str }
   technology: { dtype: str }
@@ -46,6 +47,7 @@ parameters:
   tech_cap: { dims: [bus, technology], missing: absent }
   link_eff: { dims: [generator, bus], in: [connection], missing: 1 } # over the pairs a relation lists; a `where:` may not test them
   zone_share: { dims: [bus, zone], in: [bus_zone], missing: 1 } # over the pairs that exist: data refused outside them, with no `where:` of its own
+  susceptance: { dims: [from_bus, bus], missing: 0 } # over one set twice, through its alias
   area_weight: { dims: [bus], where: "bus[area]" } # a map's label as a condition: the buses that have an area
   min_up: { dims: [generator], dtype: int }
   eta: { dims: [generator] } # a Greek name that is *given*, so the rule wins and it prints as the word
@@ -207,6 +209,9 @@ conditions:
   priced_dispatch: "dispatchable AND spend_cap > 0" # the one-line form, reading another mask and a data-only entry
 
 constraints:
+  flow_angle: # an alias read back into its dimension: the value at the other end prints at the primed index
+    dims: [bus]
+    expression: theta == sum(susceptance * at(theta, by=from_bus[bus]), over=from_bus)
   budgeted: # names the plain expression: its symbol prints here, its definition once below
     dims: [snapshot]
     expression: spend <= budget
