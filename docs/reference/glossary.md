@@ -273,10 +273,8 @@ most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Subject
 
-A subject is the dimension or the relation that a map gives a label to, one
-label per row. It is the key under `maps:`, and the part before the bracket in
-`subject[map]`, such as `generator` in `generator[bus]`
-([maps](language/relations.md#maps)).
+The subject of a map is a dimension or a relation, such as `generator` in
+`generator[bus]` ([maps](language/relations.md#maps)).
 
 ## Surface
 
