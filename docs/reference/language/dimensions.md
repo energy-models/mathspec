@@ -250,8 +250,21 @@ mathspec suggests the lookup through the relation of the dimension, or the sum
 of `flow` to the member. The same refusal applies wherever the two operands
 meet: in a product, in a sum, and in the objective, as in
 `sum(flow * capacity)`. An entry over both, such as a variable over
-`[connection, unit]`, still loads. A sum over
-a member is refused the same way. With `sum(flow, over=unit)`, mathspec prints:
+`[connection, unit]`, loads.
+
+mathspec refuses the meeting unless the `dims:` of the entry lists both the
+dimension and the member. Then the two operands meet as their cross product,
+at every pair of a connection and a unit. With
+`dims: [connection, unit, snapshot]`, `flow <= capacity` loads, with one row
+for each connection, unit and snapshot. Inside a `sum`, a dimension that the
+`sum` adds up is not in the `dims:` of the entry, so
+`sum(flow * capacity, over=unit)` is refused in that entry too. The objective
+and an [assumption](assumptions.md) have no `dims:`, so mathspec refuses
+the meeting in each of them. It also refuses the meeting in the `where:` of a
+`piecewise:` entry, because mathspec repeats that condition in assumptions.
+
+A sum over a member is refused the same way. With `sum(flow, over=unit)`,
+mathspec prints:
 
 ```text
 Constraint 'balance': sum(over=unit) but the expression has only the dims ['connection', 'snapshot']. 'unit' is a member of 'connection', which is one dimension here. Write sum(..., over=connection, by=connection[port]).

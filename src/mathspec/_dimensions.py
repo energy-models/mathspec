@@ -317,22 +317,26 @@ def operand_over(operands: Iterable[Expression], over: Iterable[str], without: s
     return next((n.name for n in found), '...')
 
 
-def check_meeting(left: Expression, right: Expression, spec: Spec, context: str) -> None:
-    """Two operands meet only where neither carries a member of a dimension the other carries without it.
+def check_meeting(left: Expression, right: Expression, spec: Spec, context: str, frame: frozenset[str]) -> None:
+    """Two operands meet a member against the dimension that lists it only where *frame* declares both.
 
     A dimension with members is one plain dimension, so an operand over a
-    member does not align with one over the dimension. The two would meet as
-    their cross product, and a sum or the objective would then add it up
-    without a frame that names it.
+    member does not align with one over the dimension: the two meet as their
+    cross product. An entry whose ``dims:`` declares both asks for that
+    product; anywhere else, a sum or the objective would add it up without a
+    frame that names it. *frame* is the entry's ``dims:`` less what an
+    enclosing sum takes away, and empty in the objective.
 
     Raises:
-        DimensionError: One operand carries a dimension with members, and the
-            other carries a member of it but not the dimension.
+        DimensionError: One operand carries a dimension with members, the
+            other carries a member of it but not the dimension, and *frame*
+            lacks one of the two.
     """
     for one, other in ((left, right), (right, left)):
         for name in sorted(set(one.dims) - set(other.dims)):
             members = {dim for _, dim in spec.dimensions[name].members}
-            if stray := sorted((members & set(other.dims)) - set(one.dims)):
+            stray = sorted((members & set(other.dims)) - set(one.dims))
+            if stray and not {name, *stray} <= frame:
                 summed = operand_over((one,), (name,), stray[0])
                 raise DimensionError(
                     f"{context}: an operand over {stray} meets one over '{name}'. "

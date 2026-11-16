@@ -93,17 +93,18 @@ class ConditionResolver:
     faults reports both. ``self_variable`` is the variable whose own
     ``where`` is being read, which may not ask whether it exists. A side
     that is an expression is built by an [`ExpressionResolver`][] over
-    the same namespace.
+    the same namespace and ``frame``, the ``dims:`` of the entry.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
+    frame: frozenset[str] = frozenset()
 
     @property
     def _expressions(self) -> ExpressionResolver:
-        return ExpressionResolver(self.ns, self.context, self.errors)
+        return ExpressionResolver(self.ns, self.context, self.errors, frame=self.frame)
 
     def build(self, node: Condition | UnresolvedConditionNode) -> Condition | UnresolvedConditionNode:
         """One condition node typed, or returned unresolved with its refusal appended."""

@@ -251,18 +251,18 @@ and never to a constraint of the same name.
 Before any data is attached, [`to_spec`](../api.md#mathspec.to_spec) works out the
 dimensions of every expression. Each part of an expression (a node) has a set of dimensions:
 
-| Node                             | Dimensions of the result       | Refused when                                                                                |
-| -------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
-| number                           | `{}`                           |                                                                                             |
-| parameter / variable             | its `dims`                     |                                                                                             |
-| `-x`, `+x`                       | `dims(x)`                      |                                                                                             |
-| `a + b`, `a * b`, `a / b`        | `dims(a) ∪ dims(b)`            | one side carries a [member](dimensions.md#over) of a dimension the other carries without it |
-| `sum(x)`                         | `{}`                           | `dims(x)` is already empty                                                                  |
-| `sum(x, over=d)`                 | `dims(x) − {d}`                | `d ∉ dims(x)`                                                                               |
-| `sum(x, over=d, by=l[c])`        | `(dims(x) − joined) ∪ grouped` | a refusal under [how a relation is used](relations.md#how-a-relation-is-used) applies       |
-| `at(x, by=l[c])`                 | `(dims(x) − joined) ∪ grouped` | the same refusals apply                                                                     |
-| `shift(x, along=d, offset=n)`    | `dims(x)`                      | `d ∉ dims(x)`                                                                               |
-| `sum_back(x, along=d, window=n)` | `dims(x)`                      | `d ∉ dims(x)`                                                                               |
+| Node                             | Dimensions of the result       | Refused when                                                                                                                                 |
+| -------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| number                           | `{}`                           |                                                                                                                                              |
+| parameter / variable             | its `dims`                     |                                                                                                                                              |
+| `-x`, `+x`                       | `dims(x)`                      |                                                                                                                                              |
+| `a + b`, `a * b`, `a / b`        | `dims(a) ∪ dims(b)`            | one side carries a [member](dimensions.md#over) of a dimension the other carries without it, and the `dims:` of the entry does not list both |
+| `sum(x)`                         | `{}`                           | `dims(x)` is already empty                                                                                                                   |
+| `sum(x, over=d)`                 | `dims(x) − {d}`                | `d ∉ dims(x)`                                                                                                                                |
+| `sum(x, over=d, by=l[c])`        | `(dims(x) − joined) ∪ grouped` | a refusal under [how a relation is used](relations.md#how-a-relation-is-used) applies                                                        |
+| `at(x, by=l[c])`                 | `(dims(x) − joined) ∪ grouped` | the same refusals apply                                                                                                                      |
+| `shift(x, along=d, offset=n)`    | `dims(x)`                      | `d ∉ dims(x)`                                                                                                                                |
+| `sum_back(x, along=d, window=n)` | `dims(x)`                      | `d ∉ dims(x)`                                                                                                                                |
 
 mathspec refuses `sum(p, over=t)` with `p` over `g` alone, and prints:
 

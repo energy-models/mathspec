@@ -149,7 +149,9 @@ def lower(spec: Spec) -> Program:
     variables = {}
     declared: dict[str, tuple[Expression | None, Expression | None]] = {}
     for vname, vdef in spec.variables.items():
-        where = resolve_condition_text(vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname)
+        where = resolve_condition_text(
+            vdef.where, ns, f"Variable '{vname}'", errors, self_variable=vname, frame=vdef.dims
+        )
         if where is not None and (refusal := self_existence(where, vname, f"Variable '{vname}'")) is not None:
             errors.append(refusal)
         context = f"Variable '{vname}' bounds"
@@ -173,8 +175,8 @@ def lower(spec: Spec) -> Program:
     constraints: dict[str, Constraint] = {}
     for cname, cdef in spec.constraints.items():
         context = f"Constraint '{cname}'"
-        where = resolve_condition_text(cdef.where, ns, context, errors)
-        if (sides := resolve_constraint_text(cdef.expression, ns, context, errors)) is not None:
+        where = resolve_condition_text(cdef.where, ns, context, errors, frame=cdef.dims)
+        if (sides := resolve_constraint_text(cdef.expression, ns, context, errors, frame=cdef.dims)) is not None:
             lhs, sense, rhs = sides
             constraints[cname] = Constraint(cdef.dims, lhs, sense, rhs, mask_of(where), description=cdef.description)
 
@@ -400,7 +402,8 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
     masks: dict[str, Mask | None] = {}
     for pname in sorted(masked):
         context = f"Parameter '{pname}'"
-        mask = masks[pname] = mask_of(resolve_condition_text(spec.parameters[pname].where, ns, context, errors))
+        pdef = spec.parameters[pname]
+        mask = masks[pname] = mask_of(resolve_condition_text(pdef.where, ns, context, errors, frame=pdef.dims))
         if mask is None:
             continue
         errors.extend(
