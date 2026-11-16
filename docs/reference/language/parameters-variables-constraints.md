@@ -547,6 +547,10 @@ The data has one capacity per technology, and the solver keeps the dispatch
 of each unit at or below the capacity of its technology. The operand of `at`
 is the name of a parameter, and mathspec refuses any other expression there.
 
+Under [`missing: absent`](relations.md#missing) on `technology_of`, a unit
+with no row has no technology. That unit has no upper bound, as under
+[`missing: absent`](absence.md#missing-on-a-parameter) on `capacity`.
+
 A looked-up bound, like a parameter bound, is over the dimensions of the
 variable or fewer. With `dims: [snapshot]` on `dispatch`, the lookup adds
 `unit`, and mathspec prints:

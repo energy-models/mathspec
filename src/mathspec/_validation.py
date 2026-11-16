@@ -270,7 +270,11 @@ def _bound_names(spec: Spec) -> Iterator[str]:
             val = getattr(vdef.bounds, side)
             if not isinstance(val, str):
                 continue
-            name = bound_parameter(val)
+            try:
+                name = _bound_parameter(val)
+            except SchemaError as error:
+                yield f"Variable '{vname}' bounds.{side}: {error}"
+                continue
             if name in parameters:
                 dtype = parameters[name].dtype
                 if dtype not in NUMERIC_DTYPES:
@@ -288,21 +292,12 @@ def _bound_names(spec: Spec) -> Iterator[str]:
             yield f"Variable '{vname}' bounds.{side}: {detail}."
 
 
-def bound_parameter(text: str) -> str | None:
-    """The parameter a bound names: bare, or the operand of ``at(parameter, by=relation[column])``.
-
-    Returns:
-        The parameter's name, or ``None`` where *text* is any other expression.
-    """
-    if text.isidentifier():
-        return text
-    try:
-        node = parse_expression(text)
-    except SchemaError:
-        return None
-    if isinstance(node, FunctionCallNode) and node.name == 'at' and node.args and isinstance(node.args[0], NameNode):
-        return node.args[0].name
-    return None
+def _bound_parameter(text: str) -> str | None:
+    """The name a bound reads, bare or as the operand of ``at``; ``None`` for any other expression it parses to."""
+    node = parse_expression(text)
+    if isinstance(node, FunctionCallNode) and node.name == 'at' and node.args:
+        node = node.args[0]
+    return node.name if isinstance(node, NameNode) else None
 
 
 def _sos_shapes(spec: Spec) -> Iterator[str]:

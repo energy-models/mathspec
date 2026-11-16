@@ -1001,7 +1001,7 @@ class Footprint:
             stands in; empty is affine throughout.
         domains: Every domain declared.
         sos_types: The order of each special-ordered set declared.
-        kinds: Every expression node kind that appears.
+        kinds: Every expression node kind that appears in a row or a variable bound.
     """
 
     quadratic: frozenset[QuadraticPosition]
@@ -1199,17 +1199,19 @@ class Program:
     def footprint(self) -> Footprint:
         """Which constructs this program uses — walked once, then held.
 
-        It answers for the rows this program holds. A curve still under
-        [`piecewise`][] is not counted, so a ``sos2`` curve adds no set order
-        here; ask the program of ``spec.expand('piecewise')`` for its rows.
+        It answers for the rows and the variable bounds this program holds. A
+        curve still under [`piecewise`][] is not counted, so a ``sos2`` curve
+        adds no set order here; ask the program of
+        ``spec.expand('piecewise')`` for its rows.
         """
+        bounds = (b for v in self.variables.values() for b in (v.lower, v.upper) if b is not None)
         return Footprint(
             quadratic=frozenset(
                 position for position, group in self._by_position() if any(is_quadratic(e) for e in group)
             ),
             domains=frozenset(v.domain for v in self.variables.values()),
             sos_types=frozenset(s.sos_type for s in self.sos.values()),
-            kinds=frozenset(type(node) for node in walk(*self.roots)),
+            kinds=frozenset(type(node) for node in walk(*self.roots, *bounds)),
         )
 
     @cached_property

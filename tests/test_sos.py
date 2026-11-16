@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 
 from mathspec.errors import SchemaError
+from mathspec.program import Join
 from tests.fixtures import SMALL_MODEL, expanded, spec_of, varied
 
 #: A set over a bounded member, which is the smallest model `expand('sos')` acts on.
@@ -21,6 +22,7 @@ PICKED = varied(
     SMALL_MODEL,
     **{
         'parameters.floor': {'dims': ['g']},
+        'parameters.ch': {'dims': ['h']},
         'variables.p.bounds': {'lower': 0, 'upper': 10},
         'constraints': {'used': {'dims': ['g'], 'expression': 'p <= c'}},
         'sos': {'pick': {'variable': 'p', 'along': 'g', 'type': 1}},
@@ -66,6 +68,11 @@ CURVE = {
             {'pick_nonzero': 'p <= c * (pick_seg)', 'pick_nonzero_below': 'p >= floor * (pick_seg)'},
             id='a-bound-the-data-carries-is-a-coefficient-like-any-other',
         ),
+        pytest.param(
+            {'lower': 0, 'upper': 'at(ch, by=lk[h])'},
+            {'pick_nonzero': 'p <= at(ch, by=lk[h]) * (pick_seg)'},
+            id='a-bound-looked-up-through-a-relation-is-a-coefficient-too',
+        ),
     ],
 )
 def test_an_unpicked_member_is_held_at_zero_from_the_sides_its_bounds_state(bounds, rows):
@@ -77,6 +84,21 @@ def test_an_unpicked_member_is_held_at_zero_from_the_sides_its_bounds_state(boun
 
     written = {name: c.expression for name, c in expanded.constraints.items() if name.startswith('pick_nonzero')}
     assert written == rows, 'the rows a set states, and no row that states nothing'
+
+
+def test_a_bound_looked_up_through_an_absent_relation_is_absent_where_the_relation_has_no_row():
+    """`missing: absent` on `lk` leaves `at(ch, by=lk[h])` with no value at a member `lk` has no row for.
+
+    The bound then leaves that side open there, and the linking row that
+    multiplies by it is absent, as for a `missing: absent` parameter.
+    """
+    spec = spec_of(varied(PICKED, **{'relations.lk.missing': 'absent', 'variables.p.bounds.upper': 'at(ch, by=lk[h])'}))
+    upper = spec.program.variables['p'].upper
+
+    assert isinstance(upper, Join) and upper.columns.relation.missing == 'absent', (
+        'the bound reads the relation as declared'
+    )
+    assert spec.expand('sos').constraints['pick_nonzero'].expression == 'p <= at(ch, by=lk[h]) * (pick_seg)'
 
 
 def test_a_set_carries_no_coefficient_of_its_own():
