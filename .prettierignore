@@ -24,13 +24,13 @@ docs/examples/piecewise_adjacency.md
 docs/examples/sos.md
 docs/examples/piecewise_lp.md
 docs/examples/piecewise_incremental.md
-docs/examples/pypsa_ladder.md
 docs/examples/pypsa_linearized_uc.md
 docs/examples/library/surface.md
 docs/examples/library/generator.md
 docs/examples/library/load.md
 docs/examples/library/composed.md
-docs/examples/pypsa/*.md
+docs/examples/pypsa/index.md
+docs/examples/pypsa/generator_commitment.md
 
 # The PyPSA reference scripts write this file; prettier would reformat what
 # they stamp, and the two would fight over it exactly as above.

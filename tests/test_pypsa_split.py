@@ -167,10 +167,11 @@ def test_the_split_index_names_a_hub_once_per_fragment_and_needs_a_described_rea
         },
     }
     specs = {'balance': to_spec(BALANCE), 'fleet': to_spec(twice), 'demand': to_spec(DEMAND)}
-    index = split_index(specs)
-    assert '| [fleet](fleet.md) | 0 | 1 | 0 | 1 | `injection` |' in index, 'two terms into one sum, listed once'
+    purpose = {'balance': 'The balance', 'fleet': 'The fleet', 'demand': 'The demand'}
+    index = split_index(specs, lambda name: f'{name}.md', purpose)
+    assert '| [fleet](fleet.md) | The fleet | 1 | `injection` |' in index, 'two terms into one sum, listed once'
     assert '[`demand_injection`](demand.md), [`curtailment`](fleet.md), [`generator_injection`](fleet.md)' in index, (
         'every term of the fragment, by fragment then by name'
     )
     with pytest.raises(ValueError, match=r"no fragment that reads 'injection' without adding to it describes it"):
-        split_index({'fleet': specs['fleet'], 'demand': specs['demand']})
+        split_index({'fleet': specs['fleet'], 'demand': specs['demand']}, lambda name: f'{name}.md', purpose)
