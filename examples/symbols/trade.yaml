@@ -7,4 +7,5 @@ notation: latex
 dimensions:
   region: { index: r, set: '\mathcal{R}' }
   commodity: { index: c, set: '\mathcal{C}' }
+  process: { index: p, set: '\mathcal{P}' }
   trade_link: { index: l, set: '\mathcal{L}' }
