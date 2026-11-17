@@ -55,7 +55,7 @@ SOURCE = Path('examples/pypsa.yaml')
 SECTIONS = (
     'dimensions',
     'relations',
-    'maps',
+    'mappings',
     'parameters',
     'variables',
     'expressions',
@@ -64,7 +64,7 @@ SECTIONS = (
     'constraints',
     'assumptions',
 )
-FRAME = ('dimensions', 'relations', 'maps')
+FRAME = ('dimensions', 'relations', 'mappings')
 IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
 READ = re.compile(r'(?<![\w.])([A-Za-z_]\w*)\[')
 HEADER = '# SPDX-FileCopyrightText: mathspec Contributors\n#\n# SPDX-License-Identifier: MIT\n'
@@ -202,7 +202,7 @@ def _names_in(value: object, known: Mapping[str, str]) -> set[str]:
 
 
 def _subjects_in(value: object, subjects: set[str]) -> set[str]:
-    """Every subject in *subjects* whose maps *value* reads, as ``subject[map]``, prose left out."""
+    """Every subject in *subjects* whose mappings *value* reads, as ``subject[mapping]``, prose left out."""
     if isinstance(value, str):
         return {token for token in READ.findall(value) if token in subjects}
     if isinstance(value, dict):
@@ -232,11 +232,11 @@ class Model:
         self.kind = {
             n: s
             for s in SECTIONS
-            if s not in ('maps', 'piecewise', 'constraints', 'assumptions')
+            if s not in ('mappings', 'piecewise', 'constraints', 'assumptions')
             for n in self.data.get(s, {})
         }
-        #: Every subject with maps. A subject shares its name with its dimension or relation, so it is not in `kind`.
-        self.subjects = set(self.data.get('maps', {}))
+        #: Every subject with mappings. A subject shares its name with its dimension or relation, so it is not in `kind`.
+        self.subjects = set(self.data.get('mappings', {}))
         #: hub -> the topic of each term -> the term, in the order the topics sort in.
         self.shares: dict[str, dict[str, str]] = {}
         for hub in HUBS:
@@ -269,9 +269,9 @@ class Model:
     def names_in(self, value: object) -> set[str]:
         return _names_in(value, self.kind)
 
-    def maps_read(self, value: object) -> set[Key]:
-        """The ``maps:`` entry of every subject *value* reads a map of."""
-        return {('maps', subject) for subject in _subjects_in(value, self.subjects)}
+    def mappings_read(self, value: object) -> set[Key]:
+        """The ``mappings:`` entry of every subject *value* reads a mapping of."""
+        return {('mappings', subject) for subject in _subjects_in(value, self.subjects)}
 
     def key(self, name: str) -> Key:
         return self.kind[name], name
@@ -328,7 +328,7 @@ def fragments(model: Model) -> dict[str, str]:
         }
         frame_reads = read | set().union(*(model.names_in(dims) for dims in stated.values()))
         frame = {model.key(n) for n in frame_reads if model.key(n)[0] in FRAME}
-        frame |= set().union(*(model.maps_read(model.data[s][n]) for s, n in mine))
+        frame |= set().union(*(model.mappings_read(model.data[s][n]) for s, n in mine))
         frame |= {model.key(n) for key in list(frame) for n in model.names_in(model.data[key[0]][key[1]])}
         written[name] = _fragment(model, mine | frame, given, stated, adds, homes_here)
     return written

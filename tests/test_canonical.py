@@ -140,9 +140,11 @@ def test_the_entries_of_a_section_are_sorted_by_name():
         pytest.param({'dim': 'h', 'missing': 'absent'}, id='with-missing'),
     ],
 )
-def test_a_map_is_written_back_as_the_mapping_it_was_declared_as(declared):
-    dumped = yaml.safe_load(ms.to_spec(varied(SMALL_MODEL, **{'maps.g.h': declared})).to_yaml(canonical=True))
-    assert dumped['maps'] == {'g': {'h': declared}}, 'a map is written with `dim:`, never as the bare dimension name'
+def test_a_mapping_is_written_back_as_the_mapping_it_was_declared_as(declared):
+    dumped = yaml.safe_load(ms.to_spec(varied(SMALL_MODEL, **{'mappings.g.h': declared})).to_yaml(canonical=True))
+    assert dumped['mappings'] == {'g': {'h': declared}}, (
+        'a mapping is written with `dim:`, never as the bare dimension name'
+    )
 
 
 #: The order the form writes the sections in, whatever order the file wrote
@@ -154,7 +156,7 @@ SECTIONS = [
     'given',
     'dimensions',
     'relations',
-    'maps',
+    'mappings',
     'parameters',
     'conditions',
     'variables',
@@ -204,8 +206,8 @@ def test_every_section_is_sorted_by_name(path):
     for section, entries in data.items():
         if isinstance(entries, dict) and section != 'objective':
             assert list(entries) == sorted(entries), f'{path.name}: `{section}` reads in name order'
-    for subject, maps in data.get('maps', {}).items():
-        assert list(maps) == sorted(maps), f'{path.name}: the maps of `{subject}` read in name order'
+    for subject, mappings in data.get('mappings', {}).items():
+        assert list(mappings) == sorted(mappings), f'{path.name}: the mappings of `{subject}` read in name order'
 
 
 def _commitment_with_its_cases_reversed() -> dict[str, object]:
@@ -344,7 +346,7 @@ def test_two_spellings_of_one_spec_write_one_canonical_text(source, key, written
         pytest.param('not (not a)', 'NOT (NOT a)', id='and-another-not'),
         pytest.param('true or a', 'True OR a', id='a-literal'),
         pytest.param("tag == 'it\\'s'", "tag == 'it\\'s'", id='a-quoted-label-keeps-its-escape'),
-        pytest.param('g[h] == h', 'g[h] == h', id='a-label-a-map-gives'),
+        pytest.param('g[h] == h', 'g[h] == h', id='a-label-a-mapping-gives'),
         pytest.param('count(b or a, over=t) >= 2', 'count(a OR b, over=t) >= 2', id='a-count'),
         pytest.param('count(a, over=t, by=g) >= 1', 'count(a, by=g, over=t) >= 1', id='a-calls-kwargs-are-sorted'),
     ],

@@ -108,7 +108,7 @@ from mathspec._validation import to_spec
 from mathspec._yaml import read_spec
 from mathspec.errors import LanguageError, SchemaError, did_you_mean, schema_error
 from mathspec.program import variables_of
-from mathspec.spec import GivenSpec, MapSpec, Spec
+from mathspec.spec import GivenSpec, MappingSpec, Spec
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -116,22 +116,22 @@ if TYPE_CHECKING:
     from mathspec.program import Program
     from mathspec.spec import DimensionSpec
 
-SHARED_SECTIONS = ('dimensions', 'relations', 'maps')
+SHARED_SECTIONS = ('dimensions', 'relations', 'mappings')
 
 SETTINGS: dict[str, frozenset[str]] = {
     'dimensions': frozenset({'ordered'}),
     'relations': frozenset({'missing'}),
-    'maps': frozenset({'missing'}),
+    'mappings': frozenset({'missing'}),
 }
-"""The fields of a dimension, a relation or a map, other than ``description``, that a patch may change. A patch may
+"""The fields of a dimension, a relation or a mapping, other than ``description``, that a patch may change. A patch may
 change no other field of one that its base declares.
 """
 
 
-class _Maps(BaseModel):
-    """The ``maps:`` section one level flatter, each map under ``subject[map]``, so it folds as a section of entries."""
+class _Mappings(BaseModel):
+    """The ``mappings:`` section one level flatter, each mapping under ``subject[mapping]``, so it folds as a section of entries."""
 
-    maps: Frozen[str, MapSpec]
+    mappings: Frozen[str, MappingSpec]
 
 
 OWNED_SECTIONS = tuple(
@@ -174,7 +174,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     Raises:
         LanguageError: A fragment does not load on its own; two fragments
             declare one name; two fragments say different things about one
-            dimension, relation, map or given entry; a fragment reads a name as
+            dimension, relation, mapping or given entry; a fragment reads a name as
             something other than what its sibling introduces, as another kind
             of thing, or over fewer dimensions than its body carries; a fragment
             adds a term to a variable, a parameter, a constraint or a
@@ -195,10 +195,10 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
     flat: dict[str, dict[str, object]] = {
-        name: {'maps': _flat_maps(sections.get('maps'))} for name, sections in read.items()
+        name: {'mappings': _flat_mappings(sections.get('mappings'))} for name, sections in read.items()
     }
-    if agreed := _agreed(flat, 'maps', 'map', 'give one of them a name of its own', owner=_Maps):
-        merged['maps'] = _nested_maps(agreed)
+    if agreed := _agreed(flat, 'mappings', 'mapping', 'give one of them a name of its own', owner=_Mappings):
+        merged['mappings'] = _nested_mappings(agreed)
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
     readings = {
         kind: _agreed(asked, kind, label, 'read it over the same dims', owner=GivenSpec)
@@ -742,17 +742,17 @@ def _entries(source: Source) -> dict[str, object]:
     return read_spec(source)
 
 
-def _flat_maps(section: object) -> dict[str, object]:
-    """A ``maps:`` section keyed by ``subject[map]``, as [`_Maps`][] reads it."""
+def _flat_mappings(section: object) -> dict[str, object]:
+    """A ``mappings:`` section keyed by ``subject[mapping]``, as [`_Mappings`][] reads it."""
     return {
         f'{subject}[{role}]': entry
-        for subject, maps in _mapping(section).items()
-        for role, entry in _mapping(maps).items()
+        for subject, mappings in _mapping(section).items()
+        for role, entry in _mapping(mappings).items()
     }
 
 
-def _nested_maps(flat: Mapping[str, object]) -> dict[str, dict[str, object]]:
-    """*flat* as the ``maps:`` section a file writes, under each subject."""
+def _nested_mappings(flat: Mapping[str, object]) -> dict[str, dict[str, object]]:
+    """*flat* as the ``mappings:`` section a file writes, under each subject."""
     nested: dict[str, dict[str, object]] = {}
     for key, entry in flat.items():
         subject, _, role = key.partition('[')
@@ -826,15 +826,15 @@ def _lay_over(base: dict[str, object], patch: dict[str, object], name: str) -> d
     for key, value in patch.items():
         if key == 'given':
             laid[key] = _given(_mapping(laid.get(key)), _section(value, key, name), name)
-        elif key == 'maps':
+        elif key == 'mappings':
             section = _section(value, key, name)
-            if dropped := [subject for subject, maps in section.items() if maps is None]:
+            if dropped := [subject for subject, mappings in section.items() if mappings is None]:
                 raise LanguageError(
-                    f"patch '{name}' removes the maps of '{dropped[0]}', which a patch cannot change. Leave the "
-                    f'subject out of the patch, and remove the entries written over its maps one at a time.'
+                    f"patch '{name}' removes the mappings of '{dropped[0]}', which a patch cannot change. Leave the "
+                    f'subject out of the patch, and remove the entries written over its mappings one at a time.'
                 )
-            shared = _shared(_flat_maps(laid.get(key)), _flat_maps(section), key, name, owner=_Maps)
-            laid[key] = _nested_maps(shared)
+            shared = _shared(_flat_mappings(laid.get(key)), _flat_mappings(section), key, name, owner=_Mappings)
+            laid[key] = _nested_mappings(shared)
         elif key in SHARED_SECTIONS:
             laid[key] = _shared(_mapping(laid.get(key)), _section(value, key, name), key, name)
         elif key in OWNED_SECTIONS:
@@ -904,7 +904,7 @@ def _shared(
     *,
     owner: type[BaseModel] = Spec,
 ) -> dict[str, object]:
-    """One ``dimensions``, ``relations`` or ``maps`` section: a patch adds one or restates one, never changes or drops it.
+    """One ``dimensions``, ``relations`` or ``mappings`` section: a patch adds one or restates one, never changes or drops it.
 
     A patch may change the description and the [`SETTINGS`][] of one its
     base declares, and ``null`` puts back the default. A dimension may gain

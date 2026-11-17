@@ -28,7 +28,7 @@ dimensions:
     dtype: int
     ordered: true
 
-maps:
+mappings:
   flow:
     converter:
       description: which converter each flow belongs to

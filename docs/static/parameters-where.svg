@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 252" width="760" height="252" style="max-width: 100%; height: auto" role="img" aria-labelledby="pwh-t pwh-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="pwh-t">A where condition on a parameter drops rows of its data</title>
-  <desc id="pwh-d">At one snapshot, the relation connection has three rows: chp to el, chp to heat and boiler to heat, and its map role gives each of them the label output. The data of efficiency has three rows: chp el 0.4, boiler heat 0.9 and boiler el 0.5. With where connection[role] == output and missing 1, the parameter efficiency has three rows: chp el 0.4, chp heat 1 and boiler heat 0.9. The data row for boiler el, which connection does not list, has no role, so it is dropped, so efficiency is absent there. The row for chp heat, which the data does not have, takes the value 1.</desc>
+  <desc id="pwh-d">At one snapshot, the relation connection has three rows: chp to el, chp to heat and boiler to heat, and its mapping role gives each of them the label output. The data of efficiency has three rows: chp el 0.4, boiler heat 0.9 and boiler el 0.5. With where connection[role] == output and missing 1, the parameter efficiency has three rows: chp el 0.4, chp heat 1 and boiler heat 0.9. The data row for boiler el, which connection does not list, has no role, so it is dropped, so efficiency is absent there. The row for chp heat, which the data does not have, takes the value 1.</desc>
   <defs>
     <pattern id="pwh-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -23,7 +23,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="16" y="20" font-weight="bold">connection</text>
-    <text x="96" y="20" fill-opacity="0.7">a relation with the map role</text>
+    <text x="96" y="20" fill-opacity="0.7">a relation with the mapping role</text>
     <text x="16" y="140" font-weight="bold">efficiency</text>
     <text x="90" y="140" fill-opacity="0.7">the data, at one snapshot</text>
     <text x="500" y="80" font-weight="bold">efficiency</text>

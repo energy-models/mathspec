@@ -110,7 +110,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
-        *_map_targets(spec),
+        *_mapping_targets(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -205,7 +205,7 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
             dim = lk.pairs[0][1] if lk.pairs else '<dimension>'
             yield (
                 f"Relation '{lname}' has {'one column' if lk.pairs else 'no column'} under 'dims:', and a relation "
-                f'needs at least two. To give each {dim} a label, declare a map under maps: {dim}:. To mark some '
+                f'needs at least two. To give each {dim} a label, declare a mapping under mappings: {dim}:. To mark some '
                 f'of them, declare a bool parameter or a condition.'
             )
         if not isinstance(lk.dims, Mapping):
@@ -228,31 +228,31 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
         )
 
 
-def _map_targets(spec: Spec) -> Iterator[str]:
-    """A map's subject is a dimension or a relation, its name is no column of the subject, and it refers to a dimension.
+def _mapping_targets(spec: Spec) -> Iterator[str]:
+    """A mapping's subject is a dimension or a relation, its name is no column of the subject, and it refers to a dimension.
 
-    A relation with two columns over one dimension takes no map, since a call
+    A relation with two columns over one dimension takes no mapping, since a call
     through it would not know which of the two the frame's dimension meets.
     """
-    for subject, maps in spec.maps.items():
-        head = f"maps: '{subject}'"
+    for subject, mappings in spec.mappings.items():
+        head = f"mappings: '{subject}'"
         if subject in spec.relations:
             pairs = spec.relations[subject].pairs
             if twice := [d for d, count in Counter(d for _, d in pairs).items() if count > 1]:
                 yield (
-                    f"{head} is a relation with two columns over '{twice[0]}', and a map reads one row per "
-                    f'combination of its dimensions. Declare the maps on a relation over each dimension once.'
+                    f"{head} is a relation with two columns over '{twice[0]}', and a mapping reads one row per "
+                    f'combination of its dimensions. Declare the mappings on a relation over each dimension once.'
                 )
         elif subject in spec.dimensions:
             pairs = ((subject, subject),)
         else:
             subjects = [*spec.dimensions, *spec.relations]
             yield (
-                f'{head} is neither a dimension nor a relation, and a map gives each row of one a label. '
+                f'{head} is neither a dimension nor a relation, and a mapping gives each row of one a label. '
                 f'{did_you_mean(subject, subjects, label="Subjects")}'
             )
             continue
-        for role, m in maps.items():
+        for role, m in mappings.items():
             if not re.fullmatch(NAME, role):
                 yield (
                     f'{head}: {role!r} is not a name. Start it with a letter or an underscore, then use only '
@@ -260,22 +260,22 @@ def _map_targets(spec: Spec) -> Iterator[str]:
                 )
             if role in dict(pairs):
                 yield (
-                    f"{head}: map '{role}' has the name of a column of '{subject}', which holds the row, not a "
-                    f'label of it. Rename the map after what it holds.'
+                    f"{head}: mapping '{role}' has the name of a column of '{subject}', which holds the row, not a "
+                    f'label of it. Rename the mapping after what it holds.'
                 )
             if m.dim in spec.relations:
                 yield (
-                    f"{head}: map '{role}' refers to the relation '{m.dim}', and a map gives a label of one "
+                    f"{head}: mapping '{role}' refers to the relation '{m.dim}', and a mapping gives a label of one "
                     f"dimension. Refer to one of its dimensions, or declare '{role}' on the relation instead."
                 )
             elif m.dim not in spec.dimensions:
                 yield (
-                    f"{head}: map '{role}' refers to undeclared dimension '{m.dim}'. Declare it under 'dimensions:'."
+                    f"{head}: mapping '{role}' refers to undeclared dimension '{m.dim}'. Declare it under 'dimensions:'."
                 )
             elif role in spec.dimensions and role != m.dim:
                 yield (
-                    f"{head}: map '{role}' is named after dimension '{role}', but refers to '{m.dim}'. Rename the "
-                    f'map after what it holds.'
+                    f"{head}: mapping '{role}' is named after dimension '{role}', but refers to '{m.dim}'. Rename the "
+                    f'mapping after what it holds.'
                 )
 
 
@@ -395,8 +395,8 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             continue
         if (activity := gate_of(pw.activity)) is None:
             yield (
-                f'{context}: activity: {pw.activity!r} is neither a variable nor a variable read through a map. '
-                f'Write activity: <variable>, or activity: at(<variable>, by=<subject>[<map>]).'
+                f'{context}: activity: {pw.activity!r} is neither a variable nor a variable read through a mapping. '
+                f'Write activity: <variable>, or activity: at(<variable>, by=<subject>[<mapping>]).'
             )
             continue
         if activity not in spec.variables:

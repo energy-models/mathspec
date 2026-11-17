@@ -55,7 +55,7 @@ mathspec loads a dimension that no entry uses, and for that dimension
 ([advice](../glossary.md#advice)).
 
 The label of another dimension that each label has, such as the carrier of
-each generator, is a [map](relations.md#maps), not a dimension.
+each generator, is a [mapping](relations.md#mappings), not a dimension.
 
 ## `one_of`
 
@@ -67,13 +67,13 @@ compares against.
 dimensions:
   carrier: { dtype: str, one_of: [ccgt, ocgt, wind] }
   generator: { dtype: str }
-maps:
+mappings:
   generator: { carrier: { dim: carrier } }
 variables:
   p: { dims: [generator], where: "generator[carrier] == 'wind'" }
 ```
 
-`p` exists only at the generators whose carrier is `wind`. The map
+`p` exists only at the generators whose carrier is `wind`. The mapping
 `generator[carrier]` gives each generator one carrier, and `one_of` makes `wind`
 one of three allowed labels.
 
@@ -91,7 +91,7 @@ The order of the list changes nothing. mathspec sorts it by name at load, so
 `one_of: [wind, ccgt, ocgt]` declares the same dimension.
 
 At load, mathspec refuses a [condition](expressions.md#conditions) that
-compares the dimension, or a map into it, against a label that is not in the
+compares the dimension, or a mapping into it, against a label that is not in the
 list. With `generator[carrier] == 'gnrtr'` in place of `generator[carrier] == 'wind'` above, mathspec prints:
 
 ```text
@@ -102,7 +102,7 @@ mathspec lists the allowed labels and suggests two rewrites.
 
 With data attached, a tool refuses a label
 outside the list: in the table of the dimension, in every column of a relation
-over it, and in the column of every map into it.
+over it, and in the column of every mapping into it.
 
 Only a dimension takes `one_of`, and a `one_of` key on a parameter is refused
 as an unknown key.
@@ -159,5 +159,5 @@ the dimension still needs `ordered: true`.
 
 !!! info "See also"
 
-    - [choose between a dimension, a relation, a map and a parameter](../../howto/declare-a-column.md)
+    - [choose between a dimension, a relation, a mapping and a parameter](../../howto/declare-a-column.md)
       for a column of data.

@@ -172,7 +172,7 @@ The constraint `emission_cap` uses `emissions` by name, and the objective uses
 | `expression`  | without `cases:` |         | the quantity, in the [expression grammar](expressions.md), which `cases:` replaces                       |
 | `dims`        | with `cases:`    | `null`  | the dimensions over which the quantity is indexed, sorted by name at load ([`dims`](#dims))              |
 | `description` | no               | `null`  | free text                                                                                                |
-| `cases`       | no               | `null`  | a map of named cases, each with a `when:` condition and an `expression:` ([`cases`](#cases))             |
+| `cases`       | no               | `null`  | a mapping of named cases, each with a `when:` condition and an `expression:` ([`cases`](#cases))         |
 | `otherwise`   | with `cases:`    | `null`  | the value at every combination of labels (a [coordinate](../glossary.md#coordinate)) that no case claims |
 | `adds_to`     | no               | `null`  | the name of a sum that this entry adds a term to ([`adds_to`](#adds_to))                                 |
 
@@ -377,7 +377,7 @@ dimensions:
   snapshot: { dtype: int }
   bus: { dtype: str }
   generator: { dtype: str }
-maps:
+mappings:
   generator: { bus: { dim: bus } }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }

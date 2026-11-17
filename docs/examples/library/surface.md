@@ -30,7 +30,7 @@ dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   bus: { dtype: str, description: network nodes }
   port: { dtype: str, description: "the connections components make, one label per connection" }
-maps:
+mappings:
   port: { bus: { dim: bus } }
 variables:
   Port_p:

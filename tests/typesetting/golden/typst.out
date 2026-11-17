@@ -64,9 +64,9 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 == Notation
 / $t minus.o k$: `edge='wrap'` --- $t-k$, cyclic
 / $t minus.square_(v) k$: `edge=v` --- $t-k$, and $v$ past the edge
-/ $t minus.o^(upright("map")(t)) k$: `within=subject[map]` --- $t-k$ inside the group of $t$
+/ $t minus.o^(upright("map")(t)) k$: `within=subject[mapping]` --- $t-k$ inside the group of $t$
 / $upright("pos")(t)$: `position()` --- the position of $t$, counted from $0$; $t$ is the label
-/ $upright("pos")_(upright("map")(t))(t)$: `position(within=subject[map])` --- the position of $t$ inside its group
+/ $upright("pos")_(upright("map")(t))(t)$: `position(within=subject[mapping])` --- the position of $t$ inside its group
 / $abs(cal(T))$: the size of $cal(T)$; $abs(cal(T)) - 1$ is the last position
 
 == Conditions

@@ -4,7 +4,7 @@
 
 description: >-
   A sum by group: `sum(array, over=dim, by=subject[m])` groups the result by
-  the label that map `m` gives each row. The data of the map, not the file,
+  the label that mapping `m` gives each row. The data of the mapping, not the file,
   sets which generator sits at which bus.
 
 dimensions:
@@ -12,7 +12,7 @@ dimensions:
   generator: { dtype: str }
   bus: { dtype: str }
 
-maps:
+mappings:
   generator: { bus: { dim: bus } }
 
 parameters:

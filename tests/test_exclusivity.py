@@ -36,7 +36,7 @@ STORAGE: dict[str, Any] = {
         'storage': {'ordered': True},
         'period': {'dtype': 'int'},
     },
-    'maps': {'snapshot': {'period': {'dim': 'period'}}},
+    'mappings': {'snapshot': {'period': {'dim': 'period'}}},
     'parameters': {
         'cyclic': {'dims': ['storage'], 'dtype': 'bool'},
         'committable': {'dims': ['storage'], 'dtype': 'bool'},
@@ -50,16 +50,16 @@ STORAGE: dict[str, Any] = {
 }
 
 
-#: A line has one label in each map, or none, and each comparison on `line[...]` reads that one row.
+#: A line has one label in each mapping, or none, and each comparison on `line[...]` reads that one row.
 NETWORK: dict[str, Any] = {
     'dimensions': {'line': {}, 'bus': {}},
-    'maps': {'line': {'bus0': {'dim': 'bus'}, 'bus1': {'dim': 'bus'}}},
+    'mappings': {'line': {'bus0': {'dim': 'bus'}, 'bus1': {'dim': 'bus'}}},
     'variables': {'flow': {'dims': ['line']}},
     'constraints': {'c': {'dims': ['line'], 'expression': 'flow >= 0'}},
 }
 
 #: The same network with a third end, so two pairs of columns can share one.
-THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'maps.line.bus2': {'dim': 'bus'}})
+THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'mappings.line.bus2': {'dim': 'bus'}})
 
 
 @pytest.fixture(scope='module')
@@ -418,15 +418,15 @@ class TestAMissingRow:
 
 
 class TestAMapWithNoLabel:
-    """A comparison on a map is false where the map gives the row no label, whatever its operator."""
+    """A comparison on a mapping is false where the mapping gives the row no label, whatever its operator."""
 
-    def test_a_map_of_a_numbered_dimension_compares_a_label(self):
-        """A map read the dtype of its subject, so a label of `snapshot[season]` reached the cells of an int.
+    def test_a_mapping_of_a_numbered_dimension_compares_a_label(self):
+        """A mapping read the dtype of its subject, so a label of `snapshot[season]` reached the cells of an int.
 
         The prover then asserted that a label or a date reached a magnitude,
         and the file did not load.
         """
-        spec = to_spec(varied(STORAGE, **{'dimensions.season': {}, 'maps.snapshot.season': {'dim': 'season'}}))
+        spec = to_spec(varied(STORAGE, **{'dimensions.season': {}, 'mappings.snapshot.season': {'dim': 'season'}}))
         cases = {'winter': "snapshot[season] == 'winter'", 'rest': "snapshot[season] != 'winter'"}
         assert refusals(spec, cases) == [], 'a label is equal to winter or not, whatever dtype the subject has'
 
@@ -436,12 +436,12 @@ class TestAMapWithNoLabel:
             pytest.param(
                 {'same': 'not line[bus0] == line[bus1]', 'different': 'not line[bus0] != line[bus1]'},
                 'line[bus0] has a label, line[bus1] has no label',
-                id='two-maps',
+                id='two-mappings',
             ),
             pytest.param(
                 {'north': "not line[bus0] == 'north'", 'elsewhere': "not line[bus0] != 'north'"},
                 'line[bus0] has no label',
-                id='a-map-and-a-label',
+                id='a-mapping-and-a-label',
             ),
         ],
     )
@@ -459,18 +459,20 @@ class TestAMapWithNoLabel:
         ('cases', 'model'),
         [
             pytest.param({'kept': "line[bus0] != 'north'", 'left_out': 'not line[bus0]'}, NETWORK, id='a-label'),
-            pytest.param({'kept': 'line[bus0] != line[bus1]', 'left_out': 'not line[bus0]'}, NETWORK, id='two-maps'),
+            pytest.param(
+                {'kept': 'line[bus0] != line[bus1]', 'left_out': 'not line[bus0]'}, NETWORK, id='two-mappings'
+            ),
             pytest.param(
                 {'later': 'snapshot[period] != 2030', 'left_out': 'not snapshot[period]'}, STORAGE, id='a-number'
             ),
         ],
     )
     def test_a_comparison_and_the_missing_label_are_apart(self, cases: dict[str, str], model: dict[str, Any]):
-        """A comparison is true only where the map gives a label, so `not subject[map]` excludes it.
+        """A comparison is true only where the mapping gives a label, so `not subject[mapping]` excludes it.
 
-        The prover read the label a comparison needs and the label the map
+        The prover read the label a comparison needs and the label the mapping
         test asks for as two facts, and refused the pair with a witness where
-        the map gives no label and still holds a value.
+        the mapping gives no label and still holds a value.
         """
         assert refusals(to_spec(model), cases) == [], 'no row both has a label and has none'
 
@@ -480,12 +482,12 @@ class TestAMapWithNoLabel:
             pytest.param(
                 {'loop': 'line[bus0] == line[bus1]', 'north': "line[bus0] == 'north'"},
                 "where line[bus0] vs line[bus1] is equal, line[bus0] is 'north'.",
-                id='a-map-value-says-the-label-exists',
+                id='a-mapping-value-says-the-label-exists',
             ),
             pytest.param(
                 {'listed': 'line[bus0]', 'again': 'line[bus0]'},
                 'where line[bus0] has a label.',
-                id='the-map-test-says-it',
+                id='the-mapping-test-says-it',
             ),
         ],
     )
@@ -498,7 +500,7 @@ class TestAMapWithNoLabel:
 class TestTwoPairsOfColumns:
     """Each pair of columns is its own fact: a line can have `bus0 == bus1` and `bus0 != bus2` at once."""
 
-    def test_two_pairs_that_share_a_map_both_claim_a_line(self):
+    def test_two_pairs_that_share_a_mapping_both_claim_a_line(self):
         """Both cases claim a line whose `bus0` is its `bus1` but not its `bus2`.
 
         The prover keyed a comparison of two columns by the two subject names

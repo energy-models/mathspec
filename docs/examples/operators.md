@@ -114,7 +114,7 @@ $`\sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{c,g,t} \le \mathrm{limit}_{c} 
 ```yaml
 description: >-
   A sum by group: `sum(array, over=dim, by=subject[m])` groups the result by
-  the label that map `m` gives each row. The data of the map, not the file,
+  the label that mapping `m` gives each row. The data of the mapping, not the file,
   sets which generator sits at which bus.
 
 dimensions:
@@ -122,7 +122,7 @@ dimensions:
   generator: { dtype: str }
   bus: { dtype: str }
 
-maps:
+mappings:
   generator: { bus: { dim: bus } }
 
 parameters:
@@ -150,7 +150,7 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{bus}(g) = b} p_{g,t} \le \mathrm{limit}_
 ```yaml
 description: >-
   A sum that keeps a key column: `sum(array, over=dim, by=subject[m])` joins
-  on the column over `dim` and groups by map `m`. The sum also joins on the
+  on the column over `dim` and groups by mapping `m`. The sum also joins on the
   key column that the call does not list. It keeps that column, so each zone
   gets one total per period.
 
@@ -162,7 +162,7 @@ dimensions:
 relations:
   zone_of: { dims: [generator, period] }
 
-maps:
+mappings:
   zone_of: { zone: { dim: zone } }
 
 parameters:
@@ -189,8 +189,8 @@ $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone}(g,\ e) = z} p_{g,e} \ge \mathrm{de
 
 ```yaml
 description: >-
-  Several columns and maps: `sum(array, over=[dim, …], by=subject[m, …])`
-  joins on both columns of the relation and groups by both of its maps.
+  Several columns and mappings: `sum(array, over=[dim, …], by=subject[m, …])`
+  joins on both columns of the relation and groups by both of its mappings.
 
 dimensions:
   generator: { dtype: str }
@@ -201,7 +201,7 @@ dimensions:
 relations:
   slot_of: { dims: [generator, period] }
 
-maps:
+mappings:
   slot_of: { bus: { dim: bus }, technology: { dim: technology } }
 
 parameters:
@@ -229,13 +229,13 @@ $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{bus}(g,\ e) = b \wed
 ```yaml
 description: >-
   The join without a grouping: `at(array, by=subject[m])` takes, for each
-  `snapshot`, the value at the `period` that the map gives that snapshot.
+  `snapshot`, the value at the `period` that the mapping gives that snapshot.
 
 dimensions:
   snapshot: { dtype: int }
   period: { dtype: int }
 
-maps:
+mappings:
   snapshot: { period: { dim: period } }
 
 parameters:
@@ -256,21 +256,21 @@ objective: { sense: minimize, expression: sum(p) }
 
 $`p_{t} \le \mathrm{cap}_{\mathrm{period}(t)} \qquad \forall\, t \in \mathcal{T}`$
 
-### `at(array, by=subject[m]), two maps into one dimension`
+### `at(array, by=subject[m]), two mappings into one dimension`
 
 `examples/operators/at_columns.yaml`
 
 ```yaml
 description: >-
-  One of two maps: where a subject has two maps into one dimension,
-  `at(array, by=subject[m])` takes the value at the label of map `m`. Here `m`
+  One of two mappings: where a subject has two mappings into one dimension,
+  `at(array, by=subject[m])` takes the value at the label of mapping `m`. Here `m`
   is `bus0`, the sending end of a line.
 
 dimensions:
   line: { dtype: str }
   bus: { dtype: str }
 
-maps:
+mappings:
   line: { bus0: { dim: bus }, bus1: { dim: bus } }
 
 parameters:
@@ -419,7 +419,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 
-maps:
+mappings:
   snapshot: { season: { dim: season } }
 
 variables:
@@ -552,7 +552,7 @@ dimensions:
   hour: { dtype: int, ordered: true }
   day: { dtype: str }
 
-maps:
+mappings:
   hour: { day: { dim: day } }
 
 variables:

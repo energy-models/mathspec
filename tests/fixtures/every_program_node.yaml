@@ -7,7 +7,7 @@ dimensions:
   t: { dtype: int, ordered: true }
   g: { dtype: str }
   zone: { dtype: str }
-maps:
+mappings:
   g: { zone: { dim: zone } }
 parameters:
   cost: { dims: [g] }

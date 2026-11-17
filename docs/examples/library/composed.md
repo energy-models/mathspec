@@ -52,7 +52,7 @@ dimensions:
   load: {dtype: str, description: 'demands, each on one port'}
   port: {dtype: str, description: 'the connections components make, one label per connection'}
   snapshot: {dtype: datetime, description: dispatch periods}
-maps:
+mappings:
   generator:
     port: {dim: port}
   load:

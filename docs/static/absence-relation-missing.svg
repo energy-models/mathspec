@@ -3,8 +3,8 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 206" width="760" height="206" style="max-width: 100%; height: auto" role="img" aria-labelledby="arm-t arm-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
-  <title id="arm-t">A map with missing absent is absent at a row with no label</title>
-  <desc id="arm-d">The dimension line has three labels: l1, l2 and l3. The map line[bus1], declared with missing absent, gives each line a bus. Its data gives l1 the bus north and l2 the bus south, and gives l3 no label. At l3 the map line[bus1] is absent.</desc>
+  <title id="arm-t">A mapping with missing absent is absent at a row with no label</title>
+  <desc id="arm-d">The dimension line has three labels: l1, l2 and l3. The mapping line[bus1], declared with missing absent, gives each line a bus. Its data gives l1 the bus north and l2 the bus south, and gives l3 no label. At l3 the mapping line[bus1] is absent.</desc>
   <defs>
     <pattern id="arm-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -21,7 +21,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12.5">
-      <text x="16" y="28">maps:</text>
+      <text x="16" y="28">mappings:</text>
       <text x="31" y="46">line: { bus1: { dim: bus, <tspan font-weight="bold">missing: absent</tspan> } }</text>
     </g>
     <text x="16" y="86" font-weight="bold">line</text>
@@ -48,7 +48,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="324" y="86" font-weight="bold">line[bus1]</text>
-    <text x="400" y="86" fill-opacity="0.7">a map</text>
+    <text x="400" y="86" fill-opacity="0.7">a mapping</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="332" y="110" font-weight="bold">line</text>
       <text x="418" y="110" font-weight="bold">bus1</text>

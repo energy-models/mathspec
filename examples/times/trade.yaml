@@ -13,7 +13,7 @@ dimensions:
   process: { description: a technology that carries trade }
   trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
 
-maps:
+mappings:
   trade_link: # the region and commodity at each end of a link
     from_commodity: { dim: commodity }
     from_region: { dim: region }

@@ -68,18 +68,18 @@ class Builtin:
 
 BUILTINS: dict[str, Builtin] = {
     'sum': Builtin(
-        'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, over=<column>, by=<subject>[<map>])',
+        'sum(<expr>), sum(<expr>, over=<dim>) or sum(<expr>, over=<column>, by=<subject>[<mapping>])',
         dimension_kwargs=('over',),
         column_kwargs=('by',),
         optional_kwargs=('over', 'by'),
         with_columns=('over',),
     ),
     'at': Builtin(
-        'at(<expr>, by=<subject>[<map>])',
+        'at(<expr>, by=<subject>[<mapping>])',
         column_kwargs=('by',),
     ),
     'sum_back': Builtin(
-        "sum_back(<expr>, along=<dim>, window=<n|parameter>[, edge='wrap'][, within=<subject>[<map>]])",
+        "sum_back(<expr>, along=<dim>, window=<n|parameter>[, edge='wrap'][, within=<subject>[<mapping>]])",
         dimension_kwargs=('along',),
         column_kwargs=('within',),
         required_value_kwargs=('window',),
@@ -87,7 +87,7 @@ BUILTINS: dict[str, Builtin] = {
         optional_kwargs=('within',),
     ),
     'shift': Builtin(
-        "shift(<expr>, along=<dim>, offset=<n>[, edge='wrap'|<number>][, within=<subject>[<map>]])",
+        "shift(<expr>, along=<dim>, offset=<n>[, edge='wrap'|<number>][, within=<subject>[<mapping>]])",
         dimension_kwargs=('along',),
         column_kwargs=('within',),
         required_value_kwargs=('offset',),

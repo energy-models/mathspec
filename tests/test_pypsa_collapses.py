@@ -47,7 +47,7 @@ def _dims(entry: Any) -> list[str]:
 def test_every_standard_name_survives():
     sections = {
         'parameters': ALL.parameters,
-        'maps': [f'{subject}[{name}]' for subject, maps in ALL.maps.items() for name in maps],
+        'mappings': [f'{subject}[{name}]' for subject, mappings in ALL.mappings.items() for name in mappings],
         'variables': ALL.variables,
         'expressions': ALL.expressions,
         'constraints': ALL.constraints,

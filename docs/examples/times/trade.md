@@ -15,7 +15,7 @@ which TIMES writes with a second name for each set, `ALIAS(REG,R)` in
 
     mathspec refuses an entry over one dimension twice. This spec declares a
     dimension `trade_link`, whose labels the data invents, one per link, and
-    the maps of `trade_link` give each link its two regions and two
+    the mappings of `trade_link` give each link its two regions and two
     commodities. Nothing refuses two labels for the same link, and a row of
     `ire_flo` for a process that does not carry the link is dropped, not
     refused. Issue [#969](https://github.com/energy-models/mathspec/issues/969)
@@ -39,7 +39,7 @@ dimensions:
   process: { description: a technology that carries trade }
   trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
 
-maps:
+mappings:
   trade_link: # the region and commodity at each end of a link
     from_commodity: { dim: commodity }
     from_region: { dim: region }

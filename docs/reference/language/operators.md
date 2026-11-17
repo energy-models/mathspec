@@ -26,18 +26,18 @@ A file cannot add an operator, and only
 | `sum(array)`                                               | `sum` removes every [dimension](dimensions.md) of `array`. The result is a scalar                                                                              |
 | `sum(array, over=dim)`                                     | `sum` removes `dim`                                                                                                                                           |
 | `sum(array, over=[a, …])`                                  | `sum` removes each dimension in the list                                                                                                                      |
-| `sum(array, over=dim, by=subject[c])`                      | `sum` removes `dim`, and groups the result by the column `c` of the table of `subject`, a [map](relations.md#maps) or a column of a [relation](relations.md#relations). The call joins on the other key columns, so `array` and the result are indexed over them |
+| `sum(array, over=dim, by=subject[c])`                      | `sum` removes `dim`, and groups the result by the column `c` of the table of `subject`, a [mapping](relations.md#mappings) or a column of a [relation](relations.md#relations). The call joins on the other key columns, so `array` and the result are indexed over them |
 | `sum(array, over=[dim, …], by=subject[c, …])`              | The call does the same with several dimensions and several columns of one table, joins on them together, and groups by their product                            |
-| `at(array, by=subject[m])`                                 | The result is `array` read at the label that the map `m` gives each row of `subject`, once per row. The result gains the key of `subject`                                                |
+| `at(array, by=subject[m])`                                 | The result is `array` read at the label that the mapping `m` gives each row of `subject`, once per row. The result gains the key of `subject`                                                |
 | `shift(array, along=dim, offset=n)`                        | The result is the value `n` positions earlier along `dim`, and the vacated edge is [absent](absence.md)                                                                         |
 | `shift(array, along=dim, offset=n, edge='wrap')`           | The result is the value `n` positions earlier, counted cyclically, so nothing is vacated                                                                                    |
 | `shift(array, along=dim, offset=n, edge=v)`                | The result is the value `n` positions earlier, with the number `v` at the vacated edge                                                                                      |
 | `shift(array, along=dim, offset=p, edge=…)`                | The result is the value `p` positions earlier, with `p` an integer parameter read per entity                                                                                |
-| `shift(array, along=dim, offset=n, within=subject[m])`     | The result is the value `n` positions earlier inside each group that the map `m` makes. Neighbours, edges and a wrap all belong to that group                 |
+| `shift(array, along=dim, offset=n, within=subject[m])`     | The result is the value `n` positions earlier inside each group that the mapping `m` makes. Neighbours, edges and a wrap all belong to that group                 |
 | `sum_back(array, along=dim, window=n)`                     | The result is the sum of the last `n` positions along `dim`, ending at the position being written                                                                           |
 | `sum_back(array, along=dim, window=p)`                     | The result is the sum of the last `p` positions, with `p` an integer parameter read per entity                                                                              |
 | `sum_back(array, along=dim, window=p, edge='wrap')`        | Instead of stopping short at its start, the window reaches around the dimension                                                                               |
-| `sum_back(array, along=dim, window=n, within=subject[m])`  | The window stays inside each group that the map `m` makes                                                                                       |
+| `sum_back(array, along=dim, window=n, within=subject[m])`  | The window stays inside each group that the mapping `m` makes                                                                                       |
 
 `array` is any expression with the right dimensions, such as a parameter or a
 variable. [Every operator as math](#every-operator-as-math) lists the typeset
@@ -53,7 +53,7 @@ each dimension once. `sum(x, over=[a, b])` is the same as
 `sum(sum(x, over=a), over=b)`, and the [typesetter](../typeset.md) prints it as
 one sum over both sets.
 
-With `by=`, the sum adds up each group that a [map](relations.md#maps) or a
+With `by=`, the sum adds up each group that a [mapping](relations.md#mappings) or a
 column of a [relation](relations.md#relations) makes, and the result is
 indexed over that column. The balance at each bus (a nodal balance) is one
 `sum(by=)` per kind of component:
@@ -63,7 +63,7 @@ dimensions:
   bus: { dtype: str }
   generator: { dtype: str }
   line: { dtype: str }
-maps:
+mappings:
   generator: { bus: { dim: bus } }
   line: { bus0: { dim: bus }, bus1: { dim: bus } }
 parameters:
@@ -110,14 +110,14 @@ sum.
 
 !!! info "See also"
 
-    - [How relations and maps are used](relations.md#how-relations-and-maps-are-used),
-      for the dimensions that a call through a relation or a map joins on, and
+    - [How relations and mappings are used](relations.md#how-relations-and-mappings-are-used),
+      for the dimensions that a call through a relation or a mapping joins on, and
       those its result has.
 
 ## `at`
 
-`at` takes, for each row of the subject of a [map](relations.md#maps), the
-value of an expression at the label that the map gives the row. `at` adds
+`at` takes, for each row of the subject of a [mapping](relations.md#mappings), the
+value of an expression at the label that the mapping gives the row. `at` adds
 nothing up (a [lookup](relations.md#lookups)), and takes one row for each row
 of the subject. Here
 `at` takes,
@@ -127,7 +127,7 @@ for every line, the build decision of its bus:
 dimensions:
   bus: { dtype: str }
   line: { dtype: str }
-maps:
+mappings:
   line: { bus: { dim: bus } }
 parameters:
   cap: { dims: [line] }
@@ -149,7 +149,7 @@ f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{bus}(l)} \qquad \forall
 --8<-- "docs/static/operators-at.svg"
 </figure>
 
-`at` removes `bus`, the dimension that the map in `by=` refers to, and adds
+`at` removes `bus`, the dimension that the mapping in `by=` refers to, and adds
 the key, `line`, so `build` is read once per line.
 
 ## `shift`
@@ -236,7 +236,7 @@ group:
 dimensions:
   snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
-maps:
+mappings:
   snapshot: { season: { dim: season } }
 parameters:
   inflow: { dims: [snapshot] }
@@ -315,14 +315,14 @@ Constraint 'arrives_after_its_lead': shift(offset=lead) steps along 'month', and
 `lead` then varies along `month`, the dimension that the shift moves along.
 
 mathspec reads the offset over the dimensions of the shifted expression, and
-over the dimension that a [`within=`](#within) map groups into. At load, mathspec refuses an offset over any other dimension. With a dimension `period`, a map
+over the dimension that a [`within=`](#within) mapping groups into. At load, mathspec refuses an offset over any other dimension. With a dimension `period`, a mapping
 `month: { period: { dim: period } }`, and `lead` declared over
 `[period]`, the spec loads under `within=month[period]`, with one offset
 per period. Without the `within=` on the shift, mathspec refuses the file and
 prints:
 
 ```text
-Constraint 'arrives_after_its_lead': shift(offset=lead): 'lead' varies over ['period'], which the expression does not carry (dims ['month', 'technology']). Declare 'lead' over dims the expression carries, or group by a map into one of ['period'].
+Constraint 'arrives_after_its_lead': shift(offset=lead): 'lead' varies over ['period'], which the expression does not carry (dims ['month', 'technology']). Declare 'lead' over dims the expression carries, or group by a mapping into one of ['period'].
 ```
 
 `period` is neither a dimension of `order` nor a group of a `within=`.
@@ -411,7 +411,7 @@ The typesetter prints each form from the smallest spec that uses it.
 | `sum(array, over=dim, by=subject[m]), joining on the rest of the key` | $`\sum_{g \in \mathcal{G} \,:\, \mathrm{zone}(g,\ e) = z} p_{g,e} \ge \mathrm{demand}_{e,z} \qquad \forall\, e \in \mathcal{E},\ z \in \mathcal{Z}`$ |
 | `sum(array, over=[dim, …], by=subject[m, …])` | $`\sum_{g \in \mathcal{G},\ e \in \mathcal{E} \,:\, \mathrm{bus}(g,\ e) = b \wedge \mathrm{technology}(g,\ e) = t} p_{g,e} \le \mathrm{cap}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}`$ |
 | `at(array, by=subject[m])` | $`p_{t} \le \mathrm{cap}_{\mathrm{period}(t)} \qquad \forall\, t \in \mathcal{T}`$ |
-| `at(array, by=subject[m]), two maps into one dimension` | $`f_{l} \le \mathrm{cap}_{\mathrm{bus0}(l)} \qquad \forall\, l \in \mathcal{L}`$ |
+| `at(array, by=subject[m]), two mappings into one dimension` | $`f_{l} \le \mathrm{cap}_{\mathrm{bus0}(l)} \qquad \forall\, l \in \mathcal{L}`$ |
 | `shift(array, along=dim, offset=n)` | $`p_{t} \le p_{t - 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge='wrap')` | $`p_{t} \le p_{t \ominus 1} \qquad \forall\, t \in \mathcal{T}`$ |
 | `shift(array, along=dim, offset=n, edge=v)` | $`p_{t} \le p_{t \boxminus_{0} 1} \qquad \forall\, t \in \mathcal{T}`$ |
@@ -428,8 +428,8 @@ The typesetter prints each form from the smallest spec that uses it.
 
     - [Absence and where](absence.md) for what each operator does with an absent
       input.
-    - [Relations and maps](relations.md#how-relations-and-maps-are-used) for the
-      relation or the map that `by=` and `within=` take.
+    - [Relations and mappings](relations.md#how-relations-and-mappings-are-used) for the
+      relation or the mapping that `by=` and `within=` take.
     - [Macros](named.md#macros) for a composition of operators under one name.
     - [One construct per spec](../../examples/operators.md) for the smallest spec
       that uses each form.
