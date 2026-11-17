@@ -13,7 +13,6 @@ math below it are written from here.
 
 from __future__ import annotations
 
-import json
 import re
 import textwrap
 from functools import partial
@@ -23,14 +22,12 @@ import yaml
 
 from mathspec import merge, override, to_spec, typeset_line
 from mathspec._typesetting import to_markdown
-from mathspec.program import Add, Constant, ExpressionReference
-from tools._page import ROOT, sidecar_for, splice, split_math, tab, without_header
+from tools._page import ROOT, sidecar_for, splice, tab, without_header
 from tools._page import main as page_main
-from tools.notation import equations
-from tools.spec_math import OPERATORS, PROBES, _section, rendered_probe
+from tools.spec_math import OPERATORS, PROBES, rendered_probe
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
 
     from mathspec.spec import Spec
@@ -60,11 +57,41 @@ MODELS = {
     'library/surface.md': LIBRARY / 'surface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
-    **{f'pypsa/{path.stem}.md': path for path in sorted(PYPSA.glob('*.yaml'))},
+    'pypsa/generator_commitment.md': PYPSA / 'generator_commitment.yaml',
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
 SPLIT_INDEX = 'pypsa/index.md'
+#: Where a fragment with no page of its own is read.
+PYPSA_ON_GITHUB = 'https://github.com/energy-models/mathspec/blob/main/examples/pypsa'
+#: Fragment -> what it states, in the Purpose column of the index.
+PURPOSE = {
+    'carrier': 'The growth limits of each carrier',
+    'cost': 'The expected operating cost and its tail, weighted by scenario',
+    'flow_based': 'Flow-based market coupling',
+    'generator': "PyPSA's `Generator`",
+    'generator_commitment': "The commitment rows of PyPSA's `Generator`",
+    'generator_maintenance': "The maintenance rows of PyPSA's `Generator`",
+    'generator_ramping': "The ramping rows of PyPSA's `Generator`",
+    'global_constraints': 'The five system totals that PyPSA caps',
+    'line': "PyPSA's `Line`",
+    'link': "PyPSA's `Link`",
+    'link_commitment': "The commitment rows of PyPSA's `Link`",
+    'link_maintenance': "The maintenance rows of PyPSA's `Link`",
+    'link_ramping': "The ramping rows of PyPSA's `Link`",
+    'load': "PyPSA's `Load`",
+    'network': 'The buses and the balance at each bus',
+    'power_flow': "Kirchhoff's voltage law around each cycle",
+    'process': "PyPSA's `Process`",
+    'process_commitment': "The commitment rows of PyPSA's `Process`",
+    'process_maintenance': "The maintenance rows of PyPSA's `Process`",
+    'process_ramping': "The ramping rows of PyPSA's `Process`",
+    'security': 'The security-constrained flows over the outages',
+    'settings': 'The weightings, the risk preference and the flags that the other fragments use',
+    'storage_unit': "PyPSA's `StorageUnit`",
+    'store': "PyPSA's `Store`",
+    'transformer': "PyPSA's `Transformer`",
+}
 
 #: Page -> the fragments whose composition it shows, and the patches laid over
 #: it. The spec is what `merge` returns, which no file in the tree holds, so
@@ -77,13 +104,6 @@ COMPOSED = {
     ),
 }
 
-#: Page -> the spec it shows one entry at a time: its YAML, then the
-#: equation it renders, headed by the name the other side gives it, read from
-#: the entry's own description.
-DECLARED = {
-    'pypsa_ladder.md': ROOT / 'examples' / 'pypsa.yaml',
-}
-
 #: Page -> the base and the patch laid over it, shown one entry of the
 #: patch at a time — its YAML, then the line it prints in the patched spec.
 #: The rest of the patched spec is the base's page.
@@ -94,20 +114,13 @@ PATCHED = {
     ),
 }
 
-#: One PyPSA reference network per rung, run out of band with the versions
-#: each script pins; `references.json` beside them holds what each solve
-#: recorded.
-REFERENCES = ROOT / 'examples' / 'references' / 'pypsa'
-RECORDED = json.loads((REFERENCES / 'references.json').read_text())
-
 
 def model_block(path: Path) -> str:
     """One spec, then the whole document the typesetter prints from it.
 
-    Under the spec's own symbol table where it has one, as
-    [`declared_block`][] is: a weight named after the entry that declared it
-    is right in the file and unreadable in the equation that names it six
-    times.
+    Under the spec's own symbol table where it has one: a weight named after
+    the entry that declared it is right in the file and unreadable in the
+    equation that names it six times.
     """
     page = to_markdown(path, symbols=sidecar_for(path), numbered=False)
     return f'```yaml\n{without_header(path)}\n```\n\n{page.strip()}'
@@ -150,11 +163,16 @@ def split_index_block() -> str:
     reader the files no longer have. The reader is the fragment that reads
     the sum with its description and adds nothing to it.
     """
-    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))})
+    return split_index({path.stem: to_spec(path) for path in sorted(PYPSA.glob('*.yaml'))}, _fragment_href, PURPOSE)
 
 
-def split_index(specs: Mapping[str, Spec]) -> str:
-    """The two tables for *specs*, each fragment under its name.
+def _fragment_href(name: str) -> str:
+    """The fragment's page where the gallery prints one, and its YAML on GitHub otherwise."""
+    return f'{name}.md' if f'pypsa/{name}.md' in MODELS else f'{PYPSA_ON_GITHUB}/{name}.yaml'
+
+
+def split_index(specs: Mapping[str, Spec], href: Callable[[str], str], purpose: Mapping[str, str]) -> str:
+    """The two tables for *specs*, each fragment under its name, linked at *href* and described by *purpose*.
 
     Raises:
         ValueError: A sum that no fragment reads with a description while
@@ -177,16 +195,13 @@ def split_index(specs: Mapping[str, Spec]) -> str:
             f"Describe each under 'given: expressions:' in the fragment that reads it."
         )
         raise ValueError(msg)
-    sums = ['| Sum | Over | Read in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
+    sums = ['| Sum | Over | Listed in | The terms, by the fragment that adds each |', '| --- | --- | --- | --- |']
     for hub, by_fragment in sorted(terms.items(), key=lambda item: -len(item[1])):
         reader, dims = readers[hub]
-        cells = ', '.join(f'[`{term}`]({fragment}.md)' for fragment, term in sorted(by_fragment))
+        cells = ', '.join(f'[`{term}`]({href(fragment)})' for fragment, term in sorted(by_fragment))
         over = f'`{", ".join(dims)}`' if dims else 'scalar'
-        sums.append(f'| `{hub}` | {over} | [{reader}]({reader}.md) | {cells} |')
-    files = [
-        '| Fragment | Parameters | Variables | Constraints | Reads | Adds to |',
-        '| --- | --- | --- | --- | --- | --- |',
-    ]
+        sums.append(f'| `{hub}` | {over} | [{reader}]({href(reader)}) | {cells} |')
+    files = ['| Fragment | Purpose | Given | Adds to |', '| --- | --- | --- | --- |']
     for name, spec in specs.items():
         given = spec.given
         reads = len(given.parameters) + len(given.variables) + len(given.expressions) + len(given.constraints)
@@ -194,10 +209,7 @@ def split_index(specs: Mapping[str, Spec]) -> str:
             expression.adds_to for expression in spec.expressions.values() if expression.adds_to is not None
         )
         adds = ', '.join(f'`{hub}`' for hub in hubs)
-        files.append(
-            f'| [{name}]({name}.md) | {len(spec.parameters)} | {len(spec.variables)} | {len(spec.constraints)} '
-            f'| {reads} | {adds} |'
-        )
+        files.append(f'| [{name}]({href(name)}) | {purpose[name]} | {reads} | {adds} |')
     return '### The sums\n\n' + '\n'.join(sums) + '\n\n### The fragments\n\n' + '\n'.join(files)
 
 
@@ -273,51 +285,6 @@ def _stands_for(name: str, description: str | None) -> str:
     return _names_for(name, description)[0]
 
 
-def declared_block(path: Path) -> str:
-    """The legend, then every entry that prints a line, as YAML beside that line, in the document's order."""
-    text = without_header(path)
-    model = to_spec(path)
-    legend, math = split_math(model, symbols=sidecar_for(path), numbered=False)
-    objective = _section(math, 'Objective').strip().removeprefix('#### Objective').strip()
-    equation = equations(_section(math, 'Subject to'))
-    definition = equations(_section(math, 'Definitions')) if model.expressions else {}
-    defined = equations(_section(math, 'Conditions')) if model.conditions else {}
-    domains = _section(math, 'Variable domains').strip()
-    assumption = equations(_section(math, 'Assumptions')) if model.assumptions else {}
-    parts = [legend.strip()]
-    parts.extend(
-        f'### `{name}`\n\n```yaml\n{entry(text, "conditions", name)}\n```\n\n{defined[name]}'
-        for name in model.conditions
-    )
-    parts.append(domains)
-    parts.extend(
-        f'### `{name}`\n\n```yaml\n{entry(text, "expressions", name)}\n```\n\n{definition[name]}'
-        for name in model.expressions
-    )
-    parts.append(f'### Objective\n\n```yaml\n{entry(text, "objective")}\n```\n\n{objective}')
-    for name, constraint in model.constraints.items():
-        printed = equation[name]
-        if _reads_a_sum(model, name):
-            line = typeset_line(model, name, 'markdown', symbols=sidecar_for(path), inline_expressions=True)
-            printed = f'```math\n{line}\n```'
-        parts.append(
-            f'### `{_stands_for(name, constraint.description)}`\n\n'
-            f'`{name}`\n\n'
-            f'```yaml\n{entry(text, "constraints", name)}\n```\n\n'
-            f'{printed}'
-        )
-    parts.extend(
-        f'### `{name}`\n\n```yaml\n{entry(text, section, name)}\n```\n\n{equation[name]}'
-        for section, group in (('sos', model.sos), ('piecewise', model.piecewise))
-        for name in group
-    )
-    parts.extend(
-        f'### `{name}`\n\n```yaml\n{entry(text, "assumptions", name)}\n```\n\n{assumption[name]}'
-        for name in model.assumptions
-    )
-    return '\n\n'.join(parts)
-
-
 def patched_block(base: Path, patch: Path) -> str:
     """The patch's description, then every entry it writes as YAML beside the line it prints once laid over *base*."""
     text = without_header(patch)
@@ -344,97 +311,9 @@ def patched_block(base: Path, patch: Path) -> str:
     return '\n\n'.join(parts)
 
 
-def _summands(node: object) -> list[object]:
-    """The terms of *node* read as a flat sum."""
-    return [*_summands(node.left), *_summands(node.right)] if isinstance(node, Add) else [node]
-
-
-def _reads_a_sum(model: Spec, name: str) -> bool:
-    """Whether the row *name* is ``hub == 0`` over a named expression that is a sum of named expressions.
-
-    Such a row prints with the sum substituted in, as the one file wrote it
-    before each term had a name: the row is what the reader came for, and the
-    terms print once each as definitions below.
-    """
-    row = model.program.constraints[name]
-    lhs, rhs = row.lhs, row.rhs
-    return (
-        isinstance(lhs, ExpressionReference)
-        and isinstance(rhs, Constant)
-        and rhs.value == 0
-        and all(isinstance(term, ExpressionReference) for term in _summands(lhs.body))
-        and len(_summands(lhs.body)) > 1
-    )
-
-
-def _script(name: str) -> str:
-    """A rung's PyPSA script, verbatim — the model under review is the code itself."""
-    return f'`{name}.py`\n\n```python\n{(REFERENCES / f"{name}.py").read_text().strip()}\n```'
-
-
-def _banner(recorded: dict) -> str:
-    """What PyPSA solved the rung to; for a rung that records a PyPSA bug, also what the file intends and the issue."""
-    pypsa = f'`pypsa {recorded["pypsa"]}`'
-    if 'diverges' not in recorded:
-        return f"> ✔ {pypsa} solves this rung's network at objective `{recorded['objective']}`, {sum(recorded['rows'].values())} rows."
-    diverges = recorded['diverges']
-    issue = f'[PyPSA/PyPSA#{diverges["issue"]}](https://github.com/PyPSA/PyPSA/issues/{diverges["issue"]})'
-    gives = (
-        f"raises `{diverges['raises']}` on this rung's network"
-        if 'raises' in diverges
-        else f"solves this rung's network at objective `{diverges['objective']}`, {sum(recorded['rows'].values())} rows"
-    )
-    return f'> ✘ {pypsa} {gives}, {issue}. The intended objective is `{recorded["objective"]}`.'
-
-
-def reference_block(stem: str) -> str:
-    """A rung's oracle: the recorded solve, then the PyPSA script that builds its network."""
-    return (
-        f'{_banner(RECORDED[stem])}\n'
-        '\n'
-        '<details markdown="1">\n'
-        '<summary>The network, as PyPSA code</summary>\n'
-        '\n'
-        f'{_script(stem)}\n'
-        '\n'
-        '</details>'
-    )
-
-
-def spine_block() -> str:
-    """The shared spine, shown once."""
-    return (
-        "> Every rung's network is `spine.build()` plus the rung's own `n.add` calls, data inline; a keyword not"
-        " passed is PyPSA's default. A banner states what PyPSA solved the rung to; how an engine attaches the network to"
-        " the file, and what it makes of it, is that engine's own record.\n"
-        '\n'
-        '<details markdown="1">\n'
-        '<summary>The shared spine, <code>spine.py</code></summary>\n'
-        '\n'
-        f'{_script("spine")}\n'
-        '\n'
-        '</details>'
-    )
-
-
-def with_references(text: str) -> str:
-    """Every reference block whose marker pair is on this page; a stem on no page at all is the test's business."""
-    blocks = {
-        'spine': spine_block,
-        **{stem: partial(reference_block, stem) for stem in sorted(RECORDED)},
-    }
-    for key, block in blocks.items():
-        begin, end = f'<!-- reference:{key}:begin -->', f'<!-- reference:{key}:end -->'
-        if begin in text and end in text:
-            text = splice(text, begin, end, block())
-    return text
-
-
 def block(page: str) -> str:
     if page == 'operators.md':
         return probe_block()
-    if page in DECLARED:
-        return declared_block(DECLARED[page])
     if page in PATCHED:
         return patched_block(*PATCHED[page])
     if page in COMPOSED:
@@ -449,14 +328,11 @@ def block(page: str) -> str:
 
 
 def rendered(page: str, text: str) -> str:
-    text = splice(text, BEGIN, END, block(page))
-    if page in DECLARED or page in PATCHED:
-        text = with_references(text)
-    return text
+    return splice(text, BEGIN, END, block(page))
 
 
 def pages() -> list[str]:
-    return [*MODELS, *COMPOSED, *DECLARED, *PATCHED, 'operators.md', SPLIT_INDEX]
+    return [*MODELS, *COMPOSED, *PATCHED, 'operators.md', SPLIT_INDEX]
 
 
 def main(argv: list[str] | None = None) -> int:

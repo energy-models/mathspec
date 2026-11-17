@@ -240,7 +240,7 @@ one line of the table ([missing row](#missing-row)).
 A rung is one step of a series of example networks (the PyPSA ladder) that
 an open-source power system modelling framework ([PyPSA](https://pypsa.org))
 solves. Each rung states one
-`n.optimize()` keyword in full ([PyPSA in one file](../examples/pypsa_ladder.md)).
+`n.optimize()` keyword in full ([PyPSA: scope and refusals](../examples/pypsa/scope.md)).
 
 ## Section
 
