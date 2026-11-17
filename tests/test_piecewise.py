@@ -838,7 +838,7 @@ def test_a_where_the_block_cannot_read_is_refused(patch, match):
 
 def test_a_where_over_a_dim_a_link_walks_into_is_not_sent_to_dims():
     """The refusal said to add `flow` to `dims:`, and the walk into `flow` was then refused for that very edit."""
-    with pytest.raises(LanguageError, match=r"which link 'power' adds through the map it walks") as refused:
+    with pytest.raises(LanguageError, match=r"which link 'power' adds through the mapping it walks") as refused:
         spec_of(
             WALKED,
             **{'parameters.on_flow': {'dims': ['flow'], 'dtype': 'bool'}, 'piecewise.coupling.where': 'on_flow'},
@@ -884,7 +884,7 @@ def test_a_model_written_out_and_read_back_asks_its_conditions_only_where_a_curv
 
 
 #: fluxopt's converter: one curve per generator, tying however many flows the
-#: map gives it. The link that carries `flow` walks the map `flow[generator]`
+#: mapping gives it. The link that carries `flow` walks the mapping `flow[generator]`
 #: from the curve's `generator` to its own `flow`.
 WALKED = {
     'dimensions': {
@@ -893,7 +893,7 @@ WALKED = {
         'flow': {'dtype': 'str'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'flow': {'generator': {'dim': 'generator'}}},
+    'mappings': {'flow': {'generator': {'dim': 'generator'}}},
     'parameters': {
         'load': {'dims': ['snapshot']},
         'bp_power': {'dims': ['flow', 'bp']},
@@ -918,7 +918,7 @@ WALKED = {
 }
 #: The values tables of the walked curve under a ragged ``where:``, which stop where the curve stops.
 WALKED_RAGGED = {'parameters.bp_power.missing': 0, 'parameters.bp_fuel.missing': 0}
-#: The walked link alone, which the map gives its arity.
+#: The walked link alone, which the mapping gives its arity.
 POWER_ONLY = {
     'piecewise.coupling.links': {'power': {'expression': 'power', 'values': 'bp_power', 'by': 'flow[generator]'}},
     'objective.expression': 'sum(power)',
@@ -975,7 +975,7 @@ def _walk(**written: object) -> dict[str, object]:
 
 def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
     """The `power` link walked through `generator_of`, a relation over *dims* that maps each row to a generator."""
-    return {'relations.generator_of': {'dims': dims}, 'maps.generator_of.generator': {'dim': 'generator'}} | _walk(
+    return {'relations.generator_of': {'dims': dims}, 'mappings.generator_of.generator': {'dim': 'generator'}} | _walk(
         by='generator_of[generator]'
     )
 
@@ -984,21 +984,21 @@ def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
     ('patch', 'match'),
     [
         pytest.param({'piecewise.coupling.dims': None}, 'with one curve per coordinate', id='a-block-without-dims'),
-        pytest.param(_walk(by='flow'), 'is not a subject with its maps in brackets', id='a-walk-naming-no-column'),
-        pytest.param(_walk(by='flow[]'), 'is not a subject with its maps in brackets', id='an-empty-column-list'),
+        pytest.param(_walk(by='flow'), 'is not a subject with its mappings in brackets', id='a-walk-naming-no-column'),
+        pytest.param(_walk(by='flow[]'), 'is not a subject with its mappings in brackets', id='an-empty-column-list'),
         pytest.param(
             _walk(by='flow[generator]) * (2'),
-            'is not a subject with its maps in brackets',
+            'is not a subject with its mappings in brackets',
             id='a-walk-closing-the-call-early',
         ),
         pytest.param(
             _walk(by='flow[generator]) + (power'),
-            'is not a subject with its maps in brackets',
+            'is not a subject with its mappings in brackets',
             id='a-walk-adding-a-term',
         ),
         pytest.param(
             _walk(by='flow[snapshot]'),
-            r"at\(by=flow\[snapshot\]\) names \['snapshot'\], which is no map of 'flow'",
+            r"at\(by=flow\[snapshot\]\) names \['snapshot'\], which is no mapping of 'flow'",
             id='a-walk-naming-a-column-the-relation-lacks',
         ),
         pytest.param(
@@ -1023,7 +1023,7 @@ def _joined(dims: list[str] | dict[str, str]) -> dict[str, object]:
             id='a-walk-into-a-dim-the-block-has',
         ),
         pytest.param(
-            {'maps.bp.generator': {'dim': 'generator'}} | _walk(by='bp[generator]'),
+            {'mappings.bp.generator': {'dim': 'generator'}} | _walk(by='bp[generator]'),
             r"link 'power': by: bp adds no dimension",
             id='a-walk-into-the-breakpoint-dim',
         ),
@@ -1061,8 +1061,8 @@ def test_a_walked_block_the_language_cannot_read_is_refused(patch, match):
         spec_of(WALKED, **patch)
 
 
-#: A map into the breakpoint dim that a walk can name.
-SLOT_OF = {'maps.flow.slot': {'dim': 'bp'}}
+#: A mapping into the breakpoint dim that a walk can name.
+SLOT_OF = {'mappings.flow.slot': {'dim': 'bp'}}
 
 
 @pytest.mark.parametrize(
@@ -1136,7 +1136,7 @@ def test_a_link_that_only_gains_a_dimension_is_refused_and_names_the_walk():
             'piecewise.coupling.links.rate': ['rate', 'bp_rate'],
         },
     )
-    with pytest.raises(LanguageError, match=r'look the curve up through a map with by: <subject>\[<map>\]'):
+    with pytest.raises(LanguageError, match=r'look the curve up through a mapping with by: <subject>\[<mapping>\]'):
         spec_of(model)
 
 
@@ -1252,7 +1252,7 @@ COMMITTED = {
         'snapshot': {'dtype': 'int'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'converter': {'status_entity': {'dim': 'status_entity', 'missing': 'absent'}}},
+    'mappings': {'converter': {'status_entity': {'dim': 'status_entity', 'missing': 'absent'}}},
     'parameters': {'bp_p': {'dims': ['converter', 'bp']}, 'bp_fuel': {'dims': ['converter', 'bp']}},
     'variables': {
         'running': {'dims': ['status_entity', 'snapshot'], 'domain': 'binary'},
@@ -1277,8 +1277,8 @@ STATUS_MASKED = {
 }
 #: The status only committable entities have, read as 0 elsewhere.
 COMMITTABLE = STATUS_MASKED | {'variables.running.missing': 0}
-#: A map that gives every converter a status entity.
-REFUSED = {'maps.converter.status_entity.missing': 'refused'}
+#: A mapping that gives every converter a status entity.
+REFUSED = {'mappings.converter.status_entity.missing': 'refused'}
 
 
 def test_a_gate_read_through_a_relation_switches_the_curves_it_maps_to():
@@ -1306,7 +1306,7 @@ dimensions:
   status_entity: {{dtype: str}}
   snapshot: {{dtype: int}}
   bp: {{dtype: int, ordered: true}}
-maps:
+mappings:
   converter: {{status_entity: {{ dim: status_entity }}}}
 parameters:
   bp_p: {{dims: [converter, bp]}}
@@ -1378,11 +1378,11 @@ def test_a_gate_read_through_a_relation_is_ungated_only_where_its_read_may_be_ab
 def test_a_gate_read_through_a_relation_prints_as_the_read():
     printed = typeset_line(spec_of(COMMITTED), 'curve', 'latex')
     assert r'\mathit{running}_{t,\mathrm{status\_entity}(c)}' in printed, 'the gate is read at each converter'
-    assert r'\text{otherwise}' in printed, 'and a converter the map gives no status entity is ungated'
+    assert r'\text{otherwise}' in printed, 'and a converter the mapping gives no status entity is ungated'
 
 
 #: What every malformed gate is refused with: the two shapes it may take.
-SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>\[<map>\]\)\.'
+SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>\[<mapping>\]\)\.'
 
 
 @pytest.mark.parametrize(
@@ -1395,7 +1395,7 @@ SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>
         ),
         pytest.param(
             {'piecewise.curve.activity': 'at(running, by=converter)'},
-            r"piecewise 'curve' activity: at\(by=converter\) names the subject and none of its maps",
+            r"piecewise 'curve' activity: at\(by=converter\) names the subject and none of its mappings",
             id='a-walk-naming-no-column',
         ),
         pytest.param(
@@ -1405,7 +1405,7 @@ SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>
         ),
         pytest.param(
             {'piecewise.curve.activity': 'at(running, by=converter[snapshot])'},
-            r"at\(by=converter\[snapshot\]\) names \['snapshot'\], which is no map of 'converter'",
+            r"at\(by=converter\[snapshot\]\) names \['snapshot'\], which is no mapping of 'converter'",
             id='a-walk-naming-a-column-the-relation-lacks',
         ),
         pytest.param(
@@ -1415,7 +1415,7 @@ SHAPES = r'Write activity: <variable>, or activity: at\(<variable>, by=<subject>
         ),
         pytest.param(
             {'piecewise.curve.activity': f'{RUNNING} * 2'},
-            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a variable nor a variable read through a map\. "
+            rf"activity: '{re.escape(RUNNING)} \* 2' is neither a variable nor a variable read through a mapping\. "
             + SHAPES,
             id='a-product',
         ),
@@ -1440,7 +1440,7 @@ def test_a_gate_read_through_a_relation_is_held_to_the_rules_of_at(patch, match)
     [
         pytest.param(
             'at(running, by=converter)',
-            r"piecewise 'curve' activity: at\(by=converter\) names the subject and none of its maps",
+            r"piecewise 'curve' activity: at\(by=converter\) names the subject and none of its mappings",
             id='a-walk-naming-no-column',
         ),
         pytest.param(f'{RUNNING} * (2)', SHAPES, id='a-walk-closing-the-call-early'),
@@ -1482,8 +1482,8 @@ def test_a_block_mask_reaches_a_walked_link_through_its_relation():
     )
 
 
-#: The map of the walk, which may give a flow no generator.
-PARTIAL = {'maps.flow.generator': {'dim': 'generator', 'missing': 'absent'}}
+#: The mapping of the walk, which may give a flow no generator.
+PARTIAL = {'mappings.flow.generator': {'dim': 'generator', 'missing': 'absent'}}
 
 
 @pytest.mark.parametrize(
@@ -1519,7 +1519,7 @@ INVESTED = {
     'dimensions': {name: {'dtype': 'str'} for name in ('cost_curve', 'effect', 'flow')}
     | {'bp': {'dtype': 'int', 'ordered': True}},
     'relations': {'cost_of': {'dims': ['flow', 'effect']}},
-    'maps': {'cost_of': {'cost_curve': {'dim': 'cost_curve'}}},
+    'mappings': {'cost_of': {'cost_curve': {'dim': 'cost_curve'}}},
     'parameters': {
         'has_cost_curve': {'dims': ['cost_curve'], 'dtype': 'bool'},
         'size_bp': {'dims': ['cost_curve', 'bp']},
@@ -1637,7 +1637,7 @@ def test_a_mask_over_part_of_what_a_walk_joins_on_reaches_the_walked_row_through
 @pytest.mark.parametrize(
     ('model', 'read'),
     [
-        pytest.param(WALKED, {'flow'}, id='no-mask-asks-only-where-the-map-reaches'),
+        pytest.param(WALKED, {'flow'}, id='no-mask-asks-only-where-the-mapping-reaches'),
         pytest.param(CURVED, {'curved', 'flow'}, id='a-mask-read-through'),
     ],
 )
@@ -1647,7 +1647,7 @@ def test_a_walked_links_breakpoints_are_asked_only_at_the_rows_it_reads_the_curv
     walked = assumptions['coupling_power_complete']
     assert walked.holds.names_read == frozenset({'bp_power'}), 'the walked link asks for its own values alone'
     assert walked.where is not None and walked.where.dims == ('flow',), 'asked per flow the walk reaches'
-    assert walked.where.names_read == frozenset(read), 'the where reads the mask, if any, and the map'
+    assert walked.where.names_read == frozenset(read), 'the where reads the mask, if any, and the mapping'
     assert assumptions['coupling_complete'].holds.names_read == frozenset({'bp_fuel'}), (
         'the link on dims: keeps the block condition to itself'
     )
@@ -1956,7 +1956,7 @@ PORTED = {
         'snapshot': {'dtype': 'int'},
         'bp': {'dtype': 'int', 'ordered': True},
     },
-    'maps': {'link_output': {'link': {'dim': 'link'}}},
+    'mappings': {'link_output': {'link': {'dim': 'link'}}},
     'parameters': {
         'bp_in': {'dims': ['link_output', 'bp']},
         'bp_out': {'dims': ['link_output', 'bp']},
@@ -1983,7 +1983,7 @@ FIRST = 'position(bp) == 0'
 #: A status per unit, which each generator reads through the unit it belongs to.
 UNITS = {
     'dimensions.unit': {'dtype': 'str'},
-    'maps.generator.unit': {'dim': 'unit'},
+    'mappings.generator.unit': {'dim': 'unit'},
     'variables.status': {'dims': ['unit', 'snapshot'], 'domain': 'binary'},
     'piecewise.coupling.activity': 'at(status, by=generator[unit])',
 }
@@ -2008,7 +2008,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.generator.unit': {'dim': 'unit', 'missing': 'absent'}},
+            UNITS | {'mappings.generator.unit': {'dim': 'unit', 'missing': 'absent'}},
             'coupling_power',
             f'({FIRST}) AND ({UNIT_STATUS})',
             f'bp_power * ({UNIT_STATUS})',
@@ -2016,7 +2016,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
         ),
         pytest.param(
             INCREMENTAL,
-            UNITS | {'maps.flow.generator': {'dim': 'generator', 'missing': 'absent'}},
+            UNITS | {'mappings.flow.generator': {'dim': 'generator', 'missing': 'absent'}},
             'coupling_power',
             f'(flow[generator]) AND ({FIRST})',
             f'bp_power * ({UNIT_STATUS})',
@@ -2036,7 +2036,7 @@ UNIT_STATUS = 'at(at(status, by=generator[unit]), by=flow[generator])'
                 **COMMITTABLE,
                 'piecewise.curve.method': 'incremental',
                 'dimensions.hour': {'dtype': 'int'},
-                'maps.hour.snapshot': {'dim': 'snapshot'},
+                'mappings.hour.snapshot': {'dim': 'snapshot'},
                 'variables.heat': {'dims': ['converter', 'hour']},
                 'parameters.bp_heat': {'dims': ['converter', 'bp']},
                 'piecewise.curve.links.heat': {'expression': 'heat', 'values': 'bp_heat', 'by': 'hour[snapshot]'},

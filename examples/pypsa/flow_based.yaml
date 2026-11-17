@@ -31,7 +31,7 @@ dimensions:
       positions (PyPSA's `domain` of a `flow_based` row), data prep. A run whose
       flow-based rows name no domain has one. A run without them has none
 
-maps:
+mappings:
   bus:
     flow_based_domain:
       description: >-

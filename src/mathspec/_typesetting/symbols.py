@@ -102,7 +102,7 @@ class Symbols:
         constraint: Each constraint's symbol, the subscript ``dual(c)`` prints
             λ against. Off the flat namespace, like the constraints themselves
             — a spec may name a constraint after a variable, so this is its
-            own map rather than an entry in [`name`][]. Given structure, so
+            own mapping rather than an entry in [`name`][]. Given structure, so
             upright unless a table overrides it.
         index: Each dimension's index letter.
         set: Each dimension's set symbol.

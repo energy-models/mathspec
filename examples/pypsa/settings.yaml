@@ -70,7 +70,7 @@ dimensions:
   carrier:
     description: energy carriers, what a growth limit is set per
 
-maps:
+mappings:
   snapshot:
     period:
       description: the investment period a snapshot falls in

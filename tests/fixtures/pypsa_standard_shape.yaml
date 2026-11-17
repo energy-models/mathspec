@@ -931,7 +931,7 @@ parameters:
   snapshot_weightings_stores:
     - snapshot
   transmission_losses: []
-maps:
+mappings:
   - generator[bus]
   - line[bus0]
   - line[bus1]

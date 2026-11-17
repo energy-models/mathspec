@@ -68,7 +68,7 @@ BASE = {
         'zone': {'dtype': 'str'},
     },
     'relations': {'gen_zone': {'dims': ['generator', 'snapshot']}},
-    'maps': {
+    'mappings': {
         'generator': {'bus': {'dim': 'bus'}, 'zone': {'dim': 'zone'}, 'b0': {'dim': 'bus'}, 'b1': {'dim': 'bus'}},
         'snapshot': {'bus': {'dim': 'bus'}, 'rep': {'dim': 'snapshot'}},
         'gen_zone': {'zone': {'dim': 'zone'}},
@@ -211,7 +211,7 @@ def namespace() -> Namespace:
         pytest.param(
             'sum(p, over=snapshot, by=snapshot[rep])',
             {'snapshot', 'generator'},
-            id='a-map-into-its-own-dimension-keeps-the-frame',
+            id='a-mapping-into-its-own-dimension-keeps-the-frame',
         ),
         pytest.param('at(p, by=snapshot[rep])', {'snapshot', 'generator'}, id='and-so-does-its-lookup'),
         pytest.param('sum(p, over=[generator, snapshot])', set(), id='a-plain-sum-over-a-list'),
@@ -257,14 +257,14 @@ def test_a_bare_relation_is_summed_between_its_key_columns(expr, expected):
 
 
 def test_a_value_column_added_to_a_relation_changes_no_call():
-    """A name in `over=` is a column of the table, so `snapshot` gaining a map `alt` leaves every call as it was.
+    """A name in `over=` is a column of the table, so `snapshot` gaining a mapping `alt` leaves every call as it was.
 
     `over=snapshot` read as a dimension would match two columns once `alt`
     arrives, and the call that loaded would stop loading. Read as a column,
     it is the key column either way, and the new column is named where it
     is meant.
     """
-    wider = {'maps.snapshot.alt': {'dim': 'snapshot'}}
+    wider = {'mappings.snapshot.alt': {'dim': 'snapshot'}}
     before = _dims('sum(p, over=snapshot, by=snapshot[rep])')
     assert _dims_with('sum(p, over=snapshot, by=snapshot[rep])', **wider) == before == {'snapshot', 'generator'}
     assert _dims_with('sum(p, over=snapshot, by=snapshot[alt])', **wider) == before, (
@@ -283,7 +283,7 @@ def test_a_lookup_carries_the_whole_key_and_what_the_operand_brings_beside_it():
 
 
 def test_a_join_opens_an_axis_for_the_column_it_drops_and_the_sum_over_it_closes_it():
-    """A map into its own dimension drops and adds one dimension, so the axis the join opens stands for the column.
+    """A mapping into its own dimension drops and adds one dimension, so the axis the join opens stands for the column.
 
     The dropped column's axis runs over `snapshot` and stands for the key
     column of the `snapshot` table, so it is not the dimension's own axis. The sum over
@@ -445,7 +445,7 @@ def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
 
 
 @pytest.mark.parametrize(
-    ('expr', 'maps', 'expected'),
+    ('expr', 'mappings', 'expected'),
     [
         pytest.param(
             'at(zone_cap, by=gen_zone[zone])',
@@ -461,7 +461,7 @@ def test_two_joined_columns_do_not_share_a_dimension(expr, diag):
         ),
     ],
 )
-def test_a_lookup_joins_on_the_key_columns_the_operand_carries_and_the_read_does_not_match(expr, maps, expected):
+def test_a_lookup_joins_on_the_key_columns_the_operand_carries_and_the_read_does_not_match(expr, mappings, expected):
     """`at` joins on each key column over a dim the operand carries, unless the column it reads already matches that dim.
 
     `at(load, by=diag, over=rep, into=generator)` once joined on the key's
@@ -469,7 +469,7 @@ def test_a_lookup_joins_on_the_key_columns_the_operand_carries_and_the_read_does
     call names only the column it reads now, so the key's `snapshot` arrives
     and the result is `load` read at `rep(t, g)` for every `(t, g)`.
     """
-    assert _dims_with(expr, **{'maps.gen_zone': maps}) == frozenset(expected), (
+    assert _dims_with(expr, **{'mappings.gen_zone': mappings}) == frozenset(expected), (
         'the frame is the operand less the dim read, plus the key'
     )
 
@@ -608,10 +608,10 @@ class TestTheEdgeRulesAreDecidedAtLoad:
         pytest.param('p_max > 0', {'generator'}, id='a-parameter-through-its-own-dims'),
         pytest.param('snapshot == 0', {'snapshot'}, id='a-dimension-through-itself'),
         pytest.param('position(snapshot) == 0', {'snapshot'}, id='a-position-through-the-axis-it-counts'),
-        pytest.param('snapshot[bus] == "b1"', {'snapshot'}, id='a-map-through-the-dim-it-maps-out-of'),
+        pytest.param('snapshot[bus] == "b1"', {'snapshot'}, id='a-mapping-through-the-dim-it-mappings-out-of'),
         pytest.param('gen_zone[zone] == "z1"', {'generator', 'snapshot'}, id='a-two-key-relation-through-both-keys'),
         pytest.param('gen_zone', {'generator', 'snapshot'}, id='a-bare-two-key-relation-the-same'),
-        pytest.param('snapshot[rep] == 3', {'snapshot'}, id='a-map-into-its-own-dimension-through-its-key'),
+        pytest.param('snapshot[rep] == 3', {'snapshot'}, id='a-mapping-into-its-own-dimension-through-its-key'),
         pytest.param(
             'position(snapshot, within=snapshot[rep]) == 0', {'snapshot'}, id='a-position-within-a-representative'
         ),
@@ -665,8 +665,8 @@ def test_the_frame_check_and_the_reading_walk_the_same_leaves(namespace):
         pytest.param('p_max > 0', {'p_max'}, id='a-parameter-comparison-names-the-parameter'),
         pytest.param('cost', {'cost'}, id='a-parameter-bare-names-the-parameter'),
         pytest.param('p', {'p'}, id='a-variable-bare-names-the-variable'),
-        pytest.param('snapshot[bus] == "b1"', {'snapshot'}, id='a-map-comparison-names-its-subject'),
-        pytest.param('generator[bus]', {'generator'}, id='a-map-test-names-its-subject'),
+        pytest.param('snapshot[bus] == "b1"', {'snapshot'}, id='a-mapping-comparison-names-its-subject'),
+        pytest.param('generator[bus]', {'generator'}, id='a-mapping-test-names-its-subject'),
         pytest.param('gen_zone', {'gen_zone'}, id='a-relation-bare-names-the-relation'),
         pytest.param('snapshot == 0', set(), id='a-dimension-names-nothing-it-is-a-coordinate'),
         pytest.param('position(snapshot) == 0', set(), id='a-position-names-nothing'),
@@ -693,9 +693,9 @@ def test_a_condition_names_the_entries_its_leaves_test(namespace, condition, exp
         pytest.param('generator[b0] != generator[b1]', {'generator'}, id='one-subject-is-named-once'),
     ],
 )
-def test_names_read_takes_both_sides_of_a_map_pair(condition, expected):
-    """The one leaf that can name two entries — two maps compared row by row on the key their subjects share."""
-    home_of = {'relations.home_of': {'dims': ['generator', 'snapshot']}, 'maps.home_of': {'zone': {'dim': 'zone'}}}
+def test_names_read_takes_both_sides_of_a_mapping_pair(condition, expected):
+    """The one leaf that can name two entries — two mappings compared row by row on the key their subjects share."""
+    home_of = {'relations.home_of': {'dims': ['generator', 'snapshot']}, 'mappings.home_of': {'zone': {'dim': 'zone'}}}
     where = where_of(condition, Namespace(_spec(**home_of)), 'test')
 
     assert where is not None, 'a condition the connectives cannot settle survives the fold'
@@ -981,8 +981,8 @@ def test_a_condition_on_a_relation_states_its_key_dims_sorted_by_name(entry):
         **{
             'relations.zone_of': keyed_backwards,
             'relations.home_of': keyed_backwards,
-            'maps.zone_of': {'zone': {'dim': 'zone'}},
-            'maps.home_of': {'zone': {'dim': 'zone'}},
+            'mappings.zone_of': {'zone': {'dim': 'zone'}},
+            'mappings.home_of': {'zone': {'dim': 'zone'}},
         }
     )
     patch = {f'variables.p.{key}': value for key, value in entry.items()}

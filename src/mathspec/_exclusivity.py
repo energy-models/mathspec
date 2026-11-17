@@ -205,8 +205,8 @@ class _Grid:
     def witness(self, cell: dict[Subject, Cell]) -> str:
         """*cell* in words. A column names a value only where its row and its labels exist, and a value says the row exists.
 
-        A comparison of two maps that is shown says both have a label, so a
-        map no literal names is not listed beside it.
+        A comparison of two mappings that is shown says both have a label, so a
+        mapping no literal names is not listed beside it.
         """
         shown = [
             subject
@@ -224,7 +224,7 @@ class _Grid:
         )
 
     def _unnamed(self, subject: Subject) -> bool:
-        """Whether *subject* is a map no literal names, so its cells are only "a label" and "none"."""
+        """Whether *subject* is a mapping no literal names, so its cells are only "a label" and "none"."""
         return self.domains[subject] == [Special.OTHER, Special.NULL]
 
 
@@ -302,7 +302,7 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         if node.op not in ('==', '!='):
             msg = (
                 f'{subject} uses {node.op!r}, and this analysis does not decide an inequality between two '
-                'maps. Compare them with == or !=, or precompute the comparison as a boolean '
+                'mappings. Compare them with == or !=, or precompute the comparison as a boolean '
                 'parameter and test that'
             )
             raise Undecidable(msg)
@@ -322,14 +322,14 @@ def _rows_read(node: TypedCondition) -> tuple[str, ...]:
 
 
 def _labels_read(node: TypedCondition) -> tuple[Subject, ...]:
-    """The maps whose label *node* compares, and so is false without, beyond the label of its own subject."""
+    """The mappings whose label *node* compares, and so is false without, beyond the label of its own subject."""
     if isinstance(node, RelationPairComparison):
         return (Subject('relation', node.name, node.column), Subject('relation', node.other, node.other_column))
     return ()
 
 
 def _pair_labels(subject: Subject) -> tuple[Subject, ...]:
-    """The two labels a comparison of two maps compares, so a cell without either gives it no value."""
+    """The two labels a comparison of two mappings compares, so a cell without either gives it no value."""
     if subject.kind != 'relation_pair' or subject.qualifier is None:
         return ()
     (column, other_column), other = subject.group, subject.qualifier
@@ -413,7 +413,7 @@ def _cells_for(subject: Subject, values: set[_Literal], dtypes: Mapping[str, Dec
 def _absence_cells(subject: Subject, *, numeric: bool) -> list[Cell]:
     """The regions where *subject* has no ordinary value.
 
-    A dimension's coordinates have no null. A map may give a row no label, so
+    A dimension's coordinates have no null. A mapping may give a row no label, so
     it has one, beside the row itself, which is a subject of its own. ``defined``
     excludes an infinity, so a magnitude needs a region where every comparison
     still reads normally and the bare name is false.
@@ -526,7 +526,7 @@ def _rank_cells(subject: Subject, positions_seen: set[int]) -> list[Cell]:
 def _clause(subject: Subject, value: Cell, *, named: bool = True) -> str:
     """*subject* in one cell, in words. A null cell says the data has no row or label, never a ``missing:`` reading's name.
 
-    A map compared against no literal has only the cells "a label" and "none",
+    A mapping compared against no literal has only the cells "a label" and "none",
     so where *named* is false its label is not "anything else" but simply there.
     """
     label = subject.kind == 'relation' and subject.qualifier is not None

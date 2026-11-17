@@ -56,7 +56,7 @@ mathspec loads a dimension that no entry uses, and for that dimension
 ([advice](../glossary.md#advice)).
 
 The label of another dimension that each label has, such as the carrier of
-each generator, is a [map](relations.md#maps), not a dimension.
+each generator, is a [mapping](relations.md#mappings), not a dimension.
 
 ## `one_of`
 
@@ -68,13 +68,13 @@ compares against.
 dimensions:
   carrier: { dtype: str, one_of: [ccgt, ocgt, wind] }
   generator: { dtype: str }
-maps:
+mappings:
   generator: { carrier: { dim: carrier } }
 variables:
   p: { dims: [generator], where: "generator[carrier] == 'wind'" }
 ```
 
-`p` exists only at the generators whose carrier is `wind`. The map
+`p` exists only at the generators whose carrier is `wind`. The mapping
 `generator[carrier]` gives each generator one carrier, and `one_of` makes `wind`
 one of three allowed labels.
 
@@ -92,7 +92,7 @@ The order of the list changes nothing. mathspec sorts it by name at load, so
 `one_of: [wind, ccgt, ocgt]` declares the same dimension.
 
 At load, mathspec refuses a [condition](expressions.md#conditions) that
-compares the dimension, or a map into it, against a label that is not in the
+compares the dimension, or a mapping into it, against a label that is not in the
 list. With `generator[carrier] == 'gnrtr'` in place of `generator[carrier] == 'wind'` above, mathspec prints:
 
 ```text
@@ -103,7 +103,7 @@ mathspec lists the allowed labels and suggests two rewrites.
 
 With data attached, a tool refuses a label
 outside the list: in the table of the dimension, in every column of a relation
-over it, and in the column of every map into it.
+over it, and in the column of every mapping into it.
 
 Only a dimension takes `one_of`, and a `one_of` key on a parameter is refused
 as an unknown key.
@@ -184,7 +184,7 @@ constraints:
 `from_region` has the labels, the `dtype` and the order of `region`, so it
 takes no `dtype:`, `one_of:` or `ordered:` of its own. The data of `ire_flo`
 has the columns `from_region`, `region` and `value`, and the data has no table
-for `from_region`. An alias has the map `from_region[region]`, which sends
+for `from_region`. An alias has the mapping `from_region[region]`, which sends
 each label to itself, so `at(exp, by=from_region[region])` reads `exp` at the
 region a row comes from. The typesetter prints the alias as the index of
 `region`, primed, over the same set:
@@ -198,5 +198,5 @@ An alias names a declared dimension that is no alias itself. A second alias of
 
 !!! info "See also"
 
-    - [choose between a dimension, a relation, a map and a parameter](../../howto/declare-a-column.md)
+    - [choose between a dimension, a relation, a mapping and a parameter](../../howto/declare-a-column.md)
       for a column of data.

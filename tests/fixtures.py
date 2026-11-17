@@ -47,13 +47,13 @@ DISPATCH_MODEL: dict[str, Any] = {
     'objective': {'sense': 'minimize', 'expression': 'sum(p * cost)'},
 }
 
-#: Two dimensions, a map from one into the other, a numeric, a scalar, a boolean and a
+#: Two dimensions, a mapping from one into the other, a numeric, a scalar, a boolean and a
 #: label parameter, a variable on each frame — one entry of every kind
 #: a rule can name, and no objective, so a test adds what it judges. `p` and `r`
 #: share no dimension, which is what a rule about *different* dims needs.
 SMALL_MODEL: dict[str, Any] = {
     'dimensions': {'g': {'dtype': 'str', 'ordered': True}, 'h': {'dtype': 'str', 'ordered': True}},
-    'maps': {'g': {'h': {'dim': 'h'}}},
+    'mappings': {'g': {'h': {'dim': 'h'}}},
     'parameters': {
         'c': {'dims': ['g']},
         'k': {'dims': []},
@@ -94,7 +94,7 @@ def sets_reversed(data: Any) -> Any:
     """*data* with every list or mapping that names a set reversed, at any depth.
 
     Each ``dims:``, ``one_of:`` and ``kwargs:`` list, a relation's
-    ``dims:`` mapping among them, and the maps of each subject.
+    ``dims:`` mapping among them, and the mappings of each subject.
     """
     if isinstance(data, list):
         return [sets_reversed(item) for item in data]
@@ -104,11 +104,11 @@ def sets_reversed(data: Any) -> Any:
 
 
 def _reversed_under(key: str, value: Any) -> Any:
-    """*value* reversed where *key* names a set, each subject's maps reversed under ``maps``, else searched on."""
+    """*value* reversed where *key* names a set, each subject's mappings reversed under ``mappings``, else searched on."""
     if key in ('dims', 'one_of', 'kwargs'):
         return _reversed(value)
-    if key == 'maps' and isinstance(value, dict):
-        return {subject: _reversed(maps) for subject, maps in value.items()}
+    if key == 'mappings' and isinstance(value, dict):
+        return {subject: _reversed(mappings) for subject, mappings in value.items()}
     return sets_reversed(value)
 
 

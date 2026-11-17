@@ -61,7 +61,7 @@ names, so that one file states several components. You need mathspec
       snapshot: { dtype: int }
       bus: { dtype: str }
       generator: { dtype: str }
-    maps:
+    mappings:
       generator: { bus: { dim: bus } }
     parameters:
       Generator_p_nom: { dims: [generator] }
@@ -85,7 +85,7 @@ names, so that one file states several components. You need mathspec
       snapshot: { dtype: int }
       bus: { dtype: str }
       load: { dtype: str }
-    maps:
+    mappings:
       load: { bus: { dim: bus } }
     parameters:
       Load_p_set: { dims: [snapshot, load] }
@@ -158,7 +158,7 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
       snapshot: { dtype: int, ordered: true }
       bus: { dtype: str }
       store: { dtype: str }
-    maps:
+    mappings:
       store: { bus: { dim: bus } }
     parameters:
       Store_e_nom: { dims: [store] }
@@ -214,7 +214,7 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
       snapshot: { dtype: int }
       bus: { dtype: str }
       unit: { dtype: str }
-    maps:
+    mappings:
       unit: { bus: { dim: bus } }
     parameters:
       Unit_p_nom: { dims: [unit] }
@@ -270,7 +270,7 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
 
     Each renamed fragment adds its own terms to the two sums.
 
-To change only a few names, pass a map from each old name to its new name:
+To change only a few names, pass a mapping from each old name to its new name:
 
 ```python
 spec = ms.rename('generator.yaml', {'Generator_p_nom': 'Generator_capacity'})
@@ -453,7 +453,7 @@ in the spec as a named expression that no sum includes.
     - [refusals](../reference/composition.md#refusals), for each message that
       `merge` and `override` give
     - [`rename`](../reference/composition.md#rename), for what a rename changes
-      and keeps, and each map that it refuses
+      and keeps, and each mapping that it refuses
     - [a spec in several files](../tutorials/several-files.md), for a lesson in which
       you build a library step by step
     - [a component library](../examples/library/index.md), for a larger library

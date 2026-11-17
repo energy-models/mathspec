@@ -53,17 +53,17 @@ contain.
 
 Eight constructs make a coordinate absent:
 
-| Construct                                         | What is absent                                                                                                                 |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `where:` on a variable                            | the variable, at the coordinates the condition excludes ([`where`](#where))                                                    |
-| `where:` on a parameter                           | the parameter, at the coordinates the condition excludes ([`where` on a parameter](parameters-variables-constraints.md#where)) |
-| `where:` on a constraint                          | the row ([`where`](#where))                                                                                                    |
-| `shift(x, along=d, offset=n)` without `edge=`     | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
-| a key with no row in a `missing: absent` relation | the relation, at that key ([relations](relations.md#missing))                                                                  |
-| a row with no label in a `missing: absent` map    | the map, at that row ([maps](relations.md#missing))                                                                            |
-| a missing row of a `missing: absent` parameter    | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
-| `within=` at a coordinate in no group             | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
-| a quotient whose divisor is zero                  | the quotient, at that coordinate ([reported values](#reported-values))                                                         |
+| Construct                                          | What is absent                                                                                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `where:` on a variable                             | the variable, at the coordinates the condition excludes ([`where`](#where))                                                    |
+| `where:` on a parameter                            | the parameter, at the coordinates the condition excludes ([`where` on a parameter](parameters-variables-constraints.md#where)) |
+| `where:` on a constraint                           | the row ([`where`](#where))                                                                                                    |
+| `shift(x, along=d, offset=n)` without `edge=`      | the expression, at the edge coordinate ([shift](operators.md#shift))                                                           |
+| a key with no row in a `missing: absent` relation  | the relation, at that key ([relations](relations.md#missing))                                                                  |
+| a row with no label in a `missing: absent` mapping | the mapping, at that row ([mappings](relations.md#missing))                                                                    |
+| a missing row of a `missing: absent` parameter     | the parameter, at that coordinate ([`missing`](#missing))                                                                      |
+| `within=` at a coordinate in no group              | the expression, at that coordinate ([`within=`](operators.md#within))                                                          |
+| a quotient whose divisor is zero                   | the quotient, at that coordinate ([reported values](#reported-values))                                                         |
 
 No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 
@@ -73,14 +73,14 @@ No value shifts in at the edge, so a `shift` without `edge=` has no row there:
 
 `shift(x, along=snapshot, offset=1)` has no row at snapshot 1, so the expression is absent there.
 
-A map with `missing: absent` is absent at a row of its subject that the data
+A mapping with `missing: absent` is absent at a row of its subject that the data
 gives no label:
 
 <figure class="diagram">
 --8<-- "docs/static/absence-relation-missing.svg"
 </figure>
 
-The data gives `l3` no label in `line[bus1]`, so the map is absent at `l3`.
+The data gives `l3` no label in `line[bus1]`, so the mapping is absent at `l3`.
 
 ## `missing`
 
@@ -342,13 +342,13 @@ either.
 
 An operator has one of two results for an absent input:
 
-| Operator                         | Inputs to one output          | At an absent input                               |
-| -------------------------------- | ----------------------------- | ------------------------------------------------ |
-| `sum(x, over=d)`                 | every position along `d`      | the sum leaves it out, and the row stays         |
-| `sum(x, over=d, by=s[c])`        | every member of the group     | the sum leaves it out, and the row stays         |
-| `sum_back(x, along=d, window=w)` | the positions in the window   | the sum leaves it out, and the row stays         |
-| `shift(x, along=d, offset=n)`    | one position, `n` back        | that input is the only one, so the row is absent |
-| `at(x, by=s[m])`                 | one position, through the map | that input is the only one, so the row is absent |
+| Operator                         | Inputs to one output              | At an absent input                               |
+| -------------------------------- | --------------------------------- | ------------------------------------------------ |
+| `sum(x, over=d)`                 | every position along `d`          | the sum leaves it out, and the row stays         |
+| `sum(x, over=d, by=s[c])`        | every member of the group         | the sum leaves it out, and the row stays         |
+| `sum_back(x, along=d, window=w)` | the positions in the window       | the sum leaves it out, and the row stays         |
+| `shift(x, along=d, offset=n)`    | one position, `n` back            | that input is the only one, so the row is absent |
+| `at(x, by=s[m])`                 | one position, through the mapping | that input is the only one, so the row is absent |
 
 With data attached, a missing row that takes the value `0` can leave a
 constraint row with no variable in it. In a constraint

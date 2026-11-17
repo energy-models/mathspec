@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class ColumnNode:
-    """``subject[map]``: the label at the frame's coordinates on a side of a comparison, and alone, that there is one."""
+    """``subject[mapping]``: the label at the frame's coordinates on a side of a comparison, and alone, that there is one."""
 
     relation: str
     column: str
@@ -230,7 +230,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
 
     ``!=``, ``<`` and ``>`` are legal here, so only the tokens no condition
     admits are diagnosed. The grammar gives up at the bracket of
-    ``subject[a, b]``, since a comparison reads one map.
+    ``subject[a, b]``, since a comparison reads one mapping.
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
@@ -246,7 +246,7 @@ def _named_rewrite(text: str, loc: int) -> str | None:
     ):
         relation, columns = before.group(1), [c.strip() for c in listed.group(1).split(',')]
         each = ' AND '.join(f'{relation}[{column}] == …' for column in columns)
-        return f"a comparison reads one map of '{relation}'. Compare each map on its own: {each}."
+        return f"a comparison reads one mapping of '{relation}'. Compare each mapping on its own: {each}."
     return None
 
 

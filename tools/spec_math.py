@@ -33,7 +33,7 @@ OPERATORS = {
     'sum(array, over=dim, by=subject[m]), joining on the rest of the key': 'sum_by_columns',
     'sum(array, over=[dim, …], by=subject[m, …])': 'sum_by_column_lists',
     'at(array, by=subject[m])': 'at',
-    'at(array, by=subject[m]), two maps into one dimension': 'at_columns',
+    'at(array, by=subject[m]), two mappings into one dimension': 'at_columns',
     'shift(array, along=dim, offset=n)': 'shift',
     "shift(array, along=dim, offset=n, edge='wrap')": 'shift_wrap',
     'shift(array, along=dim, offset=n, edge=v)': 'shift_edge',

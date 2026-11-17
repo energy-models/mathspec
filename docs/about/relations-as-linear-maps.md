@@ -7,7 +7,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 A [`sum`](../reference/language/operators.md#sum) or an
 [`at`](../reference/language/operators.md#at) through a table that gives each
-row a label ([a map](../reference/language/relations.md#maps)) is the product
+row a label ([a mapping](../reference/language/relations.md#mappings)) is the product
 of a matrix and a vector. The relations page describes the same sum in
 database words, "joined on" and "grouped by". The matrix form is the sum in
 the form a paper uses.
@@ -21,7 +21,7 @@ dimensions:
   zone: { dtype: str }
 relations:
   zone_of: { dims: [generator, snapshot], missing: absent }
-maps:
+mappings:
   zone_of: { zone: { dim: zone } }
 parameters:
   zone_cap: { dims: [snapshot, zone] }
@@ -40,17 +40,17 @@ objective:
   expression: sum(p)
 ```
 
-`zonal` contains a sum of `p` through the map `zone_of[zone]`, and
-`looked_up` a lookup of `zone_cap` through the same map. The spec loads.
+`zonal` contains a sum of `p` through the mapping `zone_of[zone]`, and
+`looked_up` a lookup of `zone_cap` through the same mapping. The spec loads.
 
 ## The indicator of a relation
 
 A relation with columns over the dimensions $`D_1, \dots, D_n`$ is a set of
 rows, so it is a subset $`R \subseteq D_1 \times \dots \times D_n`$. Its
 **indicator** $`\mathbf{1}_R`$ is $`1`$ at a row of the table and $`0`$
-everywhere else. A [map](../reference/language/relations.md#maps) gives each
+everywhere else. A [mapping](../reference/language/relations.md#mappings) gives each
 row of its subject one label, and a row is one combination of key labels (a
-key tuple). So a map from the key $`K`$ of its subject into the dimension
+key tuple). So a mapping from the key $`K`$ of its subject into the dimension
 $`V`$ is a function $`f: K \to V`$. The set of pairs $`(k, f(k))`$ is a
 relation $`R`$ (the graph of $`f`$), and its indicator is
 
@@ -70,14 +70,14 @@ generators, snapshots and zones, `zone_of[zone]` in the spec above is
 a partial $`f: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}`$, because the relation
 `zone_of` declares `missing: absent`.
 
-A [relation](../reference/language/relations.md#relations) with no map is a
+A [relation](../reference/language/relations.md#relations) with no mapping is a
 subset with no function behind it. So one generator may sit in several
 rows, each with its own bus. By default a relation also lists every key tuple, so one
 that does not must declare `missing: absent`.
 
-Every column of a relation is in its key, so a relation with no map has no
+Every column of a relation is in its key, so a relation with no mapping has no
 label for `at` to read. At load, mathspec refuses `at` through a relation with
-no map.
+no mapping.
 
 ## A join and group-by as a contraction
 
@@ -107,7 +107,7 @@ index can take in the formula:
 | joined on, the column in `over=`                              | $`g`$ is on both factors and summed. It is not in the result.        |
 | grouped by, the column in `by=`                               | $`z`$ is on the indicator alone and not summed. It is in the result. |
 | joined on and grouped by, a key column the call does not name | $`t`$ is on both factors and not summed. It is in the result.        |
-| neither, a map the call does not name                         | The map is not in the formula, and the sum does not use it.          |
+| neither, a mapping the call does not name                     | The mapping is not in the formula, and the sum does not use it.      |
 
 The result has the **free indices**, which are the indices that are not
 summed. They are the indices of the operand and of the indicator together,
@@ -129,9 +129,9 @@ formula needs each of them:
 At each $`t`$, the matrix $`M_t[z, g] = \mathbf{1}_R(g, t, z)`$ has one row
 per zone and one column per generator, with entries of zero and one, and
 $`y_t = M_t\, p_t`$. Over all snapshots, the key column that the call does not name makes the
-matrix zero outside one block per snapshot (**block-diagonal**). A map of a subject with one key column has one block.
+matrix zero outside one block per snapshot (**block-diagonal**). A mapping of a subject with one key column has one block.
 
-## A lookup through a map
+## A lookup through a mapping
 
 `at(zone_cap, by=zone_of[zone])` joins the same table, and sums over the
 other index:
@@ -236,12 +236,12 @@ With the data in the figure, no generator maps to `south`, so both rows of
 
 ## Partitions and tests
 
-The other two uses of a map, a
+The other two uses of a mapping, a
 [partition](../reference/language/relations.md#partitions) and a
 [test](../reference/language/relations.md#tests), are not matrix products. An
 operator with `within=`, such as `shift`, works separately on each set of
 members that $`f`$ sends to one value (a fibre). The dimensions of the result
-do not change. With the map `snapshot: { season: { dim: season } }`,
+do not change. With the mapping `snapshot: { season: { dim: season } }`,
 `shift(soc, along=snapshot, offset=1, edge='wrap', within=snapshot[season])`
 steps back within each season:
 
@@ -253,16 +253,16 @@ Each season is one fibre of `snapshot[season]`, so no value crosses from winter 
 summer.
 
 A test is an indicator. In a `where`, the name of a relation is
-$`\mathbf{1}_R`$ at the coordinate of the entry, and a map alone, such as
+$`\mathbf{1}_R`$ at the coordinate of the entry, and a mapping alone, such as
 `zone_of[zone]`, is the indicator of the domain of $`f`$.
 
-You can now judge the dimensions of a sum or an `at` through a map, and
+You can now judge the dimensions of a sum or an `at` through a mapping, and
 why the language has no `join` operator.
 
 !!! info "See also"
 
-    - [relations and maps](../reference/language/relations.md), for every key a
-      relation and a map accept
+    - [relations and mappings](../reference/language/relations.md), for every key a
+      relation and a mapping accept
     - [how dimensions combine](../reference/language/expressions.md#how-dimensions-combine),
       for the rule that sets the free indices of every expression
     - [how absence travels](../reference/language/absence.md#how-absence-travels),

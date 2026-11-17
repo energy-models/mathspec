@@ -38,12 +38,12 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
     """*source* with each name that *names* changes replaced by its new name.
 
     A name is replaced everywhere it occurs in the spec: as the key of its
-    entry, in ``dims:``, under ``maps:``, in ``adds_to:``, under ``given:``,
+    entry, in ``dims:``, under ``mappings:``, in ``adds_to:``, under ``given:``,
     and in the text of every expression, ``where:``, bound, case and
     assumption. Only whole names are replaced, and the text around each name
-    is unchanged. A map or a relation column named after its dimension is
-    renamed with the dimension, because an expression reads a map as
-    ``subject[map]``.
+    is unchanged. A mapping or a relation column named after its dimension is
+    renamed with the dimension, because an expression reads a mapping as
+    ``subject[mapping]``.
 
     Prose and labels stay as written: a description, the labels of
     ``one_of:``, the name of a case or of a piecewise link, and the arguments
@@ -74,7 +74,7 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
             name of an entry that is not renamed, or an argument of a macro
             whose template uses the old name.
             Also when two names get the same new name, or when an old or a new
-            name is a map or a relation column that is not named after its
+            name is a mapping or a relation column that is not named after its
             dimension.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *names* is neither a mapping nor a function.
@@ -95,10 +95,10 @@ def rename(source: Source, names: Mapping[str, str | None] | Callable[[str], str
 def _declared(spec: Spec) -> dict[str, str]:
     """Every name that *spec* declares or lists under ``given:``, with the kind of its entry for a refusal.
 
-    ``maps:`` declares no name of its own: its keys are dimensions and relations.
+    ``mappings:`` declares no name of its own: its keys are dimensions and relations.
     """
     declared = {name: GIVEN_KINDS[kind] for kind in GIVEN_KINDS for name in getattr(spec.given, kind)}
-    for section in (s for s in (*SHARED_SECTIONS, *OWNED_SECTIONS) if s != 'maps'):
+    for section in (s for s in (*SHARED_SECTIONS, *OWNED_SECTIONS) if s != 'mappings'):
         declared |= dict.fromkeys(getattr(spec, section), _singular(section))
     return declared
 
@@ -108,7 +108,7 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
 
     A token in text is renamed wherever it has the spelling, so a new name that
     is the argument of a macro whose template uses the old name, or a name that
-    is a map or a relation column named after something else, would change an
+    is a mapping or a relation column named after something else, would change an
     expression without a refusal.
     """
     for old in names:
@@ -125,9 +125,9 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
         for column, dimension in entry.pairs
         if column != dimension
     } | {
-        name: f"a map of '{subject}'"
-        for subject, maps in spec.maps.items()
-        for name, entry in maps.items()
+        name: f"a mapping of '{subject}'"
+        for subject, mappings in spec.mappings.items()
+        for name, entry in mappings.items()
         if name != entry.dim
     }
     for old, new in changed.items():
@@ -169,8 +169,8 @@ def _renamed(cls: type[BaseModel], entry: object, names: Mapping[str, str]) -> o
     with prose or labels needs a place in ``_KEPT`` or ``_LABELLED``. A description, the labels
     of ``one_of:`` and a fixed choice (a ``Literal``, such as a dtype) are
     kept. A field of entries has its keys renamed, except ``cases:`` and
-    ``links:``, whose keys are labels of rows, and ``maps:`` holds entries by
-    subject and then by map. Every other string is text that
+    ``links:``, whose keys are labels of rows, and ``mappings:`` holds entries by
+    subject and then by mapping. Every other string is text that
     may contain names. An entry that is not a mapping is a short form of one:
     an expression on one line, or a piecewise link written as a list.
     """

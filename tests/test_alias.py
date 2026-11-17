@@ -54,7 +54,7 @@ def test_an_alias_prints_as_a_primed_index_over_the_same_set(fmt: str):
     """The read through the alias is the identity, so the far end prints at the primed index, not through a function."""
     out = typeset(to_spec(TWICE), fmt)
     assert "g'" in out, 'the alias is the index of g, primed'
-    assert 'from_g(' not in out and 'g(' not in out.replace("g'", ''), 'the identity map prints no function'
+    assert 'from_g(' not in out and 'g(' not in out.replace("g'", ''), 'the identity mapping prints no function'
 
 
 @pytest.mark.parametrize(
@@ -86,9 +86,9 @@ def test_an_alias_prints_as_a_primed_index_over_the_same_set(fmt: str):
             id='an-alias-of-an-alias',
         ),
         pytest.param(
-            {'dimensions.from_g': {'alias': 'g'}, 'maps.from_g': {'g': {'dim': 'g'}}},
-            "Dimension 'from_g': alias: 'g' gives 'from_g' the map 'from_g[g]' from each label to itself.",
-            id='its-map-declared-again',
+            {'dimensions.from_g': {'alias': 'g'}, 'mappings.from_g': {'g': {'dim': 'g'}}},
+            "Dimension 'from_g': alias: 'g' gives 'from_g' the mapping 'from_g[g]' from each label to itself.",
+            id='its-mapping-declared-again',
         ),
     ],
 )

@@ -264,10 +264,10 @@ class Walk:
         return self.format.superscript(operator, step.within)
 
     def _relation_read(self, name: str, at: Mapping[str, str], read: str) -> str:
-        """Subject *name*'s map *read* as a function at the columns *at* fixes: ``bus(g)`` or ``bus(p, u)``.
+        """Subject *name*'s mapping *read* as a function at the columns *at* fixes: ``bus(g)`` or ``bus(p, u)``.
 
         *at* maps each key role to the index it is read at. The function is
-        named after the map alone, as the legend lists it.
+        named after the mapping alone, as the legend lists it.
         """
         lk = self.program.relations[name]
         if (dimension := self.program.dimensions.get(name)) is not None and dimension.alias == read:
@@ -275,10 +275,10 @@ class Walk:
         return self.format.apply(self.format.upright(read), self.format.joined([at[k] for k in lk.key], ''))
 
     def _relation_row(self, name: str, at: Mapping[str, str], column: str | None = None) -> str:
-        """That relation *name* has a row at the key *at* fixes, or with *column*, that the map gives the row a label.
+        """That relation *name* has a row at the key *at* fixes, or with *column*, that the mapping gives the row a label.
 
         A relation is a set of rows, so the row is written out:
-        ``(p, u) ∈ connection``. A map is a function, so the claim is that it
+        ``(p, u) ∈ connection``. A mapping is a function, so the claim is that it
         is defined there: ``line(o) is defined``.
         """
         lk = self.program.relations[name]
@@ -293,7 +293,7 @@ class Walk:
         return {k: ctx.subscript(lk.dim(k)) for k in lk.key}
 
     def _value_read(self, name: str, column: str, ctx: _Context) -> str:
-        """Subject *name*'s map *column* read at the frame's own indices of its key: ``period(t)``."""
+        """Subject *name*'s mapping *column* read at the frame's own indices of its key: ``period(t)``."""
         return self._relation_read(name, self._frame_key(name, ctx), column)
 
     def _tuple(self, reads: list[str]) -> str:
@@ -919,7 +919,7 @@ class Walk:
         return Line(label=name, left=left, right=right, condition=self._quantifier(frame, condition))
 
     def _link(self, link: Link, ctx: _Context) -> tuple[str, str]:
-        """One link's point coordinate and its breakpoints, each a family where the link walks a map.
+        """One link's point coordinate and its breakpoints, each a family where the link walks a mapping.
 
         A walked link is one coordinate per fine index that maps to the curve's
         own, so it prints as the family over those, which is what ties them to

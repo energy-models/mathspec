@@ -161,7 +161,7 @@ def test_the_golden_model_carries_every_node_kind_the_walk_renders():
     """A construct added to the language is a case this fixture owes output for.
 
     Two constructs can share every symbol and still render differently —
-    ``at`` and ``sum(by=)`` both print a coordinate map — so this counts node
+    ``at`` and ``sum(by=)`` both print a coordinate mapping — so this counts node
     kinds rather than symbols. Like the operator census it runs without
     `coverage` installed, and its failure names the construct rather than a line.
     """

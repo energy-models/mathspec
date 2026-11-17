@@ -70,7 +70,7 @@ dimensions:
     dtype: int
     ordered: true
 
-maps:
+mappings:
   snapshot:
     period:
       description: the investment period a snapshot falls in

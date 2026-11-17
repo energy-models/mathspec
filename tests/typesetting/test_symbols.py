@@ -101,7 +101,7 @@ DEFAULTED = varied(
     DISPATCH_MODEL,
     **{
         'dimensions.bus': {'dtype': 'str'},
-        'maps.generator': {'bus': {'dim': 'bus', 'missing': 'absent'}},
+        'mappings.generator': {'bus': {'dim': 'bus', 'missing': 'absent'}},
         'parameters.p_max.missing': 'inf',
         'parameters.cost.missing': 1,
         'parameters.load.missing': 0,
@@ -115,7 +115,7 @@ DEFAULTED = varied(
 
 @EVERY_FORMAT
 def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Format):
-    """The legend printed a value and left out a reading, so `absent`, `0` and a partial map looked complete."""
+    """The legend printed a value and left out a reading, so `absent`, `0` and a partial mapping looked complete."""
     out = typeset(DEFAULTED, name)
     for shown in (
         fmt.math(number(math.inf, fmt)),
@@ -127,7 +127,7 @@ def test_the_legend_prints_what_a_missing_row_means(name: FormatName, fmt: Forma
     ):
         assert f'{shown} where the data has no row' in out
     assert out.count(f'{fmt.mono("generator[bus]")} is {fmt.mono("absent")} where the data gives no label') == 2, (
-        'the map says what a missing label means in each of its two sets'
+        'the mapping says what a missing label means in each of its two sets'
     )
     assert out.count('where the data has no row') == 6, (
         'six parameters say what a missing row means; `ramp` keeps the default, refused, and says nothing'

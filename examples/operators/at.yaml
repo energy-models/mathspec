@@ -4,13 +4,13 @@
 
 description: >-
   The join without a grouping: `at(array, by=subject[m])` takes, for each
-  `snapshot`, the value at the `period` that the map gives that snapshot.
+  `snapshot`, the value at the `period` that the mapping gives that snapshot.
 
 dimensions:
   snapshot: { dtype: int }
   period: { dtype: int }
 
-maps:
+mappings:
   snapshot: { period: { dim: period } }
 
 parameters:

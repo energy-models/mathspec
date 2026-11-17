@@ -81,9 +81,9 @@
 \begin{description}
 \item[{$t \ominus k$}] \texttt{edge='wrap'} --- $t-k$, cyclic
 \item[{$t \boxminus_{v} k$}] \texttt{edge=v} --- $t-k$, and $v$ past the edge
-\item[{$t \ominus^{\mathrm{map}(t)} k$}] \texttt{within=subject[map]} --- $t-k$ inside the group of $t$
+\item[{$t \ominus^{\mathrm{map}(t)} k$}] \texttt{within=subject[mapping]} --- $t-k$ inside the group of $t$
 \item[{$\mathrm{pos}(t)$}] \texttt{position()} --- the position of $t$, counted from $0$; $t$ is the label
-\item[{$\mathrm{pos}_{\mathrm{map}(t)}(t)$}] \texttt{position(within=subject[map])} --- the position of $t$ inside its group
+\item[{$\mathrm{pos}_{\mathrm{map}(t)}(t)$}] \texttt{position(within=subject[mapping])} --- the position of $t$ inside its group
 \item[{$\lvert \mathcal{T} \rvert$}] the size of $\mathcal{T}$; $\lvert \mathcal{T} \rvert - 1$ is the last position
 \end{description}
 

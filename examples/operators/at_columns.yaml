@@ -3,15 +3,15 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  One of two maps: where a subject has two maps into one dimension,
-  `at(array, by=subject[m])` takes the value at the label of map `m`. Here `m`
+  One of two mappings: where a subject has two mappings into one dimension,
+  `at(array, by=subject[m])` takes the value at the label of mapping `m`. Here `m`
   is `bus0`, the sending end of a line.
 
 dimensions:
   line: { dtype: str }
   bus: { dtype: str }
 
-maps:
+mappings:
   line: { bus0: { dim: bus }, bus1: { dim: bus } }
 
 parameters:

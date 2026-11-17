@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 description: >-
-  Several columns and maps: `sum(array, over=[dim, …], by=subject[m, …])`
-  joins on both columns of the relation and groups by both of its maps.
+  Several columns and mappings: `sum(array, over=[dim, …], by=subject[m, …])`
+  joins on both columns of the relation and groups by both of its mappings.
 
 dimensions:
   generator: { dtype: str }
@@ -15,7 +15,7 @@ dimensions:
 relations:
   slot_of: { dims: [generator, period] }
 
-maps:
+mappings:
   slot_of: { bus: { dim: bus }, technology: { dim: technology } }
 
 parameters:

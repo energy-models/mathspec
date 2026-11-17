@@ -249,12 +249,12 @@ def _walked(text: str, dims: Iterable[str], link: Link | None) -> str:
 
 
 def _on_walk(text: str | None, link: Link) -> str | None:
-    """*text* as *link*'s row reads it, admitted only at the rows whose map gives the walk a label.
+    """*text* as *link*'s row reads it, admitted only at the rows whose mapping gives the walk a label.
 
-    A map or a relation declared ``missing: absent`` may give a row no label,
+    A mapping or a relation declared ``missing: absent`` may give a row no label,
     and there the walked read of the curve is absent, so the row would pin the
     link's expression to an empty sum, or to the first breakpoint under
-    ``incremental``. A where read through the map is already false there, and
+    ``incremental``. A where read through the mapping is already false there, and
     under ``missing: refused`` every row has a label.
     """
     if link.walk is None or link.reads or link.walk.relation.missing_at(link.walk.dropped) == 'refused':
@@ -263,7 +263,7 @@ def _on_walk(text: str | None, link: Link) -> str | None:
 
 
 def labelled(walk: JoinColumns) -> str:
-    """The condition that the walk finds a label, ``subject[map]`` for each map it reads."""
+    """The condition that the walk finds a label, ``subject[mapping]`` for each mapping it reads."""
     return ' AND '.join(f'{walk.name}[{role}]' for role in walk.dropped)
 
 
@@ -444,7 +444,7 @@ def leaves_ungated(gate: VariableSpec | Variable, walk: JoinColumns | None = Non
 
     A masked gate is absent off its mask, and there the curve sums to 1;
     ``missing: 0`` reads the gate as 0 there instead, which one row states.
-    A map or a relation declared ``missing: absent`` may give a curve no
+    A mapping or a relation declared ``missing: absent`` may give a curve no
     label, and there the read is absent whatever the gate's ``missing:``.
     Under ``missing: refused`` every curve has one.
     """
@@ -478,8 +478,8 @@ def gate_text(text: str, gate: VariableSpec | Variable, read: Expression) -> tup
     *text* is the ``activity:`` the file wrote, and *read* the expression it
     resolved to. Where [`leaves_ungated`][] says a curve can run ungated,
     the where is the read itself, which exists where the gate and the row of
-    its map both do. Under ``missing: 0`` a walked gate reads 0 off its
-    mask, so the map alone decides, and its label is the where.
+    its mapping both do. Under ``missing: 0`` a walked gate reads 0 off its
+    mask, so the mapping alone decides, and its label is the where.
     """
     walk = read.columns if isinstance(read, Join) else None
     if not leaves_ungated(gate, walk):
@@ -509,7 +509,7 @@ def resolve_links(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
 def resolve_walks(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]) -> dict[str, JoinColumns] | None:
     """Entry *name*'s walks by link key, each read as ``at(..., by=)`` reads its relation, or ``None`` once one failed.
 
-    The expansion writes a walked row as ``at(<entry>_lam, by=<subject>[<map>])``,
+    The expansion writes a walked row as ``at(<entry>_lam, by=<subject>[<mapping>])``,
     so a walk is held to every rule that call is held to, and refused here on
     the link the file wrote. Each refusal is appended to *errors*.
     """
@@ -537,8 +537,8 @@ def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
     """
     if (columns := _columns_of(by)) is None:
         resolver.errors.append(
-            f'{resolver.context}: by: {by!r} is not a subject with its maps in brackets. Write '
-            f'by: <subject>[<map>], as in at(..., by=).'
+            f'{resolver.context}: by: {by!r} is not a subject with its mappings in brackets. Write '
+            f'by: <subject>[<mapping>], as in at(..., by=).'
         )
         return None
     return resolver.columns_ref(columns, 'at', 'by')
@@ -676,13 +676,13 @@ def _walk_fits(ctx: str, entry: PiecewiseSpec, walk: JoinColumns) -> None:
         )
     if framed := sorted(added & {*entry.dims, entry.along}):
         raise DimensionError(
-            f'{ctx}: by: {walk.name} adds {framed}, which the curve is already over. Walk through a map '
+            f'{ctx}: by: {walk.name} adds {framed}, which the curve is already over. Walk through a mapping '
             f'whose subject is over a dimension outside dims: and along:.'
         )
     if entry.along in walk.joined_dims:
         raise DimensionError(
             f"{ctx}: by: {walk.name} is keyed on '{entry.along}', the breakpoint dimension, so a row of the "
-            f'link could take each breakpoint from a different curve. Walk through a map whose subject leaves '
+            f'link could take each breakpoint from a different curve. Walk through a mapping whose subject leaves '
             f"out '{entry.along}'."
         )
 
@@ -735,14 +735,14 @@ def _link_fits(ctx: str, key: str, entry: PiecewiseSpec, found: frozenset[str], 
         raise DimensionError(
             f"{ctx}: link '{key}' expression is over {stray}, and its row {list(own)} is not, so every "
             f'coordinate of {stray} would share one curve. Add {stray} to dims:, sum it out, or look the curve '
-            f'up through a map with by: <subject>[<map>].'
+            f'up through a mapping with by: <subject>[<mapping>].'
         )
     if added := sorted(set(own) - found - set(entry.dims)):
         by = entry.links[key].by
         raise DimensionError(
             f"{ctx}: link '{key}' expression is not over {added}, which by: {by} adds to its row {list(own)}, "
             f'so one value of the expression would lie on every curve along {added} at once. Write an '
-            f'expression over {added}, or walk through a map whose subject leaves out {added}.'
+            f'expression over {added}, or walk through a mapping whose subject leaves out {added}.'
         )
     if missing := sorted(set(own) - found):
         raise DimensionError(
@@ -787,7 +787,7 @@ def _where_fits(ctx: str, entry: PiecewiseSpec, where: Mask | None, walks: dict[
     for key, walk in walks.items():
         if into := [d for d in stray if d in walk.added_dims]:
             raise DimensionError(
-                f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through the map it walks. A "
+                f"{ctx}: where {entry.where!r} tests {into}, which link '{key}' adds through the mapping it walks. A "
                 f'where: sets which curves exist, one per coordinate of dims: {list(entry.dims)}, and only the rows of '
                 f'the link are over {into}. Test {list(entry.dims)} in the where:, or declare a where: over {into} on '
                 f'the variable of the link, so that its rows are absent.'
@@ -811,14 +811,14 @@ def _gate_fits(ctx: str, entry: PiecewiseSpec, gate: Gate, walks: dict[str, Join
     listable = not unlistable & set(stray)
     if entry.activity != gate.variable:
         found = f'over {stray} after the lookup'
-        rewrite = 'Look it up through a map that leaves it over dims:' + (
+        rewrite = 'Look it up through a mapping that leaves it over dims:' + (
             f', or add {stray} to dims:.' if listable else '.'
         )
     else:
         found = f'over {stray}'
         rewrite = (f'Add {stray} to dims:, or gate' if listable else 'Gate') + (
-            f' with a variable over dims:, or read the gate through a map with '
-            f'activity: at({gate.variable}, by=<subject>[<map>]).'
+            f' with a variable over dims:, or read the gate through a mapping with '
+            f'activity: at({gate.variable}, by=<subject>[<mapping>]).'
         )
     raise DimensionError(
         f"{ctx}: activity '{gate.variable}' is {found}, which is not in dims: {list(entry.dims)}. The gate switches "

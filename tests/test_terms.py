@@ -25,7 +25,7 @@ from tests.fixtures import BALANCE, BUS_DIMS, BUS_FRAME, INJECTION, section, set
 #: A generator fleet: what it puts in is its term.
 FLEET = {
     'dimensions': {**BUS_DIMS, 'generator': {'dtype': 'str'}},
-    'maps': {'generator': {'bus': {'dim': 'bus'}}},
+    'mappings': {'generator': {'bus': {'dim': 'bus'}}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {
@@ -49,7 +49,7 @@ DEMAND = {
 #: A store, added in a second merge.
 STORAGE = {
     'dimensions': {**BUS_DIMS, 'store': {'dtype': 'str'}},
-    'maps': {'store': {'bus': {'dim': 'bus'}}},
+    'mappings': {'store': {'bus': {'dim': 'bus'}}},
     'variables': {'store_p': {'dims': ['snapshot', 'store']}},
     'given': {'expressions': {'injection': {'dims': BUS_FRAME}}},
     'expressions': {

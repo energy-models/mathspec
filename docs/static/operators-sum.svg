@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-4.0
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 709 222" width="709" height="222" style="max-width: 100%; height: auto" role="img" aria-labelledby="osu-t osu-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
   <title id="osu-t">A nodal balance sums each kind of component by bus</title>
-  <desc id="osu-d">The map generator[bus] puts the generators wind and gas on bus north, and solar on bus south. The maps line[bus0] and line[bus1] give the line l1 from north to south. The constraint nodal_balance has one row per bus. At north it adds p of wind and p of gas, and subtracts f of l1. At south it adds p of solar and f of l1.</desc>
+  <desc id="osu-d">The mapping generator[bus] puts the generators wind and gas on bus north, and solar on bus south. The mappings line[bus0] and line[bus1] give the line l1 from north to south. The constraint nodal_balance has one row per bus. At north it adds p of wind and p of gas, and subtracts f of l1. At south it adds p of solar and f of l1.</desc>
   <defs>
     <pattern id="osu-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <line x1="0" y1="0" x2="0" y2="6" stroke="#D55E00" stroke-opacity="0.5" stroke-width="1.5"/>
@@ -19,7 +19,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="16" y="24" font-weight="bold">generator[bus]</text>
-    <text x="118" y="24" fill-opacity="0.7">a map</text>
+    <text x="118" y="24" fill-opacity="0.7">a mapping</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="48" font-weight="bold">generator</text>
       <text x="112" y="48" font-weight="bold">bus</text>
@@ -38,7 +38,7 @@ SPDX-License-Identifier: CC-BY-4.0
   </g>
   <g fill="currentColor">
     <text x="16" y="152" font-weight="bold">line[bus0], line[bus1]</text>
-    <text x="168" y="152" fill-opacity="0.7">two maps</text>
+    <text x="168" y="152" fill-opacity="0.7">two mappings</text>
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
       <text x="24" y="176" font-weight="bold">line</text>
       <text x="75" y="176" font-weight="bold">bus0</text>

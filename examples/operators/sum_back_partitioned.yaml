@@ -10,7 +10,7 @@ dimensions:
   hour: { dtype: int, ordered: true }
   day: { dtype: str }
 
-maps:
+mappings:
   hour: { day: { dim: day } }
 
 variables:

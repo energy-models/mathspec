@@ -116,7 +116,7 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
     if clash := sorted((added & inner) - dropped):
         raise DimensionError(
             f'{context}: {call} groups by {clash}, which the expression already carries.\n'
-            f'Move the factor carrying {clash} outside the operator, or group by a map into another dimension.'
+            f'Move the factor carrying {clash} outside the operator, or group by a mapping into another dimension.'
         )
     _check_joined(call, columns, inner, context)
     return joined(columns, inner)
@@ -195,7 +195,7 @@ def _check_named_amount(
         raise DimensionError(
             f"{context}: {verb}({kwarg}={amount}): '{amount}' varies over {stray}, which the expression does "
             f"not carry (dims {sorted(inner)}). Declare '{amount}' over dims the expression carries, or group "
-            f'by a map into one of {stray}.'
+            f'by a mapping into one of {stray}.'
         )
 
 
@@ -349,7 +349,7 @@ def _check_condition_dims(
             case RelationDefined(column=None):
                 leaf = f"where-relation '{atom.name}'"
             case RelationComparison() | RelationPairComparison() | RelationDefined():
-                leaf = f"where-map '{atom.name}[{atom.column}]'"
+                leaf = f"where-mapping '{atom.name}[{atom.column}]'"
             case ExpressionComparison():
                 leaf = 'a comparison of expressions'
             case CountComparison():

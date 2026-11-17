@@ -11,7 +11,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   season: { dtype: str }
 
-maps:
+mappings:
   snapshot: { season: { dim: season } }
 
 variables:

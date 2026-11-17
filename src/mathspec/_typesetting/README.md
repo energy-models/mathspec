@@ -59,7 +59,7 @@ mathspec.to_latex('dispatch.yaml', symbols=mathspec.SymbolTable.load(table))  # 
 ```
 
 The dict has the same sections as the file, which are `notation`, `dimensions`
-and `names`. It is what the YAML parses to, and not a flat `{name: symbol}` map.
+and `names`. It is what the YAML parses to, and not a flat `{name: symbol}` mapping.
 
 Whichever form you use, the table is checked against the spec. A key that names
 nothing is an error, and the message gives the near miss. Without that check, a

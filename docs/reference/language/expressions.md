@@ -225,8 +225,8 @@ The place of a name in a string sets which kinds of name it may be:
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | expression (`p * cost`)                | a variable, or a parameter whose values are numbers ([dtype](parameters-variables-constraints.md#parameters)) |
 | dimension argument (`over=`, `along=`) | a dimension, a list of them for `over=`, or with `by=` a column of the table in `by=` where one has that name |
-| column argument (`by=`, `within=`)     | maps or columns of one subject, written `subject[column]` or `subject[column, …]`                             |
-| condition                              | a parameter, variable, dimension, relation, map or named condition ([conditions](#conditions))                |
+| column argument (`by=`, `within=`)     | mappings or columns of one subject, written `subject[column]` or `subject[column, …]`                         |
+| condition                              | a parameter, variable, dimension, relation, mapping or named condition ([conditions](#conditions))            |
 | `bounds.lower` / `bounds.upper`        | a parameter name, or a number                                                                                 |
 | the `edge` key of `shift`              | `'wrap'` in quotes, or a bare number                                                                          |
 | `dual` argument (`dual(c)`)            | a constraint, resolved against the constraints alone ([named expressions](named.md#dual))                     |
@@ -251,18 +251,18 @@ and never to a constraint of the same name.
 Before any data is attached, [`to_spec`](../api.md#mathspec.to_spec) works out the
 dimensions of every expression. Each part of an expression (a node) has a set of dimensions:
 
-| Node                             | Dimensions of the result       | Refused when                                                                                            |
-| -------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| number                           | `{}`                           |                                                                                                         |
-| parameter / variable             | its `dims`                     |                                                                                                         |
-| `-x`, `+x`                       | `dims(x)`                      |                                                                                                         |
-| `a + b`, `a * b`, `a / b`        | `dims(a) ∪ dims(b)`            |                                                                                                         |
-| `sum(x)`                         | `{}`                           | `dims(x)` is already empty                                                                              |
-| `sum(x, over=d)`                 | `dims(x) − {d}`                | `d ∉ dims(x)`                                                                                           |
-| `sum(x, over=d, by=s[c])`        | `(dims(x) − joined) ∪ grouped` | a refusal under [how relations and maps are used](relations.md#how-relations-and-maps-are-used) applies |
-| `at(x, by=s[m])`                 | `(dims(x) − joined) ∪ grouped` | the same refusals apply                                                                                 |
-| `shift(x, along=d, offset=n)`    | `dims(x)`                      | `d ∉ dims(x)`                                                                                           |
-| `sum_back(x, along=d, window=n)` | `dims(x)`                      | `d ∉ dims(x)`                                                                                           |
+| Node                             | Dimensions of the result       | Refused when                                                                                                    |
+| -------------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| number                           | `{}`                           |                                                                                                                 |
+| parameter / variable             | its `dims`                     |                                                                                                                 |
+| `-x`, `+x`                       | `dims(x)`                      |                                                                                                                 |
+| `a + b`, `a * b`, `a / b`        | `dims(a) ∪ dims(b)`            |                                                                                                                 |
+| `sum(x)`                         | `{}`                           | `dims(x)` is already empty                                                                                      |
+| `sum(x, over=d)`                 | `dims(x) − {d}`                | `d ∉ dims(x)`                                                                                                   |
+| `sum(x, over=d, by=s[c])`        | `(dims(x) − joined) ∪ grouped` | a refusal under [how relations and mappings are used](relations.md#how-relations-and-mappings-are-used) applies |
+| `at(x, by=s[m])`                 | `(dims(x) − joined) ∪ grouped` | the same refusals apply                                                                                         |
+| `shift(x, along=d, offset=n)`    | `dims(x)`                      | `d ∉ dims(x)`                                                                                                   |
+| `sum_back(x, along=d, window=n)` | `dims(x)`                      | `d ∉ dims(x)`                                                                                                   |
 
 mathspec refuses `sum(p, over=t)` with `p` over `g` alone, and prints:
 
@@ -327,19 +327,19 @@ its entry.
 | `name` (bare)                            | parameter                  | For a number, it is true where the data has a row, whatever the `missing:`. For a `bool`, it is its value, and the `missing:` sets the value at a missing row ([`missing`](parameters-variables-constraints.md#missing)). `0.0` is a row, and `inflow != 0` tests for non-zero |
 | `name` (bare)                            | variable                   | It is true where the variable exists                                                                                                                                                                                                                                           |
 | `name` (bare)                            | relation                   | It is true where the relation has a row. A `missing: absent` relation has no row for some combinations ([`missing`](relations.md#missing)), and the bare name selects the combinations it lists                                                                                |
-| `subject[map]` (bare)                    | map                        | It is true where the map gives the row of its subject a label. A `missing: absent` map gives some rows no label ([`missing`](relations.md#missing))                                                                                                                            |
+| `subject[mapping]` (bare)                | mapping                    | It is true where the mapping gives the row of its subject a label. A `missing: absent` mapping gives some rows no label ([`missing`](relations.md#missing))                                                                                                                    |
 | `name` (bare)                            | dimension                  | mathspec refuses it at load                                                                                                                                                                                                                                                    |
 | `name` (bare)                            | named condition            | It tests the [named condition](named.md#conditions). A given condition is true or false at each coordinate, as a `bool` parameter is                                                                                                                                           |
 | `name OP value`                          | parameter                  | It compares element by element. A missing row with no `missing:` value compares false                                                                                                                                                                                          |
 | `name OP value`                          | dimension                  | It filters the frame's own coordinate column                                                                                                                                                                                                                                   |
-| `subject[map] OP value`                  | map                        | It compares the label that the map gives each row of its subject. A comparison reads one map. Where the map gives no label, the comparison is false for every operator, `!=` included, so `NOT` of it is true there                                                            |
-| `s[a] OP t[b]`                           | two maps                   | mathspec accepts it where both subjects are over the same dimensions and both maps refer to one dimension. `line[bus0] != line[bus1]` excludes a self-loop. Where either map gives no label, the comparison is false                                                           |
+| `subject[mapping] OP value`              | mapping                    | It compares the label that the mapping gives each row of its subject. A comparison reads one mapping. Where the mapping gives no label, the comparison is false for every operator, `!=` included, so `NOT` of it is true there                                                |
+| `s[a] OP t[b]`                           | two mappings               | mathspec accepts it where both subjects are over the same dimensions and both mappings refer to one dimension. `line[bus0] != line[bus1]` excludes a self-loop. Where either mapping gives no label, the comparison is false                                                   |
 | `expression OP expression`               | arithmetic over parameters | It compares coordinate by coordinate, over every dimension either side is over ([arithmetic in a comparison](#arithmetic-in-a-comparison)). A side with no value at a coordinate compares false                                                                                |
 | `position(name) OP i`                    | dimension                  | It tests where the row sits along the dimension's own order. `0` is first, and a negative number counts from the end                                                                                                                                                           |
-| `position(name, within=s[m])`            | dimension                  | It tests the same, counted within each group the map makes                                                                                                                                                                                                                     |
+| `position(name, within=s[m])`            | dimension                  | It tests the same, counted within each group the mapping makes                                                                                                                                                                                                                 |
 | `count(condition, over=name) OP i`       | condition                  | It compares how many coordinates along the dimension the condition admits ([`count`](#count))                                                                                                                                                                                  |
 | `shift(condition, along=name, offset=i)` | condition                  | It is the condition `i` coordinates back, and false at the first `i` coordinates                                                                                                                                                                                               |
-| `at(condition, by=s[m])`                 | condition                  | It is the condition through the map ([`at` in a condition](#at-in-a-condition)), and false where the map gives no label                                                                                                                                                        |
+| `at(condition, by=s[m])`                 | condition                  | It is the condition through the mapping ([`at` in a condition](#at-in-a-condition)), and false where the mapping gives no label                                                                                                                                                |
 | `AND` `OR` `NOT`                         |                            | They are case-insensitive. `NOT` applies before `AND`, and `AND` before `OR`                                                                                                                                                                                                   |
 | `True` / `False`                         |                            | `True` is the same as no `where`. `False` leaves an entry with no rows                                                                                                                                                                                                         |
 
@@ -482,9 +482,9 @@ arithmetic `shift` takes.
 
 ### `at` in a condition
 
-`at(<condition>, by=<subject>[<map>])` reads a condition at the label that a
-map gives each row of its subject, as `at` reads an expression. It is true
-where the condition is true at that label, and **false** where the map gives
+`at(<condition>, by=<subject>[<mapping>])` reads a condition at the label that a
+mapping gives each row of its subject, as `at` reads an expression. It is true
+where the condition is true at that label, and **false** where the mapping gives
 the row no label. In
 the spec below, `rate` exists only for a flow whose converter has a curve:
 
@@ -492,7 +492,7 @@ the spec below, `rate` exists only for a flow whose converter has a curve:
 dimensions:
   converter: { dtype: str }
   flow: { dtype: str }
-maps:
+mappings:
   flow: { converter: { dim: converter } }
 parameters:
   has_curve: { dims: [converter], dtype: bool }
@@ -517,11 +517,11 @@ objective:
 
 The converter of `f3` has no curve, so `rate` has no row for `f3`.
 
-`at` removes `converter`, the dimension that the map in `by=` refers to, and
+`at` removes `converter`, the dimension that the mapping in `by=` refers to, and
 adds the subject, `flow`. So the condition is over `flow` alone, which is the frame of
 `rate`.
 
-`by=` lists one map, or several as `subject[a, …]`, and every other
+`by=` lists one mapping, or several as `subject[a, …]`, and every other
 rule of [`at` in an expression](relations.md#lookups) applies.
 
 !!! info "See also"
@@ -567,8 +567,8 @@ Variable 'p': 'snapshot' is a datetime dimension, so comparing it to 5.0 compare
 mathspec suggests the rewrite: a quoted date.
 
 Only a number or a `datetime` compares with `<`, `<=`, `>` and `>=`. A `str`
-or a `bool` compares only with `==` and `!=`. A map has the
-dtype of the dimension it refers to, so the rule also applies to a map. For the
+or a `bool` compares only with `==` and `!=`. A mapping has the
+dtype of the dimension it refers to, so the rule also applies to a mapping. For the
 condition `generator < 'b9'` on a `str` dimension, mathspec prints:
 
 ```text
@@ -597,7 +597,7 @@ data preparation.
 Either side of a comparison may be an expression over parameters, such as
 `p_min <= 0.5 * p_max` or `p_max <= at(bus_cap, by=generator[bus])`. With macros
 and named expressions included, mathspec reads such a side as it reads an
-[expression](#the-arithmetic-grammar). A map and a quoted label
+[expression](#the-arithmetic-grammar). A mapping and a quoted label
 are compared on their own, and never take part in arithmetic.
 
 A variable and a `dual()` are refused in a comparison, because a condition
@@ -694,7 +694,7 @@ one starting row:
 dimensions:
   snapshot: { dtype: int, ordered: true }
   period: { dtype: int }
-maps:
+mappings:
   snapshot: { period: { dim: period } }
 parameters:
   soc_initial: { dims: [period] }

@@ -19,7 +19,7 @@ dimensions:
   snapshot: { dtype: int, ordered: true }
   generator: { dtype: str }
   bus: { dtype: str }
-maps:
+mappings:
   generator: { bus: { dim: bus } }
 parameters:
   load: { dims: [snapshot, bus] }
@@ -72,8 +72,8 @@ coordinate of `(snapshot, bus)`.
 
 A [relation](../reference/language/relations.md#relations) is a table whose
 columns are all in its primary key, so it lists which combinations of labels
-exist. A [map](../reference/language/relations.md#maps) is a column of the
-table of its subject. `generator: { bus: { dim: bus } }` under `maps:` is a table
+exist. A [mapping](../reference/language/relations.md#mappings) is a column of the
+table of its subject. `generator: { bus: { dim: bus } }` under `mappings:` is a table
 `generator` with the columns `generator` and `bus`, and one row per generator.
 Under the default `missing: refused`, every generator needs a bus. Under
 [`missing: absent`](../reference/language/relations.md#missing), the bus of a

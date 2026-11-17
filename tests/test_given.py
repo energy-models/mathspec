@@ -26,7 +26,7 @@ from tests.fixtures import BALANCE, section
 SUPPLY = {
     'description': 'A fleet of generators, each on one port.',
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'maps': {'generator': {'port': {'dim': 'port'}}},
+    'mappings': {'generator': {'port': {'dim': 'port'}}},
     'given': {'variables': {'flow': {'dims': ['snapshot', 'port'], 'description': 'what a port puts into its bus'}}},
     'parameters': {'gen_cost': {'dims': ['generator']}, 'gen_p_max': {'dims': ['generator']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0, 'upper': 'gen_p_max'}}},
@@ -42,7 +42,7 @@ SUPPLY = {
 #: The fragment that introduces `flow`, with the bounds and the balance that go with it.
 SURFACE = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'maps': {'port': {'bus': {'dim': 'bus'}}},
+    'mappings': {'port': {'bus': {'dim': 'bus'}}},
     'variables': {'flow': {'dims': ['snapshot', 'port'], 'bounds': {'lower': -1000, 'upper': 1000}}},
     'constraints': {'balance': {'dims': ['snapshot', 'bus'], 'expression': 'sum(flow, over=port, by=port[bus]) == 0'}},
 }
@@ -480,7 +480,7 @@ def test_the_advice_names_a_given_parameter_as_data_a_consumer_binds():
 #: A component file that defines the injection.
 INJECTOR = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'maps': {'generator': {'bus': {'dim': 'bus'}}},
+    'mappings': {'generator': {'bus': {'dim': 'bus'}}},
     'parameters': {'load': {'dims': ['snapshot', 'bus']}},
     'variables': {'gen_p': {'dims': ['snapshot', 'generator'], 'bounds': {'lower': 0}}},
     'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=generator[bus]) - load'}},
@@ -545,7 +545,7 @@ def test_a_definition_over_a_dimension_the_reader_does_not_state_is_refused():
 #: An injector whose output does not vary by snapshot: its injection is over `bus` alone.
 FLAT_INJECTOR = {
     'dimensions': {'bus': {'dtype': 'str'}, 'generator': {'dtype': 'str'}},
-    'maps': {'generator': {'bus': {'dim': 'bus'}}},
+    'mappings': {'generator': {'bus': {'dim': 'bus'}}},
     'variables': {'gen_p': {'dims': ['generator'], 'bounds': {'lower': 0}}},
     'expressions': {'injection': {'expression': 'sum(gen_p, over=generator, by=generator[bus])'}},
     'objective': {'sense': 'minimize', 'expression': 'sum(gen_p)'},

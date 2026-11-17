@@ -295,12 +295,12 @@ def test_macro_collisions_rejected(patch, match):
         ),
         pytest.param(
             {'grouped': {'args': ['x'], 'template': 'sum(x, over=g, by=[nope, also])'}},
-            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one subject. Write subject\[map\]",
+            r"Macro 'grouped'.*sum\(by=\.\.\.\) takes columns of one subject. Write subject\[mapping\]",
             id='a-list-of-names-for-columns',
         ),
         pytest.param(
             {'grouped': {'args': ['x', 'a', 'b'], 'template': 'sum(x, over=a, by=nope[b])'}},
-            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a relation, a dimension with maps or a formal argument of this macro",
+            r"Macro 'grouped'.*sum\(by=nope\[\.\.\.\]\): 'nope' is not a relation, a dimension with mappings or a formal argument of this macro",
             id='a-typo-in-a-relation-beside-formal-columns',
         ),
         pytest.param(
@@ -341,7 +341,7 @@ def test_an_entry_nothing_reads_is_held_to_the_rules_a_use_is():
     [
         pytest.param('x * tag', "Macro 'm': 'tag' is declared dtype: str", id='a-label-parameter-as-a-value'),
         pytest.param(
-            'sum(x, over=g, by=g[nope])', r"names \['nope'\], which is no map of 'g'", id='a-typo-in-a-column'
+            'sum(x, over=g, by=g[nope])', r"names \['nope'\], which is no mapping of 'g'", id='a-typo-in-a-column'
         ),
     ],
 )
@@ -371,7 +371,7 @@ def test_an_unknown_operator_names_no_construct_the_language_lacks():
         pytest.param(['x', 'e'], 'shift(x, along=g, offset=1, edge=e)', id='an-edge'),
         pytest.param(['row'], 'dual(row)', id='a-constraint'),
         pytest.param(['x', 'rel', 'a', 'b'], 'sum(x, over=a, by=rel[b])', id='a-relation-and-its-columns'),
-        pytest.param(['x', 'a', 'b'], 'sum(x, over=a, by=g[b])', id='the-maps-of-a-declared-subject'),
+        pytest.param(['x', 'a', 'b'], 'sum(x, over=a, by=g[b])', id='the-mappings-of-a-declared-subject'),
         pytest.param(
             ['x', 'd'], 'shift(x, along=d, offset=1, within=g[h])', id='the-dimension-a-partition-steps-along'
         ),
@@ -411,7 +411,7 @@ def test_a_call_binding_the_dimension_a_partition_steps_along_builds_it():
     ns = Namespace(spec_of(SMALL_MODEL, macros={'m': {'args': ['x', 'd'], 'template': template}}))
     node = expression_of('m(p, g)', ns, 'expression')
     assert isinstance(node, Translate) and node.along == 'g'
-    assert node.partition is not None and node.partition.name == 'g', 'the map is read once along= is bound'
+    assert node.partition is not None and node.partition.name == 'g', 'the mapping is read once along= is bound'
 
 
 def test_a_named_expression_is_resolved_once_however_many_uses(monkeypatch):
@@ -443,7 +443,7 @@ def test_a_use_of_a_refused_named_expression_names_it_rather_than_repeating_its_
 
 GROUPED_MODEL = {
     'dimensions': {'generator': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
-    'maps': {'generator': {'bus': {'dim': 'bus'}}},
+    'mappings': {'generator': {'bus': {'dim': 'bus'}}},
     'parameters': {'cap': {'dims': ['bus']}},
     'variables': {'p': {'dims': ['generator']}},
     'objective': {'sense': 'minimize', 'expression': 'sum(p)'},
@@ -479,7 +479,7 @@ def test_a_selection_bound_into_arithmetic_is_refused():
         'constraints': {'k': {'dims': ['generator'], 'expression': 'plus(p, cols=generator[bus]) <= 1'}},
     }
     with pytest.raises(
-        LanguageError, match=r'generator\[bus\] names a map of a subject, which is allowed only as an operator'
+        LanguageError, match=r'generator\[bus\] names a mapping of a subject, which is allowed only as an operator'
     ):
         to_spec(model)
 

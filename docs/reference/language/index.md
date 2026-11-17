@@ -18,7 +18,7 @@ _entry_, _coordinate_ and _absent_, in one fixed sense.
 - **[File shape](file.md)** lists the top-level keys of a spec file, and how mathspec reads the YAML.
 - **[Given, parameters, variables, objective and constraints](parameters-variables-constraints.md)** lists the keys of the data, the decisions, the goal and the rules, and of the `given:` section.
 - **[Dimensions](dimensions.md)** lists the keys of a dimension, the set of labels that entries are indexed over.
-- **[Relations and maps](relations.md)** lists the keys of a relation, a set of combinations of labels, and of a map, which gives each row one label, and how each operator uses them.
+- **[Relations and mappings](relations.md)** lists the keys of a relation, a set of combinations of labels, and of a mapping, which gives each row one label, and how each operator uses them.
 - **[Expressions](expressions.md)** defines the grammar of arithmetic and of conditions, and how dimensions combine.
 - **[Named expressions, conditions and macros](named.md)** lists the keys of the three kinds of named piece of an expression.
 - **[Operators](operators.md)** lists every operator, such as `sum` and `shift`, and the math each one prints.

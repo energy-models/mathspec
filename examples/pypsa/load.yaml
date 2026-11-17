@@ -18,7 +18,7 @@ dimensions:
   load:
     description: demands, each on one bus
 
-maps:
+mappings:
   load:
     bus:
       description: the bus a load sits on

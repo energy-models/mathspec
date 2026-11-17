@@ -188,6 +188,6 @@ def separabilities(program: Program) -> dict[str, Separability]:
 
 
 def _read_through(columns: JoinColumns) -> str:
-    """The subject *columns* reads, with the maps whose labels decide the reach, as the file writes them."""
-    maps = [role for role in (*columns.joined, *columns.grouped) if role in columns.relation.values]
-    return f'{columns.name}[{", ".join(maps)}]' if maps else columns.name
+    """The subject *columns* reads, with the mappings whose labels decide the reach, as the file writes them."""
+    mappings = [role for role in (*columns.joined, *columns.grouped) if role in columns.relation.values]
+    return f'{columns.name}[{", ".join(mappings)}]' if mappings else columns.name

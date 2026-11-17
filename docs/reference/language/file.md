@@ -19,7 +19,7 @@ declares only `dimensions:` loads.
 | `given`       | what this file uses and another file declares ([given](parameters-variables-constraints.md#given))                 |
 | `dimensions`  | the sets of labels that entries are indexed over ([dimensions](dimensions.md))                                     |
 | `relations`   | named sets of combinations of labels of two or more dimensions ([relations](relations.md#relations))               |
-| `maps`        | the label of a dimension that each row of a dimension or a relation has ([maps](relations.md#maps))                |
+| `mappings`    | the label of a dimension that each row of a dimension or a relation has ([mappings](relations.md#mappings))        |
 | `parameters`  | the data the spec expects ([parameters](parameters-variables-constraints.md#parameters))                           |
 | `conditions`  | named conditions, used by name in a `where:`, a `when:` or a `holds:` ([conditions](named.md#conditions))          |
 | `variables`   | what the solver decides ([variables](parameters-variables-constraints.md#variables))                               |

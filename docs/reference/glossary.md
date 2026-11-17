@@ -149,7 +149,7 @@ does not build](reading.md#what-a-program-does-not-build)).
 ## Group
 
 A group is the set of rows of a dimension or a relation to which one
-[map](#map) gives one label. `within=<subject>[<map>]` makes `shift`,
+[mapping](#mapping) gives one label. `within=<subject>[<mapping>]` makes `shift`,
 `sum_back` or `position()` work separately in each group, such as each season
 of a year ([partitions](language/relations.md#partitions)).
 
@@ -173,12 +173,12 @@ expression before any tool reads it. A file declares its own macros under
 `macros:`, so a macro is the one construct a file can add
 ([macros](language/named.md#macros)).
 
-## Map
+## Mapping
 
-A map gives each row of a dimension or a relation (its
+A mapping gives each row of a dimension or a relation (its
 [subject](#subject)) one label of a dimension, such as the bus of each
-generator. A condition or an operator reads it as `subject[map]`, as in
-`generator[bus]` ([maps](language/relations.md#maps)).
+generator. A condition or an operator reads it as `subject[mapping]`, as in
+`generator[bus]` ([mappings](language/relations.md#mappings)).
 
 ## Missing row
 
@@ -279,8 +279,8 @@ most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Subject
 
-The subject of a map is a dimension or a relation, such as `generator` in
-`generator[bus]` ([maps](language/relations.md#maps)).
+The subject of a mapping is a dimension or a relation, such as `generator` in
+`generator[bus]` ([mappings](language/relations.md#mappings)).
 
 ## Surface
 

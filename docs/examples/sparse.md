@@ -45,7 +45,7 @@ relations:
     dims: [unit, period]
     missing: absent
 
-maps:
+mappings:
   connection:
     bus: { dim: bus, description: the bus a port feeds }
 

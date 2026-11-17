@@ -1607,7 +1607,7 @@ relations:
     dims: { scenario: scenario, process: process, start: snapshot, covered: snapshot }
     missing: absent
 
-maps:
+mappings:
   snapshot:
     period:
       description: the investment period a snapshot falls in

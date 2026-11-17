@@ -38,7 +38,7 @@ relations:
     dims: [unit, port]
     missing: absent
 
-maps:
+mappings:
   connection: { bus: { dim: bus }, role: { dim: role } }
 
 parameters:

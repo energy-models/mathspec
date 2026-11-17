@@ -54,7 +54,7 @@ class Noticed:
 
     Attributes:
         policies: Each translation policy some ``shift`` or ``sum_back`` prints.
-        grouped: Whether some translation is counted inside the group of a map.
+        grouped: Whether some translation is counted inside the group of a mapping.
         positions: Each form a ``position()`` prints in.
         numeric_coordinates: Each dimension whose index is compared against a
             number, where "position 3" and "the coordinate 3" are both
@@ -260,10 +260,10 @@ class Legend:
         return f', {shown} {where}'
 
     def _signatures(self, name: str, lk: Relation, dim: str) -> list[str]:
-        """The parts of table *name* that touch *dim*: the relation inside its product, and each map from its subject.
+        """The parts of table *name* that touch *dim*: the relation inside its product, and each mapping from its subject.
 
         A relation prints as ``connection ⊆ P x U`` under each of its
-        dimensions. A map prints as ``carrier: U → C`` under its subject's
+        dimensions. A mapping prints as ``carrier: U → C`` under its subject's
         dimensions and the one it refers to, its subject a set symbol for a
         dimension and the relation's name for a relation.
         """
@@ -288,7 +288,7 @@ class Legend:
         return '' if alias is None else f', an alias of {self.format.mono(alias)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: the labels its ``one_of`` allows, each relation over it and map from or into it, and each that may leave a row out.
+        """The dimension's carried structure: the labels its ``one_of`` allows, each relation over it and mapping from or into it, and each that may leave a row out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -342,7 +342,7 @@ class Legend:
             items.append(
                 LegendItem(
                     f't {fmt.superscript(self._op("cyclic_minus"), relation)} k',
-                    f'{fmt.mono("within=subject[map]")} {dash} {shifted} inside the group of {t}',
+                    f'{fmt.mono("within=subject[mapping]")} {dash} {shifted} inside the group of {t}',
                 )
             )
         if noticed.positions:
@@ -356,7 +356,7 @@ class Legend:
             items.append(
                 LegendItem(
                     fmt.apply(fmt.subscript(self._op('position'), [relation]), 't'),
-                    f'{fmt.mono("position(within=subject[map])")} {dash} the position of {t} inside its group',
+                    f'{fmt.mono("position(within=subject[mapping])")} {dash} the position of {t} inside its group',
                 )
             )
         if 'from_end' in noticed.positions:

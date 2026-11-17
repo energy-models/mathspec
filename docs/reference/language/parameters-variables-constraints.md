@@ -142,7 +142,7 @@ dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
   generator: { dtype: str }
-maps:
+mappings:
   generator: { port: { dim: port } }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
@@ -406,7 +406,7 @@ dimensions:
   snapshot: { dtype: int }
 relations:
   connection: { dims: [entity, bus], missing: absent }
-maps:
+mappings:
   connection: { role: { dim: role } }
 parameters:
   efficiency:
@@ -466,10 +466,10 @@ For a `where:` on `efficiency` that contains the variable `p`, the message
 is:
 
 ```text
-Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a map instead.
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a mapping instead.
 ```
 
-mathspec suggests a parameter or a map as the rewrite.
+mathspec suggests a parameter or a mapping as the rewrite.
 
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
