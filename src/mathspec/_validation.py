@@ -31,7 +31,7 @@ from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
 from mathspec.errors import SchemaError, did_you_mean, unordered
-from mathspec.spec import NUMERIC_DTYPES, Spec
+from mathspec.spec import NUMERIC_DTYPES, Spec, labels_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -111,6 +111,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_frame_dimensions(spec),
         *_relation_targets(spec),
         *_mapping_targets(spec),
+        *_aliases(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -279,6 +280,25 @@ def _mapping_targets(spec: Spec) -> Iterator[str]:
                 )
 
 
+def _aliases(spec: Spec) -> Iterator[str]:
+    """An alias names a declared dimension that is no alias itself, and no mapping stands where its own mapping does."""
+    for name, d in spec.dimensions.items():
+        if d.alias is None:
+            continue
+        head = f"Dimension '{name}': alias: '{d.alias}'"
+        if d.alias == name:
+            yield f"{head} is the dimension itself. Name the dimension whose labels '{name}' has."
+        elif d.alias not in spec.dimensions:
+            yield f'{head} is no declared dimension. {did_you_mean(d.alias, spec.dimensions, label="Dimensions")}'
+        elif (target := spec.dimensions[d.alias].alias) is not None:
+            yield f"{head} is an alias of '{target}' itself. Write alias: {target}."
+        elif d.alias in spec.mappings.get(name, {}):
+            yield (
+                f"{head} gives '{name}' the mapping '{name}[{d.alias}]' from each label to itself. Delete the mapping "
+                f'declared under mappings: {name}:.'
+            )
+
+
 def _bound_names(spec: Spec) -> Iterator[str]:
     """A named bound is a numeric parameter, declared here or given."""
     parameters = {**spec.parameters, **spec.given.parameters}
@@ -323,7 +343,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
-        elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
+        elif entry.type == 2 and not labels_of(spec, entry.along).ordered:
             yield unordered(context, f'type: 2 along {entry.along}', entry.along)
         elif entry.variable in claimed:
             yield (
@@ -377,7 +397,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
         if pw.along not in spec.dimensions:
             yield undeclared_dimension('piecewise', name, pw.along, spec, along=True)
             continue
-        if not spec.dimensions[pw.along].ordered:
+        if not labels_of(spec, pw.along).ordered:
             yield unordered(context, f'along: {pw.along}', pw.along)
         for d in pw.dims:
             if d not in spec.dimensions:

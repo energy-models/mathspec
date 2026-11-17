@@ -24,6 +24,12 @@ A dimension that no entry is indexed over gets advice of the kind
 `never-an-axis`
 ([what advice warns about](language/errors.md#what-advice-warns-about)).
 
+## Alias
+
+An alias is a dimension with the labels of another, under a second name, so an
+entry can be over the same labels twice
+([`alias`](language/dimensions.md#alias)).
+
 ## Attach
 
 An [engine](#tool) attaches data: it combines tables of data with a spec. A

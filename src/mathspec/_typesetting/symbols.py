@@ -157,7 +157,10 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
     index: dict[str, str] = {}
     sets: dict[str, str] = {}
     taken_index, taken_set = set(spoken_for), set()
+    aliases = {d: entry.alias for d, entry in program.dimensions.items() if entry.alias is not None}
     for dim in program.dimensions:
+        if dim in aliases:
+            continue
         overridden = dim in table.indices
         letter = table.indices[dim] if overridden else _first_free(_index_candidates(dim), taken_index)
         taken_index.add(letter)
@@ -165,7 +168,25 @@ def symbols_for(program: Program, fmt: Format, table: SymbolTable) -> Symbols:
         upper = _first_free(_set_candidates(dim, letter), taken_set)
         taken_set.add(upper)
         sets[dim] = table.sets[dim] if dim in table.sets else fmt.script(upper)
+    for dim, primes in _primed(aliases).items():
+        target = aliases[dim]
+        index[dim] = table.indices.get(dim, index[target] + primes)
+        sets[dim] = table.sets.get(dim, sets[target])
     return Symbols(name, constraint, index, sets)
+
+
+def _primed(aliases: dict[str, str]) -> dict[str, str]:
+    """Each alias's primes: one for the first alias of a dimension by name, two for the second, and so on.
+
+    An alias is the same set under a second index, so it prints as the index
+    of the dimension it aliases, primed, and over the same set symbol.
+    """
+    counts: dict[str, int] = {}
+    primed: dict[str, str] = {}
+    for dim in sorted(aliases):
+        counts[aliases[dim]] = counts.get(aliases[dim], 0) + 1
+        primed[dim] = "'" * counts[aliases[dim]]
+    return primed
 
 
 def _index_candidates(dim: str) -> list[str]:
