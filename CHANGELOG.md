@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- docs(examples): TIMES examples and a sparse-set example ([#1021](https://github.com/energy-models/mathspec/pull/1021))
 - docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))
 - feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
 - docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))

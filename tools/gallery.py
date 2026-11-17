@@ -49,6 +49,7 @@ MODELS = {
     'dispatch.md': ROOT / 'examples' / 'dispatch.yaml',
     'commitment.md': ROOT / 'examples' / 'commitment.yaml',
     'connection.md': ROOT / 'examples' / 'connection.yaml',
+    'sparse.md': ROOT / 'examples' / 'sparse.yaml',
     'piecewise.md': ROOT / 'examples' / 'piecewise.yaml',
     'piecewise_adjacency.md': ROOT / 'examples' / 'piecewise_adjacency.yaml',
     'sos.md': ROOT / 'examples' / 'sos.yaml',
@@ -58,6 +59,8 @@ MODELS = {
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
     'pypsa/generator_commitment.md': PYPSA / 'generator_commitment.yaml',
+    'times/capacity.md': ROOT / 'examples' / 'times' / 'capacity.yaml',
+    'times/trade.md': ROOT / 'examples' / 'times' / 'trade.yaml',
 }
 
 #: The index of the PyPSA split: its two tables are read off the fragments.
