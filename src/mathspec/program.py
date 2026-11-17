@@ -275,7 +275,7 @@ class Column:
     name: str
 
     def __str__(self) -> str:
-        """The column as a file writes it, ``relation[column]``."""
+        """The column as a file writes it, ``subject[mapping]``."""
         return f'{self.relation}[{self.name}]'
 
 
@@ -294,7 +294,7 @@ class Axis:
     column: Column | None = None
 
     def __str__(self) -> str:
-        """The dimension's name, or the column's ``relation[column]`` for a join's axis."""
+        """The dimension's name, or the column's ``subject[mapping]`` for a join's axis."""
         return self.dimension if self.column is None else str(self.column)
 
 
@@ -303,7 +303,7 @@ class Sum:
     """Sum ``operand`` over the axes in ``over``, removing them from the result.
 
     An axis in ``over`` is a dimension's own, or one a [`Join`][] under it
-    opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=relation[b])``
+    opens ([`JoinColumns.axes`][]): ``sum(x, over=a, by=subject[b])``
     lowers to a ``Sum`` over a ``Join``, over the axis of each column the join
     does not group by. This node is the group-by that follows the join.
     """
@@ -323,10 +323,10 @@ class Join:
     stands for the relation's column and runs over its dimension. So a column
     dropped and a column added over one dimension stay two axes. A [`Sum`][] over
     those axes is the group-by that follows the join, which is how
-    ``sum(x, over=a, by=relation[b])`` lowers. Where the grouped columns
+    ``sum(x, over=a, by=subject[b])`` lowers. Where the grouped columns
     hold the relation's whole key, they determine every other column, the
     join opens no axis, and the bare ``Join`` is ``at(x,
-    by=relation[a])``: one value per row of the result, fanned out where
+    by=subject[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
 
     An axis is never a dim: a join that opens axes states the ``dims`` of the
@@ -490,16 +490,18 @@ def children(expression: Expression) -> tuple[Expression, ...]:
 
 @dataclass(frozen=True)
 class Relation:
-    """One declared relation: a table over its ``columns``, single-valued per ``key``.
+    """One table the data supplies: a relation's rows, or a dimension's labels, with a column per mapping of the subject.
 
     ``columns`` maps each role to its dimension, the key's roles first and
-    each side sorted by role; ``key`` is the roles a row is
-    identified by, and [`values`][] the rest — every role is a key role for
-    a bare relation, which is one with no value columns. Every value is
+    each side sorted by role; ``key`` is the roles a row is identified by: a
+    relation's own columns, or the dimension for a dimension's table. Its
+    [`values`][] are the subject's mappings, each named after the mapping, and none
+    for a relation with no mappings. Every value is
     checked when the data is attached to be a label of its column's dimension, and the table to
     have one row per key tuple — which keeps a mistyped label from silently
     dropping its terms in the join that places them, and is what lets ``at``
-    read one value.
+    read one value. [`Program.relations`][] keys a table by its subject's
+    name, so a dimension's table shares the dimension's name.
     """
 
     columns: tuple[tuple[str, str], ...]
@@ -507,6 +509,8 @@ class Relation:
     missing: RelationMissing = 'refused'
     """Whether every combination of the key needs a row: ``refused`` or ``absent``."""
     description: str | None = None
+    partial: tuple[str, ...] = ()
+    """The value roles a row may leave empty: the mappings under ``missing: absent``, sorted by role."""
 
     @property
     def roles(self) -> tuple[str, ...]:
@@ -529,6 +533,10 @@ class Relation:
 
     def dim(self, role: str) -> str:
         return self._dim_of[role]
+
+    def missing_at(self, roles: Iterable[str]) -> RelationMissing:
+        """``absent`` where a read of *roles* may find nothing there: the table may lack the row, or a mapping its label."""
+        return 'absent' if self.missing == 'absent' or set(roles) & set(self.partial) else 'refused'
 
     def in_order(self, roles: Iterable[str]) -> tuple[str, ...]:
         """*roles* as [`columns`][] orders them: the key's first, each side sorted by role."""
@@ -887,8 +895,8 @@ class Link:
     ``name`` is the link's key in the entry, and ``<entry>_<name>`` is the row
     the expansion writes for it. ``sign`` is ``'=='`` where the link is pinned
     to the curve, and one side of it where the link is bounded by the curve
-    instead. A link that walks a relation reads the curve's weights through
-    it, as ``at(..., by=)`` reads an array: ``by`` is the ``relation[column]``
+    instead. A link that walks a mapping reads the curve's weights through
+    it, as ``at(..., by=)`` reads an array: ``by`` is the ``subject[mapping]``
     the file wrote, and ``walk`` the join it resolves to. ``dims`` is the row
     the link builds: the entry's frame, or, for a walked link, that frame with
     the dims the join drops replaced by the ones it adds. ``reads`` says
@@ -1006,7 +1014,7 @@ class Reach:
 
     Attributes:
         label: The entry reading, as the lowering's messages label it.
-        name: The parameter or relation that says how far.
+        name: The parameter, the relation, or the ``subject[mapping]`` whose data says how far.
         kind: An ``offset`` is a parameter's values, which
             [`Separability.resolved`][] folds in; a ``partition`` and a
             ``coordinate`` are a relation's groups, which it does not.
@@ -1134,6 +1142,9 @@ class Program:
     """
     dimensions: Mapping[str, Dimension] = Frozen({})
     relations: Mapping[str, Relation] = Frozen({})
+    """Each table the data supplies, by its subject's name: every relation the file declares, and every dimension it
+    declares mappings of, each with its mappings as value columns.
+    """
     sos: Mapping[str, Sos] = Frozen({})
     piecewise: Mapping[str, Piecewise] = Frozen({})
     """Each ``piecewise:`` entry of the spec, as the curve it states. It is empty for the program of a spec whose curves
@@ -1171,7 +1182,7 @@ class Program:
         yield 'constraint', tuple(side for c in self.constraints.values() for side in (c.lhs, c.rhs))
 
     def relations_of(self, dimension: str) -> Mapping[str, Relation]:
-        """The relations with a column over *dimension*, by name."""
+        """The tables with a column over *dimension*, by name: a relation over it, or a subject with a mapping into it."""
         return Frozen({n: lk for n, lk in self.relations.items() if dimension in lk.dims})
 
     @property
@@ -1405,10 +1416,10 @@ class DimensionPosition:
 
 @dataclass(frozen=True)
 class RelationComparison:
-    """Compare one value column of a keyed relation against a literal — ``period_of == 2030``.
+    """Compare one mapping of a subject against a literal — ``snapshot[period] == 2030``.
 
-    ``column`` is the role read, and ``dims`` the dimensions of the key
-    columns: the leaf is read at them, one value per coordinate.
+    ``column`` is the mapping read, and ``dims`` the dimensions of the subject's
+    own columns: the leaf is read at them, one label per coordinate.
     """
 
     name: str
@@ -1420,9 +1431,9 @@ class RelationComparison:
 
 @dataclass(frozen=True)
 class RelationPairComparison:
-    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus`` — row by row on the key.
+    """Compare a mapping of one subject with a mapping of another, or of the same — ``line[bus0] != line[bus1]`` — row by row.
 
-    Both keys are over the same ``dims``, and the two columns are over one
+    Both subjects are over the same ``dims``, and the two mappings refer to one
     dimension, so a match is possible at all.
     """
 
@@ -1436,15 +1447,17 @@ class RelationPairComparison:
 
 @dataclass(frozen=True)
 class RelationDefined:
-    """True where the relation has a row at the frame's coordinates.
+    """True where the table has a row at the frame's coordinates, and with ``column`` set, a label in that mapping.
 
     ``dims`` is what the frame supplies: the key's dimensions, whose row is
     then the one the key finds — every column's for a bare relation, where a
-    row is the whole tuple.
+    row is the whole tuple. A bare relation name in a condition sets no
+    ``column``; ``subject[mapping]`` alone sets it, as ``outage[line]`` does.
     """
 
     name: str
     dims: tuple[str, ...] = ()
+    column: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1626,7 +1639,7 @@ def _atom_names(atom: TypedCondition) -> frozenset[str]:
     """One leaf's entries, its dimension apart — the rule [`Mask.names_read`][] is the union of.
 
     A comparison on a dimension names no entry — a coordinate is not
-    data to feed — a relation pair names both maps it compares, and a
+    data to feed — a relation pair names both mappings it compares, and a
     comparison of expressions names every parameter and relation its sides
     read, answered on the program's form of it since only a program mask is
     asked. ``assert_never``-closed for the reason [`_atom_dims`][] is: a condition

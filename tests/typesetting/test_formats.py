@@ -66,7 +66,7 @@ def test_markdown_delimits_math_the_one_way_github_hands_over_verbatim():
     md = typeset(golden.MODEL, 'markdown', standalone=True)
     assert _math_spans(md), 'the golden model prints math to scan'
     assert r'$\mathrm' not in md and '$$' not in md, 'no span is left in the pair GitHub reaches into'
-    assert r'\mathrm{gen\_bus}' in md, 'the escape TeX needs survives, because nothing is going to eat it'
+    assert r'\mathrm{gen\_zone}' in md, 'the escape TeX needs survives, because nothing is going to eat it'
 
 
 @pytest.mark.parametrize('entry', sorted(_ENTRIES), ids=sorted(_ENTRIES))

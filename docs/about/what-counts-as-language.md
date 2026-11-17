@@ -33,7 +33,7 @@ Five rules follow from that test:
   ([operators](../reference/language/operators.md)) is
   [closed](limits.md#new-constructs).
 - Each operator has one rule for the dimensions of its result.
-  `sum(p, over=generator, by=gen_bus[bus])` groups by `bus` for every tool.
+  `sum(p, over=generator, by=generator[bus])` groups by `bus` for every tool.
 - mathspec decides when `to_spec` reads the file
   ([at load](../reference/glossary.md#load)) whether an expression is linear or quadratic
   ([its degree](../reference/language/expressions.md#where-a-product-of-two-variables-is-allowed)).

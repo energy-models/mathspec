@@ -400,7 +400,7 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
             continue
         errors.extend(
             f"{context}: its `where:` contains variable '{v}', and a tool evaluates the `where:` of a parameter "
-            f'from the data alone, before any variable has a value. Test a parameter or a relation instead.'
+            f'from the data alone, before any variable has a value. Test a parameter or a mapping instead.'
             for v in sorted(mask.names_read & {*spec.variables, *spec.given.variables})
         )
         errors.extend(

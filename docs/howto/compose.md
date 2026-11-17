@@ -61,8 +61,8 @@ names, so that one file states several components. You need mathspec
       snapshot: { dtype: int }
       bus: { dtype: str }
       generator: { dtype: str }
-    relations:
-      Generator_bus: { key: generator, values: bus }
+    mappings:
+      generator: { bus: { dim: bus } }
     parameters:
       Generator_p_nom: { dims: [generator] }
       Generator_marginal_cost: { dims: [generator] }
@@ -70,7 +70,7 @@ names, so that one file states several components. You need mathspec
       Generator_p: { dims: [snapshot, generator], bounds: { lower: 0, upper: Generator_p_nom } }
     expressions:
       Generator_injection:
-        expression: sum(Generator_p, over=generator, by=Generator_bus[bus])
+        expression: sum(Generator_p, over=generator, by=generator[bus])
         adds_to: Bus_injection
       Generator_cost:
         expression: sum(Generator_p * Generator_marginal_cost)
@@ -85,13 +85,13 @@ names, so that one file states several components. You need mathspec
       snapshot: { dtype: int }
       bus: { dtype: str }
       load: { dtype: str }
-    relations:
-      Load_bus: { key: load, values: bus }
+    mappings:
+      load: { bus: { dim: bus } }
     parameters:
       Load_p_set: { dims: [snapshot, load] }
     expressions:
       Load_injection:
-        expression: -sum(Load_p_set, over=load, by=Load_bus[bus])
+        expression: -sum(Load_p_set, over=load, by=load[bus])
         adds_to: Bus_injection
     ```
 
@@ -158,8 +158,8 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
       snapshot: { dtype: int, ordered: true }
       bus: { dtype: str }
       store: { dtype: str }
-    relations:
-      Store_bus: { key: store, values: bus }
+    mappings:
+      store: { bus: { dim: bus } }
     parameters:
       Store_e_nom: { dims: [store] }
     variables:
@@ -171,7 +171,7 @@ Add a new file with a term of its own, and leave `network.yaml` as it is.
         expression: Store_e == shift(Store_e, along=snapshot, offset=1, edge='wrap') - Store_p
     expressions:
       Store_injection:
-        expression: sum(Store_p, over=store, by=Store_bus[bus])
+        expression: sum(Store_p, over=store, by=store[bus])
         adds_to: Bus_injection
     ```
 
@@ -214,8 +214,8 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
       snapshot: { dtype: int }
       bus: { dtype: str }
       unit: { dtype: str }
-    relations:
-      Unit_bus: { key: unit, values: bus }
+    mappings:
+      unit: { bus: { dim: bus } }
     parameters:
       Unit_p_nom: { dims: [unit] }
       Unit_marginal_cost: { dims: [unit] }
@@ -223,7 +223,7 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
       Unit_p: { dims: [snapshot, unit], bounds: { lower: 0, upper: Unit_p_nom } }
     expressions:
       Unit_injection:
-        expression: sum(Unit_p, over=unit, by=Unit_bus[bus])
+        expression: sum(Unit_p, over=unit, by=unit[bus])
         adds_to: Bus_injection
       Unit_cost:
         expression: sum(Unit_p * Unit_marginal_cost)
@@ -270,7 +270,7 @@ it other names with [`rename`](../reference/api.md#mathspec.rename).
 
     Each renamed fragment adds its own terms to the two sums.
 
-To change only a few names, pass a map from each old name to its new name:
+To change only a few names, pass a mapping from each old name to its new name:
 
 ```python
 spec = ms.rename('generator.yaml', {'Generator_p_nom': 'Generator_capacity'})
@@ -453,7 +453,7 @@ in the spec as a named expression that no sum includes.
     - [refusals](../reference/composition.md#refusals), for each message that
       `merge` and `override` give
     - [`rename`](../reference/composition.md#rename), for what a rename changes
-      and keeps, and each map that it refuses
+      and keeps, and each mapping that it refuses
     - [a spec in several files](../tutorials/several-files.md), for a lesson in which
       you build a library step by step
     - [a component library](../examples/library/index.md), for a larger library

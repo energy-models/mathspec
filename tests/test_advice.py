@@ -23,15 +23,15 @@ from tests.fixtures import SMALL_MODEL, raw_of, varied
 
 EXAMPLES = Path(__file__).resolve().parents[1] / 'examples'
 
-#: ``h`` is the target of ``lk`` and nothing else reaches it; ``g`` is an axis.
+#: ``h`` is what the mapping ``g[h]`` refers to, and nothing else reaches it; ``g`` is an axis.
 TARGET_ONLY = varied(
     SMALL_MODEL,
     variables={'p': {'dims': ['g']}},
     objective={'sense': 'minimize', 'expression': 'sum(p * c)'},
 )
 
-#: The same with the relation gone, so nothing reaches ``h`` at all.
-UNREACHED = varied(TARGET_ONLY, relations={})
+#: The same with the mapping gone, so nothing reaches ``h`` at all.
+UNREACHED = varied(TARGET_ONLY, mappings={})
 
 #: A curve on ``p``, so the program of the file as written carries a piecewise entry and
 #: the program of its expansion carries the rows. The objective drives ``p``
@@ -55,9 +55,9 @@ def test_a_dimension_nothing_reaches_is_named():
 @pytest.mark.parametrize(
     'patch',
     [
-        pytest.param({}, id='targeted-by-a-relation'),
+        pytest.param({}, id='referred-to-by-a-mapping'),
         pytest.param(
-            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=lk[h]) <= k'}}},
+            {'constraints': {'cap': {'dims': ['h'], 'expression': 'sum(p, over=g, by=g[h]) <= k'}}},
             id='grouping-into-it',
         ),
         pytest.param({'variables.r': {'dims': ['h']}}, id='indexing-by-it'),
@@ -65,7 +65,7 @@ def test_a_dimension_nothing_reaches_is_named():
 )
 def test_a_dimension_something_reaches_is_in_use(patch):
     assert not advice(varied(TARGET_ONLY, **patch)), (
-        'a dimension a relation targets, an entry indexes or a grouping groups by is in use'
+        'a dimension a mapping refers to, an entry indexes or a grouping groups by is in use'
     )
 
 

@@ -13,14 +13,17 @@ dimensions:
   process: { description: a technology that carries trade }
   trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
 
+mappings:
+  trade_link: # the region and commodity at each end of a link
+    from_commodity: { dim: commodity }
+    from_region: { dim: region }
+    to_commodity: { dim: commodity }
+    to_region: { dim: region }
+
 relations:
-  link_ends:
-    description: the region and commodity at each end of a link
-    key: trade_link
-    values: { from_commodity: commodity, from_region: region, to_commodity: commodity, to_region: region }
   top_ire:
     description: the processes that carry each link (TOP_IRE)
-    key: [trade_link, process]
+    dims: [trade_link, process]
     missing: absent
 
 parameters:
@@ -43,8 +46,8 @@ constraints:
     dims: [commodity, region]
     expression: >-
       supply
-      + sum(ire_flo * export, over=[trade_link, process], by=link_ends[to_commodity, to_region])
-      - sum(export, over=[trade_link, process], by=link_ends[from_commodity, from_region])
+      + sum(ire_flo * export, over=[trade_link, process], by=trade_link[to_commodity, to_region])
+      - sum(export, over=[trade_link, process], by=trade_link[from_commodity, from_region])
       >= demand
 
 objective:

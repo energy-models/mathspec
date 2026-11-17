@@ -44,15 +44,15 @@ dimensions:
 relations:
   rtp_vintyr:
     description: the vintages of a process that exist in a period (RTP_VINTYR)
-    key: [region, vintage, period, process]
+    dims: [region, vintage, period, process]
     missing: absent
   prc_ts:
     description: the timeslices a process operates at (PRC_TS)
-    key: [region, process, timeslice]
+    dims: [region, process, timeslice]
     missing: absent
   ts_map:
     description: each timeslice and the timeslices at or below it (TS_MAP)
-    key: { region: region, s: timeslice, ts: timeslice }
+    dims: { region: region, s: timeslice, ts: timeslice }
     missing: absent
 
 parameters:

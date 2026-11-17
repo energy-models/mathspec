@@ -142,14 +142,14 @@ dimensions:
   snapshot: { dtype: int }
   port: { dtype: str }
   generator: { dtype: str }
-relations:
-  gen_port: { key: generator, values: port }
+mappings:
+  generator: { port: { dim: port } }
 variables:
   gen_p: { dims: [snapshot, generator], bounds: { lower: 0 } }
 constraints:
   gen_injects:
     dims: [snapshot, generator]
-    expression: at(flow, by=gen_port[port]) == gen_p
+    expression: at(flow, by=generator[port]) == gen_p
 ```
 
 `gen_injects` states that the flow at the port of each generator equals the
@@ -395,17 +395,24 @@ as `` `0` where the data has no row ``. It lists nothing for `refused`.
 `where:` limits a parameter to the coordinates where a
 [condition](expressions.md#conditions) is true. The dimensions keep every
 label, and only the parameter loses coordinates. In this example, `efficiency`
-has a value only at the pairs of an entity and a bus that are wired:
+has a value only at the pairs of an entity and a bus that are wired as an
+output:
 
 ```yaml
 dimensions:
   entity: { dtype: str }
   bus: { dtype: str }
+  role: { dtype: str }
   snapshot: { dtype: int }
 relations:
-  connection: { key: [entity, bus], missing: absent }
+  connection: { dims: [entity, bus], missing: absent }
+mappings:
+  connection: { role: { dim: role } }
 parameters:
-  efficiency: { dims: [entity, bus, snapshot], where: connection, missing: 1 }
+  efficiency:
+    dims: [entity, bus, snapshot]
+    where: "connection[role] == 'output'"
+    missing: 1
 variables:
   p: { dims: [entity, snapshot] }
 constraints:
@@ -421,8 +428,9 @@ $$\sum_{e \in \mathcal{E}} \mathrm{efficiency}_{b,e,t} \cdot p_{e,t} = 0 \qquad 
 </figure>
 
 With the data in the figure, `efficiency` has rows only at the pairs that
-`connection` lists. A tool drops the data row for `boiler` at `el`, and
-`missing: 1` gives `chp` at `heat` the value `1`. In `balance`,
+`connection` lists as an output. `connection` does not list `boiler` at `el`,
+so that pair has no role, and a tool drops its data row. `missing: 1` gives
+`chp` at `heat` the value `1`. In `balance`,
 `efficiency * p` is absent at an entity that is not wired to the bus, so the
 sum adds only the wired entities.
 
@@ -436,7 +444,7 @@ steps:
    A missing row there is refused, absent or a value, as
    [`missing:`](#missing) sets.
 
-Under `missing: refused`, a tool requires a row at each wired pair and
+Under `missing: refused`, a tool requires a row at each output pair and
 snapshot of the example, and drops every other row.
 
 A tool drops a row of the data outside the condition without refusing the
@@ -458,14 +466,14 @@ For a `where:` on `efficiency` that contains the variable `p`, the message
 is:
 
 ```text
-Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a relation instead.
+Parameter 'efficiency': its `where:` contains variable 'p', and a tool evaluates the `where:` of a parameter from the data alone, before any variable has a value. Test a parameter or a mapping instead.
 ```
 
-mathspec suggests a parameter or a relation as the rewrite.
+mathspec suggests a parameter or a mapping as the rewrite.
 
 The typeset legend lists the condition beside the dimensions, after
 `only where`. For `efficiency`, the legend entry ends in
-`only where` $(e, b) \in \mathrm{connection}$.
+`only where` $\mathrm{role}(b,\ e) = \text{'}\mathrm{output}\text{'}$.
 
 ## `variables`
 

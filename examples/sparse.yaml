@@ -14,14 +14,17 @@ dimensions:
 
 relations:
   connection:
-    description: the ports a unit has, and the bus each feeds
-    key: [unit, port]
-    values: bus
+    description: the ports a unit has
+    dims: [unit, port]
     missing: absent
   active:
     description: the periods a unit runs in
-    key: [unit, period]
+    dims: [unit, period]
     missing: absent
+
+mappings:
+  connection:
+    bus: { dim: bus, description: the bus a port feeds }
 
 parameters:
   efficiency: { dims: [unit, port, period], where: connection, missing: 1, description: share of the output a port delivers }

@@ -37,14 +37,17 @@ dimensions:
 
 relations:
   connection:
-    description: the ports a unit has, and the bus each feeds
-    key: [unit, port]
-    values: bus
+    description: the ports a unit has
+    dims: [unit, port]
     missing: absent
   active:
     description: the periods a unit runs in
-    key: [unit, period]
+    dims: [unit, period]
     missing: absent
+
+mappings:
+  connection:
+    bus: { dim: bus, description: the bus a port feeds }
 
 parameters:
   efficiency: { dims: [unit, port, period], where: connection, missing: 1, description: share of the output a port delivers }
@@ -85,17 +88,17 @@ Units that feed buses through the ports they have, and run only in the periods t
 
 | Symbol | Meaning |
 |---|---|
-| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{connection}: \mathcal{O} \times \mathcal{U} \to \mathcal{B}`$, `connection` is `absent` where the data has no row — a node of the network |
+| $`\mathcal{B}`$ | index $`b`$ — `bus` with $`\mathrm{bus}: \mathrm{connection} \to \mathcal{B}`$ — a node of the network |
 | $`\mathcal{T}`$ | index $`t`$ — `period` with $`\mathrm{active} \subseteq \mathcal{T} \times \mathcal{U}`$, `active` is `absent` where the data has no row — a step of the horizon |
-| $`\mathcal{O}`$ | index $`o`$ — `port` with $`\mathrm{connection}: \mathcal{O} \times \mathcal{U} \to \mathcal{B}`$, `connection` is `absent` where the data has no row — an output of a unit |
-| $`\mathcal{U}`$ | index $`u`$ — `unit` with $`\mathrm{active} \subseteq \mathcal{T} \times \mathcal{U},\ \mathrm{connection}: \mathcal{O} \times \mathcal{U} \to \mathcal{B}`$, `active` is `absent` where the data has no row, `connection` is `absent` where the data has no row — a converter |
+| $`\mathcal{O}`$ | index $`o`$ — `port` with $`\mathrm{connection} \subseteq \mathcal{O} \times \mathcal{U},\ \mathrm{bus}: \mathrm{connection} \to \mathcal{B}`$, `connection` is `absent` where the data has no row — an output of a unit |
+| $`\mathcal{U}`$ | index $`u`$ — `unit` with $`\mathrm{active} \subseteq \mathcal{T} \times \mathcal{U},\ \mathrm{connection} \subseteq \mathcal{O} \times \mathcal{U},\ \mathrm{bus}: \mathrm{connection} \to \mathcal{B}`$, `active` is `absent` where the data has no row, `connection` is `absent` where the data has no row — a converter |
 
 #### Parameters
 
 | Symbol | Meaning |
 |---|---|
 | $`\mathrm{capacity}`$ | `capacity` over $`\mathcal{U}`$ — the most a unit produces in a period |
-| $`\mathrm{efficiency}`$ | `efficiency` over $`\mathcal{T} \times \mathcal{O} \times \mathcal{U}`$, only where $`\mathrm{connection}(o,\ u) \text{ is defined}`$, $`1`$ where the data has no row — share of the output a port delivers |
+| $`\mathrm{efficiency}`$ | `efficiency` over $`\mathcal{T} \times \mathcal{O} \times \mathcal{U}`$, only where $`\left( o,\ u \right) \in \mathrm{connection}`$, $`1`$ where the data has no row — share of the output a port delivers |
 | $`\mathrm{load}`$ | `load` over $`\mathcal{B} \times \mathcal{T}`$ — demand to be met |
 | $`\mathrm{ramp}`$ | `ramp` over $`\mathcal{U}`$ — the most a unit's output rises from one period to the next |
 
@@ -111,7 +114,7 @@ Units that feed buses through the ports they have, and run only in the periods t
 **`flow`**
 
 ```math
-\mathit{flow}_{t,o,u} \ge 0 \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \mathrm{connection}(o,\ u) \text{ is defined}
+\mathit{flow}_{t,o,u} \ge 0 \qquad \forall\, t \in \mathcal{T},\ o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \left( o,\ u \right) \in \mathrm{connection}
 ```
 
 **`output`**
@@ -131,7 +134,7 @@ Units that feed buses through the ports they have, and run only in the periods t
 **`balance`**
 
 ```math
-\sum_{o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \mathrm{connection}(o,\ u) = b} \mathrm{efficiency}_{t,o,u} \cdot \mathit{flow}_{t,o,u} \ge \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
+\sum_{o \in \mathcal{O},\ u \in \mathcal{U} \,:\, \mathrm{bus}(o,\ u) = b} \mathrm{efficiency}_{t,o,u} \cdot \mathit{flow}_{t,o,u} \ge \mathrm{load}_{b,t} \qquad \forall\, b \in \mathcal{B},\ t \in \mathcal{T}
 ```
 
 **`port_limit`**

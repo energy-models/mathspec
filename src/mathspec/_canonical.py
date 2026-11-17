@@ -227,13 +227,15 @@ def printed_condition(node: Condition | UnresolvedConditionNode) -> str:
         return word.join(sorted(_connected(item, node) for item in _chain(node)))
     if isinstance(node, Not):
         inner = printed_condition(node.operand)
-        if isinstance(node.operand, (NameNode, BooleanLiteral, UnresolvedConditionCallNode)):
+        if isinstance(node.operand, (NameNode, ColumnNode, BooleanLiteral, UnresolvedConditionCallNode)):
             return f'NOT {inner}'
         return f'NOT ({inner})'
     if isinstance(node, BooleanLiteral):
         return str(node.value)
     if isinstance(node, NameNode):
         return node.name
+    if isinstance(node, ColumnNode):
+        return node.shown
     if isinstance(node, UnresolvedComparisonNode):
         return f'{_side(node.left)} {node.op} {_side(node.right)}'
     if isinstance(node, UnresolvedConditionCallNode):
