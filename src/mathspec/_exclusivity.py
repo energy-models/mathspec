@@ -143,7 +143,7 @@ class Subject:
     columns of one row hold two values. The relation's own subject, with no
     column, is whether it has a row, and every comparison on it reads that too.
     A comparison of two columns is split by both columns, in one order
-    whichever side each was written on. ``via`` is the rows an ``at`` read
+    whichever side each was written on. ``through`` is the rows an ``at`` read
     through to reach the label the subject is read at, outermost first.
     """
 
@@ -151,12 +151,12 @@ class Subject:
     name: str
     qualifier: str | None = None
     group: tuple[str, ...] = ()
-    via: tuple[Hop, ...] = ()
+    through: tuple[Lookup, ...] = ()
 
     def __str__(self) -> str:
-        return self._own() + ''.join(f' through {hop}' for hop in reversed(self.via))
+        return self._bare() + ''.join(f' through {lookup}' for lookup in reversed(self.through))
 
-    def _own(self) -> str:
+    def _bare(self) -> str:
         if self.kind == 'rank':
             within = f' within {self.qualifier}' if self.qualifier else ''
             return f'the position of {self.name}{within}'
@@ -169,7 +169,7 @@ class Subject:
 
 
 @dataclass(frozen=True)
-class Hop:
+class Lookup:
     """One ``at(<condition>, by=relation[columns])``, kept to what decides the label it reaches.
 
     ``at`` names value columns and groups by the whole key, so a coordinate
@@ -178,17 +178,14 @@ class Hop:
     """
 
     relation: str
-    columns: tuple[str, ...]
+    roles: tuple[str, ...]
 
     @classmethod
-    def of(cls, join: JoinColumns) -> Hop:
+    def of(cls, join: JoinColumns) -> Lookup:
         return cls(join.name, join.dropped)
 
     def __str__(self) -> str:
-        return f'{self.relation}[{", ".join(self.columns)}]'
-
-
-Via = tuple[Hop, ...]
+        return f'{self.relation}[{", ".join(self.roles)}]'
 
 
 @dataclass(frozen=True)
@@ -202,7 +199,7 @@ class _Grid:
     """
 
     domains: dict[Subject, list[Cell]]
-    subjects: dict[tuple[Via, int], Subject]
+    subjects: dict[tuple[tuple[Lookup, ...], int], Subject]
     defaults: Mapping[str, bool | float]
 
     @classmethod
@@ -210,13 +207,13 @@ class _Grid:
         cls, masks: Iterable[Mask], dtypes: Mapping[str, DeclaredDtype], defaults: Mapping[str, bool | float]
     ) -> _Grid:
         values: dict[Subject, set[_Literal]] = {}
-        subjects: dict[tuple[Via, int], Subject] = {}
+        subjects: dict[tuple[tuple[Lookup, ...], int], Subject] = {}
         for mask in masks:
-            for node, via in _reads(mask.atoms, ()):
+            for node, through in _every_atom(mask.atoms, ()):
                 for relation in _rows_read(node):
-                    values.setdefault(Subject('relation', relation, via=via), set())
-                subject = replace(_subject_of(node), via=via)
-                subjects[via, id(node)] = subject
+                    values.setdefault(Subject('relation', relation, through=through), set())
+                subject = replace(_subject_of(node), through=through)
+                subjects[through, id(node)] = subject
                 _observe(node, subject, values.setdefault(subject, set()))
         return cls({s: _cells_for(s, seen, dtypes) for s, seen in values.items()}, subjects, defaults)
 
@@ -230,8 +227,8 @@ class _Grid:
 
     def witness(self, cell: dict[Subject, Cell]) -> str:
         """*cell* in words. A column names a value only where its row exists, and a value says the row exists."""
-        shown = [subject for subject in cell if all(_has_row(row, cell) for row in _rows_under(subject))]
-        read = {row for subject in shown for row in _rows_under(subject)}
+        shown = [subject for subject in cell if all(_has_row(row, cell) for row in _rows_holding(subject))]
+        read = {row for subject in shown for row in _rows_holding(subject)}
         return ', '.join(_clause(subject, cell[subject]) for subject in shown if subject not in read)
 
 
@@ -311,12 +308,14 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         values.add(node.value)
 
 
-def _reads(atoms: Iterable[TypedCondition], via: Via) -> Iterator[tuple[TypedCondition, Via]]:
+def _every_atom(
+    atoms: Iterable[TypedCondition], through: tuple[Lookup, ...]
+) -> Iterator[tuple[TypedCondition, tuple[Lookup, ...]]]:
     """Every atom, and every atom a read through a relation holds, with the rows read to reach it."""
     for node in atoms:
-        yield node, via
+        yield node, through
         if isinstance(node, JoinedCondition):
-            yield from _reads(node.operand.atoms, (*via, Hop.of(node.columns)))
+            yield from _every_atom(node.operand.atoms, (*through, Lookup.of(node.columns)))
 
 
 def _rows_read(node: TypedCondition) -> tuple[str, ...]:
@@ -330,19 +329,23 @@ def _rows_read(node: TypedCondition) -> tuple[str, ...]:
             return ()
 
 
-def _rows_under(subject: Subject) -> tuple[Subject, ...]:
+def _rows_holding(subject: Subject) -> tuple[Subject, ...]:
     """The rows that hold *subject*'s value, so a cell without one of them gives it none.
 
     That is each row an ``at`` read through to reach it, and the row of each
     relation column it is.
     """
-    via = subject.via
-    hops = tuple(Subject('relation', hop.relation, via=via[:depth]) for depth, hop in enumerate(via))
+    through = subject.through
+    rows = tuple(Subject('relation', lookup.relation, through=through[:depth]) for depth, lookup in enumerate(through))
     if subject.kind == 'relation_pair' and subject.qualifier is not None:
-        return (*hops, Subject('relation', subject.name, via=via), Subject('relation', subject.qualifier, via=via))
+        return (
+            *rows,
+            Subject('relation', subject.name, through=through),
+            Subject('relation', subject.qualifier, through=through),
+        )
     if subject.kind == 'relation' and subject.qualifier is not None:
-        return (*hops, Subject('relation', subject.name, via=via))
-    return hops
+        return (*rows, Subject('relation', subject.name, through=through))
+    return rows
 
 
 def _has_row(row: Subject, cell: dict[Subject, Cell]) -> bool:
@@ -547,33 +550,33 @@ def _shown(subject: Subject, value: Cell) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid, via: Via = ()) -> bool:
-    """Is *node* true in this cell, read at the label *via* reaches?"""
+def _evaluate(node: Condition, cell: dict[Subject, Cell], grid: _Grid, through: tuple[Lookup, ...] = ()) -> bool:
+    """Is *node* true in this cell, read at the label *through* reaches?"""
     if isinstance(node, TypedCondition):
-        return _atom(node, cell, grid, via)
+        return _atom(node, cell, grid, through)
     match node:
         case BooleanLiteral(value=value):
             return value
         case Not(operand=operand):
-            return not _evaluate(operand, cell, grid, via)
+            return not _evaluate(operand, cell, grid, through)
         case And(left=left, right=right):
-            return _evaluate(left, cell, grid, via) and _evaluate(right, cell, grid, via)
+            return _evaluate(left, cell, grid, through) and _evaluate(right, cell, grid, through)
         case Or(left=left, right=right):
-            return _evaluate(left, cell, grid, via) or _evaluate(right, cell, grid, via)
+            return _evaluate(left, cell, grid, through) or _evaluate(right, cell, grid, through)
         case ConditionReference(body=body):
-            return _evaluate(body, cell, grid, via)
+            return _evaluate(body, cell, grid, through)
         case _:
             assert_never(node)
 
 
-def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid, via: Via) -> bool:
-    if not all(_has_row(Subject('relation', relation, via=via), cell) for relation in _rows_read(node)):
+def _atom(node: TypedCondition, cell: dict[Subject, Cell], grid: _Grid, through: tuple[Lookup, ...]) -> bool:
+    if not all(_has_row(Subject('relation', relation, through=through), cell) for relation in _rows_read(node)):
         return False
-    subject = grid.subjects[via, id(node)]
+    subject = grid.subjects[through, id(node)]
     value = _read(node, cell[subject], grid)
     match node:
         case JoinedCondition(operand=operand, columns=columns):
-            return value is not Special.NULL and _evaluate(operand.root, cell, grid, (*via, Hop.of(columns)))
+            return value is not Special.NULL and _evaluate(operand.root, cell, grid, (*through, Lookup.of(columns)))
         case ParameterDefined() | RelationDefined():
             if isinstance(value, bool):
                 return value
