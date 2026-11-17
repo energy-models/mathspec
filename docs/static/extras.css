@@ -136,30 +136,31 @@
 }
 
 /* Benefit cards: the README bullet's bold lead-in is the card's title, and its
- * one link covers the whole card, since the README cannot carry card markup. */
+ * one link covers the whole card, since the README cannot carry card markup.
+ * A landing page's tiles (`grid cards tiles`) take the same card. */
 .md-typeset .landing .grid.cards {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
 }
 
-.md-typeset .landing .grid.cards > ul > li {
+.md-typeset :is(.landing .grid.cards, .grid.cards.tiles) > ul > li {
   position: relative;
   color: var(--md-default-fg-color--light);
 }
 
-.md-typeset .landing .grid.cards > ul > li > strong:first-child {
+.md-typeset :is(.landing .grid.cards, .grid.cards.tiles) > ul > li > strong:first-child {
   display: block;
   margin-bottom: 0.3rem;
   color: var(--md-default-fg-color);
   font-size: 0.9rem;
 }
 
-.md-typeset .landing .grid.cards > ul > li > a:last-child {
+.md-typeset :is(.landing .grid.cards, .grid.cards.tiles) > ul > li > a:last-child {
   display: block;
   margin-top: 0.6rem;
   font-weight: 700;
 }
 
-.md-typeset .landing .grid.cards > ul > li > a:last-child::after {
+.md-typeset :is(.landing .grid.cards, .grid.cards.tiles) > ul > li > a:last-child::after {
   content: "";
   position: absolute;
   inset: 0;

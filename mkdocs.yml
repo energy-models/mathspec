@@ -62,6 +62,7 @@ nav:
           - Assumptions: reference/language/assumptions.md
           - Absence and where: reference/language/absence.md
           - Errors and advice: reference/language/errors.md
+      - Every construct, as math: reference/notation.md
       - Composing specs: reference/composition.md
       - Typeset output: reference/typeset.md
       - Command line: reference/cli.md
@@ -85,6 +86,11 @@ nav:
               - Generators: examples/library/generator.md
               - Loads: examples/library/load.md
               - The composed spec: examples/library/composed.md
+          - PyPSA:
+              - examples/pypsa/index.md
+              - "A sample fragment: generator commitment": examples/pypsa/generator_commitment.md
+              - Scope and refusals: examples/pypsa/scope.md
+              - The relaxed commitment: examples/pypsa_linearized_uc.md
   - About:
       - about/index.md
       - Background and history: about/history.md
@@ -101,37 +107,6 @@ nav:
           - Spec API: reference/spec.md
           - Program API: reference/program.md
       - Contributing: contributing.md
-      - Proofs of concept:
-          - Every construct, as math: reference/notation.md
-          - PyPSA in one file: examples/pypsa_ladder.md
-          - Linearised unit commitment in PyPSA: examples/pypsa_linearized_uc.md
-          - PyPSA in 25 files:
-              - examples/pypsa/index.md
-              - Settings: examples/pypsa/settings.md
-              - The network: examples/pypsa/network.md
-              - Power flow: examples/pypsa/power_flow.md
-              - The cost: examples/pypsa/cost.md
-              - Carriers: examples/pypsa/carrier.md
-              - Global constraints: examples/pypsa/global_constraints.md
-              - Security: examples/pypsa/security.md
-              - Flow-based market coupling: examples/pypsa/flow_based.md
-              - Generators: examples/pypsa/generator.md
-              - Generator commitment: examples/pypsa/generator_commitment.md
-              - Generator ramping: examples/pypsa/generator_ramping.md
-              - Generator maintenance: examples/pypsa/generator_maintenance.md
-              - Links: examples/pypsa/link.md
-              - Link commitment: examples/pypsa/link_commitment.md
-              - Link ramping: examples/pypsa/link_ramping.md
-              - Link maintenance: examples/pypsa/link_maintenance.md
-              - Processes: examples/pypsa/process.md
-              - Process commitment: examples/pypsa/process_commitment.md
-              - Process ramping: examples/pypsa/process_ramping.md
-              - Process maintenance: examples/pypsa/process_maintenance.md
-              - Storage units: examples/pypsa/storage_unit.md
-              - Stores: examples/pypsa/store.md
-              - Lines: examples/pypsa/line.md
-              - Transformers: examples/pypsa/transformer.md
-              - Loads: examples/pypsa/load.md
 
 theme:
   palette:
@@ -245,11 +220,11 @@ markdown_extensions:
       permalink: "#"
       toc_depth: 3
       # GitHub's slug rules, not mkdocs'. Every page here is read in both
-      # places and they cross-link by anchor — `pypsa_ladder.md#rung-13
-      # --transmission-losses`, whose double hyphen is an em dash GitHub
-      # drops. The default slugifier collapses that to one, so such a link
-      # would 404 on the site while working in the repository. Same file,
-      # same anchor, both renderings.
+      # places and they cross-link by anchor. A heading with an em dash, such
+      # as `Rung 13 — transmission losses`, slugs to a double hyphen on GitHub,
+      # and the default slugifier collapses that to one, so such a link would
+      # 404 on the site while working in the repository. Same file, same
+      # anchor, both renderings.
       slugify: { object: pymdownx.slugs.slugify, kwds: { case: lower } }
 plugins:
   - search

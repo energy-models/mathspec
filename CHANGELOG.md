@@ -14,6 +14,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 - feat(language): a bound reads a member's parameter ([#1013](https://github.com/energy-models/mathspec/pull/1013))
 - feat(language): a case may branch on at(…, by=…) ([#1012](https://github.com/energy-models/mathspec/pull/1012))
+- docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))
 - feat(composition): rename gives a spec other names ([#1002](https://github.com/energy-models/mathspec/pull/1002))
 - docs(pypsa): the file states the rows PyPSA builds ([#998](https://github.com/energy-models/mathspec/pull/998))
 - docs(pypsa): component cites point at PyPSA 3625c816 ([#997](https://github.com/energy-models/mathspec/pull/997))
