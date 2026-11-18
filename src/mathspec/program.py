@@ -1824,7 +1824,7 @@ class Mask:
 # --------------------------------------------------------------------------
 
 
-AdviceKind = Literal['never-an-axis', 'given', 'unbounded']
+AdviceKind = Literal['never-an-axis', 'cross-product', 'given', 'unbounded']
 """The checks that an [`Advice`][] comes from. The set is closed, so a tool that filters on it can list every value."""
 
 

@@ -99,8 +99,20 @@ def test_a_column_read_and_not_built_is_advised():
     assert 'merge()' in str(note), 'and names the verb that folds the reading away where a sibling builds it'
 
 
+#: A spec whose only note is the fourth kind: `pair` is over `link` and over `unit`, a member of `link`.
+CROSSED = {
+    'dimensions': {'unit': {}, 'port': {}, 'link': {'over': ['unit', 'port']}},
+    'variables': {'pair': {'dims': ['link', 'unit'], 'bounds': {'lower': 0, 'upper': 1}}},
+}
+
+
+def test_a_dimension_beside_its_member_is_advised():
+    (note,) = advice(CROSSED)
+    assert (note.kind, note.subject) == ('cross-product', 'pair')
+
+
 def test_every_kind_a_consumer_can_pin_against_is_produced_here():
-    kinds = {note.kind for note in (*advice(BOTH_KINDS), *advice(READS_A_COLUMN))}
+    kinds = {note.kind for note in (*advice(BOTH_KINDS), *advice(READS_A_COLUMN), *advice(CROSSED))}
     assert kinds == set(get_args(AdviceKind)), 'every kind a consumer can pin against is one these fixtures produce'
 
 

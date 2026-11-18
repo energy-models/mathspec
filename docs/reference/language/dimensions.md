@@ -277,6 +277,15 @@ Constraint 'balance': sum(over=unit) but the expression has only the dims ['conn
 
 mathspec suggests the sum over the dimension, grouped by the other member.
 
+An entry whose `dims:` lists the dimension beside its own member loads, but
+it often means each connection at its own unit only. For such an entry,
+`python -m mathspec check` prints [advice](errors.md#what-advice-warns-about).
+For `limit` with `dims: [connection, unit, snapshot]`, mathspec prints:
+
+```text
+Constraint 'limit': dims: lists 'connection' beside its member 'unit', so the entry is their cross product: each connection meets every unit, not only its own. For its own unit, drop 'unit' from dims: and read the operand at each tuple: at(capacity, by=connection[unit]). To go by unit instead, drop 'connection' from dims: and sum to the member: sum(flow, over=connection, by=connection[unit]).
+```
+
 A `dims:` list is the domain of an entry, so a tool refuses a data row at a
 tuple that the dimension does not list. A
 [`where:`](absence.md#where) condition then removes rows of that domain.
@@ -359,6 +368,16 @@ mathspec reads each side through the relation of its own dimension, and the
 ```math
 \mathit{sent}_{c} + \mathit{busy}_{a} \le 1 \qquad \forall\, a \in \mathcal{A},\ c \in \mathcal{C} \,:\, \mathrm{connection.unit}(c) = \mathrm{assignment.unit}(a)
 ```
+
+Without the `where:`, `exclusive` loads as the cross product, and
+`python -m mathspec check` prints advice that suggests the filter:
+
+```text
+Constraint 'exclusive': dims: lists 'assignment' and 'connection', which share the member 'unit', so the entry is their cross product: each assignment meets every connection, of its own unit or another. For the pairs that agree on unit (the inner join), add assignment[unit] == connection[unit] to where:.
+```
+
+A named expression has no `where:`, so mathspec gives this advice for the
+entry that reads it.
 
 The left join also keeps a connection whose unit has no assignment. It is an
 entry over `connection` and `period` that reads `busy` in two steps. The

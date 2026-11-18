@@ -283,6 +283,142 @@ def test_the_inner_join_is_typeset(fmt):
     assert 'unit' in text.split('probe', 1)[1], f'{fmt} prints the shared member on both sides'
 
 
+JOIN = 'connection[unit] == assignment[unit]'
+ADVISED_JOIN = 'add assignment[unit] == connection[unit] to where:'
+
+
+def _cross_products(subject: str, **patch: Any) -> list[str]:
+    """The cross-product advice on *subject*, in the model with `assignment` beside `connection`, patched with *patch*."""
+    notes = advice(varied(MODEL, **SHARED_MEMBER, **patch))
+    return [note.text for note in notes if note.kind == 'cross-product' and note.subject == subject]
+
+
+def _over_both(where: str | None = None) -> dict[str, Any]:
+    entry = {'dims': ['connection', 'assignment'], 'expression': 'sent + on <= 1'}
+    return {'constraints.probe': entry if where is None else {**entry, 'where': where}}
+
+
+@pytest.mark.parametrize(
+    ('subject', 'patch', 'fragments'),
+    [
+        pytest.param(
+            'probe',
+            _over_both(),
+            [
+                "Constraint 'probe': dims: lists 'assignment' and 'connection', which share the member 'unit', "
+                'so the entry is their cross product',
+                ADVISED_JOIN,
+            ],
+            id='two-dimensions-share-a-member',
+        ),
+        pytest.param('probe', _over_both(JOIN.replace('==', '!=')), [ADVISED_JOIN], id='a-where-that-keeps-others'),
+        pytest.param(
+            'probe', _over_both(f"{JOIN} OR connection[port] == 'p1'"), [ADVISED_JOIN], id='the-join-in-an-or'
+        ),
+        pytest.param(
+            'pair',
+            {'variables.pair': {'dims': ['connection', 'assignment']}},
+            ["Variable 'pair': dims: lists 'assignment' and 'connection'", ADVISED_JOIN],
+            id='a-variable',
+        ),
+        pytest.param(
+            'pair',
+            {
+                'dimensions.plug': {'over': ['unit', 'port', 'period']},
+                'variables.pair': {'dims': ['connection', 'plug']},
+            },
+            [
+                "which share the members 'port' and 'unit'",
+                'add connection[port] == plug[port] AND connection[unit] == plug[unit] to where:',
+            ],
+            id='two-shared-members',
+        ),
+        pytest.param(
+            'pair',
+            {
+                'dimensions.plug': {'over': ['unit', 'port', 'period']},
+                'variables.pair': {'dims': ['connection', 'plug'], 'where': 'connection[unit] == plug[unit]'},
+            },
+            ["which share the members 'port' and 'unit'", 'add connection[port] == plug[port] to where:'],
+            id='one-of-two-shared-members-joined',
+        ),
+        pytest.param(
+            'probe',
+            _constraint('flow <= capacity', ['connection', 'unit', 'snapshot']),
+            [
+                "Constraint 'probe': dims: lists 'connection' beside its member 'unit', so the entry is their "
+                'cross product',
+                "drop 'unit' from dims: and read the operand at each tuple: at(capacity, by=connection[unit])",
+                "drop 'connection' from dims: and sum to the member: sum(flow, over=connection, by=connection[unit])",
+            ],
+            id='a-dimension-beside-its-member',
+        ),
+        pytest.param(
+            'e',
+            {'expressions.e': {'dims': ['connection', 'unit', 'snapshot'], 'expression': 'flow * capacity'}},
+            [
+                "Named expression 'e': dims: lists 'connection' beside its member 'unit'",
+                'at(capacity, by=connection[unit])',
+            ],
+            id='a-named-expression',
+        ),
+        pytest.param(
+            'p',
+            {'parameters.p': {'dims': ['connection', 'unit']}},
+            ["Parameter 'p': dims: lists 'connection' beside", 'at(..., by=connection[unit])'],
+            id='a-parameter',
+        ),
+        pytest.param(
+            'pair',
+            {'variables.pair': {'dims': ['trade', 'region']}},
+            ["'trade' beside its member 'region'", 'at(..., by=trade[dst or src])'],
+            id='a-member-by-role',
+        ),
+        pytest.param(
+            'curve',
+            {
+                'parameters.xs': {'dims': ['period']},
+                'parameters.ys': {'dims': ['period']},
+                'variables.w': {'dims': ['connection']},
+                'variables.v': {'dims': ['unit']},
+                'variables.y': {'dims': ['connection', 'unit']},
+                'piecewise.curve': {
+                    'dims': ['connection', 'unit'],
+                    'along': 'period',
+                    'links': {'x': ['w + v', 'xs'], 'y': ['y', 'ys']},
+                },
+            },
+            ["piecewise 'curve': dims: lists 'connection' beside its member 'unit'", 'at(v, by=connection[unit])'],
+            id='a-curve',
+        ),
+    ],
+)
+def test_check_advises_on_a_cross_product_through_a_member(subject, patch, fragments):
+    """Rule 11 of #1011: the entry loads as the cross product, and `check` names the rewrite it likely meant."""
+    (note,) = _cross_products(subject, **patch)
+    for fragment in fragments:
+        assert fragment in note
+
+
+@pytest.mark.parametrize(
+    ('subject', 'patch'),
+    [
+        pytest.param('probe', _over_both(JOIN), id='the-inner-join'),
+        pytest.param('probe', _over_both('assignment[unit] == connection[unit]'), id='the-join-the-other-way'),
+        pytest.param('probe', _over_both(f"{JOIN} AND connection[port] == 'p1'"), id='the-join-and-another-filter'),
+        pytest.param(
+            'e',
+            {'expressions.e': {'dims': ['connection', 'assignment'], 'expression': 'sent + on'}},
+            id='a-named-expression-its-reader-filters',
+        ),
+        pytest.param('limit', {}, id='a-dimension-beside-no-member'),
+        pytest.param('pair', {'variables.pair': {'dims': ['connection', 'trade']}}, id='two-dimensions-share-nothing'),
+    ],
+)
+def test_no_cross_product_advice_where_the_entry_says_what_it_means(subject, patch):
+    assert not _cross_products(subject, **patch), 'the entry keeps only the pairs of one member, or crosses nothing'
+
+
 def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
     """Rule 9 of #1011: `active` stays a bare relation over (unit, period), and an entry over `connection` reads it with `at`."""
     built = {'dims': ['connection', 'period'], 'where': 'at(active, by=connection[unit])'}
