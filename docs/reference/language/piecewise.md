@@ -454,9 +454,10 @@ These rules apply to a walked link:
 - If the relation declares [`missing: absent`](relations.md#missing), the
   expansion adds `converter_of` to the `where:` of the row, so a flow with no
   converter has no row.
-- mathspec refuses a `by:` that lists
-  [the members of a dimension](operators.md#at-by-the-members-of-a-dimension)
-  in `dims:`, and suggests `at` in the expression of the link.
+- mathspec refuses a `by:` that names
+  [members of a dimension](operators.md#at-by-the-members-of-a-dimension)
+  in `dims:`, and suggests `at` by the same columns in the expression of the
+  link.
 - `method: convex` and `method: lp` take no walked link, and the other methods
   do.
 - In YAML flow style, `{…}`, the `by:` value needs quotes, as in
