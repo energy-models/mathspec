@@ -294,6 +294,44 @@ is active, therefore stays a [bare relation](relations.md) over `unit` and
 entry over `connection` and `period` reads it as
 `where: "at(active, by=connection[unit])"`.
 
+### Two dimensions that share a member
+
+Two dimensions with members can share one, as `connection` and `assignment`
+share `unit` below. An entry over both is their cross product, with one row
+for each pair of a connection and an assignment. A `where:` that compares the
+shared member keeps the pairs of one unit, which is the inner join of the two:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+  connection: { over: [unit, port] }
+  assignment: { over: [unit, period] }
+variables:
+  sent: { dims: [connection] }
+  busy: { dims: [assignment] }
+constraints:
+  exclusive:
+    dims: [connection, assignment]
+    where: connection[unit] == assignment[unit]
+    expression: sent + busy <= 1
+```
+
+mathspec reads each side through the relation of its own dimension, and the
+`dims:` of the entry lists both, so the comparison loads ([conditions](expressions.md#conditions)).
+`exclusive` prints as:
+
+```math
+\mathit{sent}_{c} + \mathit{busy}_{a} \le 1 \qquad \forall\, a \in \mathcal{A},\ c \in \mathcal{C} \,:\, \mathrm{connection.unit}(c) = \mathrm{assignment.unit}(a)
+```
+
+The language has no left join, which would also keep a connection whose unit
+has no assignment, and no outer join. Write such an entry over the members, as
+`dims: [unit, port, period]`, with the two sets of tuples as the bare
+relations `plugged` over `[unit, port]` and `active` over `[unit, period]`.
+Then `where: "plugged OR active"` keeps the rows of either.
+
 ### `missing`
 
 `missing:` on a dimension with members sets whether every combination of
