@@ -294,6 +294,14 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
             'Test this row, or precompute the neighbour as a boolean parameter and test that'
         )
         raise Undecidable(msg)
+    if isinstance(node, JoinedCondition) and node.columns.spreads:
+        name = node.columns.name
+        msg = (
+            f"at(by={name}[{', '.join(node.columns.grouped)}]) is true only where '{name}' lists the tuple, which "
+            f"only the data decides. State the cases in an entry over '{name}', or precompute the condition as "
+            f'a boolean parameter over {list(node.columns.grouped_dims)} and test that'
+        )
+        raise Undecidable(msg)
     if isinstance(node, DimensionPosition):
         values.add(node.position)
     elif isinstance(node, RelationPairComparison):

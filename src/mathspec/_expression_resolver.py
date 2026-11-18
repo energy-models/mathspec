@@ -334,7 +334,7 @@ class ExpressionResolver:
 
     def _at(self, operand: Expression, columns: ColumnsNode) -> Expression | None:
         """``at(x, by=relation[column])``: *operand* read at the value of *columns* each row of the relation holds."""
-        join = self.lookup(columns, frozenset(operand.dims))
+        join = self.lookup(columns, frozenset(operand.dims), operand)
         return None if join is None else self._joined(operand, join)
 
     def _translation(
@@ -657,13 +657,19 @@ class ExpressionResolver:
             return None
         return join, plain
 
-    def lookup(self, columns: ColumnsNode, inner: frozenset[str]) -> JoinColumns | None:
+    def lookup(
+        self, columns: ColumnsNode, inner: frozenset[str], operand: Expression | None = None
+    ) -> JoinColumns | None:
         """How ``at`` reads the columns *columns* names, at an operand carrying *inner*.
 
         The operand is joined on the named columns, and on each other key
         column over a dim it carries that the named columns do not already
         match. The rest of the key arrives. So a map into its own dimension
         joins on the value column alone, and the key column arrives.
+
+        An operand over a dimension with members, and over none of them, is
+        spread onto the members instead ([`_spread`][]). A refusal names
+        *operand* in its rewrite, where the call reads an expression.
         """
         name, call = columns.relation, f'at(by={columns})'
         shape = self.ns.relations[name]
@@ -679,9 +685,46 @@ class ExpressionResolver:
                 f'at the key. Name one of the value columns, {list(shape.values)}, or sum through the key column.'
             )
             return None
+        if name in inner and not inner & {shape.dim(r) for r in shape.values}:
+            return self._spread(columns, operand)
         matched = inner - {shape.dim(r) for r in columns.columns}
         into = tuple(r for r in shape.key if shape.dim(r) not in matched)
         return self._checked_join(name, call, columns.columns, into)
+
+    def _spread(self, columns: ColumnsNode, operand: Expression | None) -> JoinColumns | None:
+        """How ``at`` spreads an operand over the dimension *columns* names onto the members of that dimension.
+
+        The members together identify one tuple, so the call lists every one:
+        a result over some of them has several tuples at a coordinate, which is
+        a sum. Each member arrives as its dimension, and a result carries a
+        dimension once, so two members over one dimension cannot both arrive.
+        """
+        name, call = columns.relation, f'at(by={columns})'
+        shape = self.ns.relations[name]
+        members = shape.values
+        read = '...' if operand is None else operand_over((operand,), (name,), '')
+        if left_out := [r for r in members if r not in columns.columns]:
+            summed = f' To add up over {left_out}, write sum({read}, over={name}, by={columns}).'
+            self.errors.append(
+                f"{self.context}: {call} lists {list(columns.columns)} of the members {list(members)} of '{name}', "
+                f"and the operand is over '{name}'. at() reads a tuple at every member: "
+                f'at({read}, by={name}[{", ".join(members)}]).{"" if operand is None else summed}'
+            )
+            return None
+        dims = [shape.dim(r) for r in members]
+        if twice := sorted({d for d in dims if dims.count(d) > 1}):
+            roles = [r for r in members if shape.dim(r) == twice[0]]
+            rewrite = (
+                f"Test the condition in an entry over '{name}'"
+                if operand is None
+                else f'Sum to one of them: sum({read}, over={name}, by={name}[{roles[0]}])'
+            )
+            self.errors.append(
+                f"{self.context}: {call}: the members {roles} of '{name}' are both over {twice[0]!r}, and a result "
+                f'carries a dimension once. {rewrite}.'
+            )
+            return None
+        return JoinColumns(name, shape, (name,), members, spreads=True)
 
     def _checked_join(
         self, name: str, call: str, from_roles: tuple[str, ...], into_roles: tuple[str, ...]

@@ -329,6 +329,12 @@ class Join:
     by=relation[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
 
+    Where ``columns.spreads``, the bare ``Join`` reads an operand over a
+    dimension with members at each tuple of member labels: the dimension goes
+    and its members arrive. The result is absent at a combination of member
+    labels that is no label of the dimension, where the ``Sum`` over the same
+    join is 0.
+
     An axis is never a dim: a join that opens axes states the ``dims`` of the
     sum that closes them, and that sum removes only the dims its plain axes
     name.
@@ -557,12 +563,18 @@ class JoinColumns:
     and not grouped by is [`dropped`][], and one grouped by and not joined
     on is [`added`][], so the frame after the call is the operand's dims,
     less the dims joined on, plus the dims grouped by.
+
+    ``spreads`` is true only for ``at(x, by=connection[unit, port])`` on an
+    operand over ``connection``, a dimension with members. The call joins on
+    the dimension and groups by every member. A tuple of member labels is at
+    most one label of the dimension, so each group is at most one row.
     """
 
     name: str
     relation: Relation
     joined: tuple[str, ...]
     grouped: tuple[str, ...]
+    spreads: bool = False
 
     def dim(self, role: str) -> str:
         """The dimension *role* ranges over."""
@@ -601,8 +613,12 @@ class JoinColumns:
 
     @property
     def one_row_per_group(self) -> bool:
-        """Whether the grouped columns hold the relation's whole key, so each group is one row: a lookup, not a sum."""
-        return set(self.relation.key) <= set(self.grouped)
+        """Whether each group is one row: a lookup, not a sum.
+
+        The grouped columns then hold the relation's whole key, or the call
+        ``spreads``.
+        """
+        return self.spreads or set(self.relation.key) <= set(self.grouped)
 
     @property
     def axes(self) -> tuple[Axis, ...]:
@@ -1504,7 +1520,8 @@ class JoinedCondition:
     the coordinate that row reads. False where the relation has no row, which
     is what a missing row already means in a mask. The dims ``columns``
     joins on go and the dims it groups by arrive, as a lookup
-    [`Join`][]'s do.
+    [`Join`][]'s do. Where ``columns.spreads``, the condition is false at a
+    combination of member labels that is no label of the dimension.
     """
 
     operand: Mask

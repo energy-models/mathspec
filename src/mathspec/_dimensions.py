@@ -248,7 +248,7 @@ def _bound_outside(
     rewrite, and the bound loads only once every rewrite it needs is made.
     """
     if isinstance(bound, ParameterReference):
-        rewrite = _at_member(outside, frame, spec, (bound,)) or f"Declare '{bound.name}' over the variable's dims"
+        rewrite = _member_rewrite(outside, frame, spec, (bound,)) or f"Declare '{bound.name}' over the variable's dims"
         return (
             f"{context} parameter '{bound.name}' has dims {sorted(outside)} outside the variable's dims "
             f'{sorted(frame)}. {rewrite}.'
@@ -298,6 +298,46 @@ def _at_member(
     return None
 
 
+def _spread_over(
+    stray: Iterable[str],
+    frame: frozenset[str],
+    spec: Spec,
+    operands: Iterable[Expression] = (),
+    read: str | None = None,
+) -> str | None:
+    """The rewrite for a dimension in *stray* whose members are all in *frame*, or ``None`` where there is none.
+
+    An operand over a dimension with members does not align with entries
+    over the members, so the file spreads it over them with ``at``. Two
+    members over one dimension cannot both arrive, so such a dimension has
+    no spread.
+    """
+    for name in sorted(stray):
+        members = spec.dimensions[name].members
+        dims = [dim for _, dim in members]
+        if not members or not set(dims) <= frame or len(set(dims)) < len(dims):
+            continue
+        read = read or operand_over(operands, (name,), '')
+        roles = ', '.join(role for role, _ in members)
+        return (
+            f"'{name}' lists the members {dims}, and is one dimension here. Spread the operand over its members: "
+            f'at({read}, by={name}[{roles}])'
+        )
+    return None
+
+
+def _member_rewrite(
+    stray: Iterable[str],
+    frame: frozenset[str],
+    spec: Spec,
+    operands: Iterable[Expression] = (),
+    read: str | None = None,
+) -> str | None:
+    """The ``at`` that brings *stray* into *frame* through a dimension with members, or ``None`` where none does."""
+    wanted = sorted(stray)
+    return _at_member(wanted, frame, spec, operands, read) or _spread_over(wanted, frame, spec, operands, read)
+
+
 def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
     """The columns of the relation *name* implies over the dims *wanted*, as a call writes them, or ``None`` where one is no member."""
     members = spec.dimensions[name].members
@@ -334,14 +374,19 @@ def check_meeting(left: Expression, right: Expression, spec: Spec, context: str,
     """
     for one, other in ((left, right), (right, left)):
         for name in sorted(set(one.dims) - set(other.dims)):
-            members = {dim for _, dim in spec.dimensions[name].members}
-            stray = sorted((members & set(other.dims)) - set(one.dims))
+            members = [dim for _, dim in spec.dimensions[name].members]
+            stray = sorted((set(members) & set(other.dims)) - set(one.dims))
             if stray and not {name, *stray} <= frame:
-                summed = operand_over((one,), (name,), stray[0])
+                read = operand_over((one,), (name,), stray[0])
+                columns = _member_columns(name, stray, spec)
+                onto_members = (
+                    f'spread {read} over the members: at({read}, by={name}[{columns}])'
+                    if stray == sorted(members)
+                    else f'sum {read} to the member: sum({read}, over={name}, by={name}[{columns}])'
+                )
                 raise DimensionError(
                     f"{context}: an operand over {stray} meets one over '{name}'. "
-                    f'{_at_member(stray, frozenset({name}), spec, (other,))}, or sum {summed} to the member: '
-                    f'sum({summed}, over={name}, by={name}[{_member_columns(name, stray, spec)}]).'
+                    f'{_at_member(stray, frozenset({name}), spec, (other,))}, or {onto_members}.'
                 )
 
 
@@ -403,7 +448,7 @@ def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expressi
             operands = (constraint.lhs, constraint.rhs)
             detail = (
                 f'carries dims {stray} that are not in its dims: {sorted(frame)}. '
-                f'{_at_member(stray, frame, spec, operands) or "Add them to dims:, or sum them out"}'
+                f'{_member_rewrite(stray, frame, spec, operands) or "Add them to dims:, or sum them out"}'
                 if stray
                 else f'does not carry {missing}, which its dims: declares. Remove them from dims:, or use them '
                 f'in the expression'
@@ -429,7 +474,7 @@ def _check_value_dims(node: Expression, frame: frozenset[str], context: str, spe
     """
     got = frozenset(node.dims)
     if stray := sorted(got - frame):
-        rewrite = _at_member(stray, frame, spec, (node,)) or f'Add them to dims:, or take them out of the {noun}'
+        rewrite = _member_rewrite(stray, frame, spec, (node,)) or f'Add them to dims:, or take them out of the {noun}'
         raise DimensionError(
             f'{context}: the {noun} carries dims {stray} outside the dims: {sorted(frame)}. {rewrite}.'
         )
@@ -485,7 +530,8 @@ def _check_condition_dims(mask: Mask | None, frame: frozenset[str], context: str
                 assert_never(atom)
         read = atom.name if isinstance(atom, ParameterDefined | ParameterComparison | VariableDefined) else None
         rewrite = (
-            _at_member(outside, frame, spec, read=read) or 'Add them to dims:, or test a name over the declared dims'
+            _member_rewrite(outside, frame, spec, read=read)
+            or 'Add them to dims:, or test a name over the declared dims'
         )
         raise DimensionError(
             f'{context}: {leaf} reads dims {outside} outside the declared dims {sorted(frame)}. {rewrite}.'

@@ -452,8 +452,14 @@ class Walk:
         return self.format.summation(domain, body), _PRECEDENCE['+']
 
     def _looked_up(self, columns: JoinColumns, ctx: _Context) -> _Context:
-        """*ctx* with each dimension *columns* drops read at the relation, as ``at`` re-indexes a leaf."""
+        """*ctx* with each dimension *columns* drops read at the relation, as ``at`` re-indexes a leaf.
+
+        A spread reads the dimension at the tuple of its members' indices, ``(p, u)``.
+        """
         at = {r: ctx.subscript(columns.dim(r)) for r in columns.grouped}
+        if columns.spreads:
+            members = self.format.joined([at[r] for r in columns.grouped], '')
+            return ctx.looked_up(columns.name, self.format.parenthesise(members))
         for read in columns.dropped:
             ctx = ctx.looked_up(columns.dim(read), self._relation_read(columns.name, at, read))
         return ctx
