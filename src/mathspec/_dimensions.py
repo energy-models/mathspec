@@ -313,17 +313,28 @@ def _spread_over(
     no spread.
     """
     for name in sorted(stray):
-        members = spec.dimensions[name].members
-        dims = [dim for _, dim in members]
-        if not members or not set(dims) <= frame or len(set(dims)) < len(dims):
+        if (roles := _spread_roles(name, frame, spec)) is None:
             continue
         read = read or operand_over(operands, (name,), '')
-        roles = ', '.join(role for role, _ in members)
+        dims = [dim for _, dim in spec.dimensions[name].members]
         return (
             f"'{name}' lists the members {dims}, and is one dimension here. Spread the operand over its members: "
             f'at({read}, by={name}[{roles}])'
         )
     return None
+
+
+def _spread_roles(name: str, frame: frozenset[str], spec: Spec) -> str | None:
+    """The members of *name* as a spread onto *frame* lists them, or ``None`` where *name* has no such spread.
+
+    The spread brings every member, so *frame* holds them all, and each
+    arrives as its dimension, so no two share one.
+    """
+    members = spec.dimensions[name].members
+    dims = [dim for _, dim in members]
+    if not members or not set(dims) <= frame or len(set(dims)) < len(dims):
+        return None
+    return ', '.join(role for role, _ in members)
 
 
 def _member_rewrite(
@@ -378,15 +389,16 @@ def check_meeting(left: Expression, right: Expression, spec: Spec, context: str,
             stray = sorted((set(members) & set(other.dims)) - set(one.dims))
             if stray and not {name, *stray} <= frame:
                 read = operand_over((one,), (name,), stray[0])
-                columns = _member_columns(name, stray, spec)
-                onto_members = (
-                    f'spread {read} over the members: at({read}, by={name}[{columns}])'
-                    if stray == sorted(members)
-                    else f'sum {read} to the member: sum({read}, over={name}, by={name}[{columns}])'
-                )
+                if (roles := _spread_roles(name, frame, spec)) is not None:
+                    onto_members = f', or spread {read} over the members: at({read}, by={name}[{roles}])'
+                elif stray != sorted(members):
+                    columns = _member_columns(name, stray, spec)
+                    onto_members = f', or sum {read} to the member: sum({read}, over={name}, by={name}[{columns}])'
+                else:
+                    onto_members = ''
                 raise DimensionError(
                     f"{context}: an operand over {stray} meets one over '{name}'. "
-                    f'{_at_member(stray, frozenset({name}), spec, (other,))}, or {onto_members}.'
+                    f'{_at_member(stray, frozenset({name}), spec, (other,))}{onto_members}.'
                 )
 
 

@@ -516,15 +516,15 @@ def resolve_walks(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
             continue
         resolver = ExpressionResolver(ns, f"piecewise '{name}' link '{key}'", errors)
         columns = walked_columns(link.by, resolver)
-        if columns is None or (walk := resolver.lookup(columns, weights)) is None:
+        if columns is not None and resolver.spreads(columns, weights):
             failed = True
-        elif walk.spreads:
-            failed = True
-            errors.append(
-                f"{resolver.context}: by: {link.by} spreads the curve over the members of '{walk.name}', and the "
-                f"curve is over '{walk.name}'. Leave by: out, and read the expression at each tuple: "
+            resolver.refuse_dims(
+                f"{resolver.context}: by: {link.by} names members of '{columns.relation}', and the curve is over "
+                f"'{columns.relation}'. Leave by: out, and read the expression at each tuple: "
                 f'at(<expression>, by={link.by}).'
             )
+        elif columns is None or (walk := resolver.lookup(columns, weights)) is None:
+            failed = True
         else:
             walks[key] = walk
     return None if failed else walks

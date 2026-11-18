@@ -972,10 +972,11 @@ def test_a_construct_the_file_does_not_use_is_an_empty_set_rather_than_none():
 
     assert footprint.sos_types == frozenset(), 'a file declaring no sos'
     assert footprint.quadratic == frozenset(), 'a file with no quadratic anywhere'
+    assert footprint.spreads == frozenset(), 'a file with no dimension that lists members'
     assert footprint.domains == {'continuous'}, 'never empty — a program has variables'
-    assert {type(f) for f in (footprint.sos_types, footprint.quadratic, footprint.kinds)} == {frozenset}, (
-        'every field is a set, so one rule reads all of them'
-    )
+    assert {type(f) for f in (footprint.sos_types, footprint.quadratic, footprint.kinds, footprint.spreads)} == {
+        frozenset
+    }, 'every field is a set, so one rule reads all of them'
     assert footprint.quadratic <= set(get_args(QuadraticPosition)), (
         'and the vocabulary a consumer pins its table against'
     )
