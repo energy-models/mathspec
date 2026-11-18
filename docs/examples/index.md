@@ -26,6 +26,10 @@ like yours, and what each line of the file means.
     One relation lists the ports of each unit, and a parameter with
     `where:` keeps only the output ports.
     [Open →](connection.md)
+- **A sparse set, read four ways**
+    Units on the ports they have and in the periods they run: a parameter per
+    unit, a sum over the ports, a step in time and a sum over every port.
+    [Open →](sparse.md)
 - **One construct per spec**
     Each form of the four operators and `dual` has its smallest file, beside
     its typeset equation.
@@ -58,6 +62,10 @@ like yours, and what each line of the file means.
     The model that `n.optimize()` builds in the power system modelling
     framework PyPSA is one file, and 25 fragments that compose into it.
     [Open →](pypsa/index.md)
+- **TIMES**
+    Two core equations of the ETSAP energy system model, capacity transfer
+    and trade between regions, each with the TIMES names it ports.
+    [Open →](times/index.md)
 
 </div>
 

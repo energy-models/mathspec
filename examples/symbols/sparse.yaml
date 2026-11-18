@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: mathspec Contributors
+#
+# SPDX-License-Identifier: MIT
+
+# How `examples/sparse.yaml` prints.
+notation: latex
+dimensions:
+  unit: { index: u, set: '\mathcal{U}' }
+  port: { index: o, set: '\mathcal{O}' }
+  bus: { index: b, set: '\mathcal{B}' }
+  period: { index: t, set: '\mathcal{T}' }
