@@ -11,6 +11,7 @@ the name of the dimension.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -286,11 +287,39 @@ def test_the_inner_join_is_typeset(fmt):
 JOIN = 'connection[unit] == assignment[unit]'
 ADVISED_JOIN = 'add assignment[unit] == connection[unit] to where:'
 
+#: A dimension with members that shares `region` with `trade`, which reads `region` under two roles.
+SITE: dict[str, Any] = {'dimensions.site': {'over': ['region', 'unit']}}
+
+#: A named expression over `connection` and `assignment`, which share `unit`.
+CROSSED_EXPRESSION: dict[str, Any] = {
+    'expressions.e': {'dims': ['connection', 'assignment'], 'expression': 'sent + on'}
+}
+
+
+def _curve(y: str) -> dict[str, Any]:
+    """A curve over `connection` and its member `unit`, whose `y` link reads *y*."""
+    return {
+        'parameters.xs': {'dims': ['period']},
+        'parameters.ys': {'dims': ['period']},
+        'variables.w': {'dims': ['connection']},
+        'variables.v': {'dims': ['unit']},
+        'variables.z': {'dims': ['connection']},
+        'variables.y': {'dims': ['connection', 'unit']},
+        'piecewise.curve': {
+            'dims': ['connection', 'unit'],
+            'along': 'period',
+            'links': {'x': ['w + v', 'xs'], 'y': [y, 'ys']},
+        },
+    }
+
+
+def _notes_on(subject: str, spec: Any) -> list[str]:
+    return [note.text for note in advice(spec) if note.kind == 'cross-product' and note.subject == subject]
+
 
 def _cross_products(subject: str, **patch: Any) -> list[str]:
     """The cross-product advice on *subject*, in the model with `assignment` beside `connection`, patched with *patch*."""
-    notes = advice(varied(MODEL, **SHARED_MEMBER, **patch))
-    return [note.text for note in notes if note.kind == 'cross-product' and note.subject == subject]
+    return _notes_on(subject, varied(MODEL, **SHARED_MEMBER, **patch))
 
 
 def _over_both(where: str | None = None) -> dict[str, Any]:
@@ -298,11 +327,45 @@ def _over_both(where: str | None = None) -> dict[str, Any]:
     return {'constraints.probe': entry if where is None else {**entry, 'where': where}}
 
 
+def _replaced(value: Any, name: str, call: str) -> Any:
+    """*value* with the operand *name* read as *call* in every expression it holds, at any depth."""
+    if isinstance(value, str):
+        return re.sub(rf'\b{name}\b', lambda _: call, value)
+    if isinstance(value, list):
+        return [_replaced(item, name, call) for item in value]
+    if isinstance(value, dict):
+        return {key: item if key == 'dims' else _replaced(item, name, call) for key, item in value.items()}
+    return value
+
+
+def _rewrites(entry: dict[str, Any], note: str) -> list[dict[str, Any]]:
+    """*entry* with each rewrite *note* suggests applied, as a user would copy it: one per role the note offers.
+
+    A sentence that drops a dim from `dims:` reads each operand it names as
+    the call it names. A filter it adds goes under `AND` at the top of `where:`.
+    """
+    rewrites = []
+    for dropped, sentence in re.findall(r"drop '(\w+)' from dims:([^.]*)", note):
+        calls: dict[str, list[str]] = {}
+        for call in re.finditer(r'(?:at|sum)\((\w+), [^)]*\)', sentence):
+            calls.setdefault(call[1], []).append(call[0])
+        for role in range(max(map(len, calls.values()), default=1)):
+            rewritten = {**entry, 'dims': [dim for dim in entry['dims'] if dim != dropped]}
+            for name, alternatives in calls.items():
+                rewritten = _replaced(rewritten, name, alternatives[role])
+            rewrites.append(rewritten)
+    if added := re.search(r'add (.+) to where:', note):
+        for role in (1, 2) if '(or ' in added[1] else (1,):
+            join = re.sub(r'(\S+) \(or (\S+)\)', rf'\g<{role}>', added[1])
+            rewrites.append({**entry, 'where': f'({entry["where"]}) AND {join}' if 'where' in entry else join})
+    return rewrites
+
+
 @pytest.mark.parametrize(
-    ('subject', 'patch', 'fragments'),
+    ('path', 'patch', 'fragments'),
     [
         pytest.param(
-            'probe',
+            'constraints.probe',
             _over_both(),
             [
                 "Constraint 'probe': dims: lists 'assignment' and 'connection', which share the member 'unit', "
@@ -311,18 +374,23 @@ def _over_both(where: str | None = None) -> dict[str, Any]:
             ],
             id='two-dimensions-share-a-member',
         ),
-        pytest.param('probe', _over_both(JOIN.replace('==', '!=')), [ADVISED_JOIN], id='a-where-that-keeps-others'),
         pytest.param(
-            'probe', _over_both(f"{JOIN} OR connection[port] == 'p1'"), [ADVISED_JOIN], id='the-join-in-an-or'
+            'constraints.probe', _over_both(JOIN.replace('==', '!=')), [ADVISED_JOIN], id='a-where-that-keeps-others'
         ),
         pytest.param(
-            'pair',
+            'constraints.probe',
+            _over_both(f"{JOIN} OR connection[port] == 'p1'"),
+            [ADVISED_JOIN],
+            id='the-join-in-an-or',
+        ),
+        pytest.param(
+            'variables.pair',
             {'variables.pair': {'dims': ['connection', 'assignment']}},
             ["Variable 'pair': dims: lists 'assignment' and 'connection'", ADVISED_JOIN],
             id='a-variable',
         ),
         pytest.param(
-            'pair',
+            'variables.pair',
             {
                 'dimensions.plug': {'over': ['unit', 'port', 'period']},
                 'variables.pair': {'dims': ['connection', 'plug']},
@@ -334,7 +402,7 @@ def _over_both(where: str | None = None) -> dict[str, Any]:
             id='two-shared-members',
         ),
         pytest.param(
-            'pair',
+            'variables.pair',
             {
                 'dimensions.plug': {'over': ['unit', 'port', 'period']},
                 'variables.pair': {'dims': ['connection', 'plug'], 'where': 'connection[unit] == plug[unit]'},
@@ -343,18 +411,54 @@ def _over_both(where: str | None = None) -> dict[str, Any]:
             id='one-of-two-shared-members-joined',
         ),
         pytest.param(
-            'probe',
+            'variables.x',
+            {**SITE, 'variables.x': {'dims': ['trade', 'site']}},
+            ['add site[region] == trade[dst] (or trade[src]) to where:'],
+            id='two-dimensions-share-a-member-by-role',
+        ),
+        pytest.param(
+            'expressions.e',
+            {**CROSSED_EXPRESSION, **_constraint('sum(e, over=assignment) <= 1', ['connection'])},
+            [
+                "Named expression 'e': dims: lists 'assignment' and 'connection'",
+                'A named expression takes no where:, so for the pairs that agree on unit (the inner join), read it '
+                "in an entry whose dims: lists both, and add assignment[unit] == connection[unit] to that entry's "
+                'where:.',
+            ],
+            id='a-named-expression-read-under-a-sum',
+        ),
+        pytest.param(
+            'expressions.e',
+            CROSSED_EXPRESSION,
+            ["Named expression 'e': dims: lists 'assignment' and 'connection'", "to that entry's where:"],
+            id='a-named-expression-nothing-reads',
+        ),
+        pytest.param(
+            'constraints.probe',
             _constraint('flow <= capacity', ['connection', 'unit', 'snapshot']),
             [
                 "Constraint 'probe': dims: lists 'connection' beside its member 'unit', so the entry is their "
                 'cross product',
-                "drop 'unit' from dims: and read the operand at each tuple: at(capacity, by=connection[unit])",
-                "drop 'connection' from dims: and sum to the member: sum(flow, over=connection, by=connection[unit])",
+                "drop 'unit' from dims: and read capacity at each tuple: at(capacity, by=connection[unit]).",
+                "drop 'connection' from dims: and sum flow to the member: "
+                'sum(flow, over=connection, by=connection[unit]).',
             ],
             id='a-dimension-beside-its-member',
         ),
         pytest.param(
-            'e',
+            'constraints.probe',
+            {
+                'parameters.reserve': {'dims': ['unit']},
+                **_constraint('flow <= capacity + reserve - 0.1 * capacity', ['connection', 'unit', 'snapshot']),
+            },
+            [
+                'read capacity and reserve at each tuple: '
+                'at(capacity, by=connection[unit]), at(reserve, by=connection[unit]).'
+            ],
+            id='two-operands-over-the-member',
+        ),
+        pytest.param(
+            'expressions.e',
             {'expressions.e': {'dims': ['connection', 'unit', 'snapshot'], 'expression': 'flow * capacity'}},
             [
                 "Named expression 'e': dims: lists 'connection' beside its member 'unit'",
@@ -363,41 +467,50 @@ def _over_both(where: str | None = None) -> dict[str, Any]:
             id='a-named-expression',
         ),
         pytest.param(
-            'p',
+            'parameters.p',
             {'parameters.p': {'dims': ['connection', 'unit']}},
-            ["Parameter 'p': dims: lists 'connection' beside", 'at(..., by=connection[unit])'],
+            [
+                "Parameter 'p': dims: lists 'connection' beside",
+                "For its own unit, drop 'unit' from dims:. To go by unit instead, drop 'connection' from dims:.",
+            ],
             id='a-parameter',
         ),
         pytest.param(
-            'pair',
-            {'variables.pair': {'dims': ['trade', 'region']}},
-            ["'trade' beside its member 'region'", 'at(..., by=trade[dst or src])'],
+            'constraints.probe',
+            _constraint('shipped <= tariff', ['trade', 'region']),
+            [
+                "'trade' beside its member 'region'",
+                'read tariff at each tuple: at(tariff, by=trade[dst]) or at(tariff, by=trade[src]).',
+                'sum shipped to the member: '
+                'sum(shipped, over=trade, by=trade[dst]) or sum(shipped, over=trade, by=trade[src]).',
+            ],
             id='a-member-by-role',
         ),
         pytest.param(
-            'curve',
-            {
-                'parameters.xs': {'dims': ['period']},
-                'parameters.ys': {'dims': ['period']},
-                'variables.w': {'dims': ['connection']},
-                'variables.v': {'dims': ['unit']},
-                'variables.y': {'dims': ['connection', 'unit']},
-                'piecewise.curve': {
-                    'dims': ['connection', 'unit'],
-                    'along': 'period',
-                    'links': {'x': ['w + v', 'xs'], 'y': ['y', 'ys']},
-                },
-            },
-            ["piecewise 'curve': dims: lists 'connection' beside its member 'unit'", 'at(v, by=connection[unit])'],
+            'piecewise.curve',
+            _curve('z + v'),
+            [
+                "piecewise 'curve': dims: lists 'connection' beside its member 'unit'",
+                'read v at each tuple: at(v, by=connection[unit])',
+                'sum w and z to the member: '
+                'sum(w, over=connection, by=connection[unit]), sum(z, over=connection, by=connection[unit])',
+            ],
             id='a-curve',
         ),
     ],
 )
-def test_check_advises_on_a_cross_product_through_a_member(subject, patch, fragments):
-    """Rule 11 of #1011: the entry loads as the cross product, and `check` names the rewrite it likely meant."""
+def test_check_advises_on_a_cross_product_and_each_rewrite_it_names_loads(path, patch, fragments):
+    """Rule 11 of #1011: the entry loads as the cross product, and `check` names the rewrite it likely meant.
+
+    Was: a role printed as `trade[dst or src]`, which does not parse, and a
+    declaration got `at(..., by=…)` with no operand to read.
+    """
+    _, subject = path.split('.')
     (note,) = _cross_products(subject, **patch)
     for fragment in fragments:
-        assert fragment in note
+        assert fragment in note, f'the note says {fragment!r}'
+    for rewritten in _rewrites(patch[path], note):
+        assert not _cross_products(subject, **{**patch, path: rewritten}), f'{rewritten} loads without the note'
 
 
 @pytest.mark.parametrize(
@@ -407,16 +520,94 @@ def test_check_advises_on_a_cross_product_through_a_member(subject, patch, fragm
         pytest.param('probe', _over_both('assignment[unit] == connection[unit]'), id='the-join-the-other-way'),
         pytest.param('probe', _over_both(f"{JOIN} AND connection[port] == 'p1'"), id='the-join-and-another-filter'),
         pytest.param(
+            'x',
+            {**SITE, 'variables.x': {'dims': ['trade', 'site'], 'where': 'site[region] == trade[src]'}},
+            id='the-join-through-a-role',
+        ),
+        pytest.param(
             'e',
-            {'expressions.e': {'dims': ['connection', 'assignment'], 'expression': 'sent + on'}},
+            {
+                **CROSSED_EXPRESSION,
+                'constraints.probe': {'dims': ['connection', 'assignment'], 'expression': 'e <= 1', 'where': JOIN},
+            },
             id='a-named-expression-its-reader-filters',
+        ),
+        pytest.param(
+            'e',
+            {**CROSSED_EXPRESSION, 'constraints.probe': {'dims': ['connection', 'assignment'], 'expression': 'e <= 1'}},
+            id='a-named-expression-its-reader-is-advised',
         ),
         pytest.param('limit', {}, id='a-dimension-beside-no-member'),
         pytest.param('pair', {'variables.pair': {'dims': ['connection', 'trade']}}, id='two-dimensions-share-nothing'),
+        pytest.param('probe', _constraint('both <= 1', ['connection', 'unit']), id='an-operand-over-both'),
+        pytest.param(
+            'probe',
+            {
+                'given.parameters.k': {'dims': ['connection', 'unit']},
+                **_constraint('sent <= k', ['connection', 'unit']),
+            },
+            id='a-given-parameter-over-both',
+        ),
+        pytest.param('curve', _curve('y'), id='a-curve-that-reads-an-operand-over-both'),
     ],
 )
 def test_no_cross_product_advice_where_the_entry_says_what_it_means(subject, patch):
+    """Was: an entry that reads an operand over the dimension and its member was advised a rewrite it refuses."""
     assert not _cross_products(subject, **patch), 'the entry keeps only the pairs of one member, or crosses nothing'
+
+
+#: A fragment that reads `flow` and `capacity` from the model, over `connection` beside its member `unit`.
+READS_BESIDE: dict[str, Any] = {
+    'dimensions': MODEL['dimensions'],
+    'given': {
+        'variables': {'flow': {'dims': ['connection', 'snapshot']}},
+        'parameters': {'capacity': {'dims': ['unit']}},
+    },
+    'constraints': {'probe': {'dims': ['connection', 'unit', 'snapshot'], 'expression': 'flow <= capacity'}},
+}
+
+
+@pytest.mark.parametrize(
+    ('patch', 'verb', 'fragment'),
+    [
+        pytest.param(
+            _constraint('flow <= capacity', ['connection', 'unit', 'snapshot']),
+            lambda spec: rename(spec, {'unit': 'machine'}),
+            'read capacity at each tuple: at(capacity, by=connection[machine])',
+            id='rename',
+        ),
+        pytest.param(
+            {}, lambda spec: merge([spec, READS_BESIDE]), "drop 'unit' from dims: and read capacity", id='merge'
+        ),
+        pytest.param(
+            _over_both(JOIN),
+            lambda spec: override(spec, [{'constraints': {'probe': {'where': None}}}]),
+            ADVISED_JOIN,
+            id='override-drops-the-join',
+        ),
+        pytest.param(
+            _over_both(),
+            lambda spec: override(spec, [{'constraints': {'probe': {'where': JOIN}}}]),
+            None,
+            id='override-adds-the-join',
+        ),
+    ],
+)
+def test_the_advice_follows_the_spec_a_verb_returns(patch, verb, fragment):
+    notes = _notes_on('probe', verb(varied(MODEL, **SHARED_MEMBER, **patch)))
+    if fragment is None:
+        assert not notes, 'the join the verb wrote keeps the pairs of one member'
+    else:
+        (note,) = notes
+        assert fragment in note, f'the note on the returned spec says {fragment!r}'
+
+
+def test_expand_advises_each_row_the_curve_writes():
+    """`expand()` moves the note from the curve to the weights it writes, which its rows read over both."""
+    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **_curve('z + v')))
+    written = {note.subject for note in advice(spec) if note.kind == 'cross-product'}
+    expanded = {note.subject for note in advice(spec.expand()) if note.kind == 'cross-product'}
+    assert expanded == written - {'curve'} | {'curve_lam', 'curve_seg'}, 'one note per weight variable, none per row'
 
 
 def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():

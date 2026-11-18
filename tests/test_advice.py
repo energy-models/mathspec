@@ -108,7 +108,7 @@ CROSSED = {
 
 def test_a_dimension_beside_its_member_is_advised():
     (note,) = advice(CROSSED)
-    assert (note.kind, note.subject) == ('cross-product', 'pair')
+    assert (note.kind, note.subject) == ('cross-product', 'pair'), 'the note is on the entry whose dims: cross'
 
 
 def test_every_kind_a_consumer_can_pin_against_is_produced_here():

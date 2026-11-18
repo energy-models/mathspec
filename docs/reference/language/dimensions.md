@@ -283,8 +283,13 @@ it often means each connection at its own unit only. For such an entry,
 For `limit` with `dims: [connection, unit, snapshot]`, mathspec prints:
 
 ```text
-Constraint 'limit': dims: lists 'connection' beside its member 'unit', so the entry is their cross product: each connection meets every unit, not only its own. For its own unit, drop 'unit' from dims: and read the operand at each tuple: at(capacity, by=connection[unit]). To go by unit instead, drop 'connection' from dims: and sum to the member: sum(flow, over=connection, by=connection[unit]).
+Constraint 'limit': dims: lists 'connection' beside its member 'unit', so the entry is their cross product: each connection meets every unit, not only its own. For its own unit, drop 'unit' from dims: and read capacity at each tuple: at(capacity, by=connection[unit]). To go by unit instead, drop 'connection' from dims: and sum flow to the member: sum(flow, over=connection, by=connection[unit]).
 ```
+
+An entry that reads an operand over both, such as `both <= 1` over
+`[connection, unit]`, asks for the cross product, so it gets no advice. A
+`piecewise:` entry gets the advice as written. After `expand()`, the weight
+variables that it writes get the advice instead.
 
 A `dims:` list is the domain of an entry, so a tool refuses a data row at a
 tuple that the dimension does not list. A
@@ -376,8 +381,10 @@ Without the `where:`, `exclusive` loads as the cross product, and
 Constraint 'exclusive': dims: lists 'assignment' and 'connection', which share the member 'unit', so the entry is their cross product: each assignment meets every connection, of its own unit or another. For the pairs that agree on unit (the inner join), add assignment[unit] == connection[unit] to where:.
 ```
 
-A named expression has no `where:`, so mathspec gives this advice for the
-entry that reads it.
+A named expression has no `where:`. An entry that reads it and whose `dims:`
+lists both dimensions gets this advice instead, unless its own `where:` keeps
+the pairs of one unit. If no such entry reads the named expression, the named
+expression itself gets the advice.
 
 The left join also keeps a connection whose unit has no assignment. It is an
 entry over `connection` and `period` that reads `busy` in two steps. The

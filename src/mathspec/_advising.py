@@ -13,9 +13,18 @@ from itertools import combinations
 from typing import TYPE_CHECKING
 
 from mathspec._boundedness import unbounded_notes
-from mathspec._dimensions import operand_over
 from mathspec._validation import to_spec
-from mathspec.program import Advice, Join, Mask, Program, RelationPairComparison, walk
+from mathspec.program import (
+    Advice,
+    ExpressionReference,
+    Join,
+    Mask,
+    ParameterReference,
+    Program,
+    RelationPairComparison,
+    VariableReference,
+    walk,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -23,6 +32,8 @@ if TYPE_CHECKING:
 
     from mathspec.program import Expression
     from mathspec.spec import Spec
+
+    _Framed = tuple[str, str, tuple[str, ...], Mask | None, tuple[Expression, ...], bool]
 
 
 def advice(spec: str | Path | Mapping[str, object] | Spec | Program) -> tuple[Advice, ...]:
@@ -134,41 +145,67 @@ def _cross_products(program: Program) -> list[Advice]:
     """One note per dimension with members that ``dims:`` crosses with a member of it, or with another that shares one.
 
     A note rather than a refusal: the cross product is what such ``dims:``
-    say, and loads. A named expression takes no ``where:``, so the entry that
-    reads it keeps the pairs of one member, and draws the note where it does
-    not.
+    say, and loads. An entry that reads an operand over both the dimension
+    and its member asks for that product, so it draws no note.
     """
     notes: list[Advice] = []
-    for label, name, dims, where, operands in _framed_entries(program):
+    framed = list(_framed_entries(program))
+    for label, name, dims, where, operands, filters in framed:
         over = {dim: [member for _, member in program.dimensions[dim].over] for dim in dims}
         tuples = sorted(dim for dim in dims if over[dim])
-        for one, other in combinations(tuples, 2) if label != 'Named expression' else ():
+        for one, other in combinations(tuples, 2):
+            if not filters and _read_within(framed, name, {one, other}):
+                continue
             shared = sorted(set(over[one]) & set(over[other]))
             if unjoined := [m for m in shared if not _joins(where, program, one, other, m)]:
-                text = _shared_note(label, name, (one, other), shared, unjoined, program)
+                text = _shared_note(label, name, (one, other), shared, unjoined, filters, program)
                 notes.append(Advice('cross-product', name, text))
         notes.extend(
             Advice('cross-product', name, _beside_note(label, name, dim, member, operands, program))
             for dim in tuples
             for member in sorted(set(over[dim]) & set(dims))
+            if not _names(operands, {dim, member})
         )
     return notes
 
 
-def _framed_entries(
-    program: Program,
-) -> Iterator[tuple[str, str, tuple[str, ...], Mask | None, tuple[Expression, ...]]]:
-    """Each entry the file builds over a ``dims:``: its label, name, dims, ``where:``, and operands."""
+def _framed_entries(program: Program) -> Iterator[_Framed]:
+    """Each entry the file builds over a ``dims:``: its label, name, dims, ``where:``, operands, and whether it takes a ``where:``."""
     for name, parameter in program.parameters.items():
-        yield 'Parameter', name, parameter.dims, parameter.where, ()
+        yield 'Parameter', name, parameter.dims, parameter.where, (), True
     for name, variable in program.variables.items():
-        yield 'Variable', name, variable.dims, variable.where, ()
+        yield 'Variable', name, variable.dims, variable.where, (), True
     for name, constraint in program.constraints.items():
-        yield 'Constraint', name, constraint.dims, constraint.where, (constraint.lhs, constraint.rhs)
+        yield 'Constraint', name, constraint.dims, constraint.where, (constraint.lhs, constraint.rhs), True
     for name, expression in program.expressions.items():
-        yield 'Named expression', name, expression.dims, None, (expression.expression,)
+        yield 'Named expression', name, expression.dims, None, (expression.expression,), False
     for name, curve in program.piecewise.items():
-        yield 'piecewise', name, curve.frame, curve.where, tuple(link.expression for link in curve.links)
+        yield 'piecewise', name, curve.frame, curve.where, tuple(link.expression for link in curve.links), True
+
+
+def _read_within(framed: list[_Framed], name: str, pair: set[str]) -> bool:
+    """Whether an entry whose ``dims:`` lists both of *pair* reads the named expression *name*.
+
+    A named expression takes no ``where:``, so such a reader is where the
+    pairs of one member are kept, and where the note goes when they are not.
+    """
+    return any(
+        pair <= set(dims)
+        and any(isinstance(node, ExpressionReference) and node.name == name for node in walk(*operands))
+        for _, _, dims, _, operands, _ in framed
+    )
+
+
+def _names(operands: tuple[Expression, ...], over: set[str], without: str | None = None) -> list[str]:
+    """The names *operands* read whose dims hold every dim in *over* and not *without*, each once, outermost first."""
+    found = (
+        node.name
+        for node in walk(*operands)
+        if isinstance(node, ParameterReference | VariableReference | ExpressionReference)
+        and over <= set(node.dims)
+        and without not in node.dims
+    )
+    return list(dict.fromkeys(found))
 
 
 def _joins(where: Mask | None, program: Program, one: str, other: str, member: str) -> bool:
@@ -191,40 +228,70 @@ def _member_of(program: Program, relation: str, column: str) -> tuple[str, str] 
     return (relation, members[column]) if column in members else None
 
 
-def _role(program: Program, dim: str, member: str) -> str:
-    """The first role of *dim* over *member*: a comparison reads one column, and of two roles over one member, either."""
-    return next(role for role, over in program.dimensions[dim].over if over == member)
+def _columns(program: Program, dim: str, member: str) -> list[str]:
+    """Each column of *dim* over *member*, as a call writes it: one per role, and a member with two roles is either."""
+    return [f'{dim}[{role}]' for role, over in program.dimensions[dim].over if over == member]
 
 
-def _roles(program: Program, dim: str, member: str) -> str:
-    """Every role of *dim* over *member*, as the refusals at load spell a call through one of them."""
-    return ' or '.join(role for role, over in program.dimensions[dim].over if over == member)
+def _either(program: Program, dim: str, member: str) -> str:
+    """The first column of *dim* over *member*, then each other role in brackets, as the side of one comparison."""
+    first, *rest = _columns(program, dim, member)
+    return ' '.join([first, *(f'(or {column})' for column in rest)])
 
 
 def _shared_note(
-    label: str, name: str, pair: tuple[str, str], shared: list[str], unjoined: list[str], program: Program
+    label: str,
+    name: str,
+    pair: tuple[str, str],
+    shared: list[str],
+    unjoined: list[str],
+    filters: bool,
+    program: Program,
 ) -> str:
+    """The note on two dimensions that share members, with the ``==`` per unjoined member that keeps the inner join.
+
+    The comparison names its first role and offers each other one, since
+    either may be the one meant; a named expression has no ``where:`` to
+    take it, so its note sends the comparison to an entry that reads it.
+    """
     one, other = pair
+    join = ' AND '.join(f'{_either(program, one, m)} == {_either(program, other, m)}' for m in unjoined)
     quoted = ' and '.join(f"'{m}'" for m in shared)
-    join = ' AND '.join(f'{one}[{_role(program, one, m)}] == {other}[{_role(program, other, m)}]' for m in unjoined)
+    kept = f'the pairs that agree on {" and ".join(unjoined)} (the inner join)'
+    fix = (
+        f'For {kept}, add {join} to where:.'
+        if filters
+        else f'A named expression takes no where:, so for {kept}, read it in an entry whose dims: lists both, '
+        f"and add {join} to that entry's where:."
+    )
     return (
         f"{label} '{name}': dims: lists '{one}' and '{other}', which share the member{'s' if len(shared) > 1 else ''} "
         f'{quoted}, so the entry is their cross product: each {one} meets every {other}, of its own '
-        f'{" and ".join(shared)} or another. For the pairs that agree on {" and ".join(unjoined)} (the inner join), '
-        f'add {join} to where:.'
+        f'{" and ".join(shared)} or another. {fix}'
     )
 
 
 def _beside_note(
     label: str, name: str, dim: str, member: str, operands: tuple[Expression, ...], program: Program
 ) -> str:
-    columns = _roles(program, dim, member)
-    read, summed = operand_over(operands, (member,), dim), operand_over(operands, (dim,), member)
+    """The note on a dimension beside its member, with the calls that rewrite each operand that keeps the product.
+
+    A call names every role of *member*, since either may be the one meant,
+    and only an operand that meets the other side: an entry without one is
+    rewritten in its ``dims:`` alone.
+    """
+    columns = _columns(program, dim, member)
+    own, by = f'drop {member!r} from dims:', f'drop {dim!r} from dims:'
+    if read := _names(operands, {member}, dim):
+        calls = ', '.join(' or '.join(f'at({n}, by={c})' for c in columns) for n in read)
+        own += f' and read {" and ".join(read)} at each tuple: {calls}'
+    if summed := _names(operands, {dim}, member):
+        calls = ', '.join(' or '.join(f'sum({n}, over={dim}, by={c})' for c in columns) for n in summed)
+        by += f' and sum {" and ".join(summed)} to the member: {calls}'
     return (
         f"{label} '{name}': dims: lists '{dim}' beside its member '{member}', so the entry is their cross product: "
-        f'each {dim} meets every {member}, not only its own. For its own {member}, drop {member!r} from dims: and '
-        f'read the operand at each tuple: at({read}, by={dim}[{columns}]). To go by {member} instead, drop {dim!r} '
-        f'from dims: and sum to the member: sum({summed}, over={dim}, by={dim}[{columns}]).'
+        f'each {dim} meets every {member}, not only its own. For its own {member}, {own}. '
+        f'To go by {member} instead, {by}.'
     )
 
 
