@@ -1906,7 +1906,7 @@ class TestRulesDecidedWithoutData:
                 },
                 (
                     "compares relations keyed over different dimensions ('lk' by ['g'], 'lh' by ['h'])",
-                    'Compare relations whose keys are over the same dimensions',
+                    "a condition has no dims:. Write the comparison in the where: of an entry whose dims: lists the keys of 'lk' and 'lh'",
                 ),
                 id='an-assumption-with-no-dims-compares-relations-keyed-apart',
             ),
