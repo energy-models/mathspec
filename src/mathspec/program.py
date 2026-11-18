@@ -1452,10 +1452,12 @@ class RelationComparison:
 
 @dataclass(frozen=True)
 class RelationPairComparison:
-    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus`` — row by row on the key.
+    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus``.
 
-    Both keys are over the same ``dims``, and the two columns are over one
-    dimension, so a match is possible at all.
+    Each relation is read at its own key, and ``dims`` is the union of the
+    two keys' dimensions, which the frame carries. The two columns are over
+    one dimension, so a match is possible at all. Where either relation has
+    no row, the comparison is false.
     """
 
     name: str

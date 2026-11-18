@@ -1887,8 +1887,28 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': ['g', 'z'], 'values': 'h'},
                     'variables.q.where': 'lk != lz',
                 },
-                ('compares relations keyed over different dimensions',),
-                id='where-two-relations-with-different-keys',
+                (
+                    'compares relations keyed over different dimensions',
+                    "dims: lacks 'z'",
+                    "Add 'z' to dims:, or compare against a relation keyed like 'lk'",
+                ),
+                id='where-two-relations-with-a-key-the-frame-lacks',
+            ),
+            pytest.param(
+                {'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}, 'variables.p.where': 'lk == lh[to]'},
+                ("dims: lacks 'h'", "Add 'h' to dims:, or compare against a relation keyed like 'lk'"),
+                id='where-two-relations-keyed-apart-in-a-frame-of-one',
+            ),
+            pytest.param(
+                {
+                    'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}},
+                    'assumptions': {'sound': 'lk == lh[to]'},
+                },
+                (
+                    "compares relations keyed over different dimensions ('lk' by ['g'], 'lh' by ['h'])",
+                    'Compare relations whose keys are over the same dimensions',
+                ),
+                id='an-assumption-with-no-dims-compares-relations-keyed-apart',
             ),
             pytest.param(
                 {'variables.p.where': 'c > q'},
@@ -2001,6 +2021,34 @@ class TestRulesDecidedWithoutData:
         message = _refusal(**patch)
         for fragment in fragments:
             assert fragment in message
+
+    @pytest.mark.parametrize(
+        'patch',
+        [
+            pytest.param({'variables.q.where': 'lk == lh[to]'}, id='a-variable-where'),
+            pytest.param({'parameters.m': {'dims': ['g', 'h'], 'where': 'lk == lh[to]'}}, id='a-parameter-where'),
+            pytest.param(
+                {'constraints.k': {'dims': ['g', 'h'], 'expression': 'q <= 1', 'where': 'lk != lh[to]'}},
+                id='a-constraint-where',
+            ),
+            pytest.param(
+                {
+                    'expressions.e': {
+                        'dims': ['g', 'h'],
+                        'cases': {'same': {'when': 'lk == lh[to]', 'expression': 'q'}},
+                        'otherwise': 0,
+                    }
+                },
+                id='a-case',
+            ),
+        ],
+    )
+    def test_two_relation_columns_keyed_apart_compare_where_dims_carry_both_keys(self, patch):
+        """Each column is read at its own key, and `dims:` carries both, so the comparison is over their product.
+
+        Was: refused unless both relations were keyed over the same dimensions.
+        """
+        _spec(**{'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}}, **patch)
 
     @pytest.mark.parametrize(
         ('operand', 'call', 'patch'),

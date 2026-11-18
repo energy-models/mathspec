@@ -20,7 +20,7 @@ from mathspec._advising import advice
 from mathspec._dimensions import sorted_dims
 from mathspec._typesetting import FORMATS, typeset
 from mathspec.errors import LanguageError
-from mathspec.program import Join, JoinedCondition, Relation, RelationComparison, Sum
+from mathspec.program import Join, JoinedCondition, Relation, RelationComparison, RelationPairComparison, Sum
 from tests.fixtures import varied
 
 #: The example of #1011: `connection` lists (unit, port) pairs, `trade` lists
@@ -198,6 +198,89 @@ def test_a_condition_compares_a_member_label():
     spec = to_spec(varied(MODEL, **{'variables.flow.where': "connection[unit] == 'gas'"}))
     (atom,) = spec.program.variables['flow'].where.atoms
     assert atom == RelationComparison('connection', 'unit', '==', 'gas', ('connection',))
+
+
+#: A second tuple dimension that shares `unit` with `connection`, and an entry over each.
+SHARED_MEMBER: dict[str, Any] = {
+    'dimensions.assignment': {'over': ['unit', 'period']},
+    'relations.backup': {'key': 'connection', 'values': {'spare': 'unit'}},
+    'variables.sent': {'dims': ['connection']},
+    'variables.on': {'dims': ['assignment']},
+}
+
+
+@pytest.mark.parametrize(
+    ('where', 'dims', 'pair'),
+    [
+        pytest.param(
+            'connection[unit] == assignment[unit]',
+            ['connection', 'assignment'],
+            ('connection', 'unit', 'assignment', 'unit', '==', ('assignment', 'connection')),
+            id='an-inner-join-on-the-shared-member',
+        ),
+        pytest.param(
+            'assignment[unit] != connection[unit]',
+            ['connection', 'assignment'],
+            ('assignment', 'unit', 'connection', 'unit', '!=', ('assignment', 'connection')),
+            id='an-inner-join-written-the-other-way-round',
+        ),
+        pytest.param(
+            'connection[unit] == backup[spare]',
+            ['connection'],
+            ('connection', 'unit', 'backup', 'spare', '==', ('connection',)),
+            id='a-relation-keyed-by-the-dimension',
+        ),
+    ],
+)
+def test_a_member_column_is_compared_with_another_relation_column(where, dims, pair):
+    """Rule 2 of #1011: the implied relation is a relation in a comparison of two columns, as on main.
+
+    Was: a side named after a tuple dimension was read as the dimension, so
+    `connection[unit] == assignment[unit]` was refused as a comparison of two
+    dimensions, and `connection[unit] == backup[spare]` as one against a relation.
+    """
+    expression = ' + '.join({'connection': 'sent', 'assignment': 'on'}[d] for d in dims) + ' <= 1'
+    constraint = {'constraints.probe': {'dims': dims, 'expression': expression, 'where': where}}
+    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **constraint))
+    assert spec.program.constraints['probe'].where.atoms == (RelationPairComparison(*pair),)
+
+
+@pytest.mark.parametrize(
+    ('cases', 'fragment'),
+    [
+        pytest.param(
+            {'joined': 'connection[unit] == assignment[unit]', 'apart': 'connection[unit] != assignment[unit]'},
+            None,
+            id='the-join-and-its-complement',
+        ),
+        pytest.param(
+            {'joined': 'connection[unit] == assignment[unit]', 'gas': "connection[unit] == 'gas'"},
+            'assignment[unit] vs connection[unit] is equal',
+            id='the-join-and-a-label',
+        ),
+    ],
+)
+def test_a_case_tests_the_inner_join(cases, fragment):
+    """The exclusivity check reads the join as one fact per pair of tuples: true, false, or a row missing."""
+    entry = {
+        'dims': ['connection', 'assignment'],
+        'cases': {name: {'when': when, 'expression': 'sent + on'} for name, when in cases.items()},
+        'otherwise': 0,
+    }
+    patch = {**SHARED_MEMBER, 'expressions.e': entry}
+    if fragment is None:
+        to_spec(varied(MODEL, **patch))
+    else:
+        assert fragment in _refusal(**patch)
+
+
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_the_inner_join_is_typeset(fmt):
+    where = 'connection[unit] == assignment[unit]'
+    constraint = {'dims': ['connection', 'assignment'], 'expression': 'sent + on <= 1', 'where': where}
+    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **{'constraints.probe': constraint}))
+    text = typeset(spec, fmt)
+    assert 'unit' in text.split('probe', 1)[1], f'{fmt} prints the shared member on both sides'
 
 
 def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
