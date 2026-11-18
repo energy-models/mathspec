@@ -386,10 +386,11 @@ lists both dimensions gets this advice instead, unless its own `where:` keeps
 the pairs of one unit. If no such entry reads the named expression, the named
 expression itself gets the advice.
 
-The left join also keeps a connection whose unit has no assignment. It is an
-entry over `connection` and `period` that reads `busy` in two steps. The
-inner `at` moves `busy` from `assignment` to its members, and the outer `at`
-reads the result at the unit of each connection:
+An entry over `connection` and `period` reads `busy` in two steps. The inner
+`at` moves `busy` from `assignment` to its members, and the outer `at` reads
+the result at the unit of each connection. The inner `at` is
+[absent](absence.md#how-absence-travels) where `assignment` lists no tuple,
+and a `sum` by the same columns is 0 there:
 
 ```yaml
 dimensions:
@@ -405,15 +406,25 @@ constraints:
   only_when_busy:
     dims: [connection, period]
     expression: sent <= at(at(busy, by=assignment[unit, period]), by=connection[unit])
+  idle_sends_nothing:
+    dims: [connection, period]
+    expression: sent <= at(sum(busy, over=assignment, by=assignment[unit, period]), by=connection[unit])
 ```
 
 ```math
 \mathit{sent}_{c,p} \le \mathit{busy}_{\left( p,\ \mathrm{connection.unit}(c) \right)} \qquad \forall\, c \in \mathcal{C},\ p \in \mathcal{P}
 ```
 
-`sent` has a column for every connection and period. `only_when_busy` has a
-row only where the unit of the connection has an assignment in that period,
-because `busy` is [absent](absence.md#how-absence-travels) elsewhere.
+```math
+\mathit{sent}_{c,p} \le \sum_{a \in \mathcal{A} \,:\, \mathrm{assignment.period}(a) = p \wedge \mathrm{assignment.unit}(a) = \mathrm{connection.unit}(c)} \mathit{busy}_{a} \qquad \forall\, c \in \mathcal{C},\ p \in \mathcal{P}
+```
+
+In `only_when_busy`, the absent `busy` stands outside any sum, so the entry
+has no row where the unit of the connection has no assignment in that period.
+Its rows are those of the inner join, and `sent` is free elsewhere. In
+`idle_sends_nothing`, the sum has no term there and is 0. The entry keeps every
+connection and period, which is the left join, and holds `sent` at 0 where
+nothing matches.
 
 The language has no outer join, which would keep the tuples of either
 dimension. Write such an entry over the members, as

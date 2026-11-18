@@ -563,6 +563,9 @@ class JoinColumns:
     and not grouped by is [`dropped`][], and one grouped by and not joined
     on is [`added`][], so the frame after the call is the operand's dims,
     less the dims joined on, plus the dims grouped by.
+
+    A call that [`spreads`][] is the exception: it joins on the key column,
+    which is the dimension, groups by every member, and keeps no key column.
     """
 
     name: str
@@ -1017,12 +1020,17 @@ class Footprint:
         domains: Every domain declared.
         sos_types: The order of each special-ordered set declared.
         kinds: Every expression node kind that appears in a row or a variable bound.
+        spreads: Every dimension a row or a variable bound reads at the
+            tuples of its members, as ``at(x, by=connection[unit, port])``
+            does. Such a read is a [`Join`][] among ``kinds``, and only this
+            field tells it from a lookup or a sum.
     """
 
     quadratic: frozenset[QuadraticPosition]
     domains: frozenset[VariableDomain]
     sos_types: frozenset[SosType]
     kinds: frozenset[type[Expression]]
+    spreads: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -1223,14 +1231,16 @@ class Program:
         adds no set order here; ask the program of
         ``spec.expand('piecewise')`` for its rows.
         """
-        bounds = (b for v in self.variables.values() for b in (v.lower, v.upper) if b is not None)
+        bounds = [b for v in self.variables.values() for b in (v.lower, v.upper) if b is not None]
+        nodes = list(walk(*self.roots, *bounds))
         return Footprint(
             quadratic=frozenset(
                 position for position, group in self._by_position() if any(is_quadratic(e) for e in group)
             ),
             domains=frozenset(v.domain for v in self.variables.values()),
             sos_types=frozenset(s.sos_type for s in self.sos.values()),
-            kinds=frozenset(type(node) for node in walk(*self.roots, *bounds)),
+            kinds=frozenset(type(node) for node in nodes),
+            spreads=frozenset(n.columns.name for n in nodes if isinstance(n, Join) and n.columns.spreads),
         )
 
     @cached_property

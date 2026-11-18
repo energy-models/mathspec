@@ -175,6 +175,10 @@ class ExpressionResolver:
             case _:
                 assert_never(node.op)
 
+    def refuse_dims(self, text: str) -> None:
+        """Append *text* as a dim rule's refusal, so the load raises a ``DimensionError`` where nothing else failed."""
+        self.errors.append(self.ns.refused_dims(DimensionError(text)))
+
     def met(self, left: Expression, right: Expression) -> bool:
         """Whether *left* and *right* meet a member against the dimension that lists it, the refusal appended."""
         try:
@@ -685,11 +689,17 @@ class ExpressionResolver:
                 f'at the key. Name one of the value columns, {list(shape.values)}, or sum through the key column.'
             )
             return None
-        if name in inner and not inner & {shape.dim(r) for r in shape.values}:
+        if self.spreads(columns, inner):
             return self._spread(columns, operand)
         matched = inner - {shape.dim(r) for r in columns.columns}
         into = tuple(r for r in shape.key if shape.dim(r) not in matched)
         return self._checked_join(name, call, columns.columns, into)
+
+    def spreads(self, columns: ColumnsNode, inner: frozenset[str]) -> bool:
+        """Whether ``at`` by *columns* spreads an operand carrying *inner*: it is over the dimension and over no member."""
+        shape = self.ns.relations[columns.relation]
+        members = {shape.dim(r) for r in shape.values}
+        return columns.relation in inner and not inner & members and set(columns.columns) <= set(shape.values)
 
     def _spread(self, columns: ColumnsNode, operand: Expression | None) -> JoinColumns | None:
         """How ``at`` spreads an operand over the dimension *columns* names onto the members of that dimension.
@@ -705,7 +715,7 @@ class ExpressionResolver:
         read = '...' if operand is None else operand_over((operand,), (name,), '')
         if left_out := [r for r in members if r not in columns.columns]:
             summed = f' To add up over {left_out}, write sum({read}, over={name}, by={columns}).'
-            self.errors.append(
+            self.refuse_dims(
                 f"{self.context}: {call} lists {list(columns.columns)} of the members {list(members)} of '{name}', "
                 f"and the operand is over '{name}'. List every member to read each tuple: "
                 f'at({read}, by={name}[{", ".join(members)}]).{"" if operand is None else summed}'
@@ -719,7 +729,7 @@ class ExpressionResolver:
                 if operand is None
                 else f'Sum to one of them: sum({read}, over={name}, by={name}[{roles[0]}])'
             )
-            self.errors.append(
+            self.refuse_dims(
                 f"{self.context}: {call}: the members {roles} of '{name}' are both over {twice[0]!r}, and a result "
                 f'carries a dimension once. {rewrite}.'
             )

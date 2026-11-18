@@ -20,7 +20,7 @@ from mathspec import merge, override, rename, to_spec
 from mathspec._advising import advice
 from mathspec._dimensions import sorted_dims
 from mathspec._typesetting import FORMATS, typeset
-from mathspec.errors import LanguageError
+from mathspec.errors import DimensionError, LanguageError, SchemaError
 from mathspec.program import Join, JoinedCondition, Relation, RelationComparison, RelationPairComparison, Sum
 from tests.fixtures import varied
 
@@ -296,7 +296,7 @@ CROSSED_EXPRESSION: dict[str, Any] = {
 }
 
 
-def _curve(y: str) -> dict[str, Any]:
+def _crossed_curve(y: str) -> dict[str, Any]:
     """A curve over `connection` and its member `unit`, whose `y` link reads *y*."""
     return {
         'parameters.xs': {'dims': ['period']},
@@ -488,7 +488,7 @@ def _rewrites(entry: dict[str, Any], note: str) -> list[dict[str, Any]]:
         ),
         pytest.param(
             'piecewise.curve',
-            _curve('z + v'),
+            _crossed_curve('z + v'),
             [
                 "piecewise 'curve': dims: lists 'connection' beside its member 'unit'",
                 'read v at each tuple: at(v, by=connection[unit])',
@@ -548,7 +548,7 @@ def test_check_advises_on_a_cross_product_and_each_rewrite_it_names_loads(path, 
             },
             id='a-given-parameter-over-both',
         ),
-        pytest.param('curve', _curve('y'), id='a-curve-that-reads-an-operand-over-both'),
+        pytest.param('curve', _crossed_curve('y'), id='a-curve-that-reads-an-operand-over-both'),
     ],
 )
 def test_no_cross_product_advice_where_the_entry_says_what_it_means(subject, patch):
@@ -604,7 +604,7 @@ def test_the_advice_follows_the_spec_a_verb_returns(patch, verb, fragment):
 
 def test_expand_advises_each_row_the_curve_writes():
     """`expand()` moves the note from the curve to the weights it writes, which its rows read over both."""
-    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **_curve('z + v')))
+    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **_crossed_curve('z + v')))
     written = {note.subject for note in advice(spec) if note.kind == 'cross-product'}
     expanded = {note.subject for note in advice(spec.expand()) if note.kind == 'cross-product'}
     assert expanded == written - {'curve'} | {'curve_lam', 'curve_seg'}, 'one note per weight variable, none per row'
@@ -666,44 +666,80 @@ def test_a_sum_by_every_member_still_adds_up():
 
 
 @pytest.mark.parametrize(
-    ('patch', 'entry', 'dims'),
+    ('patch', 'spreads'),
     [
         pytest.param(
-            _constraint('on_link <= at(capacity, by=link[unit])', ['link'])
-            | {'expressions.e': {'dims': ['port', 'unit'], 'expression': 'at(on_link, by=link[unit, side])'}},
-            'expressions.e',
-            ('port', 'unit'),
-            id='a-role-arrives-as-its-dimension',
+            _constraint('w <= at(flow, by=connection[unit, port])', ['unit', 'port', 'snapshot']),
+            {'connection'},
+            id='a-row',
         ),
         pytest.param(
-            _constraint('x <= at(at(y, by=assignment[unit, period]), by=connection[unit])', ['connection', 'period']),
-            'constraints.probe',
-            ('connection', 'period'),
+            {'variables.w.bounds.upper': 'at(limit, by=connection[unit, port])'}, {'connection'}, id='a-bound'
+        ),
+        pytest.param(
+            _constraint('w <= sum(flow, over=connection, by=connection[unit, port])', ['unit', 'port', 'snapshot']),
+            set(),
+            id='a-sum-by-every-member',
+        ),
+    ],
+)
+def test_the_footprint_names_each_dimension_a_row_spreads(patch, spreads):
+    """A spread is a `Join` in `footprint.kinds`, as a sum by every member is, so the kinds alone hid it from an engine."""
+    footprint = to_spec(varied(SPREAD, **patch)).program.footprint
+    assert footprint.spreads == spreads, 'the dimensions read at the tuples of their members'
+
+
+def _curve(x: str, x_dims: list[str], by: str | None = None) -> dict[str, Any]:
+    """A curve over `connection` whose link `x` reads *x* over `a`, which is over *x_dims*, walking *by* where given."""
+    link = {'expression': x, 'values': 'xs'} | ({'by': by} if by else {})
+    return {
+        'parameters.xs': {'dims': ['period']},
+        'parameters.ys': {'dims': ['period']},
+        'variables.a': {'dims': x_dims},
+        'variables.b': {'dims': ['connection']},
+        'piecewise.curve': {'dims': ['connection'], 'along': 'period', 'links': {'x': link, 'y': ['b', 'ys']}},
+    }
+
+
+@pytest.mark.parametrize(
+    ('expression', 'frame'),
+    [
+        pytest.param(
+            'x <= at(at(y, by=assignment[unit, period]), by=connection[unit])',
+            ['connection', 'period'],
             id='a-left-join-of-two-dimensions-that-share-a-member',
         ),
         pytest.param(
-            _constraint('sum(at(flow, by=connection[unit, port]), over=port) >= 0', ['unit', 'snapshot']),
-            'constraints.probe',
-            ('snapshot', 'unit'),
+            'sum(at(flow, by=connection[unit, port]), over=port) >= 0',
+            ['unit', 'snapshot'],
             id='a-sum-after-the-spread',
         ),
         pytest.param(
-            _constraint(
-                "shift(at(flow, by=connection[unit, port]), along=snapshot, offset=1, edge='wrap') <= w",
-                ['unit', 'port', 'snapshot'],
-            ),
-            'constraints.probe',
-            ('port', 'snapshot', 'unit'),
+            "shift(at(flow, by=connection[unit, port]), along=snapshot, offset=1, edge='wrap') <= w",
+            ['unit', 'port', 'snapshot'],
             id='a-shift-along-another-dimension',
         ),
         pytest.param(
-            _constraint(
-                'y >= at(shift(at(y, by=assignment[unit, period]), along=period, offset=1), by=assignment[unit, period])',
-                ['assignment'],
-            ),
-            'constraints.probe',
-            ('assignment',),
+            'y >= at(shift(at(y, by=assignment[unit, period]), along=period, offset=1), by=assignment[unit, period])',
+            ['assignment'],
             id='a-shift-along-a-member-read-back-at-each-tuple',
+        ),
+    ],
+)
+def test_a_spread_loads_in_a_constraint(expression, frame):
+    """Rule 6 of #1011: each of these was refused, as an `at` that joins on a member the operand lacks."""
+    row = to_spec(varied(SPREAD, **_constraint(expression, frame))).program.constraints['probe']
+    assert sorted_dims(row.lhs.dims, row.rhs.dims) == tuple(sorted(frame)), 'the row is over its dims: and no more'
+
+
+@pytest.mark.parametrize(
+    ('patch', 'read', 'dims'),
+    [
+        pytest.param(
+            {'expressions.e': {'dims': ['port', 'unit'], 'expression': 'at(on_link, by=link[unit, side])'}},
+            lambda program: program.expressions['e'].expression,
+            ('port', 'unit'),
+            id='a-role-arrives-as-its-dimension',
         ),
         pytest.param(
             {
@@ -712,7 +748,7 @@ def test_a_sum_by_every_member_still_adds_up():
                     'expression': 'at(flow, by=connection[unit, port])',
                 }
             },
-            'expressions.e',
+            lambda program: program.expressions['e'].expression,
             ('port', 'snapshot', 'unit'),
             id='a-named-expression',
         ),
@@ -724,61 +760,65 @@ def test_a_sum_by_every_member_still_adds_up():
                     'expression': 'at(e, by=connection[unit, port])',
                 },
             },
-            'expressions.f',
+            lambda program: program.expressions['f'].expression,
             ('port', 'snapshot', 'unit'),
             id='a-named-expression-as-the-operand',
         ),
         pytest.param(
+            {
+                'expressions.e': {
+                    'dims': ['unit', 'port', 'snapshot'],
+                    'cases': {'open': {'when': 'at(open, by=connection[unit, port])', 'expression': 'w'}},
+                    'otherwise': '0',
+                }
+            },
+            lambda program: program.expressions['e'].expression,
+            ('port', 'snapshot', 'unit'),
+            id='one-case-and-otherwise',
+        ),
+        pytest.param(
             {'variables.w.bounds.upper': 'at(limit, by=connection[unit, port])'},
-            'variables.w.upper',
+            lambda program: program.variables['w'].upper,
             ('port', 'unit'),
             id='a-bound',
         ),
         pytest.param(
             {'variables.w.where': 'at(open, by=connection[unit, port])'},
-            'variables.w.where',
+            lambda program: program.variables['w'].where,
             ('port', 'unit'),
             id='a-condition',
         ),
         pytest.param(
-            {
-                'parameters.xs': {'dims': ['period']},
-                'parameters.ys': {'dims': ['period']},
-                'variables.a': {'dims': ['unit', 'port']},
-                'variables.b': {'dims': ['connection']},
-                'piecewise.curve': {
-                    'dims': ['connection'],
-                    'along': 'period',
-                    'links': {'x': ['at(a, by=connection[unit, port])', 'xs'], 'y': ['b', 'ys']},
-                },
-            },
-            'variables.b.where',
-            None,
-            id='the-rewrite-of-a-piecewise-link-that-walks-the-dimension',
-        ),
-        pytest.param(
             {'variables.w.where': 'at(limit > 0, by=connection[port, unit])'},
-            'variables.w.where',
+            lambda program: program.variables['w'].where,
             ('port', 'unit'),
             id='a-comparison-in-a-condition',
         ),
+        pytest.param(
+            _curve('at(a, by=connection[unit, port])', ['unit', 'port']),
+            lambda program: program.piecewise['curve'].links[0].expression,
+            ('connection',),
+            id='the-rewrite-of-a-piecewise-link-that-names-every-member',
+        ),
+        pytest.param(
+            _curve('at(a, by=connection[unit])', ['unit']),
+            lambda program: program.piecewise['curve'].links[0].expression,
+            ('connection',),
+            id='the-rewrite-of-a-piecewise-link-that-names-one-member',
+        ),
     ],
 )
-def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
-    program = to_spec(varied(SPREAD, **patch)).program
-    section, name, *field = entry.split('.')
-    found = getattr(program, section)[name]
-    if section == 'constraints':
-        assert sorted_dims(found.lhs.dims, found.rhs.dims) == dims
-    elif dims is not None:
-        assert getattr(found, *field or ['expression']).dims == dims
+def test_a_spread_loads_in_an_entry_that_is_no_constraint(patch, read, dims):
+    """Rule 6 of #1011: a spread reads as a lookup does in every entry, and the rewrite a refused `by:` suggests loads."""
+    assert read(to_spec(varied(SPREAD, **patch)).program).dims == dims, 'the entry is over the dims the reads bring'
 
 
 @pytest.mark.parametrize(
-    ('patch', 'fragments'),
+    ('patch', 'error', 'fragments'),
     [
         pytest.param(
             _constraint('at(flow, by=connection[unit]) >= 0', ['unit', 'snapshot']),
+            DimensionError,
             (
                 "at(by=connection[unit]) lists ['unit'] of the members ['port', 'unit'] of 'connection'",
                 'at(flow, by=connection[port, unit])',
@@ -788,6 +828,7 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
         ),
         pytest.param(
             {'variables.w.where': 'at(open, by=connection[port])'},
+            DimensionError,
             (
                 "Variable 'w': at(by=connection[port]) lists ['port'] of the members ['port', 'unit']",
                 'at(..., by=connection[port, unit])',
@@ -796,6 +837,7 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
         ),
         pytest.param(
             _constraint('at(shipped, by=trade[src, dst]) >= 0', ['region']),
+            DimensionError,
             (
                 "at(by=trade[src, dst]): the members ['dst', 'src'] of 'trade' are both over 'region'",
                 'sum(shipped, over=trade, by=trade[dst])',
@@ -804,11 +846,13 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
         ),
         pytest.param(
             _constraint('at(both, by=connection[unit, port]) >= 0', ['unit', 'port']),
+            DimensionError,
             ("carries both 'connection' and its member ['unit']", "Sum ['unit'] out of the operand first"),
             id='an-operand-with-the-dimension-and-a-member',
         ),
         pytest.param(
             _constraint('w <= flow', ['unit', 'port', 'snapshot']),
+            DimensionError,
             (
                 "an operand over ['port', 'unit'] meets one over 'connection'",
                 'at(w, by=connection[port, unit])',
@@ -818,47 +862,55 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
         ),
         pytest.param(
             _constraint('flow >= 0', ['unit', 'port', 'snapshot']),
+            DimensionError,
             ("carries dims ['connection'] that are not in its dims", 'at(flow, by=connection[port, unit])'),
             id='a-constraint-over-the-members-reads-the-dimension',
         ),
         pytest.param(
             {'expressions.e': {'dims': ['unit', 'port', 'snapshot'], 'expression': '2 * flow'}},
+            DimensionError,
             ("the body carries dims ['connection']", 'at(flow, by=connection[port, unit])'),
             id='a-named-expression-over-the-members-reads-the-dimension',
         ),
         pytest.param(
             {'variables.w.bounds.upper': 'limit'},
+            DimensionError,
             ("parameter 'limit' has dims ['connection'] outside", 'at(limit, by=connection[port, unit])'),
             id='a-bound-over-the-dimension',
         ),
         pytest.param(
             {'variables.w.where': 'open'},
+            DimensionError,
             ("reads dims ['connection'] outside the declared dims", 'at(open, by=connection[port, unit])'),
             id='a-where-over-the-dimension',
         ),
         pytest.param(
-            {
-                'parameters.xs': {'dims': ['period']},
-                'parameters.ys': {'dims': ['period']},
-                'variables.a': {'dims': ['unit', 'port']},
-                'variables.b': {'dims': ['connection']},
-                'piecewise.curve': {
-                    'dims': ['connection'],
-                    'along': 'period',
-                    'links': {
-                        'x': {'expression': 'a', 'values': 'xs', 'by': 'connection[unit, port]'},
-                        'y': ['b', 'ys'],
-                    },
-                },
-            },
+            _curve('a', ['unit', 'port'], 'connection[unit, port]'),
+            DimensionError,
             (
-                "piecewise 'curve' link 'x': by: connection[unit, port] spreads the curve over the members",
+                "piecewise 'curve' link 'x': by: connection[unit, port] names members of 'connection'",
                 'at(<expression>, by=connection[unit, port])',
             ),
-            id='a-piecewise-link-that-walks-the-dimension',
+            id='a-piecewise-link-that-walks-every-member',
+        ),
+        pytest.param(
+            _curve('a', ['unit'], 'connection[unit]'),
+            DimensionError,
+            (
+                "piecewise 'curve' link 'x': by: connection[unit] names members of 'connection'",
+                'at(<expression>, by=connection[unit])',
+            ),
+            id='a-piecewise-link-that-walks-one-member',
+        ),
+        pytest.param(
+            _curve('a', ['connection'], 'connection[connection]'),
+            SchemaError,
+            ("at(by=connection[connection]) names ['connection'], a key column of 'connection'",),
+            id='a-piecewise-link-that-walks-the-key',
         ),
         pytest.param(
             _constraint('at(flow, by=connection_bus[bus]) >= 0', ['bus', 'snapshot']),
+            DimensionError,
             ("at(by=connection_bus[bus]) joins on ['bus']", 'use sum() instead'),
             id='a-relation-keyed-by-the-dimension-is-no-spread',
         ),
@@ -867,6 +919,7 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
                 "shift(at(flow, by=connection[unit, port]), along=connection, offset=1, edge='wrap') >= 0",
                 ['unit', 'port', 'snapshot'],
             ),
+            SchemaError,
             ("shift(along=connection) reads the order of 'connection'",),
             id='a-shift-along-the-dimension',
         ),
@@ -881,6 +934,7 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
                     'otherwise': '0',
                 }
             },
+            SchemaError,
             (
                 "cases 'open' and 'shut' cannot be told apart before the data arrives",
                 "at(by=connection[port, unit]) is true only where 'connection' lists the tuple",
@@ -888,12 +942,42 @@ def test_a_spread_loads_wherever_a_lookup_does(patch, entry, dims):
             ),
             id='a-spread-in-two-cases',
         ),
+        pytest.param(
+            {
+                'conditions.is_open': {'condition': 'at(open, by=connection[unit, port])'},
+                'expressions.e': {
+                    'dims': ['unit', 'port', 'snapshot'],
+                    'cases': {
+                        'open': {'when': 'is_open', 'expression': 'w'},
+                        'shut': {'when': 'not is_open', 'expression': '2 * w'},
+                    },
+                    'otherwise': '0',
+                },
+            },
+            SchemaError,
+            (
+                "cases 'open' and 'shut' cannot be told apart before the data arrives",
+                "at(by=connection[port, unit]) is true only where 'connection' lists the tuple",
+            ),
+            id='a-spread-in-two-cases-through-a-named-condition',
+        ),
     ],
 )
-def test_a_spread_that_does_not_load_is_refused_with_the_rewrite(patch, fragments):
-    message = _spread_refusal(**patch)
+def test_a_spread_that_does_not_load_is_refused_with_the_rewrite(patch, error, fragments):
+    """A refusal names the rewrite, and its class says whether a dim rule refused it."""
+    with pytest.raises(LanguageError) as caught:
+        to_spec(varied(SPREAD, **patch))
+    assert type(caught.value) is error, f'{error.__name__}, the class a dim rule or the language raises here'
     for fragment in fragments:
-        assert fragment in message
+        assert fragment in str(caught.value), f'the refusal says {fragment!r}'
+
+
+@pytest.mark.parametrize('frame', [['connection', 'snapshot'], ['unit', 'snapshot']])
+def test_an_operand_meets_the_dimension_and_no_spread_is_advised_outside_dims(frame):
+    """The meeting advised `at(flow, by=connection[port, unit])` even where dims: lacks a member, which is refused next."""
+    message = _spread_refusal(**_constraint('w <= flow', frame))
+    assert "meets one over 'connection'" in message, 'the meeting is refused'
+    assert 'at(flow, by=' not in message, 'no spread onto members that dims: does not declare'
 
 
 @pytest.mark.parametrize('fmt', FORMATS)
@@ -913,6 +997,25 @@ def test_a_spread_prints_the_tuple_as_the_index(fmt):
             FORMATS[fmt].upright(name) if name == 'open' else FORMATS[fmt].italic(name), [index]
         )
         assert read in printed, f'{fmt} reads {name} at the tuple of its members, in the order the legend lists them'
+
+
+@pytest.mark.parametrize('fmt', FORMATS)
+def test_a_member_read_inside_a_spread_prints_as_the_index_of_the_member(fmt):
+    """A gather inside a spread printed `capacity_{connection.unit((p, u))}`, which is `capacity_u`."""
+    spec = varied(
+        FRAGMENT,
+        **{
+            'parameters.capacity': {'dims': ['unit']},
+            'variables.w': {'dims': ['unit', 'port']},
+            'constraints.probe': {
+                'dims': ['unit', 'port'],
+                'expression': 'w <= at(flow * at(capacity, by=connection[unit]), by=connection[unit, port])',
+            },
+        },
+    )
+    printed = typeset(to_spec(spec), fmt)
+    out = FORMATS[fmt]
+    assert out.subscript(out.upright('capacity'), ['u']) in printed, f'{fmt} reads capacity at the unit of the tuple'
 
 
 @pytest.mark.parametrize(

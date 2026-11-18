@@ -153,10 +153,15 @@ $`\mathrm{zone\_cap} \circ f`$, which is a **pullback**: the value of
 `zone_cap` at $`f(g, t)`$.
 
 That one term is the difference between `at` and `sum`, and mathspec decides
-the difference at load from the key alone. Where the columns a call groups by
+the difference at load from the call alone. Where the columns a call groups by
 include the whole key, every group is one row. An `at` is evaluated at the
-whole key, so each of its groups is always one row. A `sum` with one row per
-group adds up nothing, so mathspec refuses it, and the message suggests `at`.
+whole key, so each of its groups is always one row. On an operand over a
+dimension with members, `at` by every member groups by the members instead.
+The members of a tuple identify it, so a group is at most one row. A `sum`
+with one row per group adds up nothing, so mathspec refuses it, and the
+message suggests `at`. The sum by every member loads, because it is 0 where
+`at` is absent
+([relations](../reference/language/relations.md#sums-through-a-relation)).
 
 The two maps are **adjoint**. The sum of elementwise products (the inner
 product) does not change when the matrix moves to the other side, flipped

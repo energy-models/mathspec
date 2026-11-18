@@ -140,21 +140,38 @@ class _Context:
     are outermost first, the order they apply to the index — the outer shift of
     ``shift(shift(x, offset=a), offset=b)`` moves ``t`` to ``t - b``, and the inner one
     reads ``x`` from there.
+
+    ``tuples`` holds, per dimension a spread read at a tuple, that tuple's
+    text and the index of each member in it.
     """
 
     walk: Walk
     offsets: dict[str, tuple[_Step, ...]] = field(default_factory=dict)
     lookups: dict[str, str] = field(default_factory=dict)
     bound: tuple[str, ...] = ()
+    tuples: dict[str, tuple[str, dict[str, str]]] = field(default_factory=dict)
 
     def translated(self, dim: str, step: _Step) -> _Context:
         steps = self.offsets.get(dim, ())
         merged = steps[-1].merged(step) if steps else None
         steps = (*steps[:-1], merged) if merged is not None else (*steps, step)
-        return _Context(self.walk, {**self.offsets, dim: steps}, self.lookups, self.bound)
+        return replace(self, offsets={**self.offsets, dim: steps})
 
     def looked_up(self, dim: str, rendered: str) -> _Context:
-        return _Context(self.walk, self.offsets, {**self.lookups, dim: rendered}, self.bound)
+        return replace(self, lookups={**self.lookups, dim: rendered})
+
+    def spread(self, dim: str, members: dict[str, str]) -> _Context:
+        """*dim* read at the tuple of *members*, each member role's index: ``(p, u)``."""
+        text = self.walk.format.parenthesise(self.walk.format.joined(list(members.values()), ''))
+        return replace(self, lookups={**self.lookups, dim: text}, tuples={**self.tuples, dim: (text, members)})
+
+    def member(self, dim: str, at: Mapping[str, str], read: str) -> str | None:
+        """The index of member *read* where *at* reads *dim* at the tuple a spread fixed, else ``None``.
+
+        ``connection.unit((p, u))`` is ``u``, and the equation shows it so.
+        """
+        text, members = self.tuples.get(dim, ('', {}))
+        return members.get(read) if text and at.get(dim) == text else None
 
     def reducing(self, dim: str) -> tuple[str, _Context]:
         """A dummy index for a reduction over *dim*, and the context its body reads under.
@@ -165,7 +182,7 @@ class _Context:
         """
         primes = "'" * self.bound.count(dim)
         dummy = f'{self.walk.symbols.index[dim]}{primes}'
-        body = _Context(self.walk, self.offsets, {**self.lookups, dim: dummy}, (*self.bound, dim))
+        body = replace(self, lookups={**self.lookups, dim: dummy}, bound=(*self.bound, dim))
         return dummy, body
 
     def subscript(self, dim: str) -> str:
@@ -458,10 +475,10 @@ class Walk:
         """
         at = {r: ctx.subscript(columns.dim(r)) for r in columns.grouped}
         if columns.spreads:
-            members = self.format.joined([at[r] for r in columns.grouped], '')
-            return ctx.looked_up(columns.name, self.format.parenthesise(members))
+            return ctx.spread(columns.name, at)
         for read in columns.dropped:
-            ctx = ctx.looked_up(columns.dim(read), self._relation_read(columns.name, at, read))
+            rendered = ctx.member(columns.name, at, read) or self._relation_read(columns.name, at, read)
+            ctx = ctx.looked_up(columns.dim(read), rendered)
         return ctx
 
     def _grouping(self, join: JoinColumns, dummies: Mapping[str, str], ctx: _Context) -> list[str]:
