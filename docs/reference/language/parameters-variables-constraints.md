@@ -551,6 +551,12 @@ Under [`missing: absent`](relations.md#missing) on `technology_of`, a unit
 with no row has no technology. That unit has no upper bound, as under
 [`missing: absent`](absence.md#missing-on-a-parameter) on `capacity`.
 
+A bound may also read a parameter over a dimension that lists its members
+[by every member](operators.md#at-by-the-members-of-a-dimension), as
+`at(rating, by=connection[unit, port])` on a variable over `unit` and `port`.
+The variable has no bound on that side at a unit and a port that the dimension
+does not list together.
+
 A looked-up bound, like a parameter bound, is over the dimensions of the
 variable or fewer. With `dims: [snapshot]` on `dispatch`, the lookup adds
 `unit`, and mathspec prints:

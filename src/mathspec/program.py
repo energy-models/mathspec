@@ -563,11 +563,6 @@ class JoinColumns:
     and not grouped by is [`dropped`][], and one grouped by and not joined
     on is [`added`][], so the frame after the call is the operand's dims,
     less the dims joined on, plus the dims grouped by.
-
-    ``spreads`` is true only for ``at(x, by=connection[unit, port])`` on an
-    operand over ``connection``, a dimension with members. The call joins on
-    the dimension and groups by every member. A tuple of member labels is at
-    most one label of the dimension, so each group is at most one row.
     """
 
     name: str
@@ -575,6 +570,10 @@ class JoinColumns:
     joined: tuple[str, ...]
     grouped: tuple[str, ...]
     spreads: bool = False
+    """Whether the call is ``at(x, by=connection[unit, port])`` on an operand over ``connection``, a dimension with members.
+    The call joins on the dimension and groups by every member. A tuple of member labels is at most one label of the
+    dimension, so each group is at most one row, and the result is absent where the dimension has no such label.
+    """
 
     def dim(self, role: str) -> str:
         """The dimension *role* ranges over."""

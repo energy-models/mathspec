@@ -151,6 +151,66 @@ f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{line\_bus}(l)} \qquad \
 `at` removes the column in `by=`, `bus`, and adds the key, `line`, so `build`
 is read once per line.
 
+### `at` by the members of a dimension
+
+On an expression over a dimension that lists its
+[members](dimensions.md#over), `at` by every member takes the value of each
+tuple at the labels of its members. `at` adds nothing up here either. The
+dimension goes, and each member arrives as its own dimension:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  connection: { over: [unit, port] }
+variables:
+  flow: { dims: [connection], bounds: { lower: 0 } }
+  metered: { dims: [unit, port], bounds: { lower: 0 } }
+constraints:
+  meter:
+    dims: [unit, port]
+    expression: metered == at(flow, by=connection[unit, port])
+objective: { sense: minimize, expression: sum(metered) }
+```
+
+```math
+\mathit{metered}_{p,u} = \mathit{flow}_{\left( p,\ u \right)} \qquad \forall\, p \in \mathcal{P},\ u \in \mathcal{U}
+```
+
+<figure class="diagram">
+--8<-- "docs/static/operators-at-members.svg"
+</figure>
+
+With three connections of data, the unit `u2` has no port `in`. The result
+of `at` is [absent](absence.md#how-absence-travels) there, so `meter` has no
+row for `u2` and `in`. The `sum` by the same columns has a row there, and its
+value is `0`.
+
+`by=` lists every member, in any order. With
+`sum(metered, over=port) == at(flow, by=connection[unit])` over `[unit]`,
+mathspec prints:
+
+```text
+Constraint 'meter': at(by=connection[unit]) lists ['unit'] of the members ['port', 'unit'] of 'connection', and the operand is over 'connection'. List every member to read each tuple: at(flow, by=connection[port, unit]). To add up over ['port'], write sum(flow, over=connection, by=connection[unit]).
+```
+
+mathspec suggests both rewrites: the full list, or the sum to the one member.
+
+A member arrives as the dimension that it is over, and an expression has a
+dimension once. So mathspec refuses the call on a dimension with two members
+over one dimension. With `trade: { over: { source: region, target: region } }`
+and `moved` over `[trade]`, mathspec prints:
+
+```text
+Constraint 'meter': at(by=trade[source, target]): the members ['source', 'target'] of 'trade' are both over 'region', and a result carries a dimension once. Sum to one of them: sum(moved, over=trade, by=trade[source]).
+```
+
+mathspec suggests the sum to one of the two members.
+
+The same call on an expression over the members has the result of every other
+`at`: it [takes the value at the members of each tuple](dimensions.md#the-relation-of-the-dimension),
+and the result is over the dimension.
+
 ## `shift`
 
 `shift` takes the value of an expression a number of positions earlier along

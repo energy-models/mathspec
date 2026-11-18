@@ -707,7 +707,7 @@ class ExpressionResolver:
             summed = f' To add up over {left_out}, write sum({read}, over={name}, by={columns}).'
             self.errors.append(
                 f"{self.context}: {call} lists {list(columns.columns)} of the members {list(members)} of '{name}', "
-                f"and the operand is over '{name}'. at() reads a tuple at every member: "
+                f"and the operand is over '{name}'. List every member to read each tuple: "
                 f'at({read}, by={name}[{", ".join(members)}]).{"" if operand is None else summed}'
             )
             return None

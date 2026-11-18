@@ -230,6 +230,13 @@ over. A `Join` under a sum through a relation has the dimensions of that sum.
 A `Join` also opens an index per dropped column (an `Axis`). An axis is not a dimension and is not in `dims`. An
 `ExpressionReference` has the dimensions of its body.
 
+A `Join` whose `columns.spreads` is true is
+[`at` by the members of a dimension](language/operators.md#at-by-the-members-of-a-dimension).
+It joins on the dimension, groups by every member, and opens no axis. A tool
+gives it one row for each label of the dimension, at the member labels of that
+label. With data attached, the result is absent at every other combination of
+member labels, and a `JoinedCondition` with such columns is false there.
+
 The order of `dimensions:` and the order of an entry's `dims:` do not change
 a node's `dims`. An entry that declares `dims: [snapshot, generator]` has
 `program.expressions[name].dims == ('generator', 'snapshot')`, and each

@@ -226,9 +226,14 @@ reads any relation column:
 | ------------------------------------------------- | ----------------------------------------------------------- |
 | `at(capacity, by=connection[unit])`               | the capacity of the unit of each connection                 |
 | `at(rating, by=connection[unit, port])`           | `rating`, a parameter over `unit` and `port`, at each tuple |
+| `at(flow, by=connection[unit, port])`             | `flow` at each unit and port that the dimension lists       |
 | `sum(flow, over=connection, by=connection[port])` | the flows of each port, added over its connections          |
 | `where: "connection[unit] == 'u1'"`               | the connections of the unit `u1`                            |
 | `where: "at(active, by=connection[unit])"`        | the connections whose unit is in the condition `active`     |
+
+The last `at` is on an operand over `connection`, so the dimension goes and
+its members arrive
+([`at` by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)).
 
 mathspec refuses a relation under `relations:` with the name of a dimension,
 so the file does not declare this relation a second time. A fact about a tuple
@@ -278,21 +283,50 @@ tuple that the dimension does not list. A
 
 At load, mathspec also refuses each of these, and prints the rewrite:
 
-| Refused                                                                                         | What you write instead                                                    |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| a member that has members of its own                                                            | the members themselves, in one list                                       |
-| a dimension twice in the list form, as in `over: [region, region]`                              | the mapping form, with a name for each member                             |
-| a member named after a dimension that it is not over                                            | another name for the member                                               |
-| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                           | the key on a member                                                       |
-| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension        | an entry over the members, with `where:` a relation that lists the tuples |
-| a comparison of the dimension with a label, as in `connection == 'a'`                           | a comparison of a member, as in `connection[unit] == 'u1'`                |
-| a call through the relation of the dimension on an operand over both the dimension and a member | the member summed out of the operand first                                |
+| Refused                                                                                         | What you write instead                                               |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| a member that has members of its own                                                            | the members themselves, in one list                                  |
+| a dimension twice in the list form, as in `over: [region, region]`                              | the mapping form, with a name for each member                        |
+| a member named after a dimension that it is not over                                            | another name for the member                                          |
+| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                           | the key on a member                                                  |
+| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension        | the construct along an ordered member, as described below this table |
+| a comparison of the dimension with a label, as in `connection == 'a'`                           | a comparison of a member, as in `connection[unit] == 'u1'`           |
+| a call through the relation of the dimension on an operand over both the dimension and a member | the member summed out of the operand first                           |
 
-A set of tuples with an ordered member, such as the periods in which each unit
-is active, therefore stays a [bare relation](relations.md) over `unit` and
-`period`. An entry over `unit` and `period` uses it as `where: active`, and an
-entry over `connection` and `period` reads it as
-`where: "at(active, by=connection[unit])"`.
+A tuple has no order, and a member can declare one. `shift` and `sum_back`
+step along an ordered member of an operand that
+[`at` has moved to the members](operators.md#at-by-the-members-of-a-dimension).
+A second `at` reads the result back at each tuple. Here `assignment` lists the
+periods in which each unit is active, and `carry` reads the level of the same
+unit one period earlier:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  period: { dtype: int, ordered: true }
+  assignment: { over: [unit, period] }
+variables:
+  level: { dims: [assignment], bounds: { lower: 0 } }
+  charge: { dims: [assignment], bounds: { lower: 0 } }
+constraints:
+  carry:
+    dims: [assignment]
+    expression: level == at(shift(at(level, by=assignment[unit, period]), along=period, offset=1), by=assignment[unit, period]) + charge
+```
+
+```math
+\mathit{level}_{a} = \mathit{level}_{\left( \mathrm{assignment.period}(a) - 1,\ \mathrm{assignment.unit}(a) \right)} + \mathit{charge}_{a} \qquad \forall\, a \in \mathcal{A}
+```
+
+`carry` has no row for an assignment whose unit has no assignment one period
+earlier, because the shifted level is
+[absent](absence.md#how-absence-travels) there.
+
+`position`, `piecewise:` and `sos:` take no operand that `at` can move. An
+entry that uses one of them along a member is over the members, and the set
+of tuples is a [bare relation](relations.md) over `unit` and `period`. Such an
+entry uses the relation as `where: active`, and an entry over `connection` and
+`period` reads it as `where: "at(active, by=connection[unit])"`.
 
 ### Two dimensions that share a member
 
@@ -326,8 +360,37 @@ mathspec reads each side through the relation of its own dimension, and the
 \mathit{sent}_{c} + \mathit{busy}_{a} \le 1 \qquad \forall\, a \in \mathcal{A},\ c \in \mathcal{C} \,:\, \mathrm{connection.unit}(c) = \mathrm{assignment.unit}(a)
 ```
 
-The language has no left join, which would also keep a connection whose unit
-has no assignment, and no outer join. Write such an entry over the members, as
+The left join also keeps a connection whose unit has no assignment. It is an
+entry over `connection` and `period` that reads `busy` in two steps. The
+inner `at` moves `busy` from `assignment` to its members, and the outer `at`
+reads the result at the unit of each connection:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+  connection: { over: [unit, port] }
+  assignment: { over: [unit, period] }
+variables:
+  sent: { dims: [connection, period] }
+  busy: { dims: [assignment] }
+constraints:
+  only_when_busy:
+    dims: [connection, period]
+    expression: sent <= at(at(busy, by=assignment[unit, period]), by=connection[unit])
+```
+
+```math
+\mathit{sent}_{c,p} \le \mathit{busy}_{\left( p,\ \mathrm{connection.unit}(c) \right)} \qquad \forall\, c \in \mathcal{C},\ p \in \mathcal{P}
+```
+
+`sent` has a column for every connection and period. `only_when_busy` has a
+row only where the unit of the connection has an assignment in that period,
+because `busy` is [absent](absence.md#how-absence-travels) elsewhere.
+
+The language has no outer join, which would keep the tuples of either
+dimension. Write such an entry over the members, as
 `dims: [unit, port, period]`, with the two sets of tuples as the bare
 relations `plugged` over `[unit, port]` and `active` over `[unit, period]`.
 Then `where: "plugged OR active"` keeps the rows of either.

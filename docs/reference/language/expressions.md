@@ -261,6 +261,7 @@ dimensions of every expression. Each part of an expression (a node) has a set of
 | `sum(x, over=d)`                 | `dims(x) − {d}`                | `d ∉ dims(x)`                                                                                                                                |
 | `sum(x, over=d, by=l[c])`        | `(dims(x) − joined) ∪ grouped` | a refusal under [how a relation is used](relations.md#how-a-relation-is-used) applies                                                        |
 | `at(x, by=l[c])`                 | `(dims(x) − joined) ∪ grouped` | the same refusals apply                                                                                                                      |
+| `at(x, by=d[m, …])`              | `(dims(x) − {d}) ∪ members(d)` | `d ∈ dims(x)` lists [members](operators.md#at-by-the-members-of-a-dimension), and `by=` leaves one out or two are over one dimension         |
 | `shift(x, along=d, offset=n)`    | `dims(x)`                      | `d ∉ dims(x)`                                                                                                                                |
 | `sum_back(x, along=d, window=n)` | `dims(x)`                      | `d ∉ dims(x)`                                                                                                                                |
 
@@ -521,6 +522,14 @@ relation, `flow`. So the condition is over `flow` alone, which is the frame of
 
 `by=` lists one value column, or several as `relation[a, …]`, and every other
 rule of [`at` in an expression](relations.md#lookups) applies.
+
+On a condition over a dimension that lists its members, `at` by every member
+reads the condition at each tuple, as
+[`at` by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)
+reads an expression. With `connection: { over: [unit, port] }` and a boolean
+parameter `open` over `[connection]`, `where: "at(open, by=connection[unit, port])"`
+is over `unit` and `port`. It is **false** at a unit and a port that the
+dimension does not list together.
 
 !!! info "See also"
 

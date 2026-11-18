@@ -370,6 +370,15 @@ def test_a_sum_by_every_member_still_adds_up():
             id='a-shift-along-another-dimension',
         ),
         pytest.param(
+            _constraint(
+                'y >= at(shift(at(y, by=assignment[unit, period]), along=period, offset=1), by=assignment[unit, period])',
+                ['assignment'],
+            ),
+            'constraints.probe',
+            ('assignment',),
+            id='a-shift-along-a-member-read-back-at-each-tuple',
+        ),
+        pytest.param(
             {
                 'expressions.e': {
                     'dims': ['unit', 'port', 'snapshot'],
