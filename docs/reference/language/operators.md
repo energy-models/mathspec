@@ -153,10 +153,10 @@ is read once per line.
 
 ### `at` by the members of a dimension
 
-On an expression over a dimension that lists its
-[members](dimensions.md#over), `at` by every member takes the value of each
-tuple at the labels of its members. `at` adds nothing up here either. The
-dimension goes, and each member arrives as its own dimension:
+A dimension can list its [members](dimensions.md#over). On an expression over
+such a dimension, `at` by every member takes the value of each tuple at the
+labels of its members. `at` adds nothing up here either. The dimension goes,
+and each member arrives as its own dimension:
 
 ```yaml
 dimensions:
@@ -207,8 +207,8 @@ Constraint 'meter': at(by=trade[source, target]): the members ['source', 'target
 
 mathspec suggests the sum to one of the two members.
 
-The same call on an expression over the members has the result of every other
-`at`: it [takes the value at the members of each tuple](dimensions.md#the-relation-of-the-dimension),
+On an expression over the members, the same call is a lookup like any other.
+It [takes the value at the members of each tuple](dimensions.md#the-relation-of-the-dimension),
 and the result is over the dimension.
 
 ## `shift`
