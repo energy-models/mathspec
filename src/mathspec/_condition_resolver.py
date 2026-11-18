@@ -829,8 +829,9 @@ def _relation_pair_error(
         keyed = f"('{names[0]}' by {sorted(keys[0])}, '{names[1]}' by {sorted(keys[1])})"
         if not frame:
             return (
-                f'{context}: {comparison} compares relations keyed over different dimensions {keyed}. Compare '
-                f'relations whose keys are over the same dimensions.'
+                f'{context}: {comparison} compares relations keyed over different dimensions {keyed}, and a '
+                f'condition has no dims:. Write the comparison in the where: of an entry whose dims: lists the '
+                f'keys of {_listed(list(names))}.'
             )
         outside = sorted((keys[0] | keys[1]) - frame)
         inside = [name for name, key in zip(names, keys, strict=True) if key <= frame]
