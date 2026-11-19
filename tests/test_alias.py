@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 import yaml
 
-from mathspec import to_spec, typeset
+from mathspec import advice, to_spec, typeset
 from mathspec.errors import LanguageError
 from tests.fixtures import SMALL_MODEL, varied
 
@@ -117,3 +117,24 @@ def test_a_sum_inside_an_entry_over_the_alias_takes_an_index_of_its_own():
         )
     )
     assert "w_{g',g''}" in typeset(spec, 'markdown'), 'the inner sum takes g, primed past the alias'
+
+
+#: `from_h` is an alias of `h`, and no relation and no entry other than `p` is over either.
+ALIASED_H: dict[str, Any] = varied(
+    SMALL_MODEL, relations={}, variables={'p': {'dims': ['g']}}, **{'dimensions.from_h': {'alias': 'h'}}
+)
+
+
+@pytest.mark.parametrize(
+    ('patch', 'unused'),
+    [
+        pytest.param({}, ['from_h', 'h'], id='nothing-uses-the-alias'),
+        pytest.param({'variables.w': {'dims': ['from_h']}}, [], id='an-entry-is-over-the-alias'),
+    ],
+)
+def test_the_relation_an_alias_implies_reaches_no_dimension(patch: dict[str, Any], unused: list[str]):
+    """An alias nothing used drew no advice: the relation it implies counted as a column over both dimensions."""
+    notes = advice(varied(ALIASED_H, **patch))
+    assert [n.subject for n in notes if n.kind == 'never-an-axis'] == unused, (
+        'an unused alias is advised, and an alias in use reaches the dimension whose labels it has'
+    )
