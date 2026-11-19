@@ -196,16 +196,10 @@ Constraint 'meter': at(by=connection[unit]) lists ['unit'] of the members ['port
 
 mathspec suggests both rewrites: the full list, or the sum to the one member.
 
-A member arrives as the dimension that it is over, and an expression has a
-dimension once. So mathspec refuses the call on a dimension with two members
-over one dimension. With `trade: { over: { source: region, target: region } }`
-and `moved` over `[trade]`, mathspec prints:
-
-```text
-Constraint 'meter': at(by=trade[source, target]): the members ['source', 'target'] of 'trade' are both over 'region', and a result carries a dimension once. Sum to one of them: sum(moved, over=trade, by=trade[source]).
-```
-
-mathspec suggests the sum to one of the two members.
+A member arrives as its own dimension. A dimension that lists one set twice
+lists an [alias](dimensions.md#alias) beside it, as
+`trade: { over: [from_region, region] }`, so
+`at(moved, by=trade[from_region, region])` is over `from_region` and `region`.
 
 On an expression over the members, the same call is a lookup like any other.
 It [takes the value at the members of each tuple](dimensions.md#the-relation-of-the-dimension),

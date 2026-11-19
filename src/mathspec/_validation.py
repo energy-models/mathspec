@@ -273,8 +273,9 @@ def _shared_member(
     return (
         f"{entry} lists '{one}' and '{other}' in dims:, which share {_quoted(shared)}. A dimension with members is "
         f'opaque, so the entry would pair every {one} with every {other}, whatever their {" and ".join(shared)}. '
-        f'Write the entry over the members, dims: [{", ".join(flat)}], with where: a relation keyed by '
-        f'[{", ".join(sorted(members[one]))}] and one keyed by [{", ".join(sorted(members[other]))}]; or, if every '
+        f'Write the entry over the members, dims: [{", ".join(flat)}], and spread each operand onto them: '
+        f'at(<operand>, by={one}[{", ".join(sorted(members[one]))}]) and '
+        f'at(<operand>, by={other}[{", ".join(sorted(members[other]))}]); or, if every '
         f'pair is meant, let {other} hold an alias of {_quoted(shared)}: {aliases}, and {other}: '
         f'{{over: [{", ".join(renamed)}]}}.'
     )

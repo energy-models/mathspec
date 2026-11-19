@@ -393,33 +393,8 @@ constraints:
 ```
 
 ```text
-Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], with where: a relation keyed by [period, unit] and one keyed by [port, unit]; or, if every pair is meant, let connection hold an alias of 'unit': connection_unit: {alias: unit}, and connection: {over: [connection_unit, port]}.
+Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], and spread each operand onto them: at(<operand>, by=assignment[period, unit]) and at(<operand>, by=connection[port, unit]); or, if every pair is meant, let connection hold an alias of 'unit': connection_unit: {alias: unit}, and connection: {over: [connection_unit, port]}.
 ```
-
-The join is an entry over the members. Each set of tuples is then a
-[bare relation](relations.md), and the `where:` tests both:
-
-```yaml
-dimensions:
-  unit: { dtype: str }
-  port: { dtype: str }
-  period: { dtype: int, ordered: true }
-relations:
-  plugged: { key: [unit, port], missing: absent }
-  active: { key: [unit, period], missing: absent }
-variables:
-  sent: { dims: [unit, port], where: plugged }
-  busy: { dims: [unit, period], where: active }
-constraints:
-  exclusive:
-    dims: [unit, port, period]
-    where: plugged AND active
-    expression: sent + busy <= 1
-```
-
-`exclusive` has a row for each unit, port and period where the unit has both
-the port and the period, which is the join on `unit`. The language has no
-outer join, which would also keep a connection whose unit has no assignment.
 
 Where every pair is meant, as when each supply ships to each demand of any
 region, each side holds its own [alias](#alias) of the shared dimension. The
@@ -450,6 +425,46 @@ Constraint 'cap' lists 'connection' and its member 'unit' in dims:. 'connection'
 Two dimensions that share no member, such as `connection` and a
 `scenario_year` over `[scenario, year]`, share an entry: their cross product
 pairs no two tuples that disagree.
+
+### Joins
+
+An entry over the members states a join of two dimensions that share one.
+`at` spreads each operand onto the members, and is
+[absent](absence.md#how-absence-travels) where its dimension lists no tuple.
+So the row of `exclusive` exists only where both spreads exist, which is the
+inner join on `unit`:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+  connection: { over: [unit, port] }
+  assignment: { over: [unit, period] }
+variables:
+  sent: { dims: [connection] }
+  busy: { dims: [assignment] }
+constraints:
+  exclusive:
+    dims: [unit, port, period]
+    expression: at(sent, by=connection[unit, port]) + at(busy, by=assignment[unit, period]) <= 1
+```
+
+```math
+\mathit{sent}_{\left( o,\ u \right)} + \mathit{busy}_{\left( p,\ u \right)} \le 1 \qquad \forall\, p \in \mathcal{P},\ o \in \mathcal{O},\ u \in \mathcal{U}
+```
+
+Where the data lists the joined tuples, a third dimension declares them, as
+`slot: { over: [unit, port, period] }`. An entry over `slot` reads each
+operand at its tuple: the inner `at` spreads `sent` onto `unit` and `port`,
+and the outer `at` reads the result at the unit and port of each slot:
+
+```yaml
+constraints:
+  exclusive:
+    dims: [slot]
+    expression: at(at(sent, by=connection[unit, port]), by=slot[unit, port]) + at(at(busy, by=assignment[unit, period]), by=slot[unit, period]) <= 1
+```
 
 An entry over `connection` and `period` reads `busy` in two steps. The inner
 `at` moves `busy` from `assignment` to its members, and the outer `at` reads
@@ -492,7 +507,9 @@ connection and period, which is the left join, and holds `sent` at 0 where
 nothing matches.
 
 The language has no outer join, which would keep the tuples of either
-dimension. Write such an entry over the members, as
+dimension with no partner. A cross product is no outer join: it pairs every
+tuple of one dimension with every tuple of the other, units that differ
+included. Write such an entry over the members, as
 `dims: [unit, port, period]`, with the two sets of tuples as the bare
 relations `plugged` over `[unit, port]` and `active` over `[unit, period]`.
 Then `where: "plugged OR active"` keeps the rows of either.
