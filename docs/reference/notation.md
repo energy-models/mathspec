@@ -646,7 +646,7 @@ p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ 
 
 #### `at` onto the members of a dimension
 
-a variable over a dimension with members, spread over them: its index is the tuple of their indices
+a variable over a dimension with members, spread onto them: its index is the tuple of their indices
 
 ```yaml
 constraints:

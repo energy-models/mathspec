@@ -347,20 +347,13 @@ claim no unit together. Reads through two relations reach two rows, so
 `at(kind == 'b', by=backup_of[tech])` in place of the second overlaps the
 first.
 
-Where `cases:` has two or more cases, a `when:` may not read a condition
-[by the members of a dimension](operators.md#at-by-the-members-of-a-dimension).
-Such a read is false where the dimension lists no tuple, which is known only
-when the data is attached. With `connection: { over: [unit, port] }`, the
-parameter `open` over `[connection]`, and
-`when: "at(open, by=connection[unit, port])"` on a case of `tariff`, mathspec
-prints:
-
-```text
-Named expression 'tariff': cases 'open' and 'shut' cannot be told apart before the data arrives: at(by=connection[port, unit]) is true only where 'connection' lists the tuple, which only the data decides. State the cases in an entry over 'connection', or precompute the condition as a boolean parameter over ['port', 'unit'] and test that.
-```
-
-mathspec suggests two rewrites: the cases in an entry over the dimension, or
-a boolean parameter over the members.
+A read [by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)
+reaches one row too. With `connection: { over: [unit, port] }` and a boolean
+parameter `open` over `[connection]`, the cases
+`at(open, by=connection[unit, port])` and
+`not at(open, by=connection[unit, port])` claim no unit and port together.
+Where `connection` lists no tuple, the first is false and the second claims
+the unit and port.
 
 Each `when:` and each value is indexed only over dimensions that `dims:`
 lists. A value indexed over fewer of them is repeated along the others, as a

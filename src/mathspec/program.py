@@ -329,9 +329,9 @@ class Join:
     by=relation[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
 
-    Where ``columns.spreads``, the bare ``Join`` reads an operand over a
-    dimension with members at each tuple of member labels: the dimension goes
-    and its members arrive. The result is absent at a combination of member
+    Where ``columns.spreads``, the bare ``Join`` spreads an operand over a
+    dimension with members onto the members: the dimension goes and its
+    members arrive. The result is absent at a combination of member
     labels that is no label of the dimension, where the ``Sum`` over the same
     join is 0.
 
@@ -1025,10 +1025,10 @@ class Footprint:
         domains: Every domain declared.
         sos_types: The order of each special-ordered set declared.
         kinds: Every expression node kind that appears in a row or a variable bound.
-        spreads: Every dimension a row or a variable bound reads at the
-            tuples of its members, as ``at(x, by=connection[unit, port])``
-            does. Such a read is a [`Join`][] among ``kinds``, and only this
-            field tells it from a lookup or a sum.
+        spreads: Every dimension a row or a variable bound spreads onto its
+            members, as ``at(x, by=connection[unit, port])`` does. A spread is
+            a [`Join`][] among ``kinds``, and only this field tells it from a
+            lookup or a sum.
     """
 
     quadratic: frozenset[QuadraticPosition]

@@ -174,8 +174,9 @@ class Lookup:
 
     ``at`` names value columns and groups by the whole key, so a coordinate
     reads one row. A spread groups by every member instead, and a tuple of
-    member labels is at most one row too. Two reads that name the same relation and columns read
-    that row, and so reach the same label.
+    member labels is at most one row too, which is absent where the
+    dimension does not list the tuple. Two reads that name the same relation
+    and columns read that row, and so reach the same label.
     """
 
     relation: str
@@ -183,7 +184,7 @@ class Lookup:
 
     @classmethod
     def of(cls, join: JoinColumns) -> Lookup:
-        return cls(join.name, join.dropped)
+        return cls(join.name, join.grouped if join.spreads else join.dropped)
 
     def __str__(self) -> str:
         return f'{self.relation}[{", ".join(self.roles)}]'
@@ -293,14 +294,6 @@ def _observe(node: TypedCondition, subject: Subject, values: set[_Literal]) -> N
         msg = (
             'it reads a condition at a neighbouring coordinate, which only the data decides. '
             'Test this row, or precompute the neighbour as a boolean parameter and test that'
-        )
-        raise Undecidable(msg)
-    if isinstance(node, JoinedCondition) and node.columns.spreads:
-        name = node.columns.name
-        msg = (
-            f"at(by={name}[{', '.join(node.columns.grouped)}]) is true only where '{name}' lists the tuple, which "
-            f"only the data decides. State the cases in an entry over '{name}', or precompute the condition as "
-            f'a boolean parameter over {list(node.columns.grouped_dims)} and test that'
         )
         raise Undecidable(msg)
     if isinstance(node, DimensionPosition):

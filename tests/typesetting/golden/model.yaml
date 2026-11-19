@@ -383,7 +383,7 @@ constraints:
     dims: [snapshot, generator]
     where: "priced_dispatch AND position(snapshot) > 0"
     expression: p <= p_max
-  site_share: # a variable over a dimension with members, spread over them: its index is the tuple of their indices
+  site_share: # a variable over a dimension with members, spread onto them: its index is the tuple of their indices
     dims: [snapshot, generator, bus]
     expression: at(site_out, by=site[generator, bus]) <= p
 

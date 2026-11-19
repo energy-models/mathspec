@@ -80,7 +80,7 @@ SPDX-License-Identifier: CC-BY-4.0
     <path d="M156,190 C240,190 240,286 300,286 H332"/>
   </g>
   <g fill="currentColor" font-size="12">
-    <text x="176" y="96">read at each tuple</text>
+    <text x="176" y="96">spread onto members</text>
     <text x="176" y="306">add up, 0 where none</text>
   </g>
 </svg>

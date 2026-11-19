@@ -271,6 +271,12 @@ def spreads(group: list[str], spec: Spec, operands: Iterable[Expression] = ()) -
     return listed(calls, quoted=False)
 
 
+def keyed(group: list[str], spec: Spec) -> str:
+    """A relation keyed by the members of each dimension in *group*: the ``where:`` of the join over the members."""
+    keys = [f'[{", ".join(sorted(spec.dimensions[d].members))}]' for d in group]
+    return f'a relation keyed by {listed([keys[0], *(f"one keyed by {k}" for k in keys[1:])], quoted=False)}'
+
+
 def sorted_dims(*dims: Iterable[str]) -> tuple[str, ...]:
     """Every dim in *dims*, once, sorted by name: what a node states as ``dims``."""
     return tuple(sorted(set().union(*dims)))
@@ -421,21 +427,22 @@ def _spread_over(
     operands: Iterable[Expression] = (),
     read: str | None = None,
 ) -> str | None:
-    """The rewrite for a dimension in *stray* whose members are all in *frame*, or ``None`` where there is none.
+    """The rewrite where *stray* is one dimension whose members are all in *frame*, or ``None`` where it is not.
 
     An operand over a dimension with members does not align with entries
-    over the members, so the file spreads it over them with ``at``.
+    over the members, so the file spreads it onto them with ``at``. A spread
+    brings the members of one dimension and nothing else, so it is no rewrite
+    where another dimension is outside *frame* too.
     """
-    for name in sorted(stray):
-        members = spec.dimensions[name].members
-        if not members or not set(members) <= frame:
-            continue
-        read = read or operand_over(operands, (name,), '')
-        return (
-            f"'{name}' lists the members {list(members)}, and is one dimension here. Spread the operand over its "
-            f'members: at({read}, by={name}[{", ".join(members)}])'
-        )
-    return None
+    match list(stray):
+        case [name] if (members := spec.dimensions[name].members) and set(members) <= frame:
+            read = read or operand_over(operands, (name,), '')
+            return (
+                f"'{name}' lists the members {list(members)}, and is one dimension here. Spread the operand onto "
+                f'its members: at({read}, by={name}[{", ".join(members)}])'
+            )
+        case _:
+            return None
 
 
 def _member_rewrite(
@@ -482,7 +489,7 @@ def check_meeting(left: Expression, right: Expression, spec: Spec, context: str,
             if stray := sorted((set(members) & set(other.dims)) - set(one.dims)):
                 read = operand_over((one,), (name,), stray[0])
                 if stray == sorted(members):
-                    onto_members = f', or spread {read} over the members: at({read}, by={name}[{", ".join(members)}])'
+                    onto_members = f', or spread {read} onto the members: at({read}, by={name}[{", ".join(members)}])'
                 else:
                     columns = ', '.join(stray)
                     onto_members = f', or sum {read} to the member: sum({read}, over={name}, by={name}[{columns}])'

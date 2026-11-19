@@ -358,11 +358,11 @@ The expanded curve has no quadratic term, no SOS, and only continuous
 variables. Every field is a set, and an empty field means that the program
 does not use the construct.
 
-`footprint.spreads` names each dimension that a row or a bound reads at the
-tuples of its members, as `at(flow, by=connection[unit, port])` does. That
-read is a `Join` among the kinds, as a lookup is, so an engine without spread
-support refuses a program where this field is not empty. Like `kinds`, it does
-not read `where:` conditions.
+`footprint.spreads` lists each dimension that a row or a bound spreads onto
+its members, as `at(flow, by=connection[unit, port])` does. A spread is a
+`Join` among the kinds, as a lookup is, so an engine without spread support
+refuses a program where this field is not empty. Like `kinds`, it leaves out
+`where:` conditions.
 
 Each engine decides whether its solver takes a construct. The footprint has no field for convexity.
 

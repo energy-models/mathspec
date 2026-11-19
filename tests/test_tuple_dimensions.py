@@ -448,14 +448,54 @@ def _curve(along: str) -> dict[str, Any]:
             },
             id='two-operands-that-share-a-member',
         ),
+        pytest.param(
+            _constraint('flow >= 0', ['unit', 'port']),
+            'Spread the operand onto its members: at(flow, by=connection[port, unit]).',
+            _constraint('at(flow, by=connection[port, unit]) >= 0', ['unit', 'port']),
+            id='an-operand-over-the-dimension-in-an-entry-over-the-members',
+        ),
+        pytest.param(
+            {'variables.w': {'dims': ['unit', 'port']}, **_constraint('w <= flow', ['unit', 'port'])},
+            'or spread flow onto the members: at(flow, by=connection[port, unit]).',
+            {
+                'variables.w': {'dims': ['unit', 'port']},
+                **_constraint('w <= at(flow, by=connection[port, unit])', ['unit', 'port']),
+            },
+            id='an-operand-over-the-dimension-meets-one-over-the-members',
+        ),
+        pytest.param(
+            {
+                'parameters.open': {'dims': ['connection'], 'dtype': 'bool'},
+                'variables.w': {'dims': ['unit', 'port'], 'where': 'open'},
+            },
+            'Spread the operand onto its members: at(open, by=connection[port, unit]).',
+            {
+                'parameters.open': {'dims': ['connection'], 'dtype': 'bool'},
+                'variables.w': {'dims': ['unit', 'port'], 'where': 'at(open, by=connection[port, unit])'},
+            },
+            id='a-where-over-the-dimension-on-an-entry-over-the-members',
+        ),
+        pytest.param(
+            _constraint('at(flow, by=connection[unit]) >= 0', ['unit', 'port']),
+            'List every member to spread the operand onto them: at(flow, by=connection[port, unit]).',
+            _constraint('at(flow, by=connection[port, unit]) >= 0', ['unit', 'port']),
+            id='a-spread-that-leaves-a-member-out',
+        ),
+        pytest.param(
+            _constraint('at(flow, by=connection[unit]) >= 0', ['unit']),
+            "To add up over ['port'], write sum(flow, over=connection, by=connection[unit]).",
+            _constraint('sum(flow, over=connection, by=connection[unit]) >= 0', ['unit']),
+            id='a-spread-that-leaves-a-member-out-summed',
+        ),
     ],
 )
-def test_the_rewrite_an_overlap_refusal_suggests_loads(refused, fragment, rewrite):
+def test_the_rewrite_a_refusal_suggests_loads(refused, fragment, rewrite):
     """A refusal that suggests a rewrite holds it out as one that loads.
 
     Was: an alias of an alias, a `dims:` refused again over a third dimension,
-    an `at` through a dimension the operand was still over, and a curve that
-    loaded only to be refused at expansion.
+    an `at` through a dimension the operand was still over, a curve that
+    loaded only to be refused at expansion, and a variable told to spread
+    operands it does not have.
     """
     with pytest.raises(LanguageError) as caught:
         to_spec(varied(PAIRED, **refused))
@@ -740,7 +780,7 @@ def test_a_spread_loads_in_an_entry_that_is_no_constraint(patch, read, dims):
             (
                 "an operand over ['port', 'unit'] meets one over 'connection'",
                 'at(w, by=connection[port, unit])',
-                'spread flow over the members: at(flow, by=connection[port, unit])',
+                'spread flow onto the members: at(flow, by=connection[port, unit])',
             ),
             id='an-operand-over-every-member-meets-the-dimension',
         ),
@@ -921,7 +961,10 @@ def test_cases_that_both_admit_a_spread_condition_are_refused_with_the_tuple():
     }
     with pytest.raises(SchemaError) as caught:
         to_spec(varied(SPREAD, **patch))
-    assert "cases 'open' and 'wide' both claim the value where" in str(caught.value)
+    assert (
+        "cases 'open' and 'wide' both claim the value where open through connection[port, unit] is true, w_on is true."
+        in str(caught.value)
+    )
 
 
 @pytest.mark.parametrize('fmt', FORMATS)

@@ -154,9 +154,10 @@ is read once per line.
 ### `at` by the members of a dimension
 
 A dimension can list its [members](dimensions.md#over). On an expression over
-such a dimension, `at` by every member takes the value of each tuple at the
-labels of its members. `at` adds nothing up here either. The dimension goes,
-and each member arrives as its own dimension:
+such a dimension, `at` by every member spreads the expression onto the
+members: the value of each tuple goes to the labels of its members. `at` adds
+nothing up here either. The dimension goes, and each member arrives as its own
+dimension:
 
 ```yaml
 dimensions:
@@ -191,7 +192,7 @@ value is `0`.
 mathspec prints:
 
 ```text
-Constraint 'meter': at(by=connection[unit]) lists ['unit'] of the members ['port', 'unit'] of 'connection', and the operand is over 'connection'. List every member to read each tuple: at(flow, by=connection[port, unit]). To add up over ['port'], write sum(flow, over=connection, by=connection[unit]).
+Constraint 'meter': at(by=connection[unit]) lists ['unit'] of the members ['port', 'unit'] of 'connection', and the operand is over 'connection'. List every member to spread the operand onto them: at(flow, by=connection[port, unit]). To add up over ['port'], write sum(flow, over=connection, by=connection[unit]).
 ```
 
 mathspec suggests both rewrites: the full list, or the sum to the one member.

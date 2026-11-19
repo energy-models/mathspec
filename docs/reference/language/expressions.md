@@ -524,9 +524,8 @@ relation, `flow`. So the condition is over `flow` alone, which is the frame of
 rule of [`at` in an expression](relations.md#lookups) applies.
 
 On a condition over a dimension that lists its members, `at` by every member
-reads the condition at each tuple, as
-[`at` by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)
-reads an expression. With `connection: { over: [unit, port] }` and a boolean
+spreads the condition onto the members, as it
+[spreads an expression](operators.md#at-by-the-members-of-a-dimension). With `connection: { over: [unit, port] }` and a boolean
 parameter `open` over `[connection]`, `where: "at(open, by=connection[unit, port])"`
 is over `unit` and `port`. It is **false** at a unit and a port that the
 dimension does not list together.
