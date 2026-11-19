@@ -247,7 +247,9 @@ class ConditionResolver:
             )
             return node
         if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
+            self.errors.append(
+                unordered(context, f'shift(<condition>, along={along.name})', along.name, self.ns.alias_of(along.name))
+            )
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
@@ -455,7 +457,7 @@ class ConditionResolver:
             )
             return node
         if ns.unordered(dimension):
-            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            self.errors.append(unordered(context, f'position({dimension})', dimension, ns.alias_of(dimension)))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -515,9 +517,12 @@ class ConditionResolver:
                 return node
             value = typed
         if labelled in ns.one_of and value not in ns.one_of[labelled]:
+            alias = ns.alias_of(labelled)
+            named = f"'{labelled}', an alias of '{alias}'" if alias else f"'{labelled}'"
             self.errors.append(
-                f"{context}: {value!r} is not a label of '{labelled}', which allows only "
-                f"{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+                f'{context}: {value!r} is not a label of {named}, which allows only '
+                f'{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '
+                f"'{alias or labelled}'."
             )
             return node
 

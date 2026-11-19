@@ -492,6 +492,13 @@ class TestADimensionWithOneOf:
         assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
         assert "add 'west' to the one_of of 'h'" in message, message
 
+    def test_a_label_not_in_one_of_through_an_alias_names_the_dimension_that_lists_them(self):
+        """The refusal told the file to add the label to the one_of of the alias, which an alias may not carry."""
+        alias = {'dimensions.from_h': {'alias': 'h'}, 'variables.r': {'dims': ['from_h'], 'where': "from_h == 'west'"}}
+        message = _refusal(**_ONE_OF, **alias)
+        assert "'west' is not a label of 'from_h', an alias of 'h', which allows only" in message, message
+        assert "add 'west' to the one_of of 'h'." in message, message
+
     @pytest.mark.parametrize(
         'patch',
         [
@@ -3359,12 +3366,25 @@ _READS_ORDER = [
 ]
 
 
+#: `t` and `bp` as aliases, so their order is that of the dimension each aliases.
+_ALIASED_ORDER = {'t': 'time', 'bp': 'point'}
+
+
+@pytest.mark.parametrize('aliased', [pytest.param(False, id='declared'), pytest.param(True, id='an-alias')])
 @pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)
-def test_a_construct_that_reads_order_along_an_unordered_dimension_is_refused(patch, dimension):
-    """The order an unordered dimension has is the data's row order, which is not part of the model."""
-    message = _refusal(UNORDERED, **patch)
-    assert f"reads the order of '{dimension}', which is not declared ordered" in message
-    assert f"'{dimension}: {{ordered: true}}' under dimensions:" in message, 'the refusal names the rewrite'
+def test_a_construct_that_reads_order_along_an_unordered_dimension_is_refused(patch, dimension, aliased):
+    """The order an unordered dimension has is the data's row order, which is not part of the model.
+
+    The refusal along an alias told the file to declare the alias ordered, which an alias may not carry.
+    """
+    aliases = {alias: {'alias': target} for alias, target in _ALIASED_ORDER.items()}
+    targets = {target: {'dtype': 'int'} for target in _ALIASED_ORDER.values()}
+    model = varied(UNORDERED, dimensions={**aliases, **targets}) if aliased else UNORDERED
+    owner = _ALIASED_ORDER[dimension] if aliased else dimension
+    named = f"'{dimension}', an alias of '{owner}'" if aliased else f"'{dimension}'"
+    message = _refusal(model, **patch)
+    assert f'reads the order of {named}, which is not declared ordered' in message, message
+    assert f"'{owner}: {{ordered: true}}' under dimensions:" in message, 'the refusal names the rewrite'
 
 
 @pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)
