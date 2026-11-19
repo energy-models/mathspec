@@ -290,9 +290,19 @@ def _curve(along: str) -> dict[str, Any]:
             id='an-alias-of-the-shared-member',
         ),
         pytest.param(
+            {'variables.x': {'dims': ['connection', 'assignment', 'unit']}},
+            "If every pair is meant, leave 'unit' out, and let connection list its own alias",
+            {
+                'dimensions.connection_unit': {'alias': 'unit'},
+                'dimensions.connection': {'over': ['connection_unit', 'port']},
+                'variables.x': {'dims': ['connection', 'assignment']},
+            },
+            id='an-alias-of-the-shared-member-beside-the-member',
+        ),
+        pytest.param(
             {**_DEPOT, 'variables.x': {'dims': ['connection', 'assignment', 'depot']}},
             'dims: [bus, period, port, unit], with where: a relation keyed by [period, unit], one keyed by '
-            '[bus, unit] and one keyed by [port, unit]',
+            '[port, unit] and one keyed by [bus, unit]',
             {
                 **_JOINED,
                 **_DEPOT,
@@ -511,6 +521,15 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
                 'from_region: {alias: region}, and list both: over: [from_region, region].',
             ),
             id='a-dimension-twice',
+        ),
+        pytest.param(
+            {'dimensions.pair': {'over': ['nope', 'nope']}},
+            (
+                "Dimension 'pair' references undeclared dimension 'nope'.",
+                "Dimension 'pair' lists 'nope' twice under 'over:'. Declare an alias of it under dimensions:, "
+                'from_nope: {alias: nope}, and list both: over: [from_nope, nope].',
+            ),
+            id='an-undeclared-dimension-twice',
         ),
         pytest.param(
             {'relations.connection': {'key': 'connection', 'values': ['unit', 'port']}},

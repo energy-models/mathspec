@@ -200,9 +200,21 @@ over the same set:
 \mathit{imp}_{r} = \sum_{r' \in \mathcal{R}} \mathrm{ire\_flo}_{r',r} \cdot \mathit{exp}_{r'} \qquad \forall\, r \in \mathcal{R}
 ```
 
-An alias names a declared dimension that is no alias itself. A second alias of
-`region` prints with two primes. The file declares no relation named
-`from_region`, because the alias already implies it.
+An alias names a declared dimension that is no alias itself and has no
+[members](#over). A second alias of `region` prints with two primes. The file
+declares no relation named `from_region`, because the alias already implies it.
+
+mathspec refuses an alias of a dimension with members, such as
+`link: { alias: connection }`, and suggests a second dimension with the same
+members:
+
+```text
+Dimension 'link': alias: 'connection' is a dimension with members. Declare 'link' with the same members instead: link: {over: [port, unit]}.
+```
+
+`link` and `connection` then share their members, so the
+[overlap rules](#two-dimensions-that-share-a-member) apply to an entry over
+both.
 
 ## `over`
 
@@ -310,14 +322,14 @@ tuple that the dimension does not list. A
 
 At load, mathspec also refuses each of these, and prints the rewrite:
 
-| Refused                                                                                         | What you write instead                                                    |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| a member that has members of its own                                                            | the members themselves, in one list                                       |
-| a dimension twice, as in `over: [region, region]`, or a mapping under `over:`                   | an alias beside the dimension, as in `over: [from_region, region]`        |
-| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                           | the key on a member                                                       |
-| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension        | an entry over the members, with `where:` a relation that lists the tuples |
-| a comparison of the dimension with a label, as in `connection == 'a'`                           | a comparison of a member, as in `connection[unit] == 'u1'`                |
-| a call through the relation of the dimension on an operand over both the dimension and a member | the member summed out of the operand first                                |
+| Refused                                                                                                                     | What you write instead                                                    |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| a member that has members of its own                                                                                        | the members themselves, in one list                                       |
+| a dimension twice, as in `over: [region, region]`, or a mapping under `over:`                                               | an alias beside the dimension, as in `over: [from_region, region]`        |
+| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                                                       | the key on a member                                                       |
+| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension, or `within=` through its relation | an entry over the members, with `where:` a relation that lists the tuples |
+| a comparison of the dimension with a label, as in `connection == 'a'`                                                       | a comparison of a member, as in `connection[unit] == 'u1'`                |
+| a call through the relation of the dimension on an operand over both the dimension and a member                             | the member summed out of the operand first                                |
 
 A set of tuples with an ordered member, such as the periods in which each unit
 is active, therefore stays a [bare relation](relations.md) over `unit` and
@@ -327,7 +339,7 @@ entry over `connection` and `period` reads it as
 
 ### Two dimensions that share a member
 
-A dimension with members is opaque: an entry reads its tuples whole, and never
+A dimension with members is opaque: an entry is over its tuples, and never over
 the members inside them. An entry over two such dimensions is their cross
 product, with one row for each pair of tuples. Where the two share a member, as
 `connection` and `assignment` share `unit` below, the cross product also pairs
@@ -359,7 +371,7 @@ constraints:
 ```
 
 ```text
-Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], with where: a relation keyed by [period, unit] and one keyed by [port, unit]; or, if every pair is meant, let connection hold an alias of 'unit': connection_unit: {alias: unit}, and connection: {over: [connection_unit, port]}.
+Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], with where: a relation keyed by [period, unit] and one keyed by [port, unit]. If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
 ```
 
 The join is an entry over the members. Each set of tuples is then a
@@ -388,7 +400,7 @@ the port and the period, which is the join on `unit`. The language has no
 outer join, which would also keep a connection whose unit has no assignment.
 
 Where every pair is meant, as when each supply ships to each demand of any
-region, each side holds its own [alias](#alias) of the shared dimension. The
+region, each side lists its own [alias](#alias) of the shared dimension. The
 two then share no member, and the entry loads as their cross product:
 
 ```yaml
@@ -410,8 +422,21 @@ every unit. The member is already in each tuple, so the rewrite reads it
 there:
 
 ```text
-Constraint 'cap' lists 'connection' and its member 'unit' in dims:. 'connection' already holds 'unit', so the entry would pair every connection with every unit. Drop 'unit' from dims:, and read it at each connection as connection[unit], as in at(<operand>, by=connection[unit]).
+Constraint 'cap' lists 'connection' and its member 'unit' in dims:, so the entry would pair every connection with every unit. Drop 'unit' from dims:, and read it at each connection as connection[unit], as in at(<operand>, by=connection[unit]).
 ```
+
+mathspec refuses the same cross product where an expression forms it. Where two
+operands over `connection` and `assignment` meet, as in the objective
+`sum(sent * busy)`, mathspec prints:
+
+```text
+The objective: sent * busy is over 'assignment' and 'connection', which share 'unit'. A dimension with members is opaque, so the expression would pair every assignment with every connection, whatever their unit. Declare the operands over the members, with where: a relation keyed by [period, unit] and one keyed by [port, unit]. If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
+```
+
+A `sum(by=)` or an `at(by=)` that groups an operand over `connection` by
+`unit` is refused the same way, and so is a curve over `assignment` that steps
+along its member `period`. Where three dimensions share a member, one message
+names all three.
 
 Two dimensions that share no member, such as `connection` and a
 `scenario_year` over `[scenario, year]`, share an entry: their cross product

@@ -196,6 +196,13 @@ def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _aliased(dimensions: Mapping[object, object], name: object) -> object:
+    """The dimension *name* is an alias of in the raw *dimensions*, or *name* where it is no alias."""
+    entry = dimensions.get(name)
+    alias = entry.get('alias') if isinstance(entry, Mapping) else None
+    return alias or name
+
+
 def _as_yaml(v: object) -> str:
     """*v* as the file spells it, so a refusal quotes the line the author wrote."""
     return str(v).lower() if isinstance(v, bool) else str(v)
@@ -367,20 +374,6 @@ class DimensionSpec(_StrictSpec):
     def members(self) -> tuple[str, ...]:
         """The members, sorted by name; empty for a dimension without ``over:``."""
         return self.over or ()
-
-    @field_validator('over', mode='before')
-    @classmethod
-    def _a_list(cls, v: object) -> object:
-        """A member is named after its dimension, so one dimension twice is an alias and the dimension, not two roles."""
-        if isinstance(v, Mapping):
-            mapping = cast('Mapping[object, object]', v)
-            aliases = ', '.join(f'{role}: {{alias: {dim}}}' for role, dim in mapping.items() if role != dim)
-            msg = (
-                f'takes a list of dimensions, not a mapping. Name each member that repeats a dimension as an alias '
-                f'of it under dimensions:, {aliases}, and list the names: over: [{", ".join(map(str, mapping))}].'
-            )
-            raise ValueError(msg)
-        return v
 
     @field_validator('over', mode='after')
     @classmethod
@@ -1340,6 +1333,38 @@ class Spec(_StrictSpec):
             f'Upgrade mathspec, or write the version this file targets.'
         )
         raise ValueError(msg)
+
+    @model_validator(mode='before')
+    @classmethod
+    def _members_listed(cls, data: object) -> object:
+        """A member is named after its dimension, so one dimension twice is an alias and the dimension, not two roles.
+
+        The rewrite of a mapping under ``over:`` declares an alias of what each
+        value is, since an alias of an alias is refused, so the check reads
+        every dimension the file declares.
+        """
+        dimensions = data.get('dimensions') if isinstance(data, Mapping) else None
+        if not isinstance(dimensions, Mapping):
+            return data
+        declared = cast('Mapping[object, object]', dimensions)
+        for name, entry in declared.items():
+            over = entry.get('over') if isinstance(entry, Mapping) else None
+            if not isinstance(over, Mapping):
+                continue
+            mapping = cast('Mapping[object, object]', over)
+            aliases = ', '.join(
+                f'{role}: {{alias: {_aliased(declared, dim)}}}' for role, dim in mapping.items() if role != dim
+            )
+            names = f'over: [{", ".join(map(str, mapping))}]'
+            rewrite = (
+                f'Name each member that repeats a dimension as an alias of it under dimensions:, {aliases}, and list '
+                f'the names: {names}.'
+                if aliases
+                else f'List the dimensions: {names}.'
+            )
+            msg = f'dimensions.{name}.over: takes a list of dimensions, not a mapping. {rewrite}'
+            raise ValueError(msg)
+        return data
 
     @model_serializer(mode='wrap')
     def _drop_absence(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
