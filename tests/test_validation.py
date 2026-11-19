@@ -41,6 +41,26 @@ def _refusal(model: dict[str, Any] = SMALL_MODEL, **patch: Any) -> str:
 
 _NONLINEAR_ENTRY = {'expressions': {'bad': 'c / sum(p)'}}
 
+#: Two dimensions with members that share `region`, and one whose member `unit` an entry may list beside it.
+_TUPLES = {
+    'dimensions.region': {},
+    'dimensions.plant': {},
+    'dimensions.site': {},
+    'dimensions.supply': {'over': ['region', 'plant']},
+    'dimensions.demand': {'over': ['region', 'site']},
+    'dimensions.unit': {},
+    'dimensions.port': {},
+    'dimensions.connection': {'over': ['unit', 'port']},
+}
+
+_SHARED_REGION = (
+    "Variable 'x' lists 'demand' and 'supply' in dims:, which share 'region'. A dimension with members is opaque, so "
+    'the entry would pair every demand with every supply, whatever their region. Write the entry over the members, '
+    'dims: [plant, region, site], with where: a relation keyed by [region, site] and one keyed by [plant, region]; '
+    "or, if every pair is meant, let supply hold an alias of 'region': supply_region: {alias: region}, and supply: "
+    '{over: [plant, supply_region]}.'
+)
+
 
 class TestValidateExpressions:
     @pytest.mark.parametrize(
@@ -1887,28 +1907,8 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': ['g', 'z'], 'values': 'h'},
                     'variables.q.where': 'lk != lz',
                 },
-                (
-                    'compares relations keyed over different dimensions',
-                    "dims: lacks 'z'",
-                    "Add 'z' to dims:, or compare against a relation keyed like 'lk'",
-                ),
-                id='where-two-relations-with-a-key-the-frame-lacks',
-            ),
-            pytest.param(
-                {'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}, 'variables.p.where': 'lk == lh[to]'},
-                ("dims: lacks 'h'", "Add 'h' to dims:, or compare against a relation keyed like 'lk'"),
-                id='where-two-relations-keyed-apart-in-a-frame-of-one',
-            ),
-            pytest.param(
-                {
-                    'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}},
-                    'assumptions': {'sound': 'lk == lh[to]'},
-                },
-                (
-                    "compares relations keyed over different dimensions ('lk' by ['g'], 'lh' by ['h'])",
-                    "a condition has no dims:. Write the comparison in the where: of an entry whose dims: lists the keys of 'lk' and 'lh'",
-                ),
-                id='an-assumption-with-no-dims-compares-relations-keyed-apart',
+                ('compares relations keyed over different dimensions',),
+                id='where-two-relations-with-different-keys',
             ),
             pytest.param(
                 {'variables.p.where': 'c > q'},
@@ -2015,40 +2015,31 @@ class TestRulesDecidedWithoutData:
                 ),
                 id='where-two-relations-whose-columns-are-over-different-dimensions',
             ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['supply', 'demand']}},
+                (_SHARED_REGION,),
+                id='dims-two-dimensions-that-share-a-member',
+            ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['supply', 'demand'], 'where': 'supply[region] == demand[region]'}},
+                (_SHARED_REGION,),
+                id='dims-two-dimensions-that-share-a-member-whatever-the-where',
+            ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['connection', 'unit']}},
+                (
+                    "Variable 'x' lists 'connection' and its member 'unit' in dims:. 'connection' already holds "
+                    "'unit', so the entry would pair every connection with every unit. Drop 'unit' from dims:, and "
+                    'read it at each connection as connection[unit], as in at(<operand>, by=connection[unit]).',
+                ),
+                id='dims-a-dimension-beside-its-own-member',
+            ),
         ],
     )
     def test_a_rule_decided_without_data(self, patch, fragments):
         message = _refusal(**patch)
         for fragment in fragments:
             assert fragment in message
-
-    @pytest.mark.parametrize(
-        'patch',
-        [
-            pytest.param({'variables.q.where': 'lk == lh[to]'}, id='a-variable-where'),
-            pytest.param({'parameters.m': {'dims': ['g', 'h'], 'where': 'lk == lh[to]'}}, id='a-parameter-where'),
-            pytest.param(
-                {'constraints.k': {'dims': ['g', 'h'], 'expression': 'q <= 1', 'where': 'lk != lh[to]'}},
-                id='a-constraint-where',
-            ),
-            pytest.param(
-                {
-                    'expressions.e': {
-                        'dims': ['g', 'h'],
-                        'cases': {'same': {'when': 'lk == lh[to]', 'expression': 'q'}},
-                        'otherwise': 0,
-                    }
-                },
-                id='a-case',
-            ),
-        ],
-    )
-    def test_two_relation_columns_keyed_apart_compare_where_dims_carry_both_keys(self, patch):
-        """Each column is read at its own key, and `dims:` carries both, so the comparison is over their product.
-
-        Was: refused unless both relations were keyed over the same dimensions.
-        """
-        _spec(**{'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}}, **patch)
 
     @pytest.mark.parametrize(
         ('operand', 'call', 'patch'),

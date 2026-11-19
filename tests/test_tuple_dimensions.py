@@ -23,7 +23,7 @@ from mathspec.program import JoinedCondition, Relation, RelationComparison, Rela
 from tests.fixtures import varied
 
 #: The example of #1011: `connection` lists (unit, port) pairs, `trade` lists
-#: two regions by role, and `active` is a sparse set with an ordered member.
+#: two regions through an alias, and `active` is a sparse set with an ordered member.
 MODEL: dict[str, Any] = {
     'dimensions': {
         'unit': {},
@@ -33,7 +33,8 @@ MODEL: dict[str, Any] = {
         'snapshot': {'dtype': 'int', 'ordered': True},
         'period': {'dtype': 'int', 'ordered': True},
         'connection': {'over': ['unit', 'port']},
-        'trade': {'over': {'src': 'region', 'dst': 'region'}},
+        'from_region': {'alias': 'region'},
+        'trade': {'over': ['from_region', 'region']},
     },
     'relations': {
         'connection_bus': {'key': 'connection', 'values': 'bus'},
@@ -48,7 +49,6 @@ MODEL: dict[str, Any] = {
     'variables': {
         'flow': {'dims': ['connection', 'snapshot'], 'bounds': {'lower': 0}},
         'shipped': {'dims': ['trade'], 'bounds': {'lower': 0}},
-        'both': {'dims': ['connection', 'unit']},
     },
     'constraints': {
         'limit': {'dims': ['connection', 'snapshot'], 'expression': 'flow <= at(capacity, by=connection[unit])'},
@@ -80,12 +80,12 @@ def _constraint(expression: str, dims: list[str]) -> dict[str, Any]:
 def test_a_dimension_with_members_implies_a_relation_of_its_name():
     program = to_spec(MODEL).program
     connection = program.dimensions['connection']
-    assert connection.over == (('port', 'port'), ('unit', 'unit')), 'members are (role, dimension), sorted by role'
+    assert connection.over == ('port', 'unit'), 'members are sorted by name'
     assert connection.missing == 'absent', 'a tuple dimension is a sparse subset unless the file says refused'
     assert program.relations['connection'] == Relation(
         (('connection', 'connection'), ('port', 'port'), ('unit', 'unit')), ('connection',), 'refused'
     ), 'the implied relation is keyed by the dimension and has one value column per member'
-    assert program.dimensions['trade'].over == (('dst', 'region'), ('src', 'region')), 'a role names each member'
+    assert program.dimensions['trade'].over == ('from_region', 'region'), 'an alias lists one dimension twice'
     assert program.dimensions['unit'].over == (), 'a plain dimension has no members'
 
 
@@ -106,86 +106,16 @@ def test_missing_says_whether_the_full_product_is_required(missing):
     [
         pytest.param('flow <= at(capacity, by=connection[unit])', ['connection', 'snapshot'], id='one-member'),
         pytest.param('flow <= at(rating, by=connection[unit, port])', ['connection', 'snapshot'], id='every-member'),
-        pytest.param('shipped <= at(tariff, by=trade[src])', ['trade'], id='a-member-by-role'),
+        pytest.param('shipped <= at(tariff, by=trade[region])', ['trade'], id='a-member-beside-its-alias'),
         pytest.param(
             'sum(flow, over=connection, by=connection[port]) >= 0', ['port', 'snapshot'], id='sum-to-a-member'
         ),
         pytest.param('sum(flow, over=connection) >= 0', ['snapshot'], id='sum-the-tuples-away'),
-        pytest.param('both <= capacity', ['connection', 'unit'], id='an-entry-over-the-dimension-and-a-member'),
     ],
 )
 def test_a_member_is_read_through_the_implied_relation(expression, dims):
     constraint = to_spec(varied(MODEL, **_constraint(expression, dims))).program.constraints['probe']
     assert sorted({*constraint.lhs.dims, *constraint.rhs.dims}) == sorted(dims)
-
-
-@pytest.mark.parametrize(
-    'patch',
-    [
-        pytest.param(_constraint('flow <= capacity', ['connection', 'unit', 'snapshot']), id='a-constraint'),
-        pytest.param(
-            {'expressions.e': {'dims': ['connection', 'unit', 'snapshot'], 'expression': 'flow * capacity'}},
-            id='a-named-expression',
-        ),
-        pytest.param(
-            _constraint('sum(flow * capacity, over=snapshot) <= both', ['connection', 'unit']),
-            id='under-a-sum-that-keeps-both',
-        ),
-        pytest.param({'variables.both.where': 'at(rating, by=connection[unit, port]) > capacity'}, id='a-condition'),
-        pytest.param(
-            {
-                'constraints.probe': {
-                    'dims': ['connection', 'unit'],
-                    'expression': 'both <= 1',
-                    'where': 'at(rating, by=connection[unit, port]) > capacity',
-                }
-            },
-            id='a-constraint-where',
-        ),
-        pytest.param(
-            {
-                'parameters.p': {
-                    'dims': ['connection', 'unit'],
-                    'where': 'at(rating, by=connection[unit, port]) > capacity',
-                }
-            },
-            id='a-parameter-where',
-        ),
-        pytest.param(
-            {
-                'expressions.e': {
-                    'dims': ['connection', 'unit', 'snapshot'],
-                    'cases': {
-                        'a': {
-                            'when': 'at(rating, by=connection[unit, port]) > capacity',
-                            'expression': 'flow * capacity',
-                        }
-                    },
-                    'otherwise': 'flow * capacity',
-                }
-            },
-            id='a-case',
-        ),
-        pytest.param(
-            {
-                'parameters.xs': {'dims': ['period']},
-                'parameters.ys': {'dims': ['period']},
-                'variables.w': {'dims': ['connection']},
-                'variables.v': {'dims': ['unit']},
-                'variables.y': {'dims': ['connection', 'unit']},
-                'piecewise.curve': {
-                    'dims': ['connection', 'unit'],
-                    'along': 'period',
-                    'links': {'x': ['w + v', 'xs'], 'y': ['y', 'ys']},
-                },
-            },
-            id='a-piecewise-link',
-        ),
-    ],
-)
-def test_a_frame_over_the_dimension_and_its_member_takes_the_cross_product(patch):
-    """Rule 11 of #1011: where `dims:` declares both, a member operand meets the dimension, and the entry loads."""
-    to_spec(varied(MODEL, **patch))
 
 
 def test_a_bound_reads_a_parameter_of_a_member():
@@ -208,62 +138,46 @@ SHARED_MEMBER: dict[str, Any] = {
 }
 
 
-@pytest.mark.parametrize(
-    ('where', 'dims', 'pair'),
-    [
-        pytest.param(
-            'connection[unit] == assignment[unit]',
-            ['connection', 'assignment'],
-            ('connection', 'unit', 'assignment', 'unit', '==', ('assignment', 'connection')),
-            id='an-inner-join-on-the-shared-member',
-        ),
-        pytest.param(
-            'assignment[unit] != connection[unit]',
-            ['connection', 'assignment'],
-            ('assignment', 'unit', 'connection', 'unit', '!=', ('assignment', 'connection')),
-            id='an-inner-join-written-the-other-way-round',
-        ),
-        pytest.param(
-            'connection[unit] == backup[spare]',
-            ['connection'],
-            ('connection', 'unit', 'backup', 'spare', '==', ('connection',)),
-            id='a-relation-keyed-by-the-dimension',
-        ),
-    ],
-)
-def test_a_member_column_is_compared_with_another_relation_column(where, dims, pair):
+def test_a_member_column_is_compared_with_a_column_of_a_relation_keyed_alike():
     """Rule 2 of #1011: the implied relation is a relation in a comparison of two columns, as on main.
 
     Was: a side named after a tuple dimension was read as the dimension, so
-    `connection[unit] == assignment[unit]` was refused as a comparison of two
-    dimensions, and `connection[unit] == backup[spare]` as one against a relation.
+    `connection[unit] == backup[spare]` was refused as a comparison against a relation.
     """
-    expression = ' + '.join({'connection': 'sent', 'assignment': 'on'}[d] for d in dims) + ' <= 1'
-    constraint = {'constraints.probe': {'dims': dims, 'expression': expression, 'where': where}}
-    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **constraint))
-    assert spec.program.constraints['probe'].where.atoms == (RelationPairComparison(*pair),)
+    constraint = {'dims': ['connection'], 'expression': 'sent <= 1', 'where': 'connection[unit] == backup[spare]'}
+    spec = to_spec(varied(MODEL, **SHARED_MEMBER, **{'constraints.probe': constraint}))
+    pair = RelationPairComparison('connection', 'unit', 'backup', 'spare', '==', ('connection',))
+    assert spec.program.constraints['probe'].where.atoms == (pair,)
+
+
+def test_two_tuple_dimensions_compare_no_member_column():
+    """Two relations keyed over different dimensions compare nowhere, as on main: no entry is over both keys."""
+    constraint = {'dims': ['connection'], 'expression': 'sent <= 1', 'where': 'connection[unit] == assignment[unit]'}
+    message = _refusal(**SHARED_MEMBER, **{'constraints.probe': constraint})
+    assert "keyed over different dimensions ('connection' by ['connection'], 'assignment' by ['assignment'])" in message
+    assert 'Compare relations whose keys are over the same dimensions' in message
 
 
 @pytest.mark.parametrize(
     ('cases', 'fragment'),
     [
         pytest.param(
-            {'joined': 'connection[unit] == assignment[unit]', 'apart': 'connection[unit] != assignment[unit]'},
+            {'same': 'connection[unit] == backup[spare]', 'apart': 'connection[unit] != backup[spare]'},
             None,
-            id='the-join-and-its-complement',
+            id='a-comparison-and-its-complement',
         ),
         pytest.param(
-            {'joined': 'connection[unit] == assignment[unit]', 'gas': "connection[unit] == 'gas'"},
-            'assignment[unit] vs connection[unit] is equal',
-            id='the-join-and-a-label',
+            {'same': 'connection[unit] == backup[spare]', 'gas': "connection[unit] == 'gas'"},
+            'backup[spare] vs connection[unit] is equal',
+            id='a-comparison-and-a-label',
         ),
     ],
 )
-def test_a_case_tests_the_inner_join(cases, fragment):
-    """The exclusivity check reads the join as one fact per pair of tuples: true, false, or a row missing."""
+def test_a_case_tests_a_member_column_against_another_column(cases, fragment):
+    """The exclusivity check reads the comparison as one fact per tuple: true, false, or a row missing."""
     entry = {
-        'dims': ['connection', 'assignment'],
-        'cases': {name: {'when': when, 'expression': 'sent + on'} for name, when in cases.items()},
+        'dims': ['connection'],
+        'cases': {name: {'when': when, 'expression': 'sent'} for name, when in cases.items()},
         'otherwise': 0,
     }
     patch = {**SHARED_MEMBER, 'expressions.e': entry}
@@ -274,12 +188,81 @@ def test_a_case_tests_the_inner_join(cases, fragment):
 
 
 @pytest.mark.parametrize('fmt', FORMATS)
-def test_the_inner_join_is_typeset(fmt):
-    where = 'connection[unit] == assignment[unit]'
-    constraint = {'dims': ['connection', 'assignment'], 'expression': 'sent + on <= 1', 'where': where}
+def test_a_member_column_compared_with_another_column_is_typeset(fmt):
+    constraint = {'dims': ['connection'], 'expression': 'sent <= 1', 'where': 'connection[unit] == backup[spare]'}
     spec = to_spec(varied(MODEL, **SHARED_MEMBER, **{'constraints.probe': constraint}))
-    text = typeset(spec, fmt)
-    assert 'unit' in text.split('probe', 1)[1], f'{fmt} prints the shared member on both sides'
+    text = typeset(spec, fmt).split('probe', 1)[1]
+    assert 'unit' in text, f'{fmt} prints the member column'
+    assert 'backup' in text, f'{fmt} prints the other relation'
+
+
+def _entry(kind: str, dims: list[str]) -> dict[str, Any]:
+    """An entry of *kind* over *dims*, its `where:` joining the two tuple dimensions where it has one."""
+    where = 'connection[unit] == assignment[unit]'
+    entries: dict[str, dict[str, Any]] = {
+        'parameter': {'parameters.probe': {'dims': dims, 'where': where}},
+        'variable': {'variables.probe': {'dims': dims, 'where': where}},
+        'constraint': {'constraints.probe': {'dims': dims, 'expression': 'sent <= 1', 'where': where}},
+        'named-expression': {'expressions.probe': {'dims': dims, 'expression': 'sent'}},
+        'case': {
+            'expressions.probe': {'dims': dims, 'cases': {'a': {'when': where, 'expression': 'sent'}}, 'otherwise': 0}
+        },
+        'piecewise': {
+            'parameters.xs': {'dims': ['period']},
+            'parameters.ys': {'dims': ['period']},
+            'piecewise.probe': {'dims': dims, 'along': 'period', 'links': {'x': ['sent', 'xs'], 'y': ['on', 'ys']}},
+        },
+        'given-variable': {'given.variables.probe': {'dims': dims}},
+    }
+    return entries[kind]
+
+
+@pytest.mark.parametrize(
+    'kind', ['parameter', 'variable', 'constraint', 'named-expression', 'case', 'piecewise', 'given-variable']
+)
+@pytest.mark.parametrize(
+    ('dims', 'fragment'),
+    [
+        pytest.param(['connection', 'assignment'], "which share 'unit'", id='two-sharing-a-member'),
+        pytest.param(['connection', 'unit'], "lists 'connection' and its member 'unit'", id='one-beside-its-member'),
+    ],
+)
+def test_an_entry_over_overlapping_tuple_dimensions_is_refused_whatever_its_where(kind, dims, fragment):
+    """A tuple dimension is opaque, so an entry over two that share a member pairs tuples whose members differ.
+
+    Was: the entry loaded as the cross product of the two, and a `where:` that
+    compared the shared member kept the pairs of one unit.
+    """
+    message = _refusal(**SHARED_MEMBER, **_entry(kind, dims))
+    assert fragment in message
+
+
+def test_an_alias_per_side_opts_into_every_pair():
+    """The allocation of #1011: each side holds its own alias of `region`, so the two share no member."""
+    allocation = {
+        'dimensions': {
+            'region': {},
+            'plant': {},
+            'site': {},
+            'supply_region': {'alias': 'region'},
+            'demand_region': {'alias': 'region'},
+            'supply': {'over': ['supply_region', 'plant']},
+            'demand': {'over': ['demand_region', 'site']},
+        },
+        'variables': {'x': {'dims': ['supply', 'demand']}},
+    }
+    assert to_spec(allocation).program.variables['x'].dims == ('demand', 'supply')
+    assert [note.subject for note in advice(allocation) if note.kind == 'never-an-axis'] == [], (
+        'x reaches each member, and each alias the dimension it aliases'
+    )
+
+
+def test_tuple_dimensions_without_a_shared_member_share_an_entry():
+    patch = {
+        'dimensions.scenario_year': {'over': ['region', 'period']},
+        'variables.probe': {'dims': ['connection', 'scenario_year']},
+    }
+    assert to_spec(varied(MODEL, **patch)).program.variables['probe'].dims == ('connection', 'scenario_year')
 
 
 def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
@@ -338,14 +321,22 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='no-member',
         ),
         pytest.param(
-            {'dimensions.pair': {'over': {'port': 'unit', 'bus': 'bus'}}},
-            ("Dimension 'pair' names member 'port' after dimension 'port', but the member is over 'unit'", 'Rename'),
-            id='a-role-named-after-another-dimension',
+            {'dimensions.trade.over': {'from_region': 'region', 'region': 'region'}},
+            (
+                'dimensions.trade.over',
+                'takes a list of dimensions, not a mapping. Name each member that repeats a dimension as an alias '
+                'of it under dimensions:, from_region: {alias: region}, and list the names: '
+                'over: [from_region, region].',
+            ),
+            id='a-mapping-of-members',
         ),
         pytest.param(
             {'dimensions.pair': {'over': ['region', 'region']}},
-            ("Dimension 'pair' lists 'region' twice under 'over:'", 'over: {region0: region, region1: region}'),
-            id='a-dimension-twice-in-the-list-form',
+            (
+                "Dimension 'pair' lists 'region' twice under 'over:'. Declare an alias of it under dimensions:, "
+                'from_region: {alias: region}, and list both: over: [from_region, region].',
+            ),
+            id='a-dimension-twice',
         ),
         pytest.param(
             {'relations.connection': {'key': ['unit', 'port']}},
@@ -390,7 +381,7 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='sos-of-type-2',
         ),
         pytest.param(
-            _constraint('at(both, by=connection[unit]) >= 0', ['connection']),
+            {'relations.r': {'key': ['connection', 'unit']}, 'variables.flow.where': 'at(r, by=connection[unit])'},
             (
                 "at(by=connection[unit]) reads through 'connection'",
                 "carries both 'connection' and its member ['unit']",
@@ -423,8 +414,8 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
         ),
         pytest.param(
             _constraint('sum(shipped, over=region) >= 0', ['trade']),
-            ("'region' is a member of 'trade'", 'by=trade[<the members to keep>]'),
-            id='over-names-a-dimension-two-roles-are-over',
+            ("'region' is a member of 'trade'", 'Write sum(..., over=trade, by=trade[from_region]).'),
+            id='over-names-a-member-beside-its-alias',
         ),
         pytest.param(
             _constraint('flow <= capacity', ['connection', 'snapshot']),
@@ -454,16 +445,6 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='a-member-operand-meets-the-tuple-under-a-sum',
         ),
         pytest.param(
-            _constraint('sum(flow * capacity, over=unit) <= both', ['connection', 'unit', 'snapshot']),
-            ("meets one over 'connection'", 'at(capacity, by=connection[unit])'),
-            id='a-member-operand-meets-the-tuple-under-a-sum-over-the-member-the-frame-declares',
-        ),
-        pytest.param(
-            _constraint('sum(flow * capacity) <= both', ['connection', 'unit']),
-            ("meets one over 'connection'", 'at(capacity, by=connection[unit])'),
-            id='a-member-operand-meets-the-tuple-under-a-sum-over-everything',
-        ),
-        pytest.param(
             {'assumptions.a': 'at(rating, by=connection[unit, port]) > capacity'},
             ("Assumption 'a': an operand over ['unit'] meets one over 'connection'",),
             id='a-member-operand-meets-the-tuple-in-an-assumption',
@@ -472,9 +453,9 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             {
                 'parameters.xs': {'dims': ['period']},
                 'parameters.ys': {'dims': ['period']},
-                'variables.y': {'dims': ['connection', 'unit']},
+                'variables.y': {'dims': ['connection']},
                 'piecewise.curve': {
-                    'dims': ['connection', 'unit'],
+                    'dims': ['connection'],
                     'along': 'period',
                     'links': {'x': ['y', 'xs'], 'y': ['y', 'ys']},
                     'where': 'at(rating, by=connection[unit, port]) > capacity',
@@ -616,14 +597,13 @@ def test_fragments_that_agree_on_the_members_merge():
         'dimensions': {'port': {}, 'unit': {}, 'connection': {'over': ['port', 'unit']}},
         'variables': {'loss': {'dims': ['connection']}},
     }
-    assert merge([FRAGMENT, other]).program.dimensions['connection'].over == (('port', 'port'), ('unit', 'unit'))
+    assert merge([FRAGMENT, other]).program.dimensions['connection'].over == ('port', 'unit')
 
 
 @pytest.mark.parametrize(
     'connection',
     [
         pytest.param({'over': ['unit']}, id='other-members'),
-        pytest.param({'over': {'unit': 'unit', 'side': 'port'}}, id='other-roles'),
         pytest.param({'over': ['unit', 'port'], 'missing': 'refused'}, id='other-missing'),
         pytest.param({}, id='no-members'),
     ],
@@ -646,19 +626,9 @@ def test_a_patch_cannot_change_the_members():
 def test_rename_reaches_the_members_and_the_implied_relation():
     renamed = rename(MODEL, {'unit': 'plant', 'connection': 'link', 'region': 'zone'})
     assert renamed.dimensions['link'].over == ('plant', 'port')
-    assert dict(renamed.dimensions['trade'].over) == {'src': 'zone', 'dst': 'zone'}, 'a role keeps its name'
+    assert renamed.dimensions['trade'].over == ('from_region', 'zone'), 'an alias member keeps its name'
     assert renamed.constraints['limit'].expression == 'flow <= at(capacity, by=link[plant])'
     assert rename(renamed, {'plant': 'unit', 'link': 'connection', 'zone': 'region'}) == to_spec(MODEL)
-
-
-@pytest.mark.parametrize(
-    'names', [pytest.param({'src': 'origin'}, id='from-a-role'), pytest.param({'bus': 'src'}, id='to-a-role')]
-)
-def test_rename_refuses_a_name_that_is_a_role(names):
-    """A token is renamed wherever it is spelt, so a role named after no dimension would change with an entry of its name."""
-    model = varied(MODEL, **{'parameters.src': {'dims': []}}) if 'src' in names else MODEL
-    with pytest.raises(LanguageError, match=r"'src' is also a member of the dimension 'trade'"):
-        rename(model, names)
 
 
 @pytest.mark.parametrize('canonical', [False, True])
