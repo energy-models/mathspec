@@ -44,6 +44,7 @@ $`\mathit{dispatch}_{g,t}`$, and the legend lists `generator` first.
 | `dtype`       | the type of a label: `float`, `int`, `str` or `datetime`                    | `str`    |
 | `one_of`      | [the labels a `str` dimension allows](#one_of)                              | `null`   |
 | `ordered`     | whether the order of the labels is part of the spec ([`ordered`](#ordered)) | `false`  |
+| `alias`       | [the dimension whose labels this one has](#alias)                           | `null`   |
 | `over`        | [the dimensions whose labels a label combines](#over)                       | `null`   |
 | `missing`     | [whether every combination of the members needs a label](#missing)          | `absent` |
 | `description` | free text, which the typeset legend lists                                   | `null`   |
@@ -162,6 +163,46 @@ A dimension with [`over:`](#over) has no order, so mathspec refuses
 [`edge='wrap'`](operators.md#shift) makes one `shift` cyclic, so that the first
 label steps back to the last. `edge='wrap'` does not change the dimension, and
 the dimension still needs `ordered: true`.
+
+## `alias`
+
+An entry is over each dimension once. An alias is the same labels under a
+second name, so an entry can be over them twice, such as an efficiency for
+each pair of regions that trade:
+
+```yaml
+dimensions:
+  region: { dtype: str }
+  from_region: { alias: region }
+relations:
+  trade: { key: [from_region, region], missing: absent }
+parameters:
+  ire_flo: { dims: [from_region, region], where: trade }
+variables:
+  exp: { dims: [region] }
+  imp: { dims: [region] }
+constraints:
+  eq_ire:
+    dims: [region]
+    expression: imp == sum(ire_flo * at(exp, by=from_region[region]), over=from_region)
+```
+
+`from_region` has the labels, the `dtype` and the order of `region`, so it
+takes no `dtype:`, `one_of:` or `ordered:` of its own. The data of `ire_flo`
+has the columns `from_region`, `region` and `value`, and the data has no table
+for `from_region`. An alias implies a relation of its own name, keyed by
+`from_region`, with the value column `region`, which sends each label to
+itself. So `at(exp, by=from_region[region])` reads `exp` at the region a row
+comes from. The typesetter prints the alias as the index of `region`, primed,
+over the same set:
+
+```math
+\mathit{imp}_{r} = \sum_{r' \in \mathcal{R}} \mathrm{ire\_flo}_{r',r} \cdot \mathit{exp}_{r'} \qquad \forall\, r \in \mathcal{R}
+```
+
+An alias names a declared dimension that is no alias itself. A second alias of
+`region` prints with two primes. The file declares no relation named
+`from_region`, because the alias already implies it.
 
 ## `over`
 

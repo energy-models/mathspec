@@ -62,6 +62,7 @@ from mathspec.program import (
     variables_of,
     walk,
 )
+from mathspec.spec import labels_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -236,7 +237,15 @@ def lower(spec: Spec) -> Program:
         constraints=constraints,
         objective=objective,
         dimensions={
-            name: Dimension(ddef.dtype, ddef.one_of, ddef.ordered, ddef.description, ddef.members, ddef.missing)
+            name: Dimension(
+                dtype=(labels := labels_of(spec, name)).dtype,
+                one_of=labels.one_of,
+                ordered=labels.ordered,
+                alias=ddef.alias,
+                over=ddef.members,
+                missing=ddef.missing,
+                description=ddef.description,
+            )
             for name, ddef in spec.dimensions.items()
         },
         relations=ns.relations,

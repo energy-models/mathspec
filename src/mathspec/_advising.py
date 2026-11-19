@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._boundedness import unbounded_notes
 from mathspec._validation import to_spec
-from mathspec.program import Advice, Join, Program, walk
+from mathspec.program import Advice, Dimension, Join, Program, walk
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -95,8 +95,8 @@ def _never_an_axis(program: Program) -> list[Advice]:
     that column is checked against, and a ``where`` selects on them, so it is
     in use even where nothing is indexed by it. A dimension only a given entry
     indexes is reached too: the column exists, in another file. The relation a
-    dimension with members implies is no use of its own; a reached dimension
-    reaches its members.
+    dimension implies is no use of its own; a reached dimension reaches its
+    members, and a reached alias the dimension whose labels it has.
     """
     reached: set[str] = set()
     for entry in (
@@ -111,7 +111,9 @@ def _never_an_axis(program: Program) -> list[Advice]:
         reached.update(entry.dims)
     reached |= _grouped_axes(program)
     reached |= {dim for name, lk in program.relations.items() if name not in program.dimensions for dim in lk.dims}
-    reached |= {dim for name in reached for _, dim in program.dimensions[name].over}
+    frontier = reached
+    while frontier := {d for name in frontier for d in _behind(program.dimensions[name])} - reached:
+        reached |= frontier
 
     return [
         Advice(
@@ -124,6 +126,15 @@ def _never_an_axis(program: Program) -> list[Advice]:
         for name in program.dimensions
         if name not in reached
     ]
+
+
+def _behind(dimension: Dimension) -> set[str]:
+    """The dimensions a label of *dimension* is made of: its members, or the dimension it aliases.
+
+    A member may be an alias, and an alias may be of a dimension with members,
+    so the caller follows these until nothing new is reached.
+    """
+    return {d for _, d in dimension.over} | ({dimension.alias} if dimension.alias is not None else set())
 
 
 def _grouped_axes(program: Program) -> set[str]:

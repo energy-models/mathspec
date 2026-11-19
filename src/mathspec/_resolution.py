@@ -49,6 +49,7 @@ from mathspec.program import (
     VariableDefined,
     carries_variable,
 )
+from mathspec.spec import implied_relations, labels_of
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -103,17 +104,17 @@ class Namespace:
         self.dtypes: dict[str, DeclaredDtype] = {
             **{p: pd.dtype for p, pd in parameters.items()},
             **{m: cast('DeclaredDtype', 'bool') for m in spec.given.conditions},
-            **{d: dd.dtype for d, dd in spec.dimensions.items()},
+            **{d: labels_of(spec, d).dtype for d in spec.dimensions},
         }
         self.one_of: dict[str, tuple[str, ...]] = {
-            d: dd.one_of for d, dd in spec.dimensions.items() if dd.one_of is not None
+            d: one_of for d in spec.dimensions if (one_of := labels_of(spec, d).one_of) is not None
         }
         self.defaults: dict[str, bool | float] = {
             p: pd.missing for p, pd in spec.parameters.items() if not isinstance(pd.missing, str) and pd.where is None
         }
         self.relations: dict[str, Relation] = {
             **{n: Relation(lk.pairs, lk.key_roles, lk.missing, lk.description) for n, lk in spec.relations.items()},
-            **{d: Relation(((d, d), *dd.members), (d,)) for d, dd in spec.dimensions.items() if dd.over},
+            **implied_relations(spec),
         }
         self.leaf_dims: dict[str, tuple[str, ...]] = {
             **{p: pd.dims for p, pd in parameters.items()},
@@ -255,7 +256,7 @@ class Namespace:
 
     def unordered(self, name: str) -> bool:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
-        return not self.spec.dimensions[name].ordered
+        return not labels_of(self.spec, name).ordered
 
     def unordered_refusal(self, context: str, construct: str, name: str) -> str:
         """The refusal for *construct* reading the order of the dimension *name*, with the rewrite its entry allows."""

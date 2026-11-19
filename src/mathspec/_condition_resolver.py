@@ -689,7 +689,7 @@ class _Plain(NamedTuple):
 
 
 def _side_kind(ns: Namespace, name: str, column: str) -> str | None:
-    """What a side names: a relation where it reads a column of one, so a tuple dimension's ``connection[unit]`` reads its implied relation."""
+    """What a side names: a relation where it reads a column of one, so ``connection[unit]`` or an alias's ``from_region[region]`` reads the implied relation."""
     return 'relation' if column and name in ns.relations else ns.kind(name)
 
 

@@ -749,7 +749,10 @@ def test_a_member_read_inside_a_spread_prints_as_the_index_of_the_member(fmt):
         ),
         pytest.param(
             {'relations.connection': {'key': ['unit', 'port']}},
-            ("Relation 'connection' collides with the dimension of the same name",),
+            (
+                "Relation 'connection' collides with the relation that dimension 'connection' implies, read as "
+                "connection[port], connection[unit]. Delete 'connection' under relations:.",
+            ),
             id='a-declared-relation-of-the-same-name',
         ),
         pytest.param(
@@ -994,14 +997,28 @@ def test_a_set_of_type_1_runs_along_a_dimension_with_members():
 @pytest.mark.parametrize(
     ('variables', 'unused'),
     [
-        pytest.param({'x': {'dims': ['snapshot']}}, ['connection', 'port', 'unit'], id='nothing-is-over-the-dimension'),
-        pytest.param({'x': {'dims': ['connection']}}, ['snapshot'], id='an-entry-is-over-the-dimension'),
+        pytest.param(
+            {'x': {'dims': ['snapshot']}},
+            ['connection', 'from_unit', 'link', 'port', 'unit'],
+            id='nothing-is-over-the-dimension',
+        ),
+        pytest.param(
+            {'x': {'dims': ['connection']}}, ['from_unit', 'link', 'snapshot'], id='an-entry-is-over-the-dimension'
+        ),
+        pytest.param({'x': {'dims': ['link']}}, ['connection', 'snapshot'], id='a-member-is-an-alias'),
     ],
 )
 def test_the_implied_relation_does_not_count_as_a_use(variables, unused):
     """The relation the entry implies has a column over the dimension and each member, so it counted as reaching them."""
     spec = {
-        'dimensions': {'unit': {}, 'port': {}, 'snapshot': {}, 'connection': {'over': ['unit', 'port']}},
+        'dimensions': {
+            'unit': {},
+            'port': {},
+            'snapshot': {},
+            'connection': {'over': ['unit', 'port']},
+            'from_unit': {'alias': 'unit'},
+            'link': {'over': ['from_unit', 'port']},
+        },
         'variables': variables,
     }
     notes = sorted(note.subject for note in advice(spec) if note.kind == 'never-an-axis')
