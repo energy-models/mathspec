@@ -138,3 +138,9 @@ def test_the_relation_an_alias_implies_reaches_no_dimension(patch: dict[str, Any
     assert [n.subject for n in notes if n.kind == 'never-an-axis'] == unused, (
         'an unused alias is advised, and an alias in use reaches the dimension whose labels it has'
     )
+
+
+def test_a_condition_compares_the_label_an_alias_reads():
+    """`from_g[g] == 'a'` was refused as a column of a dimension: a condition did not read the relation the alias implies."""
+    out = typeset(to_spec(varied(TWICE, **{'parameters.link.where': "from_g[g] == 'a'"})), 'markdown')
+    assert "only where $`g' = " in out, 'the condition reads the label at the primed index'
