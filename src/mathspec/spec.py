@@ -44,6 +44,7 @@ from mathspec.program import (
     ParameterDtype,
     PiecewiseMethod,
     Program,
+    Relation,
     RelationMissing,
     SosType,
     VariableDomain,
@@ -347,7 +348,23 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
+    alias: str | None = None
+    """The dimension whose labels this one has, under a second name, so an entry can be over the same labels twice. It
+    takes that dimension's dtype, labels and order, and has the map ``<this>[<that>]`` from each label to itself.
+    """
     description: str | None = None
+
+    @model_validator(mode='after')
+    def _alias_takes_the_rest(self) -> DimensionSpec:
+        """An alias has the labels of its dimension, so a key that would set its own is refused."""
+        if self.alias is not None and (own := sorted(self.model_fields_set & {'dtype', 'one_of', 'ordered'})):
+            listed = ', '.join(f'{key}:' for key in own)
+            msg = (
+                f"is an alias of '{self.alias}', and takes its dtype, labels and order from it. Delete {listed}, or "
+                f"set it on '{self.alias}'."
+            )
+            raise ValueError(msg)
+        return self
 
     @field_validator('one_of', mode='before')
     @classmethod
@@ -1363,6 +1380,27 @@ class Spec(_StrictSpec):
         """
         _ = self.program
         return self
+
+
+def labels_of(spec: Spec, name: str) -> DimensionSpec:
+    """The declaration that sets the dtype, labels and order of dimension *name*: its own, or that of the one it aliases."""
+    declared = spec.dimensions[name]
+    return spec.dimensions.get(declared.alias, declared) if declared.alias is not None else declared
+
+
+def implied_relations(spec: Spec) -> dict[str, Relation]:
+    """Each relation a dimension implies, under the name of that dimension; the data has no table for one.
+
+    An alias implies the relation from each of its labels to the same label of
+    the dimension it aliases, read as ``<alias>[<dimension>]``. The file
+    declares none of them under ``relations:``, so none collides with the
+    dimension it is named after.
+    """
+    return {
+        name: Relation(((name, name), (d.alias, d.alias)), (name,))
+        for name, d in spec.dimensions.items()
+        if d.alias is not None and d.alias in spec.dimensions
+    }
 
 
 def _formulations(asked: tuple[str, ...]) -> tuple[Formulation, ...]:

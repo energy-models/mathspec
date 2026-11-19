@@ -29,8 +29,8 @@ from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError, unordered
-from mathspec.spec import NUMERIC_DTYPES, Spec, side_columns
+from mathspec.errors import SchemaError, did_you_mean, unordered
+from mathspec.spec import NUMERIC_DTYPES, Spec, implied_relations, labels_of, side_columns
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -109,6 +109,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_relation_targets(spec),
+        *_aliases(spec),
         *_bound_names(spec),
         *_sos_shapes(spec),
         *_sos_bounds(spec),
@@ -140,13 +141,25 @@ def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
 
 
 def _name_collisions(spec: Spec) -> Iterator[str]:
-    """A name is declared once, and never as a built-in operator."""
+    """A name is declared once, and never as a built-in operator.
+
+    A relation that a dimension implies is not declared, so it collides with
+    nothing. A relation the file declares under the name of such a dimension
+    is the implied one written twice, and the rewrite deletes it.
+    """
+    implied = implied_relations(spec)
     seen: dict[str, str] = {}
     for kind, group in _flat_namespace(spec):
         for name in group:
             if name in BUILTIN_NAMES:
                 yield f"{kind.capitalize()} '{name}' collides with the built-in operator '{name}'. Rename the {kind}."
-            if name in seen:
+            if kind == 'relation' and name in implied:
+                reads = ', '.join(f'{name}[{column}]' for column in implied[name].values)
+                yield (
+                    f"Relation '{name}' collides with the relation that dimension '{name}' implies, read as {reads}. "
+                    f"Delete '{name}' under relations:."
+                )
+            elif name in seen:
                 yield (
                     f"{kind.capitalize()} '{name}' collides with the {seen[name]} of the same name. Rename one of them."
                 )
@@ -229,6 +242,20 @@ def _relation_targets(spec: Spec) -> Iterator[str]:
             )
 
 
+def _aliases(spec: Spec) -> Iterator[str]:
+    """An alias names a declared dimension that is no alias itself."""
+    for name, d in spec.dimensions.items():
+        if d.alias is None:
+            continue
+        head = f"Dimension '{name}': alias: '{d.alias}'"
+        if d.alias == name:
+            yield f"{head} is the dimension itself. Name the dimension whose labels '{name}' has."
+        elif d.alias not in spec.dimensions:
+            yield f'{head} is no declared dimension. {did_you_mean(d.alias, spec.dimensions, label="Dimensions")}'
+        elif (target := spec.dimensions[d.alias].alias) is not None:
+            yield f"{head} is an alias of '{target}' itself. Write alias: {target}."
+
+
 def _bound_names(spec: Spec) -> Iterator[str]:
     """A named bound is a numeric parameter, declared here or given, bare or looked up through a relation."""
     parameters = {**spec.parameters, **spec.given.parameters}
@@ -286,7 +313,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f"'{entry.variable}' (dims {list(spec.variables[entry.variable].dims)}). Set 'along:' "
                 f'to one of these dims.'
             )
-        elif entry.type == 2 and not spec.dimensions[entry.along].ordered:
+        elif entry.type == 2 and not labels_of(spec, entry.along).ordered:
             yield unordered(context, f'type: 2 along {entry.along}', entry.along)
         elif entry.variable in claimed:
             yield (
@@ -340,7 +367,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
         if pw.along not in spec.dimensions:
             yield undeclared_dimension('piecewise', name, pw.along)
             continue
-        if not spec.dimensions[pw.along].ordered:
+        if not labels_of(spec, pw.along).ordered:
             yield unordered(context, f'along: {pw.along}', pw.along)
         for d in pw.dims:
             if d not in spec.dimensions:

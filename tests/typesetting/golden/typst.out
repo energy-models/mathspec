@@ -6,6 +6,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 == Sets
 / $cal(B)$: index $b$ --- `bp`
 / $cal(U)$: index $u$ --- `bus` with $upright("area_of"): cal(U) arrow.r cal(Z), upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("zone_of"): cal(U) arrow.r cal(Z)$, `area_of` is `absent` where the data has no row, `connection` is `absent` where the data has no row
+/ $cal(U)$: index $u'$ --- `from_bus`, an alias of `bus`
 / $cal(G)$: index $g$ --- `generator` with $upright("connection") subset.eq cal(U) times cal(G), upright("gen_bt"): cal(G) arrow.r cal(U) times cal(E), upright("gen_bus"): cal(G) arrow.r cal(U), upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z)$, `connection` is `absent` where the data has no row
 / $cal(S)$: index $s$ --- `season` with $upright("season_of"): cal(T) arrow.r cal(S)$
 / $cal(T)$: index $t$ --- `snapshot` (`int` coordinates) with $upright("gen_zone"): cal(G) times cal(T) arrow.r cal(Z), upright("rep_of"): cal(T) arrow.r cal(T), upright("season_of"): cal(T) arrow.r cal(S)$
@@ -28,6 +29,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("min_up")$: `min_up` over $cal(G)$
 / $upright("p")^(upright("max"))$: `p_max` over $cal(G)$, $infinity$ where the data has no row
 / $upright("p")^(upright("min"))$: `p_min` over $cal(G)$
+/ $upright("susceptance")$: `susceptance` over $cal(U) times cal(U)$, $0$ where the data has no row
 / $upright("tech_cap")$: `tech_cap` over $cal(U) times cal(E)$, `absent` where the data has no row
 / $upright("zone_cap")$: `zone_cap` over $cal(Z)$
 
@@ -123,7 +125,9 @@ $ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in ca
   upright("crossed") & p_(g + 1,t minus.o 1) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
   upright("edges") & p_(g,t minus.square_(0) 1) & <= p_(g,t plus.square_(0) 1) + upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
   upright("efficiency") & p_(g,t) & <= upright("eta")_(g) dot upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \
+  upright("exchanged") & theta_(u) & = sum_(u' in cal(U) colon u' = u) sum_(u'' in cal(U)) upright("susceptance")_(u'',u') & forall u in cal(U) \
   upright("first") & italic("on")_(g,t) & = 1 & forall g in cal(G), t in cal(T) colon upright("pos")(t) = 0 or upright("pos")_(upright("season_of")(t))(t) = 0 \
+  upright("flow_angle") & theta_(u) & = sum_(u' in cal(U)) upright("susceptance")_(u,u') dot theta_(u') & forall u in cal(U) \
   upright("grouped_once") & sum_(g in cal(G) colon upright("gen_bt.bus")(g) = u and upright("gen_bt.technology")(g) = e) p_(g,t) & <= upright("tech_cap")_(u,e) & forall u in cal(U), t in cal(T), e in cal(E) \
   upright("held_in_season") & p_(g,t) & <= p_(g,t minus.square_(0)^(upright("season_of")(t)) 1) & forall g in cal(G), t in cal(T) \
   upright("history") & sum_(t' in cal(T) colon 0 <= t minus.o t' < upright("min_up")) italic("on")_(g,t') & <= italic("units")_(g) & forall g in cal(G), t in cal(T) \
