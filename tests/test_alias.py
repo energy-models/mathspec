@@ -99,12 +99,24 @@ def test_an_alias_that_says_more_or_less_than_its_dimension_is_refused(patch: di
     assert message in str(caught.value)
 
 
-def test_a_sum_inside_an_entry_over_the_alias_takes_an_index_of_its_own():
+@pytest.mark.parametrize(
+    ('frame', 'expression', 'indexed'),
+    [
+        pytest.param(['g'], 'p == sum(sum(w, over=g), over=from_g, by=from_g[g])', "w_{g',g''}", id='under-g'),
+        pytest.param(['from_g', 'g'], 'x == sum(sum(w, over=g), over=from_g)', "w_{g'',g'''}", id='under-both'),
+        pytest.param(['from_g', 'g'], 'x == sum(sum(w, over=from_g), over=g)', "w_{g''',g''}", id='under-both-swapped'),
+    ],
+)
+def test_a_sum_inside_an_entry_over_the_alias_takes_an_index_of_its_own(
+    frame: list[str], expression: str, indexed: str
+):
     """A sum over `g` inside a sum over its alias printed `w_{g',g'}`: its dummy took the alias's own index.
 
     The alias prints as `g'`, and a reduction primes its dummy once per
     enclosing use of the dimension, so the sum over `g` under `∀ g` also
-    printed `g'`, and the two indices of `w` read as one.
+    printed `g'`, and the two indices of `w` read as one. Under `∀ g', g`
+    both sums printed `g''`: the inner dummy skipped every dimension's index
+    but not the dummy of the sum around it.
     """
     spec = to_spec(
         varied(
@@ -112,11 +124,12 @@ def test_a_sum_inside_an_entry_over_the_alias_takes_an_index_of_its_own():
             **{
                 'dimensions.from_g': {'alias': 'g'},
                 'variables.w': {'dims': ['from_g', 'g']},
-                'constraints.out': {'dims': ['g'], 'expression': 'p == sum(sum(w, over=g), over=from_g, by=from_g[g])'},
+                'variables.x': {'dims': ['from_g', 'g']},
+                'constraints.out': {'dims': frame, 'expression': expression},
             },
         )
     )
-    assert "w_{g',g''}" in typeset(spec, 'markdown'), 'the inner sum takes g, primed past the alias'
+    assert indexed in typeset(spec, 'markdown'), 'each sum takes an index no dimension and no enclosing sum prints'
 
 
 #: `from_h` is an alias of `h`, and no relation and no entry other than `p` is over either.
