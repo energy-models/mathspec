@@ -104,8 +104,8 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
 
     A token in text is renamed wherever it has the spelling, so a new name that
     is the argument of a macro whose template uses the old name, or a name that
-    is a relation column or a member named after something else, would change
-    an expression without a refusal.
+    is a relation column named after something else, would change an
+    expression without a refusal.
     """
     for old in names:
         if old not in declared:
@@ -116,18 +116,12 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
             raise LanguageError(msg)
     changed = {old: new for old, new in names.items() if new is not None and new != old}
     columns = {
-        column: ('column', f"relation '{relation}'")
+        column: relation
         for relation, entry in spec.relations.items()
         for side in (entry.key, entry.values)
         if isinstance(side, Mapping)
         for column, dimension in side.items()
         if column != dimension
-    }
-    columns |= {
-        role: ('member', f"dimension '{name}'")
-        for name, entry in spec.dimensions.items()
-        for role, dimension in entry.members
-        if role != dimension
     }
     for old, new in changed.items():
         for macro, entry in spec.macros.items():
@@ -138,10 +132,9 @@ def _checked(names: Mapping[str, str | None], declared: Mapping[str, str], spec:
                 )
                 raise LanguageError(msg)
         if (column := old if old in columns else new) in columns:
-            noun, owner = columns[column]
             msg = (
-                f"rename changes '{old}' to '{new}', and '{column}' is also a {noun} of the {owner}. Give the "
-                f'{noun} another name in the file, or choose another name.'
+                f"rename changes '{old}' to '{new}', and '{column}' is also a column of the relation "
+                f"'{columns[column]}'. Give the column another name in the file, or choose another name."
             )
             raise LanguageError(msg)
     for old, new in changed.items():

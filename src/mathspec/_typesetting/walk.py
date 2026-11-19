@@ -131,14 +131,15 @@ class _Step:
         return replace(self, by=self.by + other.by) if same else None
 
 
-def _unclaimed(index: Mapping[str, str], dim: str, primes: int) -> str:
-    """The index of *dim* with *primes* primes, and more until no other dimension prints with it.
+def _unclaimed(index: Mapping[str, str], dim: str, primes: int, enclosing: Iterable[str]) -> str:
+    """The index of *dim* with *primes* primes, and more until no other dimension and no *enclosing* index prints with it.
 
     An alias prints as its dimension's index primed, so a reduction over the
     dimension inside an entry over the alias would take the alias's own index
-    as its dummy and read two indices as one.
+    as its dummy and read two indices as one. Priming past it can land on the
+    dummy of an enclosing reduction over the alias, so those are taken too.
     """
-    taken = {symbol for other, symbol in index.items() if other != dim}
+    taken = {symbol for other, symbol in index.items() if other != dim} | set(enclosing)
     dummy = index[dim] + "'" * primes
     while dummy in taken:
         dummy += "'"
@@ -194,7 +195,7 @@ class _Context:
         once per enclosing use of the same dimension, so ``sum(q, over=generator, by=bus_of[bus])``
         under ``∀ g`` sums over ``g'`` and its condition can still name ``g``.
         """
-        dummy = _unclaimed(self.walk.symbols.index, dim, self.bound.count(dim))
+        dummy = _unclaimed(self.walk.symbols.index, dim, self.bound.count(dim), self.lookups.values())
         body = replace(self, lookups={**self.lookups, dim: dummy}, bound=(*self.bound, dim))
         return dummy, body
 

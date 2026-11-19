@@ -41,6 +41,26 @@ def _refusal(model: dict[str, Any] = SMALL_MODEL, **patch: Any) -> str:
 
 _NONLINEAR_ENTRY = {'expressions': {'bad': 'c / sum(p)'}}
 
+#: Two dimensions with members that share `region`, and one whose member `unit` an entry may list beside it.
+_TUPLES = {
+    'dimensions.region': {},
+    'dimensions.plant': {},
+    'dimensions.site': {},
+    'dimensions.supply': {'over': ['region', 'plant']},
+    'dimensions.demand': {'over': ['region', 'site']},
+    'dimensions.unit': {},
+    'dimensions.port': {},
+    'dimensions.connection': {'over': ['unit', 'port']},
+}
+
+_SHARED_REGION = (
+    "Variable 'x' lists 'demand' and 'supply' in dims:, which share 'region'. A dimension with members is opaque, so "
+    'the entry would pair every demand with every supply, whatever their region. Write the entry over the members, '
+    'dims: [plant, region, site], with where: a relation keyed by [region, site] and one keyed by [plant, region]; '
+    "or, if every pair is meant, let supply hold an alias of 'region': supply_region: {alias: region}, and supply: "
+    '{over: [plant, supply_region]}.'
+)
+
 
 class TestValidateExpressions:
     @pytest.mark.parametrize(
@@ -491,6 +511,13 @@ class TestADimensionWithOneOf:
         message = _refusal(**_ONE_OF, **patch)
         assert "'west' is not a label of 'h', which allows only ['north', 'south']" in message, message
         assert "add 'west' to the one_of of 'h'" in message, message
+
+    def test_a_label_not_in_one_of_through_an_alias_names_the_dimension_that_lists_them(self):
+        """The refusal told the file to add the label to the one_of of the alias, which an alias may not carry."""
+        alias = {'dimensions.from_h': {'alias': 'h'}, 'variables.r': {'dims': ['from_h'], 'where': "from_h == 'west'"}}
+        message = _refusal(**_ONE_OF, **alias)
+        assert "'west' is not a label of 'from_h', an alias of 'h', which allows only" in message, message
+        assert "add 'west' to the one_of of 'h'." in message, message
 
     @pytest.mark.parametrize(
         'patch',
@@ -1887,28 +1914,8 @@ class TestRulesDecidedWithoutData:
                     'relations.lz': {'key': ['g', 'z'], 'values': 'h'},
                     'variables.q.where': 'lk != lz',
                 },
-                (
-                    'compares relations keyed over different dimensions',
-                    "dims: lacks 'z'",
-                    "Add 'z' to dims:, or compare against a relation keyed like 'lk'",
-                ),
-                id='where-two-relations-with-a-key-the-frame-lacks',
-            ),
-            pytest.param(
-                {'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}, 'variables.p.where': 'lk == lh[to]'},
-                ("dims: lacks 'h'", "Add 'h' to dims:, or compare against a relation keyed like 'lk'"),
-                id='where-two-relations-keyed-apart-in-a-frame-of-one',
-            ),
-            pytest.param(
-                {
-                    'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}},
-                    'assumptions': {'sound': 'lk == lh[to]'},
-                },
-                (
-                    "compares relations keyed over different dimensions ('lk' by ['g'], 'lh' by ['h'])",
-                    "a condition has no dims:. Write the comparison in the where: of an entry whose dims: lists the keys of 'lk' and 'lh'",
-                ),
-                id='an-assumption-with-no-dims-compares-relations-keyed-apart',
+                ('compares relations keyed over different dimensions',),
+                id='where-two-relations-with-different-keys',
             ),
             pytest.param(
                 {'variables.p.where': 'c > q'},
@@ -2015,40 +2022,31 @@ class TestRulesDecidedWithoutData:
                 ),
                 id='where-two-relations-whose-columns-are-over-different-dimensions',
             ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['supply', 'demand']}},
+                (_SHARED_REGION,),
+                id='dims-two-dimensions-that-share-a-member',
+            ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['supply', 'demand'], 'where': 'supply[region] == demand[region]'}},
+                (_SHARED_REGION,),
+                id='dims-two-dimensions-that-share-a-member-whatever-the-where',
+            ),
+            pytest.param(
+                {**_TUPLES, 'variables.x': {'dims': ['connection', 'unit']}},
+                (
+                    "Variable 'x' lists 'connection' and its member 'unit' in dims:. 'connection' already holds "
+                    "'unit', so the entry would pair every connection with every unit. Drop 'unit' from dims:, and "
+                    'read it at each connection as connection[unit], as in at(<operand>, by=connection[unit]).',
+                ),
+                id='dims-a-dimension-beside-its-own-member',
+            ),
         ],
     )
     def test_a_rule_decided_without_data(self, patch, fragments):
         message = _refusal(**patch)
         for fragment in fragments:
             assert fragment in message
-
-    @pytest.mark.parametrize(
-        'patch',
-        [
-            pytest.param({'variables.q.where': 'lk == lh[to]'}, id='a-variable-where'),
-            pytest.param({'parameters.m': {'dims': ['g', 'h'], 'where': 'lk == lh[to]'}}, id='a-parameter-where'),
-            pytest.param(
-                {'constraints.k': {'dims': ['g', 'h'], 'expression': 'q <= 1', 'where': 'lk != lh[to]'}},
-                id='a-constraint-where',
-            ),
-            pytest.param(
-                {
-                    'expressions.e': {
-                        'dims': ['g', 'h'],
-                        'cases': {'same': {'when': 'lk == lh[to]', 'expression': 'q'}},
-                        'otherwise': 0,
-                    }
-                },
-                id='a-case',
-            ),
-        ],
-    )
-    def test_two_relation_columns_keyed_apart_compare_where_dims_carry_both_keys(self, patch):
-        """Each column is read at its own key, and `dims:` carries both, so the comparison is over their product.
-
-        Was: refused unless both relations were keyed over the same dimensions.
-        """
-        _spec(**{'relations.lh': {'key': {'from': 'h'}, 'values': {'to': 'h'}}}, **patch)
 
     @pytest.mark.parametrize(
         ('operand', 'call', 'patch'),
@@ -3407,12 +3405,25 @@ _READS_ORDER = [
 ]
 
 
+#: `t` and `bp` as aliases, so their order is that of the dimension each aliases.
+_ALIASED_ORDER = {'t': 'time', 'bp': 'point'}
+
+
+@pytest.mark.parametrize('aliased', [pytest.param(False, id='declared'), pytest.param(True, id='an-alias')])
 @pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)
-def test_a_construct_that_reads_order_along_an_unordered_dimension_is_refused(patch, dimension):
-    """The order an unordered dimension has is the data's row order, which is not part of the model."""
-    message = _refusal(UNORDERED, **patch)
-    assert f"reads the order of '{dimension}', which is not declared ordered" in message
-    assert f"'{dimension}: {{ordered: true}}' under dimensions:" in message, 'the refusal names the rewrite'
+def test_a_construct_that_reads_order_along_an_unordered_dimension_is_refused(patch, dimension, aliased):
+    """The order an unordered dimension has is the data's row order, which is not part of the model.
+
+    The refusal along an alias told the file to declare the alias ordered, which an alias may not carry.
+    """
+    aliases = {alias: {'alias': target} for alias, target in _ALIASED_ORDER.items()}
+    targets = {target: {'dtype': 'int'} for target in _ALIASED_ORDER.values()}
+    model = varied(UNORDERED, dimensions={**aliases, **targets}) if aliased else UNORDERED
+    owner = _ALIASED_ORDER[dimension] if aliased else dimension
+    named = f"'{dimension}', an alias of '{owner}'" if aliased else f"'{dimension}'"
+    message = _refusal(model, **patch)
+    assert f'reads the order of {named}, which is not declared ordered' in message, message
+    assert f"'{owner}: {{ordered: true}}' under dimensions:" in message, 'the refusal names the rewrite'
 
 
 @pytest.mark.parametrize(('patch', 'dimension'), _READS_ORDER)

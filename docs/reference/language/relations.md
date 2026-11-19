@@ -8,8 +8,10 @@ SPDX-License-Identifier: CC-BY-4.0
 A **relation** is a table that maps between [dimensions](dimensions.md), such
 as the bus of each generator. The period of each snapshot and the buses that a
 generator may connect to are also relations. The file declares the columns of
-the table, and the rows come with the data. This page lists the keys of a
-relation, the data it expects, and how each operator uses a relation.
+the table, and the rows come with the data. An [alias](dimensions.md#alias)
+implies a relation with no table, because its rows come from the labels of its
+dimension. This page lists the keys of a relation, the data it expects, and how
+each operator uses a relation.
 
 ## `relations`
 
@@ -335,15 +337,6 @@ mathspec suggests the rewrite: the columns split between `key:` and `values:`.
 
 A condition tests a relation at the coordinates of its own entry. It compares
 a value column, written `l[c]`, against a label, compares two relation columns, or tests that a row exists.
-Two columns compare where the `dims:` of the entry lists the keys of both
-relations, so `bus_of[bus] == line_end[bus]` over `dims: [unit, line]` keeps
-each unit and line that meet at a bus. Without that dimension in `dims:`,
-mathspec refuses the comparison and suggests the rewrite:
-
-```text
-Variable 'z': 'bus_of[bus] == line_end[bus]' compares relations keyed over different dimensions ('bus_of' by ['unit'], 'line_end' by ['line']), and dims: lacks 'line'. Add 'line' to dims:, or compare against a relation keyed like 'bus_of'.
-```
-
 [Conditions](expressions.md#conditions) lists when two columns may be compared. A
 comparison uses one column, so `calendar[month, weekday] == 'x'` is refused,
 and mathspec suggests the rewrite:

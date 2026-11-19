@@ -287,7 +287,7 @@ class Legend:
         if (labels := self.program.dimensions[dim].one_of) is not None:
             clauses.append(f' (labels {", ".join(self.format.mono(m) for m in labels)})')
         if members := dimensions[dim].over:
-            product = self.format.joined([self.symbols.set[d] for _, d in members], self._op('times'))
+            product = self.format.joined([self.symbols.set[d] for d in members], self._op('times'))
             holds = self._op('subset_of' if dimensions[dim].missing == 'absent' else 'equal')
             clauses.append(f', {self.format.math(f"{self.symbols.set[dim]} {holds} {product}")}')
         if carried:

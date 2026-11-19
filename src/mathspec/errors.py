@@ -43,22 +43,28 @@ def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared', li
     return f'{label}: {", ".join(candidates) or "nothing"}.' if listing else ''
 
 
-def unordered(context: str, construct: str, dimension: str, members: Iterable[tuple[str, str]] = ()) -> str:
+def unordered(
+    context: str, construct: str, dimension: str, alias: str | None = None, members: Iterable[str] = ()
+) -> str:
     """The refusal for *construct* reading the order of *dimension*, which is not declared ordered.
 
-    A dimension with *members*, each a ``(role, dimension)``, cannot be
+    *alias* is the dimension that *dimension* is an alias of, if any: an alias
+    takes its order from that dimension and may not declare one, so the
+    rewrite names that dimension. A dimension with *members* cannot be
     declared ordered, so its rewrite is the entry over the members.
     """
-    if over := sorted({dim for _, dim in members}):
+    if over := sorted(members):
         return (
             f"{context}: {construct} reads the order of '{dimension}', which lists its members and so has no "
             f'order. Declare the entry over {over}, with `where:` a relation that lists the tuples, and step '
             f'along a member that is declared ordered.'
         )
+    owner = alias or dimension
+    named = f"'{dimension}', an alias of '{alias}'" if alias else f"'{dimension}'"
     return (
-        f"{context}: {construct} reads the order of '{dimension}', which is not declared ordered, so the "
+        f'{context}: {construct} reads the order of {named}, which is not declared ordered, so the '
         f'order would come from the row order of the data. Declare '
-        f"'{dimension}: {{ordered: true}}' under dimensions:."
+        f"'{owner}: {{ordered: true}}' under dimensions:."
     )
 
 

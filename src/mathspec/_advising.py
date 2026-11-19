@@ -134,7 +134,7 @@ def _behind(dimension: Dimension) -> set[str]:
     A member may be an alias, and an alias may be of a dimension with members,
     so the caller follows these until nothing new is reached.
     """
-    return {d for _, d in dimension.over} | ({dimension.alias} if dimension.alias is not None else set())
+    return {*dimension.over, *([dimension.alias] if dimension.alias is not None else [])}
 
 
 def _grouped_axes(program: Program) -> set[str]:

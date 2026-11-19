@@ -185,7 +185,9 @@ expression before any tool reads it. A file declares its own macros under
 A member is a dimension that another dimension lists under `over:`. A label
 of the listing dimension combines one label of each member, and a call reads
 a member through the relation that the dimension declares
-([`over`](language/dimensions.md#over)).
+([`over`](language/dimensions.md#over)). No entry is over a dimension and its
+member, or over two dimensions that share a member
+([two dimensions that share a member](language/dimensions.md#two-dimensions-that-share-a-member)).
 
 ## Missing row
 

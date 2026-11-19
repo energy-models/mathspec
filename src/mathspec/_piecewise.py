@@ -491,9 +491,7 @@ def resolve_links(name: str, pw: PiecewiseSpec, ns: Namespace, errors: list[str]
     A link is read affinely, so it is held to degree 1 where it is read.
     """
     links = [
-        resolve_expression_text(
-            link.expression, ns, f"piecewise '{name}' link '{key}'", errors, ceiling=1, frame=pw.dims
-        )
+        resolve_expression_text(link.expression, ns, f"piecewise '{name}' link '{key}'", errors, ceiling=1)
         for key, link in pw.links.items()
     ]
     if any(link is None for link in links):

@@ -12,7 +12,7 @@ doors that call this.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
 from mathspec._dimensions import check_meeting, check_node, joined, operand_over, sorted_dims
@@ -84,16 +84,13 @@ class ExpressionResolver:
     appended to ``errors``; every sibling is still read, so an entry
     with two faults reports both. ``formals`` are a macro template's formals:
     a formal has no kind until a call site binds it, so a node one stands
-    under is ``None`` with nothing appended. ``frame`` is the ``dims:`` of
-    the entry, less the dims an enclosing sum adds up, which is where a
-    member may meet the dimension that lists it.
+    under is ``None`` with nothing appended.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     formals: frozenset[str] = frozenset()
-    frame: frozenset[str] = frozenset()
 
     def _formal(self, value: ArithmeticNode) -> bool:
         """Whether *value* is a formal, left for the call site to bind."""
@@ -182,7 +179,7 @@ class ExpressionResolver:
     def met(self, left: Expression, right: Expression) -> bool:
         """Whether *left* and *right* meet a member against the dimension that lists it, the refusal appended."""
         try:
-            check_meeting(left, right, self.ns.spec, self.context, self.frame)
+            check_meeting(left, right, self.ns.spec, self.context)
         except DimensionError as e:
             self.errors.append(self.ns.refused_dims(e))
             return True
@@ -249,7 +246,7 @@ class ExpressionResolver:
             self.errors.append(f'{self.context}: {shape_error}')
         if node.name == 'dual':
             return None if shape_error is not None else self._dual(node)
-        args = [self._inside(node).arith(a) for a in node.args]
+        args = [self.arith(a) for a in node.args]
         along: str | None = None
         over: tuple[str, ...] | None = None
         amounts: dict[str, int | str | None] = {}
@@ -289,13 +286,6 @@ class ExpressionResolver:
         if columns is not None and (partition := self.partition(columns, node.name, along)) is None:
             return None
         return self._translation(node.name, operand, along, amounts, edge, partition)
-
-    def _inside(self, node: FunctionCallNode) -> ExpressionResolver:
-        """The resolver for the operands of *node*: inside a sum, a dim it sums away is no longer the entry's own."""
-        if node.name != 'sum':
-            return self
-        over = node.kwargs.get('over')
-        return replace(self, frame=frozenset() if over is None else self.frame - set(names_in(over)))
 
     def _sum(self, operand: Expression, over: tuple[str, ...] | None, columns: ColumnsNode | None) -> Expression | None:
         """A plain sum over the dims *over* names, or a sum through a relation, grouped by *columns*.
@@ -630,7 +620,7 @@ class ExpressionResolver:
                 f"{n!r} is a member of '{r}', which is one dimension here, so write over={r}"
                 for n in plain
                 for r in shape.roles
-                if n in {dim for _, dim in ns.spec.dimensions[shape.dim(r)].members}
+                if n in ns.spec.dimensions[shape.dim(r)].members
             ]
             self.errors.append(
                 f"{self.context}: {call}: over={shown(over)} names no column of '{name}', so the sum reads nothing "
@@ -706,8 +696,7 @@ class ExpressionResolver:
 
         The members together identify one tuple, so the call lists every one:
         a result over some of them has several tuples at a coordinate, which is
-        a sum. Each member arrives as its dimension, and a result carries a
-        dimension once, so two members over one dimension cannot both arrive.
+        a sum.
         """
         name, call = columns.relation, f'at(by={columns})'
         shape = self.ns.relations[name]
@@ -719,19 +708,6 @@ class ExpressionResolver:
                 f"{self.context}: {call} lists {list(columns.columns)} of the members {list(members)} of '{name}', "
                 f"and the operand is over '{name}'. List every member to read each tuple: "
                 f'at({read}, by={name}[{", ".join(members)}]).{"" if operand is None else summed}'
-            )
-            return None
-        dims = [shape.dim(r) for r in members]
-        if twice := sorted({d for d in dims if dims.count(d) > 1}):
-            roles = [r for r in members if shape.dim(r) == twice[0]]
-            rewrite = (
-                f"Test the condition in an entry over '{name}'"
-                if operand is None
-                else f'Sum to one of them: sum({read}, over={name}, by={name}[{roles[0]}])'
-            )
-            self.refuse_dims(
-                f"{self.context}: {call}: the members {roles} of '{name}' are both over {twice[0]!r}, and a result "
-                f'carries a dimension once. {rewrite}.'
             )
             return None
         return JoinColumns(name, shape, (name,), members, spreads=True)
