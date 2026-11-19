@@ -528,9 +528,12 @@ class ConditionResolver:
                 return node
             value = typed
         if labelled in ns.one_of and value not in ns.one_of[labelled]:
+            alias = ns.alias_of(labelled)
+            named = f"'{labelled}', an alias of '{alias}'" if alias else f"'{labelled}'"
             self.errors.append(
-                f"{context}: {value!r} is not a label of '{labelled}', which allows only "
-                f"{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+                f'{context}: {value!r} is not a label of {named}, which allows only '
+                f'{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '
+                f"'{alias or labelled}'."
             )
             return node
 

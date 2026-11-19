@@ -339,12 +339,17 @@ def test_a_sparse_set_with_an_ordered_member_is_read_at_a_tuple():
             id='a-dimension-twice',
         ),
         pytest.param(
-            {'relations.connection': {'key': ['unit', 'port']}},
+            {'relations.connection': {'key': 'connection', 'values': ['unit', 'port']}},
             (
                 "Relation 'connection' collides with the relation that dimension 'connection' implies, read as "
                 "connection[port], connection[unit]. Delete 'connection' under relations:.",
             ),
-            id='a-declared-relation-of-the-same-name',
+            id='the-implied-relation-written-out',
+        ),
+        pytest.param(
+            {'relations.connection': {'key': ['unit', 'port']}},
+            ("Relation 'connection' collides with the dimension of the same name. Rename one of them.",),
+            id='another-relation-of-the-same-name',
         ),
         pytest.param(
             _constraint("shift(flow, along=connection, offset=1, edge='wrap') >= 0", ['connection', 'snapshot']),

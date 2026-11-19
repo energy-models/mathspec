@@ -260,7 +260,11 @@ class Namespace:
 
     def unordered_refusal(self, context: str, construct: str, name: str) -> str:
         """The refusal for *construct* reading the order of the dimension *name*, with the rewrite its entry allows."""
-        return unordered(context, construct, name, self.spec.dimensions[name].members)
+        return unordered(context, construct, name, self.alias_of(name), self.spec.dimensions[name].members)
+
+    def alias_of(self, name: str) -> str | None:
+        """The dimension that the declared dimension *name* is an alias of, or ``None``."""
+        return self.spec.dimensions[name].alias
 
     def kind(self, name: str) -> NameKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
