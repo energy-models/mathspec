@@ -244,12 +244,6 @@
               "type": "array"
             },
             {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
-            },
-            {
               "type": "null"
             }
           ],

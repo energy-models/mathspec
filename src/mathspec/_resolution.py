@@ -348,13 +348,8 @@ def resolve_expression(
     errors: list[str],
     *,
     formals: frozenset[str] = frozenset(),
-    frame: Iterable[str] = (),
 ) -> Expression | None:
     """Build the program tree *node* stands for, checking every name and operator call shape on the way.
-
-    *frame* is the ``dims:`` of the entry *node* belongs to: where it declares
-    a dimension with members and a member, an operand over the member meets
-    one over the dimension as their cross product.
 
     Returns:
         The tree, or ``None`` once anything failed — appending to *errors*
@@ -366,7 +361,7 @@ def resolve_expression(
 
     """
     before = len(errors)
-    resolved = ExpressionResolver(ns, context, errors, formals=formals, frame=frozenset(frame)).build(node)
+    resolved = ExpressionResolver(ns, context, errors, formals=formals).build(node)
     return None if len(errors) > before else resolved
 
 
@@ -376,10 +371,8 @@ def resolve_condition(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-    *,
-    frame: Iterable[str] = (),
 ) -> Condition | None:
-    """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds, *frame* read as [`resolve_expression`][] reads it.
+    """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
@@ -387,7 +380,7 @@ def resolve_condition(
         problems appended to *errors*.
     """
     before = len(errors)
-    resolved = ConditionResolver(ns, context, errors, self_variable, frozenset(frame)).build(node)
+    resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
     return None if len(errors) > before else Mask(cast('Condition', resolved)).root
 
 
@@ -397,8 +390,6 @@ def resolve_condition_text(
     context: str,
     errors: list[str],
     self_variable: str | None = None,
-    *,
-    frame: Iterable[str] = (),
 ) -> Condition | None:
     """Parse and resolve one condition as [`resolve_condition`][] does, a parse failure appended to *errors*.
 
@@ -412,11 +403,11 @@ def resolve_condition_text(
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
-    return resolve_condition(node, ns, context, errors, self_variable, frame=frame)
+    return resolve_condition(node, ns, context, errors, self_variable)
 
 
 def resolve_expression_text(
-    text: str, ns: Namespace, context: str, errors: list[str], *, ceiling: int | None, frame: Iterable[str] = ()
+    text: str, ns: Namespace, context: str, errors: list[str], *, ceiling: int | None
 ) -> Expression | None:
     """Parse, expand, resolve and degree-check one expression string that stands for a value.
 
@@ -437,14 +428,14 @@ def resolve_expression_text(
     if isinstance(ast, ComparisonNode):
         errors.append(f'{context}: the expression holds a comparison operator.\nGot: {text!r}\nRemove the comparison.')
         return None
-    resolved = resolve_expression(ast, ns, context, errors, frame=frame)
+    resolved = resolve_expression(ast, ns, context, errors)
     if resolved is None or ceiling is None:
         return resolved
     return None if _over_the_ceiling(resolved, context, errors, ceiling=ceiling) else resolved
 
 
 def resolve_constraint_text(
-    text: str, ns: Namespace, context: str, errors: list[str], *, frame: Iterable[str] = ()
+    text: str, ns: Namespace, context: str, errors: list[str]
 ) -> tuple[Expression, Sense, Expression] | None:
     """Parse, expand, resolve and degree-check one constraint string: exactly one comparison, a variable on a side (#1171).
 
@@ -461,7 +452,7 @@ def resolve_constraint_text(
         )
         return None
     found = len(errors)
-    resolver = ExpressionResolver(ns, context, errors, frame=frozenset(frame))
+    resolver = ExpressionResolver(ns, context, errors)
     left, right = resolver.build(ast.left), resolver.build(ast.right)
     if len(errors) > found or left is None or right is None or resolver.met(left, right):
         return None
@@ -505,10 +496,10 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     regions rather than working out which one is left; the language proved
     the rest apart, so the regions are disjoint and total.
     """
-    context, frame = f"Named expression '{name}'", entry.dims or ()
+    context = f"Named expression '{name}'"
     if not entry.cases:
         assert entry.expression is not None
-        body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None, frame=frame)
+        body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
         return None if body is None else ExpressionReference(name, body, dims=body.dims)
 
     found = len(errors)
@@ -516,16 +507,16 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     masks: dict[str, Condition] = {}
     for case_name, case in entry.cases.items():
         arm_context = case_context(name, case_name)
-        when = resolve_condition_text(case.when, ns, arm_context, errors, frame=frame)
+        when = resolve_condition_text(case.when, ns, arm_context, errors)
         if isinstance(when, BooleanLiteral):
             errors.append(_constant_arm(arm_context, value=when.value))
         elif when is not None:
             masks[case_name] = when
-        value = resolve_expression_text(case.expression, ns, arm_context, errors, ceiling=None, frame=frame)
+        value = resolve_expression_text(case.expression, ns, arm_context, errors, ceiling=None)
         if when is not None and value is not None:
             regions.append(Region(Mask(when), value))
     assert entry.otherwise is not None
-    fallback = resolve_expression_text(entry.otherwise, ns, case_context(name, None), errors, ceiling=None, frame=frame)
+    fallback = resolve_expression_text(entry.otherwise, ns, case_context(name, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
     errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))

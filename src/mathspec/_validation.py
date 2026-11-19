@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
+from itertools import combinations
 from typing import TYPE_CHECKING
 
 from mathspec._expression_parser import FunctionCallNode, NameNode, parse_expression
@@ -109,6 +110,7 @@ def reference_errors(spec: Spec) -> list[str]:
         *_name_collisions(spec),
         *_frame_dimensions(spec),
         *_members(spec),
+        *_opaque_tuples(spec),
         *_relation_targets(spec),
         *_aliases(spec),
         *_bound_names(spec),
@@ -179,9 +181,9 @@ def _given_constraint_collisions(spec: Spec) -> Iterator[str]:
             yield f"Given constraint '{name}' is also declared under 'constraints:'. Delete one of the two."
 
 
-def _frame_dimensions(spec: Spec) -> Iterator[str]:
-    """Every frame is a product of distinct, declared dimensions."""
-    frames = [
+def _frames(spec: Spec) -> list[tuple[str, str, Iterable[str]]]:
+    """Each entry that declares ``dims:``, as its kind, its name and the dims."""
+    return [
         *(('Parameter', name, p.dims) for name, p in spec.parameters.items()),
         *(('Variable', name, v.dims) for name, v in spec.variables.items()),
         *(('Given parameter', name, g.dims) for name, g in spec.given.parameters.items()),
@@ -192,7 +194,11 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
         *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
-    for kind, name, dims in frames:
+
+
+def _frame_dimensions(spec: Spec) -> Iterator[str]:
+    """Every frame is a product of distinct, declared dimensions."""
+    for kind, name, dims in _frames(spec):
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
         yield from (
             f"{kind} '{name}' names dimension '{d}' twice. Delete one."
@@ -202,35 +208,75 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
 
 
 def _members(spec: Spec) -> Iterator[str]:
-    """A dimension lists plain, declared dimensions as its members, each once or under a role of its own.
+    """A dimension lists plain, declared dimensions as its members, each once.
 
-    The relation the entry implies names a column after each role, so a role
-    is held to the rule of a relation column: it is named after its own
-    dimension or after none.
+    The relation the entry implies names a column after each member, so one
+    dimension twice is two columns of one name; a second name for it is an
+    alias.
     """
     for name, entry in spec.dimensions.items():
-        dims = [dim for _, dim in entry.members]
+        dims = entry.members
         yield from (undeclared_dimension('Dimension', name, d) for d in dict.fromkeys(dims) if d not in spec.dimensions)
         for d in dict.fromkeys(dims):
             if d in spec.dimensions and (inner := spec.dimensions[d].members):
-                flat = sorted({*dims, *(dim for _, dim in inner)} - {d, name})
+                flat = sorted({*dims, *inner} - {d, name})
                 yield (
                     f"Dimension '{name}' lists '{d}' under 'over:', and '{d}' has members of its own. A member is "
                     f'a dimension without `over:`. List the members themselves: over: {flat}.'
                 )
-        if not isinstance(entry.over, Mapping):
-            yield from (
-                f"Dimension '{name}' lists '{d}' twice under 'over:'. Give the two members roles: "
-                f'over: {{{d}0: {d}, {d}1: {d}}}.'
-                for d, count in Counter(dims).items()
-                if count > 1
-            )
         yield from (
-            f"Dimension '{name}' names member '{role}' after dimension '{role}', but the member is over "
-            f"'{dim}'. Rename the member after what it holds."
-            for role, dim in entry.members
-            if role in spec.dimensions and role != dim
+            f"Dimension '{name}' lists '{d}' twice under 'over:'. Declare an alias of it under dimensions:, "
+            f'from_{d}: {{alias: {d}}}, and list both: over: [from_{d}, {d}].'
+            for d, count in Counter(dims).items()
+            if count > 1
         )
+
+
+def _opaque_tuples(spec: Spec) -> Iterator[str]:
+    """No frame lists two dimensions that share a member, or a dimension beside one of its members.
+
+    A dimension with members is opaque, so a frame over two is their cross
+    product, which pairs tuples whose shared member differs. The ``where:``
+    of the entry does not change this.
+    """
+    frames = [*_frames(spec), *(('piecewise', name, pw.dims) for name, pw in spec.piecewise.items())]
+    for kind, name, dims in frames:
+        members = {d: set(spec.dimensions[d].members) for d in dims if d in spec.dimensions}
+        for one, other in combinations(sorted(d for d, inner in members.items() if inner), 2):
+            if shared := sorted(members[one] & members[other]):
+                yield _shared_member(f"{kind} '{name}'", dims, (one, other), members, shared)
+        for one, inner in sorted(members.items()):
+            if stray := sorted(inner & set(dims)):
+                columns = ', '.join(stray)
+                yield (
+                    f"{kind} '{name}' lists '{one}' and its member {_quoted(stray)} in dims:. '{one}' already holds "
+                    f'{_quoted(stray)}, so the entry would pair every {one} with every {" and ".join(stray)}. Drop '
+                    f'{_quoted(stray)} from dims:, and read it at each {one} as {one}[{columns}], as in '
+                    f'at(<operand>, by={one}[{columns}]).'
+                )
+
+
+def _shared_member(
+    entry: str, dims: Iterable[str], pair: tuple[str, str], members: Mapping[str, set[str]], shared: list[str]
+) -> str:
+    """The refusal of a frame over two dimensions that share *shared*, with the join and the alias that rewrite it."""
+    one, other = pair
+    flat = sorted({*dims, *members[one], *members[other]} - {one, other})
+    aliases = ', '.join(f'{other}_{s}: {{alias: {s}}}' for s in shared)
+    renamed = sorted(f'{other}_{m}' if m in shared else m for m in members[other])
+    return (
+        f"{entry} lists '{one}' and '{other}' in dims:, which share {_quoted(shared)}. A dimension with members is "
+        f'opaque, so the entry would pair every {one} with every {other}, whatever their {" and ".join(shared)}. '
+        f'Write the entry over the members, dims: [{", ".join(flat)}], with where: a relation keyed by '
+        f'[{", ".join(sorted(members[one]))}] and one keyed by [{", ".join(sorted(members[other]))}]; or, if every '
+        f'pair is meant, let {other} hold an alias of {_quoted(shared)}: {aliases}, and {other}: '
+        f'{{over: [{", ".join(renamed)}]}}.'
+    )
+
+
+def _quoted(names: list[str]) -> str:
+    """*names* quoted and joined, as one refusal names one or several members."""
+    return ' and '.join(map(repr, names))
 
 
 def _relation_targets(spec: Spec) -> Iterator[str]:

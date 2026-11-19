@@ -674,9 +674,9 @@ class Dimension:
     [`Program.relations`][mathspec.program.Program.relations] sends each label to itself.
     """
     description: str | None = None
-    over: tuple[tuple[str, str], ...] = ()
-    """The members of the dimension as ``(role, dimension)``, sorted by role, or empty when the file lists none. A label
-    is then one tuple of member labels, which ``dtype`` does not describe. The relation of the same name in
+    over: tuple[str, ...] = ()
+    """The members of the dimension, sorted by name, or empty when the file lists none. A label is then one tuple of
+    member labels, which ``dtype`` does not describe. The relation of the same name in
     [`Program.relations`][mathspec.program.Program.relations] has one value column per member.
     """
     missing: RelationMissing = 'absent'
@@ -1440,12 +1440,10 @@ class RelationComparison:
 
 @dataclass(frozen=True)
 class RelationPairComparison:
-    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus``.
+    """Compare a value column of one keyed relation with one of another — ``from_bus != to_bus`` — row by row on the key.
 
-    Each relation is read at its own key, and ``dims`` is the union of the
-    two keys' dimensions, which the frame carries. The two columns are over
-    one dimension, so a match is possible at all. Where either relation has
-    no row, the comparison is false.
+    Both keys are over the same ``dims``, and the two columns are over one
+    dimension, so a match is possible at all.
     """
 
     name: str

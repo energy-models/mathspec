@@ -93,18 +93,17 @@ class ConditionResolver:
     faults reports both. ``self_variable`` is the variable whose own
     ``where`` is being read, which may not ask whether it exists. A side
     that is an expression is built by an [`ExpressionResolver`][] over
-    the same namespace and ``frame``, the ``dims:`` of the entry.
+    the same namespace.
     """
 
     ns: Namespace
     context: str
     errors: list[str]
     self_variable: str | None = None
-    frame: frozenset[str] = frozenset()
 
     @property
     def _expressions(self) -> ExpressionResolver:
-        return ExpressionResolver(self.ns, self.context, self.errors, frame=self.frame)
+        return ExpressionResolver(self.ns, self.context, self.errors)
 
     def build(self, node: Condition | UnresolvedConditionNode) -> Condition | UnresolvedConditionNode:
         """One condition node typed, or returned unresolved with its refusal appended."""
@@ -171,7 +170,7 @@ class ConditionResolver:
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
                 members = ns.spec.dimensions[node.name].members
-                compared = f"{node.name}[{members[0][0]}] == '...'" if members else f'{node.name} > 0'
+                compared = f"{node.name}[{members[0]}] == '...'" if members else f'{node.name} > 0'
                 self.errors.append(
                     f"{context}: '{node.name}' is a dimension, and a bare dimension "
                     f'name is true at every coordinate. '
@@ -486,12 +485,11 @@ class ConditionResolver:
                     right = self._relation_column(right_name, right_column or None, value, plain.op)
                     if left is None or right is None:
                         return node
-                    refusal = _relation_pair_error(context, plain, value, ns, (left, right), self.frame)
-                    if refusal is not None:
+                    if (refusal := _relation_pair_error(context, plain, value, ns, left, right)) is not None:
                         self.errors.append(refusal)
                         return node
-                    dims = _key_dims(ns, left_name) | _key_dims(ns, right_name)
-                    return RelationPairComparison(left_name, left, right_name, right, plain.op, tuple(sorted(dims)))
+                    dims = tuple(sorted(ns.relations[left_name].dim(k) for k in ns.relations[left_name].key))
+                    return RelationPairComparison(left_name, left, right_name, right, plain.op, dims)
                 given = right_name in ns.spec.given.expressions
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
@@ -521,7 +519,7 @@ class ConditionResolver:
             self.errors.append(
                 f"{context}: '{plain.name}' compares a label of '{labelled}', and '{labelled}' lists its members, "
                 f"so it has no label to compare. In an entry over '{labelled}', compare a member: "
-                f'{labelled}[{members[0][0]}] {plain.op} {plain.value!r}.'
+                f'{labelled}[{members[0]}] {plain.op} {plain.value!r}.'
             )
             return node
         if dtype is not None:
@@ -693,12 +691,6 @@ def _side_kind(ns: Namespace, name: str, column: str) -> str | None:
     return 'relation' if column and name in ns.relations else ns.kind(name)
 
 
-def _key_dims(ns: Namespace, name: str) -> frozenset[str]:
-    """The dimensions relation *name* is keyed over."""
-    shape = ns.relations[name]
-    return frozenset(shape.dim(k) for k in shape.key)
-
-
 def _side_name_or_none(side: ArithmeticNode | ColumnNode | KeywordNode) -> str | None:
     """The bare name a side spells, or ``None`` — a quoted label is no name."""
     return side.name if isinstance(side, NameNode) else None
@@ -810,46 +802,35 @@ def _declared_rhs_error(context: str, node: _Plain, value: str, kind: str, *, gi
     )
 
 
-def _relation_pair_error(
-    context: str, node: _Plain, other: str, ns: Namespace, columns: tuple[str, str], frame: frozenset[str]
-) -> str | None:
+def _relation_pair_error(context: str, node: _Plain, other: str, ns: Namespace, left: str, right: str) -> str | None:
     """Why two relation columns may not be compared, or ``None`` where they may.
 
-    Each relation is read at its own key, so the frame carries both keys or
-    no coordinate reads both rows; with no frame, the keys are over the same
-    dimensions. The two columns are over one dimension, or no value of one is
-    ever a value of the other. Every wrong answer is silent, and a build's
-    data library decides which one. Two columns over a dimension outside
-    ``_INEQUALITY_DTYPES`` compare only with == and !=.
+    Both relations are read at their keys, so the keys must be over the same
+    dimensions or no row carries both; and the two columns must be over one
+    dimension, or no value of one is ever a value of the other. Both wrong
+    answers are silent, and a build's data library decides which one. Two
+    columns over a dimension outside ``_INEQUALITY_DTYPES`` compare only with
+    == and !=.
     """
     comparison = f"'{node.name} {node.op} {other}'"
-    names = _split_column(node.name)[0], _split_column(other)[0]
-    keys = _key_dims(ns, names[0]), _key_dims(ns, names[1])
-    if keys[0] != keys[1] and not keys[0] | keys[1] <= frame:
-        keyed = f"('{names[0]}' by {sorted(keys[0])}, '{names[1]}' by {sorted(keys[1])})"
-        if not frame:
-            return (
-                f'{context}: {comparison} compares relations keyed over different dimensions {keyed}, and a '
-                f'condition has no dims:. Write the comparison in the where: of an entry whose dims: lists the '
-                f'keys of {_listed(list(names))}.'
-            )
-        outside = sorted((keys[0] | keys[1]) - frame)
-        inside = [name for name, key in zip(names, keys, strict=True) if key <= frame]
-        rewrite = f", or compare against a relation keyed like '{inside[0]}'" if inside else ''
+    left_name, right_name = _split_column(node.name)[0], _split_column(other)[0]
+    ls, rs = ns.relations[left_name], ns.relations[right_name]
+    left_keys, right_keys = {ls.dim(k) for k in ls.key}, {rs.dim(k) for k in rs.key}
+    if left_keys != right_keys:
         return (
-            f'{context}: {comparison} compares relations keyed over different dimensions {keyed}, and dims: lacks '
-            f'{_listed(outside)}. Add {_listed(outside)} to dims:{rewrite}.'
+            f'{context}: {comparison} compares relations keyed over different dimensions '
+            f"('{left_name}' by {sorted(left_keys)}, '{right_name}' by {sorted(right_keys)}). Compare relations "
+            f'whose keys are over the same dimensions.'
         )
-    left, right = (ns.relations[name].dim(column) for name, column in zip(names, columns, strict=True))
-    if left != right:
+    if ls.dim(left) != rs.dim(right):
         return (
-            f"{context}: {comparison} compares '{node.name}' (a column over '{left}') with "
-            f"'{other}' (a column over '{right}'). Compare two columns over the same dimension."
+            f"{context}: {comparison} compares '{node.name}' (a column over '{ls.dim(left)}') with "
+            f"'{other}' (a column over '{rs.dim(right)}'). Compare two columns over the same dimension."
         )
-    dtype = ns.dtypes[left]
+    dtype = ns.dtypes[ls.dim(left)]
     if node.op not in ('==', '!=') and dtype not in _INEQUALITY_DTYPES:
         return (
-            f"{context}: {comparison} compares two columns over '{left}', of dtype '{dtype}', "
+            f"{context}: {comparison} compares two columns over '{ls.dim(left)}', of dtype '{dtype}', "
             f'on which {node.op} is not defined. Compare them with == or !=, or precompute the comparison as a '
             'boolean parameter.'
         )

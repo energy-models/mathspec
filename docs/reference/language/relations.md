@@ -320,15 +320,6 @@ mathspec suggests the rewrite: the columns split between `key:` and `values:`.
 
 A condition tests a relation at the coordinates of its own entry. It compares
 a value column, written `l[c]`, against a label, compares two relation columns, or tests that a row exists.
-Two columns compare where the `dims:` of the entry lists the keys of both
-relations, so `bus_of[bus] == line_end[bus]` over `dims: [unit, line]` keeps
-each unit and line that meet at a bus. Without that dimension in `dims:`,
-mathspec refuses the comparison and suggests the rewrite:
-
-```text
-Variable 'z': 'bus_of[bus] == line_end[bus]' compares relations keyed over different dimensions ('bus_of' by ['unit'], 'line_end' by ['line']), and dims: lacks 'line'. Add 'line' to dims:, or compare against a relation keyed like 'bus_of'.
-```
-
 [Conditions](expressions.md#conditions) lists when two columns may be compared. A
 comparison uses one column, so `calendar[month, weekday] == 'x'` is refused,
 and mathspec suggests the rewrite:

@@ -267,9 +267,7 @@ both are true at the same coordinates.
 
 A comparison on a relation column is a `RelationComparison`, and a comparison
 of two relation columns is a `RelationPairComparison`. The page on [conditions](language/expressions.md#conditions) defines both,
-and both are false for every operator where the relation has no row. A tool
-reads each relation of a `RelationPairComparison` at its own key, and its
-`dims` are the dimensions of both keys.
+and both are false for every operator where the relation has no row.
 
 Three conditions contain another condition rather than an entry. A
 `CountComparison` contains the condition that it counts and the dimension that

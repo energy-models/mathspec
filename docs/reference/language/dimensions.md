@@ -243,17 +243,20 @@ $`\mathcal{C} \subseteq \mathcal{P} \times \mathcal{U}`$, and `limit` prints as:
 \mathit{flow}_{c,t} \le \mathrm{capacity}_{\mathrm{connection.unit}(c)} \qquad \forall\, c \in \mathcal{C},\ t \in \mathcal{T}
 ```
 
-`over` takes a list of dimensions, or a mapping of name to dimension where two
-members are over one dimension:
+`over` takes a list of dimensions, and a member has the name of its
+dimension. To list one dimension twice, list an [alias](#alias) of it beside
+it:
 
 ```yaml
 dimensions:
   region: { dtype: str }
-  trade: { over: { source: region, target: region } }
+  from_region: { alias: region }
+  trade: { over: [from_region, region] }
 ```
 
-A member in the list form has the name of its dimension. The order of the
-members changes nothing, because mathspec sorts them by name at load.
+mathspec refuses a mapping under `over:`, and its message names this alias.
+The order of the members changes nothing, because mathspec sorts them by name
+at load.
 
 ### The relation of the dimension
 
@@ -289,20 +292,8 @@ Constraint 'limit': an operand over ['unit'] meets one over 'connection'. 'unit'
 
 mathspec suggests the lookup through the relation of the dimension, or the sum
 of `flow` to the member. The same refusal applies wherever the two operands
-meet: in a product, in a sum, and in the objective, as in
-`sum(flow * capacity)`. An entry over both, such as a variable over
-`[connection, unit]`, loads.
-
-mathspec refuses the meeting unless the `dims:` of the entry lists both the
-dimension and the member. Then the two operands meet as their cross product,
-at every pair of a connection and a unit. With
-`dims: [connection, unit, snapshot]`, `flow <= capacity` loads, with one row
-for each connection, unit and snapshot. Inside a `sum`, a dimension that the
-`sum` adds up is not in the `dims:` of the entry, so
-`sum(flow * capacity, over=unit)` is refused in that entry too. The objective
-and an [assumption](assumptions.md) have no `dims:`, so mathspec refuses
-the meeting in each of them. It also refuses the meeting in the `where:` of a
-`piecewise:` entry, because mathspec repeats that condition in assumptions.
+meet: in a product, in a sum, in a `where:`, in the objective and in an
+[assumption](assumptions.md), as in `sum(flow * capacity)`.
 
 A sum over a member is refused the same way. With `sum(flow, over=unit)`,
 mathspec prints:
@@ -322,8 +313,7 @@ At load, mathspec also refuses each of these, and prints the rewrite:
 | Refused                                                                                         | What you write instead                                                    |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | a member that has members of its own                                                            | the members themselves, in one list                                       |
-| a dimension twice in the list form, as in `over: [region, region]`                              | the mapping form, with a name for each member                             |
-| a member named after a dimension that it is not over                                            | another name for the member                                               |
+| a dimension twice, as in `over: [region, region]`, or a mapping under `over:`                   | an alias beside the dimension, as in `over: [from_region, region]`        |
 | `ordered: true`, `dtype:` or `one_of:` beside `over:`                                           | the key on a member                                                       |
 | `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension        | an entry over the members, with `where:` a relation that lists the tuples |
 | a comparison of the dimension with a label, as in `connection == 'a'`                           | a comparison of a member, as in `connection[unit] == 'u1'`                |
@@ -337,10 +327,22 @@ entry over `connection` and `period` reads it as
 
 ### Two dimensions that share a member
 
-Two dimensions with members can share one, as `connection` and `assignment`
-share `unit` below. An entry over both is their cross product, with one row
-for each pair of a connection and an assignment. A `where:` that compares the
-shared member keeps the pairs of one unit, which is the inner join of the two:
+A dimension with members is opaque: an entry reads its tuples whole, and never
+the members inside them. An entry over two such dimensions is their cross
+product, with one row for each pair of tuples. Where the two share a member, as
+`connection` and `assignment` share `unit` below, the cross product also pairs
+tuples of different units. A join on `unit` keeps only the pairs of one unit:
+
+| `connection` | `assignment` | same unit | cross product | join on `unit`       |
+| ------------ | ------------ | --------- | ------------- | -------------------- |
+| `(u1, p1)`   | `(u1, t1)`   | yes       | kept          | kept: `(u1, p1, t1)` |
+| `(u1, p1)`   | `(u3, t1)`   | no        | kept          | dropped              |
+| `(u2, p1)`   | `(u1, t1)`   | no        | kept          | dropped              |
+| `(u2, p1)`   | `(u3, t1)`   | no        | kept          | dropped              |
+
+An entry over both usually means the join, and an opaque dimension has no
+member to join on. So mathspec refuses an entry whose `dims:` lists two
+dimensions that share a member, whatever its `where:`:
 
 ```yaml
 dimensions:
@@ -353,25 +355,67 @@ variables:
   sent: { dims: [connection] }
   busy: { dims: [assignment] }
 constraints:
+  exclusive: { dims: [connection, assignment], expression: sent + busy <= 1 }
+```
+
+```text
+Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], with where: a relation keyed by [period, unit] and one keyed by [port, unit]; or, if every pair is meant, let connection hold an alias of 'unit': connection_unit: {alias: unit}, and connection: {over: [connection_unit, port]}.
+```
+
+The join is an entry over the members. Each set of tuples is then a
+[bare relation](relations.md), and the `where:` tests both:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+relations:
+  plugged: { key: [unit, port], missing: absent }
+  active: { key: [unit, period], missing: absent }
+variables:
+  sent: { dims: [unit, port], where: plugged }
+  busy: { dims: [unit, period], where: active }
+constraints:
   exclusive:
-    dims: [connection, assignment]
-    where: connection[unit] == assignment[unit]
+    dims: [unit, port, period]
+    where: plugged AND active
     expression: sent + busy <= 1
 ```
 
-mathspec reads each side through the relation of its own dimension, and the
-`dims:` of the entry lists both, so the comparison loads ([conditions](expressions.md#conditions)).
-`exclusive` prints as:
+`exclusive` has a row for each unit, port and period where the unit has both
+the port and the period, which is the join on `unit`. The language has no
+outer join, which would also keep a connection whose unit has no assignment.
 
-```math
-\mathit{sent}_{c} + \mathit{busy}_{a} \le 1 \qquad \forall\, a \in \mathcal{A},\ c \in \mathcal{C} \,:\, \mathrm{connection.unit}(c) = \mathrm{assignment.unit}(a)
+Where every pair is meant, as when each supply ships to each demand of any
+region, each side holds its own [alias](#alias) of the shared dimension. The
+two then share no member, and the entry loads as their cross product:
+
+```yaml
+dimensions:
+  region: {}
+  plant: {}
+  site: {}
+  supply_region: { alias: region }
+  demand_region: { alias: region }
+  supply: { over: [supply_region, plant] }
+  demand: { over: [demand_region, site] }
+variables:
+  x: { dims: [supply, demand] }
 ```
 
-The language has no left join, which would also keep a connection whose unit
-has no assignment, and no outer join. Write such an entry over the members, as
-`dims: [unit, port, period]`, with the two sets of tuples as the bare
-relations `plugged` over `[unit, port]` and `active` over `[unit, period]`.
-Then `where: "plugged OR active"` keeps the rows of either.
+mathspec refuses an entry over a dimension and one of its own members, such as
+`dims: [connection, unit]`, for the same reason: it pairs each connection with
+every unit. The member is already in each tuple, so the rewrite reads it
+there:
+
+```text
+Constraint 'cap' lists 'connection' and its member 'unit' in dims:. 'connection' already holds 'unit', so the entry would pair every connection with every unit. Drop 'unit' from dims:, and read it at each connection as connection[unit], as in at(<operand>, by=connection[unit]).
+```
+
+Two dimensions that share no member, such as `connection` and a
+`scenario_year` over `[scenario, year]`, share an entry: their cross product
+pairs no two tuples that disagree.
 
 ### `missing`
 

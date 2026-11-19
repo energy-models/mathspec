@@ -102,14 +102,10 @@ def _sum_through(summed: str, over: set[str], inner: frozenset[str], spec: Spec)
     """
     for name in sorted(inner):
         members = spec.dimensions[name].members
-        dims = [dim for _, dim in members]
-        if summed not in dims:
+        if summed not in members:
             continue
-        kept = [role for role, dim in members if dim not in over]
-        if len(set(dims)) < len(dims):
-            by = f', by={name}[<the members to keep>]'
-        else:
-            by = f', by={name}[{", ".join(kept)}]' if kept else ''
+        kept = [member for member in members if member not in over]
+        by = f', by={name}[{", ".join(kept)}]' if kept else ''
         return f"'{summed}' is a member of '{name}', which is one dimension here. Write sum(..., over={name}{by})"
     return None
 
@@ -300,10 +296,9 @@ def _at_member(
 
 def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
     """The columns of the relation *name* implies over the dims *wanted*, as a call writes them, or ``None`` where one is no member."""
-    members = spec.dimensions[name].members
-    if not set(wanted) <= {dim for _, dim in members}:
+    if not set(wanted) <= set(spec.dimensions[name].members):
         return None
-    return ', '.join(' or '.join(role for role, dim in members if dim == d) for d in wanted)
+    return ', '.join(wanted)
 
 
 def operand_over(operands: Iterable[Expression], over: Iterable[str], without: str) -> str:
@@ -317,26 +312,20 @@ def operand_over(operands: Iterable[Expression], over: Iterable[str], without: s
     return next((n.name for n in found), '...')
 
 
-def check_meeting(left: Expression, right: Expression, spec: Spec, context: str, frame: frozenset[str]) -> None:
-    """Two operands meet a member against the dimension that lists it only where *frame* declares both.
+def check_meeting(left: Expression, right: Expression, spec: Spec, context: str) -> None:
+    """An operand over a member never meets one over the dimension that lists it.
 
     A dimension with members is one plain dimension, so an operand over a
-    member does not align with one over the dimension: the two meet as their
-    cross product. An entry whose ``dims:`` declares both asks for that
-    product; anywhere else, a sum or the objective would add it up without a
-    frame that names it. *frame* is the entry's ``dims:`` less what an
-    enclosing sum takes away, and empty in the objective.
+    member does not align with one over the dimension: the two would meet as
+    their cross product, which pairs each tuple with members it does not hold.
 
     Raises:
-        DimensionError: One operand carries a dimension with members, the
-            other carries a member of it but not the dimension, and *frame*
-            lacks one of the two.
+        DimensionError: One operand carries a dimension with members, and the
+            other carries a member of it but not the dimension.
     """
     for one, other in ((left, right), (right, left)):
         for name in sorted(set(one.dims) - set(other.dims)):
-            members = {dim for _, dim in spec.dimensions[name].members}
-            stray = sorted((members & set(other.dims)) - set(one.dims))
-            if stray and not {name, *stray} <= frame:
+            if stray := sorted((set(spec.dimensions[name].members) & set(other.dims)) - set(one.dims)):
                 summed = operand_over((one,), (name,), stray[0])
                 raise DimensionError(
                     f"{context}: an operand over {stray} meets one over '{name}'. "

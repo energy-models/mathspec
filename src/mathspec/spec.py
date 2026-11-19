@@ -348,10 +348,10 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
-    over: Dims | ByName[str] | None = None
-    """The members of the dimension: a list of dimensions, or a mapping of role to dimension where two members are over
-    one dimension. A label of the dimension is then one tuple of member labels, and the entry implies a relation of the
-    same name with one value column per member. The order of the members has no meaning.
+    over: Dims | None = None
+    """The members of the dimension, a list of dimensions; an alias lists one dimension twice. A label of the dimension is
+    then one tuple of member labels, and the entry implies a relation of the same name with one value column per member.
+    The order of the members has no meaning.
     """
     missing: RelationMissing = 'absent'
     """Whether every combination of member labels needs a tuple. Under ``absent``, the data lists the tuples that exist.
@@ -364,9 +364,23 @@ class DimensionSpec(_StrictSpec):
     description: str | None = None
 
     @property
-    def members(self) -> tuple[tuple[str, str], ...]:
-        """``(role, dimension)`` per member, sorted by role; empty for a dimension without ``over:``."""
-        return tuple(sorted(side_columns(self.over)))
+    def members(self) -> tuple[str, ...]:
+        """The members, sorted by name; empty for a dimension without ``over:``."""
+        return self.over or ()
+
+    @field_validator('over', mode='before')
+    @classmethod
+    def _a_list(cls, v: object) -> object:
+        """A member is named after its dimension, so one dimension twice is an alias and the dimension, not two roles."""
+        if isinstance(v, Mapping):
+            mapping = cast('Mapping[object, object]', v)
+            aliases = ', '.join(f'{role}: {{alias: {dim}}}' for role, dim in mapping.items() if role != dim)
+            msg = (
+                f'takes a list of dimensions, not a mapping. Name each member that repeats a dimension as an alias '
+                f'of it under dimensions:, {aliases}, and list the names: over: [{", ".join(map(str, mapping))}].'
+            )
+            raise ValueError(msg)
+        return v
 
     @field_validator('over', mode='after')
     @classmethod
@@ -397,11 +411,10 @@ class DimensionSpec(_StrictSpec):
                     'members needs a tuple. Delete `missing:`, or list the members under `over:`.'
                 )
             return self
-        members = sorted({dim for _, dim in self.members})
         if self.ordered:
             raise ValueError(
                 f'`ordered: true` is on a dimension with `over:`, and a tuple of member labels has no order. '
-                f'Declare the entry that steps over {members}, with `where:` a relation that lists the tuples, and '
+                f'Declare the entry that steps over {list(self.members)}, with `where:` a relation that lists the tuples, and '
                 f'declare the member it steps along `ordered: true`.'
             )
         for key in ('dtype', 'one_of'):
@@ -1458,7 +1471,7 @@ def implied_relations(spec: Spec) -> dict[str, Relation]:
     return {
         name: Relation(((name, name), *columns), (name,))
         for name, d in spec.dimensions.items()
-        if (columns := ((d.alias, d.alias),) if d.alias in spec.dimensions else d.members)
+        if (columns := ((d.alias, d.alias),) if d.alias in spec.dimensions else tuple((m, m) for m in d.members))
     }
 
 
