@@ -238,6 +238,35 @@ def test_an_entry_over_overlapping_tuple_dimensions_is_refused_whatever_its_wher
     assert fragment in message
 
 
+_SPREAD_EACH = (
+    'and spread each operand onto them: at(<operand>, by=assignment[period, unit]) and at(<operand>, '
+    'by=connection[port, unit])'
+)
+_KEYED = 'with where: a relation keyed by [period, unit] and one keyed by [port, unit]'
+
+
+@pytest.mark.parametrize(
+    ('kind', 'rewrite'),
+    [
+        pytest.param('constraint', _SPREAD_EACH, id='constraint'),
+        pytest.param('named-expression', _SPREAD_EACH, id='named-expression'),
+        pytest.param('case', _SPREAD_EACH, id='case'),
+        pytest.param('parameter', _KEYED, id='parameter'),
+        pytest.param('variable', _KEYED, id='variable'),
+        pytest.param('piecewise', _KEYED, id='piecewise'),
+        pytest.param('given-variable', _KEYED, id='given-variable'),
+    ],
+)
+def test_an_overlap_refusal_suggests_a_spread_only_to_an_entry_with_an_expression(kind, rewrite):
+    """An entry without an expression has no operand to spread, so its join over the members is a `where:`.
+
+    Was: a variable over two dimensions that share a member was told to
+    spread each operand, and the flat `dims:` it was given lost the join.
+    """
+    message = _refusal(**SHARED_MEMBER, **_entry(kind, ['connection', 'assignment']))
+    assert f'Write the entry over the members, dims: [period, port, unit], {rewrite}.' in message
+
+
 #: `connection` and `assignment` share `unit`; `f` steps along `snapshot`, which `snap_unit` sends to a unit.
 PAIRED: dict[str, Any] = varied(
     FRAGMENT,
@@ -288,6 +317,16 @@ def _curve(along: str) -> dict[str, Any]:
                 'variables.x': {'dims': ['connection', 'assignment']},
             },
             id='an-alias-of-the-shared-member',
+        ),
+        pytest.param(
+            {'variables.x': {'dims': ['connection', 'assignment']}},
+            _KEYED,
+            {
+                'relations.plugged': {'key': ['port', 'unit'], 'missing': 'absent'},
+                'relations.busy': {'key': ['period', 'unit'], 'missing': 'absent'},
+                'variables.x': {'dims': ['period', 'port', 'unit'], 'where': 'plugged AND busy'},
+            },
+            id='a-variable-over-the-members-with-a-relation-for-each',
         ),
         pytest.param(
             {'variables.x': {'dims': ['connection', 'assignment', 'unit']}},
@@ -768,44 +807,6 @@ def test_a_spread_loads_in_an_entry_that_is_no_constraint(patch, read, dims):
             ("shift(along=connection) reads the order of 'connection'",),
             id='a-shift-along-the-dimension',
         ),
-        pytest.param(
-            {
-                'expressions.e': {
-                    'dims': ['unit', 'port', 'snapshot'],
-                    'cases': {
-                        'open': {'when': 'at(open, by=connection[unit, port])', 'expression': 'w'},
-                        'shut': {'when': 'not at(open, by=connection[unit, port])', 'expression': '2 * w'},
-                    },
-                    'otherwise': '0',
-                }
-            },
-            SchemaError,
-            (
-                "cases 'open' and 'shut' cannot be told apart before the data arrives",
-                "at(by=connection[port, unit]) is true only where 'connection' lists the tuple",
-                "an entry over 'connection'",
-            ),
-            id='a-spread-in-two-cases',
-        ),
-        pytest.param(
-            {
-                'conditions.is_open': {'condition': 'at(open, by=connection[unit, port])'},
-                'expressions.e': {
-                    'dims': ['unit', 'port', 'snapshot'],
-                    'cases': {
-                        'open': {'when': 'is_open', 'expression': 'w'},
-                        'shut': {'when': 'not is_open', 'expression': '2 * w'},
-                    },
-                    'otherwise': '0',
-                },
-            },
-            SchemaError,
-            (
-                "cases 'open' and 'shut' cannot be told apart before the data arrives",
-                "at(by=connection[port, unit]) is true only where 'connection' lists the tuple",
-            ),
-            id='a-spread-in-two-cases-through-a-named-condition',
-        ),
     ],
 )
 def test_a_spread_that_does_not_load_is_refused_with_the_rewrite(patch, error, fragments):
@@ -815,6 +816,112 @@ def test_a_spread_that_does_not_load_is_refused_with_the_rewrite(patch, error, f
     assert type(caught.value) is error, f'{error.__name__}, the class a dim rule or the language raises here'
     for fragment in fragments:
         assert fragment in str(caught.value), f'the refusal says {fragment!r}'
+
+
+def _stray(**entry: Any) -> dict[str, Any]:
+    """*entry* beside `on` and `lim`, over `connection` and `snapshot`, and `v`, a variable over the members."""
+    return {
+        'parameters.on': {'dims': ['connection', 'snapshot'], 'dtype': 'bool'},
+        'parameters.lim': {'dims': ['connection', 'snapshot']},
+        'variables.v': {'dims': ['unit', 'port']},
+        **entry,
+    }
+
+
+@pytest.mark.parametrize(
+    ('patch', 'message'),
+    [
+        pytest.param(
+            _stray(**_constraint('flow >= 0', ['unit', 'port'])),
+            "Constraint 'probe': the expression carries dims ['connection', 'snapshot'] that are not in its dims: "
+            "['port', 'unit']. Add them to dims:, or sum them out.",
+            id='a-constraint',
+        ),
+        pytest.param(
+            _stray(**{'expressions.e': {'dims': ['unit', 'port'], 'expression': '2 * flow'}}),
+            "Named expression 'e': the body carries dims ['connection', 'snapshot'] outside the dims: ['port', "
+            "'unit']. Add them to dims:, or take them out of the body.",
+            id='a-named-expression',
+        ),
+        pytest.param(
+            _stray(**{'variables.v.bounds.upper': 'lim'}),
+            "Variable 'v': bounds.upper parameter 'lim' has dims ['connection', 'snapshot'] outside the variable's "
+            "dims ['port', 'unit']. Declare 'lim' over the variable's dims.",
+            id='a-bound',
+        ),
+        pytest.param(
+            _stray(**{'variables.v.where': 'on'}),
+            "Variable 'v': where-parameter 'on' reads dims ['connection', 'snapshot'] outside the declared dims "
+            "['port', 'unit']. Add them to dims:, or test a name over the declared dims.",
+            id='a-where',
+        ),
+    ],
+)
+def test_no_spread_is_suggested_where_a_dimension_would_stay_outside(patch, message):
+    """A spread brings the members of one dimension, so it is the rewrite only where that dimension is all that is outside.
+
+    Was: the message suggested `at(flow, by=connection[port, unit])`, which
+    the loader refused again for `snapshot`.
+    """
+    with pytest.raises(DimensionError) as caught:
+        to_spec(varied(SPREAD, **patch))
+    assert str(caught.value) == message
+
+
+_CASES = {'dims': ['unit', 'port', 'snapshot'], 'otherwise': '0'}
+
+
+@pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param(
+            {
+                'expressions.e': {
+                    **_CASES,
+                    'cases': {
+                        'open': {'when': 'at(open, by=connection[unit, port])', 'expression': 'w'},
+                        'shut': {'when': 'not at(open, by=connection[unit, port])', 'expression': '2 * w'},
+                    },
+                }
+            },
+            id='a-spread-and-its-negation',
+        ),
+        pytest.param(
+            {
+                'conditions.is_open': {'condition': 'at(open, by=connection[port, unit])'},
+                'expressions.e': {
+                    **_CASES,
+                    'cases': {
+                        'open': {'when': 'at(open, by=connection[unit, port])', 'expression': 'w'},
+                        'shut': {'when': 'not is_open', 'expression': '2 * w'},
+                    },
+                },
+            },
+            id='the-members-in-another-order-through-a-named-condition',
+        ),
+    ],
+)
+def test_cases_split_by_a_spread_condition_load(patch):
+    """A spread reaches one row of the dimension, so a condition and its negation claim no tuple together.
+
+    Was: the pair was refused as one only the data decides, though the same
+    split through a lookup loads.
+    """
+    to_spec(varied(SPREAD, **patch))
+
+
+def test_cases_that_both_admit_a_spread_condition_are_refused_with_the_tuple():
+    cases = {
+        'open': {'when': 'at(open, by=connection[unit, port])', 'expression': 'w'},
+        'wide': {'when': 'w_on', 'expression': '2 * w'},
+    }
+    patch = {
+        'parameters.w_on': {'dims': ['unit', 'port'], 'dtype': 'bool'},
+        'expressions.e': {**_CASES, 'cases': cases},
+    }
+    with pytest.raises(SchemaError) as caught:
+        to_spec(varied(SPREAD, **patch))
+    assert "cases 'open' and 'wide' both claim the value where" in str(caught.value)
 
 
 @pytest.mark.parametrize('fmt', FORMATS)

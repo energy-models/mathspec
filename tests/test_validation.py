@@ -62,8 +62,8 @@ _OWN_REGION = (
 )
 _SHARED_REGION = (
     f"Variable 'x' lists 'demand' and 'supply' in dims:, which share 'region'. {_PAIRED_REGION.format('entry')} Write "
-    'the entry over the members, dims: [plant, region, site], and spread each operand onto them: '
-    f'at(<operand>, by=demand[region, site]) and at(<operand>, by=supply[plant, region]). {_OWN_REGION}'
+    'the entry over the members, dims: [plant, region, site], with where: a relation keyed by [region, site] and one '
+    f'keyed by [plant, region]. {_OWN_REGION}'
 )
 
 
@@ -2038,6 +2038,16 @@ class TestRulesDecidedWithoutData:
                 id='dims-two-dimensions-that-share-a-member-whatever-the-where',
             ),
             pytest.param(
+                {**_TUPLES, 'constraints.c': {'dims': ['supply', 'demand'], 'expression': '0 <= 1'}},
+                (
+                    "Constraint 'c' lists 'demand' and 'supply' in dims:, which share 'region'. "
+                    f'{_PAIRED_REGION.format("entry")} Write the entry over the members, dims: [plant, region, site], '
+                    'and spread each operand onto them: at(<operand>, by=demand[region, site]) and at(<operand>, '
+                    f'by=supply[plant, region]). {_OWN_REGION}',
+                ),
+                id='dims-of-a-constraint-two-dimensions-that-share-a-member',
+            ),
+            pytest.param(
                 {**_TUPLES, 'variables.x': {'dims': ['connection', 'unit']}},
                 (
                     "Variable 'x' lists 'connection' and its member 'unit' in dims:, so the entry would pair every "
@@ -2055,10 +2065,9 @@ class TestRulesDecidedWithoutData:
                 (
                     "Variable 'x' lists 'demand', 'depot' and 'supply' in dims:, which share 'region'. A dimension "
                     'with members is opaque, so the entry would pair every demand with every depot and every supply, '
-                    'whatever their region. Write the entry over the members, dims: [plant, region, site, unit], and '
-                    'spread each operand onto them: at(<operand>, by=demand[region, site]), at(<operand>, '
-                    'by=depot[region, unit]) and at(<operand>, by=supply[plant, region]). If every pair is meant, let '
-                    'depot and supply list their own alias of the shared '
+                    'whatever their region. Write the entry over the members, dims: [plant, region, site, unit], '
+                    'with where: a relation keyed by [region, site], one keyed by [region, unit] and one keyed by '
+                    '[plant, region]. If every pair is meant, let depot and supply list their own alias of the shared '
                     'member: depot_region: {alias: region}, depot: {over: [depot_region, unit]}, supply_region: '
                     '{alias: region} and supply: {over: [plant, supply_region]}.',
                 ),
@@ -2075,9 +2084,8 @@ class TestRulesDecidedWithoutData:
                 (
                     "Variable 'x' lists 'demand' and 'supply' in dims:, which share 'supply_region'. A dimension with "
                     'members is opaque, so the entry would pair every demand with every supply, whatever their '
-                    'supply_region. Write the entry over the members, dims: [plant, site, supply_region], and spread '
-                    'each operand onto them: at(<operand>, by=demand[site, supply_region]) and at(<operand>, '
-                    'by=supply[plant, supply_region]). If every pair '
+                    'supply_region. Write the entry over the members, dims: [plant, site, supply_region], with where: '
+                    'a relation keyed by [site, supply_region] and one keyed by [plant, supply_region]. If every pair '
                     'is meant, let supply list its own alias of the shared member: supply_supply_region: '
                     '{alias: region} and supply: {over: [plant, supply_supply_region]}.',
                 ),
