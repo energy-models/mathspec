@@ -111,7 +111,7 @@ def _never_an_axis(program: Program) -> list[Advice]:
         reached.update(entry.dims)
     reached |= _grouped_axes(program)
     reached |= {dim for name, lk in program.relations.items() if name not in program.dimensions for dim in lk.dims}
-    reached |= {alias for name in reached if (alias := program.dimensions[name].alias) is not None}
+    reached |= {target for name in reached if (target := program.dimensions[name].alias) is not None}
 
     return [
         Advice(
