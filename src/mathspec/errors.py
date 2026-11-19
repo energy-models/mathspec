@@ -43,6 +43,17 @@ def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared', li
     return f'{label}: {", ".join(candidates) or "nothing"}.' if listing else ''
 
 
+def listed(items: Iterable[str], *, quoted: bool = True) -> str:
+    """``'a'``, ``'a' and 'b'``, ``'a', 'b' and 'c'``: one rule, so every message reads the same.
+
+    *quoted* off joins the items as written, as a message lists YAML to write.
+    """
+    words = [f"'{item}'" if quoted else item for item in items]
+    if len(words) <= 1:
+        return words[0] if words else 'nothing'
+    return f'{", ".join(words[:-1])} and {words[-1]}'
+
+
 def unordered(
     context: str, construct: str, dimension: str, alias: str | None = None, members: Iterable[str] = ()
 ) -> str:

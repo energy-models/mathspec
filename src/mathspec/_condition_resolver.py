@@ -37,7 +37,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, listed, prefixed
 from mathspec.program import (
     Add,
     And,
@@ -245,7 +245,7 @@ class ConditionResolver:
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
-                f'not read. Step along one of {_listed(list(mask.dims))}.'
+                f'not read. Step along one of {listed(list(mask.dims))}.'
             )
             return node
         if self.ns.unordered(along.name):
@@ -271,7 +271,7 @@ class ConditionResolver:
         if by is None:
             return node
         try:
-            dims = join_dims(by, frozenset(mask.dims), context, 'the condition')
+            dims = join_dims(by, frozenset(mask.dims), context, 'the condition', self.ns.spec)
         except DimensionError as refusal:
             self.errors.append(self.ns.refused_dims(refusal))
             return node
@@ -314,7 +314,7 @@ class ConditionResolver:
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
-                f'not read. Count along one of {_listed(list(mask.dims))}.'
+                f'not read. Count along one of {listed(list(mask.dims))}.'
             )
             return node
         dims = tuple(d for d in mask.dims if d != over.name)
@@ -422,7 +422,7 @@ class ConditionResolver:
         if len(self.errors) > found:
             return node
         left, right = sides
-        if self._expressions.met(left, right):
+        if self._expressions.met(left, right, f'{node.left} {node.op} {node.right}'):
             return node
         if all(_is_number(side) for side in sides):
             self.errors.append(
@@ -733,11 +733,11 @@ def _kwargs_error(
     """
     missing = [key for key in required if key not in kwargs]
     if missing:
-        return f'{context}: {name}(<condition>) needs {_listed([f"{key}=" for key in missing])}.'
+        return f'{context}: {name}(<condition>) needs {listed([f"{key}=" for key in missing])}.'
     if extra := sorted(set(kwargs) - set(required)):
         return (
-            f'{context}: {name}(<condition>) does not take {_listed([f"{key}=" for key in extra])}. '
-            f'It takes only {_listed([f"{key}=" for key in required])}.'
+            f'{context}: {name}(<condition>) does not take {listed([f"{key}=" for key in extra])}. '
+            f'It takes only {listed([f"{key}=" for key in required])}.'
         )
     return None
 
@@ -753,14 +753,6 @@ def _decided_count(op: str, value: float) -> str | None:
     if value == 0 and op in ('>=', '<'):
         return 'every' if op == '>=' else 'no'
     return None
-
-
-def _listed(items: list[str]) -> str:
-    """``'a'``, ``'a' and 'b'``, ``'a', 'b' and 'c'`` — one rule, so every message reads the same."""
-    quoted = [f"'{item}'" for item in items]
-    if len(quoted) <= 1:
-        return quoted[0] if quoted else 'nothing'
-    return f'{", ".join(quoted[:-1])} and {quoted[-1]}'
 
 
 def _is_number(side: Expression) -> bool:

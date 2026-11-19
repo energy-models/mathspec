@@ -14,9 +14,10 @@ to its own: a constraint's two sides together are indexed over exactly its
 
 from __future__ import annotations
 
+from itertools import combinations
 from typing import TYPE_CHECKING, assert_never
 
-from mathspec.errors import DimensionError, case_context
+from mathspec.errors import DimensionError, case_context, listed
 from mathspec.program import (
     Cases,
     CountComparison,
@@ -65,7 +66,7 @@ def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: st
     if isinstance(node, Sum):
         _check_sum(node, inner, spec, context)
     elif isinstance(node, Join):
-        join_dims(node.columns, inner, context, 'the expression')
+        join_dims(node.columns, inner, context, 'the expression', spec)
     else:
         _check_translation(node, inner, spec, context)
 
@@ -110,7 +111,7 @@ def _sum_through(summed: str, over: set[str], inner: frozenset[str], spec: Spec)
     return None
 
 
-def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str) -> frozenset[str]:
+def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand: str, spec: Spec) -> frozenset[str]:
     """The dims *inner* has once *columns* joins it, an expression's or a condition's alike.
 
     The dims joined on go and the dims grouped by arrive. A column both
@@ -118,8 +119,10 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
     ``at`` where each group is one row, and ``sum`` otherwise.
 
     Raises:
-        DimensionError: *operand* does not carry a dim the call joins on, or
-            already carries one the call adds.
+        DimensionError: *operand* does not carry a dim the call joins on,
+            already carries one the call adds, or would be over dimensions
+            whose cross product pairs tuples that disagree on a member
+            ([`overlaps`][]).
     """
     lookup = columns.one_row_per_group
     named = columns.dropped if lookup else columns.added
@@ -149,7 +152,123 @@ def join_dims(columns: JoinColumns, inner: frozenset[str], context: str, operand
             f'dimension.'
         )
     _check_joined(call, columns, inner, context)
-    return joined(columns, inner)
+    result = joined(columns, inner)
+    shared, beside = overlaps(result, spec)
+    if not (shared or beside):
+        return result
+    overlapping = {d for group, _ in shared for d in group} | {d for one, stray in beside for d in (one, *stray)}
+    carried = sorted(inner & overlapping)
+    rewrite = f'Sum {listed(carried)} out of the operand first, or group' if carried else 'Group'
+    rewrite = f'{rewrite} by a column over another dimension'
+    if shared:
+        group, members = shared[0]
+        raise DimensionError(
+            shared_refusal(f'{context}: {call} is over', '', result, group, members, operand, rewrite, spec)
+        )
+    one, stray = beside[0]
+    raise DimensionError(
+        f"{context}: {call} is over '{one}' and its member {listed(stray)}, so {operand} would pair every "
+        f'{one} with every {listed(stray, quoted=False)}. {rewrite}.'
+    )
+
+
+def overlaps(dims: Iterable[str], spec: Spec) -> tuple[list[tuple[list[str], list[str]]], list[tuple[str, list[str]]]]:
+    """The dimensions with members in *dims* whose cross product pairs tuples that disagree on a member.
+
+    A dimension with members is opaque, so two that share a member are
+    linked. Each group of linked dimensions comes back once, with every member
+    two of them share, so that one rewrite covers the group. A dimension
+    beside its own members comes back with those members, unless it is in a
+    group, whose rewrite lists the members instead.
+    """
+    named = set(dims)
+    declared = [d for d in sorted(named) if d in spec.dimensions and spec.dimensions[d].members]
+    members = {d: set(spec.dimensions[d].members) for d in declared}
+    groups: list[set[str]] = []
+    for name, inner in members.items():
+        linked = [group for group in groups if any(inner & members[d] for d in group)]
+        groups = [group for group in groups if group not in linked]
+        groups.append({name}.union(*linked))
+    shared = [
+        (sorted(group), sorted({m for a, b in combinations(sorted(group), 2) for m in members[a] & members[b]}))
+        for group in groups
+        if len(group) > 1
+    ]
+    grouped = {d for group, _ in shared for d in group}
+    beside = [(d, sorted(inner & named)) for d, inner in members.items() if d not in grouped and inner & named]
+    return shared, beside
+
+
+def shared_refusal(
+    subject: str,
+    place: str,
+    named: Iterable[str],
+    group: list[str],
+    shared: list[str],
+    noun: str,
+    rewrite: str,
+    spec: Spec,
+) -> str:
+    """The refusal of *group*, dimensions with members in *named* that share *shared*, with two rewrites.
+
+    *subject* comes before the group and *place* after it, as in
+    ``Variable 'x' lists`` and ``' in dims:'``. *noun* is what would pair the tuples, and *rewrite* is
+    the join over the members that keeps the pairs that agree. The other
+    rewrite keeps every pair through aliases, and leaves out each member that
+    *named* lists beside the group, which the aliases would not cover.
+    """
+    first, *rest = group
+    inside = sorted(set(named) & {m for d in group for m in spec.dimensions[d].members})
+    leave = f'leave {listed(inside)} out, and ' if inside else ''
+    return (
+        f'{subject} {listed(group)}{place}, which share {listed(shared)}. A dimension with members is opaque, so '
+        f'{noun} would pair every {first} with every {" and every ".join(rest)}, whatever their '
+        f'{listed(shared, quoted=False)}. {rewrite}. If every pair is meant, {leave}'
+        f'{_own_aliases(group, shared, spec)}.'
+    )
+
+
+def _own_aliases(group: list[str], shared: list[str], spec: Spec) -> str:
+    """The aliases that let *group* pair every tuple: each dimension past the first that lists a shared member lists its own alias.
+
+    An alias of an alias is refused, so a member that is an alias has its
+    own alias name the dimension the member is an alias of.
+    """
+    renamed: dict[str, dict[str, str]] = {}
+    for member in shared:
+        for name in [d for d in group if member in spec.dimensions[d].members][1:]:
+            renamed.setdefault(name, {})[member] = f'{name}_{member}'
+    declared: list[str] = []
+    for name, aliases in sorted(renamed.items()):
+        declared += [f'{a}: {{alias: {aliased(m, spec)}}}' for m, a in aliases.items()]
+        over = sorted(aliases.get(m, m) for m in spec.dimensions[name].members)
+        declared.append(f'{name}: {{over: [{", ".join(over)}]}}')
+    whose = 'its' if len(renamed) == 1 else 'their'
+    which = 'the shared member' if len(shared) == 1 else 'each shared member'
+    return f'let {listed(sorted(renamed), quoted=False)} list {whose} own alias of {which}: {listed(declared, quoted=False)}'
+
+
+def aliased(name: str, spec: Spec) -> str:
+    """The dimension *name* is an alias of, or *name* itself: what an alias a refusal suggests names.
+
+    An alias of an alias is refused. *name* may be undeclared, which another
+    refusal reports.
+    """
+    entry = spec.dimensions.get(name)
+    return (entry.alias if entry is not None else None) or name
+
+
+def spreads(group: list[str], spec: Spec, operands: Iterable[Expression] = ()) -> str:
+    """An ``at`` per dimension in *group* that spreads an operand onto its members: the join over the members.
+
+    Each ``at`` names the operand in *operands* over the dimension, or
+    ``<operand>`` where the refusal has no operand to name.
+    """
+    calls = []
+    for name in group:
+        read = operand_over(operands, (name,), '') if operands else '<operand>'
+        calls.append(f'at({read}, by={name}[{", ".join(sorted(spec.dimensions[name].members))}])')
+    return listed(calls, quoted=False)
 
 
 def sorted_dims(*dims: Iterable[str]) -> tuple[str, ...]:
@@ -284,12 +403,13 @@ def _at_member(
     """
     wanted = sorted(stray)
     for name in sorted(frame):
-        if (columns := _member_columns(name, wanted, spec)) is None:
+        if not set(wanted) <= set(spec.dimensions[name].members):
             continue
         read = read or operand_over(operands, wanted, name)
         return (
             f'{", ".join(map(repr, wanted))} {"is a member" if len(wanted) == 1 else "are members"} of '
-            f"'{name}', which is one dimension here. Read the operand at each tuple: at({read}, by={name}[{columns}])"
+            f"'{name}', which is one dimension here. Read the operand at each tuple: "
+            f'at({read}, by={name}[{", ".join(wanted)}])'
         )
     return None
 
@@ -330,13 +450,6 @@ def _member_rewrite(
     return _at_member(wanted, frame, spec, operands, read) or _spread_over(wanted, frame, spec, operands, read)
 
 
-def _member_columns(name: str, wanted: list[str], spec: Spec) -> str | None:
-    """The columns of the relation *name* implies over the dims *wanted*, as a call writes them, or ``None`` where one is no member."""
-    if not set(wanted) <= set(spec.dimensions[name].members):
-        return None
-    return ', '.join(wanted)
-
-
 def operand_over(operands: Iterable[Expression], over: Iterable[str], without: str) -> str:
     """The outermost name in *operands* over every dim in *over* and not over *without*, or ``...`` where none is.
 
@@ -348,16 +461,20 @@ def operand_over(operands: Iterable[Expression], over: Iterable[str], without: s
     return next((n.name for n in found), '...')
 
 
-def check_meeting(left: Expression, right: Expression, spec: Spec, context: str) -> None:
-    """An operand over a member never meets one over the dimension that lists it.
+def check_meeting(left: Expression, right: Expression, spec: Spec, context: str, text: str) -> None:
+    """An operand over a member never meets one over the dimension that lists it, nor two over dimensions that share one.
 
     A dimension with members is one plain dimension, so an operand over a
     member does not align with one over the dimension: the two would meet as
-    their cross product, which pairs each tuple with members it does not hold.
+    their cross product, which pairs each tuple with members it does not
+    contain. Two operands over dimensions that share a member meet as their
+    cross product too, which pairs tuples that disagree on the member.
+    *text* is the expression where the two meet, as the file writes it.
 
     Raises:
         DimensionError: One operand carries a dimension with members, and the
-            other carries a member of it but not the dimension.
+            other carries a member of it but not the dimension, or the two
+            carry dimensions that share a member.
     """
     for one, other in ((left, right), (right, left)):
         for name in sorted(set(one.dims) - set(other.dims)):
@@ -367,12 +484,17 @@ def check_meeting(left: Expression, right: Expression, spec: Spec, context: str)
                 if stray == sorted(members):
                     onto_members = f', or spread {read} over the members: at({read}, by={name}[{", ".join(members)}])'
                 else:
-                    columns = _member_columns(name, stray, spec)
+                    columns = ', '.join(stray)
                     onto_members = f', or sum {read} to the member: sum({read}, over={name}, by={name}[{columns}])'
                 raise DimensionError(
                     f"{context}: an operand over {stray} meets one over '{name}'. "
                     f'{_at_member(stray, frozenset({name}), spec, (other,))}{onto_members}.'
                 )
+    named = {*left.dims, *right.dims}
+    for group, shared in overlaps(named, spec)[0]:
+        rewrite = f'Spread each operand onto its members: {spreads(group, spec, (left, right))}'
+        subject = f'{context}: {text} is over'
+        raise DimensionError(shared_refusal(subject, '', named, group, shared, 'the expression', rewrite, spec))
 
 
 def check_spec(spec: Spec, program: Program, bounds: Mapping[str, tuple[Expression | None, Expression | None]]) -> None:

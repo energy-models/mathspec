@@ -155,7 +155,7 @@ class ExpressionResolver:
     def _binary(self, node: BinaryOperatorNode) -> Expression | None:
         """A subtraction is an addition of the negation, so a program has one additive node."""
         left, right = self.arith(node.left), self.arith(node.right)
-        if left is None or right is None or self.met(left, right):
+        if left is None or right is None or self.met(left, right, str(node)):
             return None
         dims = sorted_dims(left.dims, right.dims)
         match node.op:
@@ -176,10 +176,13 @@ class ExpressionResolver:
         """Append *text* as a dim rule's refusal, so the load raises a ``DimensionError`` where nothing else failed."""
         self.errors.append(self.ns.refused_dims(DimensionError(text)))
 
-    def met(self, left: Expression, right: Expression) -> bool:
-        """Whether *left* and *right* meet a member against the dimension that lists it, the refusal appended."""
+    def met(self, left: Expression, right: Expression, text: str) -> bool:
+        """Whether *left* and *right* meet as a cross product that pairs tuples ([`check_meeting`][]), the refusal appended.
+
+        *text* is the expression where the two meet, as the file writes it.
+        """
         try:
-            check_meeting(left, right, self.ns.spec, self.context)
+            check_meeting(left, right, self.ns.spec, self.context, text)
         except DimensionError as e:
             self.errors.append(self.ns.refused_dims(e))
             return True
@@ -744,7 +747,7 @@ class ExpressionResolver:
         name, within_roles = columns.relation, columns.columns
         shape = self.ns.relations[name]
         call = f'{operator}(within={columns})'
-        if name in self.ns.dimensions:
+        if name in self.ns.dimensions and self.ns.spec.dimensions[name].members:
             self.errors.append(self.ns.unordered_refusal(context, call, name))
             return None
         if not shape.values:

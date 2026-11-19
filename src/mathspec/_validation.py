@@ -20,9 +20,9 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Mapping
-from itertools import combinations
 from typing import TYPE_CHECKING
 
+from mathspec._dimensions import aliased, overlaps, shared_refusal, spreads
 from mathspec._expression_parser import FunctionCallNode, NameNode, parse_expression
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
@@ -30,7 +30,7 @@ from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError, did_you_mean, unordered
+from mathspec.errors import SchemaError, did_you_mean, listed, unordered
 from mathspec.spec import NUMERIC_DTYPES, Spec, implied_relations, labels_of, side_columns
 
 if TYPE_CHECKING:
@@ -232,58 +232,47 @@ def _members(spec: Spec) -> Iterator[str]:
                 )
         yield from (
             f"Dimension '{name}' lists '{d}' twice under 'over:'. Declare an alias of it under dimensions:, "
-            f'from_{d}: {{alias: {d}}}, and list both: over: [from_{d}, {d}].'
+            f'from_{d}: {{alias: {aliased(d, spec)}}}, and list both: over: [from_{d}, {d}].'
             for d, count in Counter(dims).items()
             if count > 1
         )
 
 
 def _opaque_tuples(spec: Spec) -> Iterator[str]:
-    """No frame lists two dimensions that share a member, or a dimension beside one of its members.
+    """No frame is over dimensions whose cross product pairs tuples that disagree on a member ([`overlaps`][]).
 
-    A dimension with members is opaque, so a frame over two is their cross
-    product, which pairs tuples whose shared member differs. The ``where:``
-    of the entry does not change this.
+    A dimension with members is opaque, so a frame over two that share a
+    member pairs tuples whose shared member differs, and a frame over one and
+    its member pairs each tuple with every label of the member. The ``where:``
+    of the entry does not change this. A curve is over its ``along:`` too.
     """
     frames = [*_frames(spec), *(('piecewise', name, pw.dims) for name, pw in spec.piecewise.items())]
     for kind, name, dims in frames:
-        members = {d: set(spec.dimensions[d].members) for d in dims if d in spec.dimensions}
-        for one, other in combinations(sorted(d for d, inner in members.items() if inner), 2):
-            if shared := sorted(members[one] & members[other]):
-                yield _shared_member(f"{kind} '{name}'", dims, (one, other), members, shared)
-        for one, inner in sorted(members.items()):
-            if stray := sorted(inner & set(dims)):
-                columns = ', '.join(stray)
-                yield (
-                    f"{kind} '{name}' lists '{one}' and its member {_quoted(stray)} in dims:. '{one}' already holds "
-                    f'{_quoted(stray)}, so the entry would pair every {one} with every {" and ".join(stray)}. Drop '
-                    f'{_quoted(stray)} from dims:, and read it at each {one} as {one}[{columns}], as in '
-                    f'at(<operand>, by={one}[{columns}]).'
-                )
-
-
-def _shared_member(
-    entry: str, dims: Iterable[str], pair: tuple[str, str], members: Mapping[str, set[str]], shared: list[str]
-) -> str:
-    """The refusal of a frame over two dimensions that share *shared*, with the join and the alias that rewrite it."""
-    one, other = pair
-    flat = sorted({*dims, *members[one], *members[other]} - {one, other})
-    aliases = ', '.join(f'{other}_{s}: {{alias: {s}}}' for s in shared)
-    renamed = sorted(f'{other}_{m}' if m in shared else m for m in members[other])
-    return (
-        f"{entry} lists '{one}' and '{other}' in dims:, which share {_quoted(shared)}. A dimension with members is "
-        f'opaque, so the entry would pair every {one} with every {other}, whatever their {" and ".join(shared)}. '
-        f'Write the entry over the members, dims: [{", ".join(flat)}], and spread each operand onto them: '
-        f'at(<operand>, by={one}[{", ".join(sorted(members[one]))}]) and '
-        f'at(<operand>, by={other}[{", ".join(sorted(members[other]))}]); or, if every '
-        f'pair is meant, let {other} hold an alias of {_quoted(shared)}: {aliases}, and {other}: '
-        f'{{over: [{", ".join(renamed)}]}}.'
-    )
-
-
-def _quoted(names: list[str]) -> str:
-    """*names* quoted and joined, as one refusal names one or several members."""
-    return ' and '.join(map(repr, names))
+        shared, beside = overlaps(dims, spec)
+        for group, members in shared:
+            flat = sorted({*dims, *(m for d in group for m in spec.dimensions[d].members)} - set(group))
+            rewrite = (
+                f'Write the entry over the members, dims: [{", ".join(flat)}], and spread each operand onto them: '
+                f'{spreads(group, spec)}'
+            )
+            yield shared_refusal(
+                f"{kind} '{name}' lists", ' in dims:', dims, group, members, 'the entry', rewrite, spec
+            )
+        for one, stray in beside:
+            columns = ', '.join(stray)
+            yield (
+                f"{kind} '{name}' lists '{one}' and its member {listed(stray)} in dims:, so the entry would pair "
+                f'every {one} with every {listed(stray, quoted=False)}. Drop {listed(stray)} from dims:, and read '
+                f'it at each {one} as {one}[{columns}], as in at(<operand>, by={one}[{columns}]).'
+            )
+    for name, pw in spec.piecewise.items():
+        for one in sorted(d for d in pw.dims if d in spec.dimensions and pw.along in spec.dimensions[d].members):
+            alias = f'{name}_{pw.along}'
+            yield (
+                f"piecewise '{name}': along: '{pw.along}' is a member of '{one}' in dims:, so the curve would pair "
+                f'every {one} with every {pw.along}. Step along an alias of it, {alias}: '
+                f"{{alias: {aliased(pw.along, spec)}}}, and declare the breakpoints over '{alias}'."
+            )
 
 
 def _relation_targets(spec: Spec) -> Iterator[str]:
@@ -340,6 +329,11 @@ def _aliases(spec: Spec) -> Iterator[str]:
             yield f'{head} is no declared dimension. {did_you_mean(d.alias, spec.dimensions, label="Dimensions")}'
         elif (target := spec.dimensions[d.alias].alias) is not None:
             yield f"{head} is an alias of '{target}' itself. Write alias: {target}."
+        elif members := spec.dimensions[d.alias].members:
+            yield (
+                f"{head} is a dimension with members. Declare '{name}' with the same members instead: "
+                f'{name}: {{over: [{", ".join(members)}]}}.'
+            )
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:

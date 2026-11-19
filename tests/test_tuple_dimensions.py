@@ -238,8 +238,194 @@ def test_an_entry_over_overlapping_tuple_dimensions_is_refused_whatever_its_wher
     assert fragment in message
 
 
+#: `connection` and `assignment` share `unit`; `f` steps along `snapshot`, which `snap_unit` sends to a unit.
+PAIRED: dict[str, Any] = varied(
+    FRAGMENT,
+    **{
+        'dimensions.bus': {},
+        'dimensions.period': {'dtype': 'int', 'ordered': True},
+        'dimensions.snapshot': {'dtype': 'int', 'ordered': True},
+        'dimensions.assignment': {'over': ['unit', 'period']},
+        'relations.snap_unit': {'key': 'snapshot', 'values': 'unit'},
+        'variables.on': {'dims': ['assignment']},
+        'variables.f': {'dims': ['connection', 'snapshot']},
+    },
+)
+
+_DEPOT = {'dimensions.depot': {'over': ['unit', 'bus']}, 'variables.stock': {'dims': ['depot']}}
+
+
+def _curve(along: str) -> dict[str, Any]:
+    """A curve over `assignment` whose breakpoints are over *along*."""
+    links = {'x': ['on', 'xs'], 'y': ['y', 'ys']}
+    return {
+        'parameters.xs': {'dims': [along]},
+        'parameters.ys': {'dims': [along]},
+        'variables.y': {'dims': ['assignment']},
+        'piecewise.curve': {'dims': ['assignment'], 'along': along, 'links': links},
+    }
+
+
+@pytest.mark.parametrize(
+    ('refused', 'fragment', 'rewrite'),
+    [
+        pytest.param(
+            _constraint('flow + on <= 1', ['connection', 'assignment']),
+            'dims: [period, port, unit], and spread each operand onto them: at(<operand>, by=assignment[period, unit]) '
+            'and at(<operand>, by=connection[port, unit])',
+            _constraint(
+                'at(flow, by=connection[port, unit]) + at(on, by=assignment[period, unit]) <= 1',
+                ['period', 'port', 'unit'],
+            ),
+            id='an-entry-over-the-members',
+        ),
+        pytest.param(
+            {'variables.x': {'dims': ['connection', 'assignment']}},
+            'connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}',
+            {
+                'dimensions.connection_unit': {'alias': 'unit'},
+                'dimensions.connection': {'over': ['connection_unit', 'port']},
+                'variables.x': {'dims': ['connection', 'assignment']},
+            },
+            id='an-alias-of-the-shared-member',
+        ),
+        pytest.param(
+            {'variables.x': {'dims': ['connection', 'assignment', 'unit']}},
+            "If every pair is meant, leave 'unit' out, and let connection list its own alias",
+            {
+                'dimensions.connection_unit': {'alias': 'unit'},
+                'dimensions.connection': {'over': ['connection_unit', 'port']},
+                'variables.x': {'dims': ['connection', 'assignment']},
+            },
+            id='an-alias-of-the-shared-member-beside-the-member',
+        ),
+        pytest.param(
+            {**_DEPOT, **_constraint('flow + on + stock <= 1', ['connection', 'assignment', 'depot'])},
+            'dims: [bus, period, port, unit], and spread each operand onto them: at(<operand>, '
+            'by=assignment[period, unit]), at(<operand>, by=connection[port, unit]) and at(<operand>, '
+            'by=depot[bus, unit])',
+            {
+                **_DEPOT,
+                **_constraint(
+                    'at(flow, by=connection[port, unit]) + at(on, by=assignment[period, unit]) '
+                    '+ at(stock, by=depot[bus, unit]) <= 1',
+                    ['bus', 'period', 'port', 'unit'],
+                ),
+            },
+            id='three-that-share-a-member-over-the-members',
+        ),
+        pytest.param(
+            {**_DEPOT, 'variables.x': {'dims': ['connection', 'assignment', 'depot']}},
+            'connection_unit: {alias: unit}, connection: {over: [connection_unit, port]}, depot_unit: '
+            '{alias: unit} and depot: {over: [bus, depot_unit]}',
+            {
+                'dimensions.connection_unit': {'alias': 'unit'},
+                'dimensions.connection': {'over': ['connection_unit', 'port']},
+                'dimensions.depot_unit': {'alias': 'unit'},
+                'dimensions.depot': {'over': ['bus', 'depot_unit']},
+                'variables.x': {'dims': ['connection', 'assignment', 'depot']},
+            },
+            id='three-that-share-a-member-each-with-an-alias',
+        ),
+        pytest.param(
+            {
+                'dimensions.from_unit': {'alias': 'unit'},
+                'dimensions.assignment': {'over': ['from_unit', 'period']},
+                'dimensions.connection': {'over': ['from_unit', 'port']},
+                'variables.x': {'dims': ['connection', 'assignment']},
+            },
+            'connection_from_unit: {alias: unit}',
+            {
+                'dimensions.from_unit': {'alias': 'unit'},
+                'dimensions.connection_from_unit': {'alias': 'unit'},
+                'dimensions.assignment': {'over': ['from_unit', 'period']},
+                'dimensions.connection': {'over': ['connection_from_unit', 'port']},
+                'variables.x': {'dims': ['connection', 'assignment']},
+            },
+            id='a-shared-member-that-is-an-alias',
+        ),
+        pytest.param(
+            {'variables.x': {'dims': ['connection', 'unit']}},
+            "Drop 'unit' from dims:",
+            {'variables.x': {'dims': ['connection']}},
+            id='a-dimension-beside-its-member',
+        ),
+        pytest.param(
+            {'dimensions.from_unit': {'alias': 'unit'}, 'dimensions.pair': {'over': ['from_unit', 'from_unit']}},
+            'from_from_unit: {alias: unit}, and list both: over: [from_from_unit, from_unit]',
+            {
+                'dimensions.from_unit': {'alias': 'unit'},
+                'dimensions.from_from_unit': {'alias': 'unit'},
+                'dimensions.pair': {'over': ['from_from_unit', 'from_unit']},
+            },
+            id='an-alias-twice-under-over',
+        ),
+        pytest.param(
+            {
+                'dimensions.from_unit': {'alias': 'unit'},
+                'dimensions.pair': {'over': {'src': 'from_unit', 'dst': 'from_unit'}},
+            },
+            'src: {alias: unit}, dst: {alias: unit}, and list the names: over: [src, dst]',
+            {
+                'dimensions.src': {'alias': 'unit'},
+                'dimensions.dst': {'alias': 'unit'},
+                'dimensions.pair': {'over': ['src', 'dst']},
+            },
+            id='a-mapping-through-an-alias',
+        ),
+        pytest.param(
+            {'dimensions.pair': {'over': {'unit': 'unit', 'port': 'port'}}},
+            'not a mapping. List the dimensions: over: [unit, port].',
+            {'dimensions.pair': {'over': ['unit', 'port']}},
+            id='a-mapping-that-repeats-no-dimension',
+        ),
+        pytest.param(
+            {'dimensions.c2': {'alias': 'connection'}},
+            "Declare 'c2' with the same members instead: c2: {over: [port, unit]}.",
+            {'dimensions.c2': {'over': ['port', 'unit']}},
+            id='an-alias-of-a-dimension-with-members',
+        ),
+        pytest.param(
+            _curve('period'),
+            "Step along an alias of it, curve_period: {alias: period}, and declare the breakpoints over 'curve_period'.",
+            {**_curve('curve_period'), 'dimensions.curve_period': {'alias': 'period'}},
+            id='a-curve-along-a-member',
+        ),
+        pytest.param(
+            {'expressions.e': 'sum(f, over=snapshot, by=snap_unit[unit])'},
+            "Sum 'connection' out of the operand first",
+            {'expressions.e': 'sum(sum(f, over=connection), over=snapshot, by=snap_unit[unit])'},
+            id='a-join-that-adds-a-member-beside-its-dimension',
+        ),
+        pytest.param(
+            {'objective': {'sense': 'minimize', 'expression': 'sum(flow * on)'}},
+            'Spread each operand onto its members: at(on, by=assignment[period, unit]) and '
+            'at(flow, by=connection[port, unit]).',
+            {
+                'objective': {
+                    'sense': 'minimize',
+                    'expression': 'sum(at(flow, by=connection[port, unit]) * at(on, by=assignment[period, unit]))',
+                }
+            },
+            id='two-operands-that-share-a-member',
+        ),
+    ],
+)
+def test_the_rewrite_an_overlap_refusal_suggests_loads(refused, fragment, rewrite):
+    """A refusal that suggests a rewrite holds it out as one that loads.
+
+    Was: an alias of an alias, a `dims:` refused again over a third dimension,
+    an `at` through a dimension the operand was still over, and a curve that
+    loaded only to be refused at expansion.
+    """
+    with pytest.raises(LanguageError) as caught:
+        to_spec(varied(PAIRED, **refused))
+    assert fragment in str(caught.value)
+    to_spec(varied(PAIRED, **rewrite)).expand()
+
+
 def test_an_alias_per_side_opts_into_every_pair():
-    """The allocation of #1011: each side holds its own alias of `region`, so the two share no member."""
+    """The allocation of #1011: each side lists its own alias of `region`, so the two share no member."""
     allocation = {
         'dimensions': {
             'region': {},
@@ -734,6 +920,15 @@ def test_a_member_read_inside_a_spread_prints_as_the_index_of_the_member(fmt):
             id='a-dimension-twice',
         ),
         pytest.param(
+            {'dimensions.pair': {'over': ['nope', 'nope']}},
+            (
+                "Dimension 'pair' references undeclared dimension 'nope'.",
+                "Dimension 'pair' lists 'nope' twice under 'over:'. Declare an alias of it under dimensions:, "
+                'from_nope: {alias: nope}, and list both: over: [from_nope, nope].',
+            ),
+            id='an-undeclared-dimension-twice',
+        ),
+        pytest.param(
             {'relations.connection': {'key': 'connection', 'values': ['unit', 'port']}},
             (
                 "Relation 'connection' collides with the relation that dimension 'connection' implies, read as "
@@ -920,6 +1115,65 @@ def test_a_member_read_inside_a_spread_prints_as_the_index_of_the_member(fmt):
             {'variables.flow.where': 'connection'},
             ('a bare dimension name is true at every coordinate', 'where: "connection[port] == \'...\'"'),
             id='a-bare-dimension-with-members',
+        ),
+        pytest.param(
+            {**SHARED_MEMBER, 'objective': {'sense': 'minimize', 'expression': 'sum(sent * on)'}},
+            ("The objective: sent * on is over 'assignment' and 'connection', which share 'unit'.",),
+            id='two-tuple-dimensions-that-share-a-member-meet-in-the-objective',
+        ),
+        pytest.param(
+            {**SHARED_MEMBER, 'expressions.e': 'sent * on'},
+            ("Named expression 'e': sent * on is over 'assignment' and 'connection', which share 'unit'.",),
+            id='two-tuple-dimensions-that-share-a-member-meet-in-a-named-expression',
+        ),
+        pytest.param(
+            {**SHARED_MEMBER, **_constraint('sum(sent * on, over=assignment) <= 1', ['connection'])},
+            ("Constraint 'probe': sent * on is over 'assignment' and 'connection', which share 'unit'.",),
+            id='two-tuple-dimensions-that-share-a-member-meet-under-a-sum',
+        ),
+        pytest.param(
+            {
+                'relations.snap_unit': {'key': 'snapshot', 'values': 'unit'},
+                'expressions.e': 'sum(flow, over=snapshot, by=snap_unit[unit])',
+            },
+            (
+                "Named expression 'e': sum(by=snap_unit[unit]) is over 'connection' and its member 'unit', so the "
+                'expression would pair every connection with every unit.',
+            ),
+            id='a-join-adds-a-member-beside-the-tuple',
+        ),
+        pytest.param(
+            {
+                **SHARED_MEMBER,
+                **_constraint(
+                    'shift(flow, along=snapshot, offset=1, within=connection[unit]) >= 0', ['connection', 'snapshot']
+                ),
+            },
+            ("shift(within=connection[unit]) reads the order of 'connection'", 'no order'),
+            id='within-through-the-dimension',
+        ),
+        pytest.param(
+            {'dimensions.c2': {'alias': 'connection'}},
+            ("Dimension 'c2': alias: 'connection' is a dimension with members.",),
+            id='an-alias-of-a-dimension-with-members',
+        ),
+        pytest.param(
+            {
+                **SHARED_MEMBER,
+                'parameters.xs': {'dims': ['period']},
+                'parameters.ys': {'dims': ['period']},
+                'piecewise.curve': {
+                    'dims': ['assignment'],
+                    'along': 'period',
+                    'links': {'x': ['on', 'xs'], 'y': ['on', 'ys']},
+                },
+            },
+            (
+                "piecewise 'curve': along: 'period' is a member of 'assignment' in dims:, so the curve would pair "
+                'every assignment with every period. Step along an alias of it, curve_period: {alias: period}, and '
+                "declare the breakpoints over 'curve_period'.",
+            ),
+            id='a-curve-along-a-member-of-its-dimension',
         ),
         pytest.param(
             {'dimensions.ring': {'over': ['loop', 'unit']}, 'dimensions.loop': {'over': ['ring', 'port']}},
