@@ -668,6 +668,11 @@ class Dimension:
     """Whether the order of the labels is part of the spec. When it is, a tool keeps the labels in the order the data gives
     them.
     """
+    alias: str | None = None
+    """The dimension whose labels this one has, or ``None``. A tool reads no labels for an alias: it has the labels,
+    dtype and order of that dimension, which ``dtype``, ``one_of`` and ``ordered`` repeat. The relation it implies in
+    [`Program.relations`][mathspec.program.Program.relations] sends each label to itself.
+    """
     description: str | None = None
 
 
@@ -1134,6 +1139,9 @@ class Program:
     """
     dimensions: Mapping[str, Dimension] = Frozen({})
     relations: Mapping[str, Relation] = Frozen({})
+    """Each relation under ``relations:``, and the one each alias implies under the name of the alias. A tool takes the
+    rows of an implied relation from the labels of its dimension and reads no table for it.
+    """
     sos: Mapping[str, Sos] = Frozen({})
     piecewise: Mapping[str, Piecewise] = Frozen({})
     """Each ``piecewise:`` entry of the spec, as the curve it states. It is empty for the program of a spec whose curves

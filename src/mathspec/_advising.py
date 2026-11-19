@@ -95,7 +95,8 @@ def _never_an_axis(program: Program) -> list[Advice]:
     labels that column is checked against, and a ``where`` selects on them,
     so it is in use even where nothing is indexed by it. A dimension only a
     given entry indexes is reached too: the column exists, in another
-    file.
+    file. The relation a dimension implies is no use of its own; a reached
+    alias reaches the dimension whose labels it has.
     """
     reached: set[str] = set()
     for entry in (
@@ -109,7 +110,8 @@ def _never_an_axis(program: Program) -> list[Advice]:
     ):
         reached.update(entry.dims)
     reached |= _grouped_axes(program)
-    reached |= {dim for lk in program.relations.values() for dim in lk.dims}
+    reached |= {dim for name, lk in program.relations.items() if name not in program.dimensions for dim in lk.dims}
+    reached |= {target for name in reached if (target := program.dimensions[name].alias) is not None}
 
     return [
         Advice(
