@@ -56,7 +56,8 @@ _TUPLES = {
 _SHARED_REGION = (
     "Variable 'x' lists 'demand' and 'supply' in dims:, which share 'region'. A dimension with members is opaque, so "
     'the entry would pair every demand with every supply, whatever their region. Write the entry over the members, '
-    'dims: [plant, region, site], with where: a relation keyed by [region, site] and one keyed by [plant, region]; '
+    'dims: [plant, region, site], and spread each operand onto them: at(<operand>, by=demand[region, site]) and '
+    'at(<operand>, by=supply[plant, region]); '
     "or, if every pair is meant, let supply hold an alias of 'region': supply_region: {alias: region}, and supply: "
     '{over: [plant, supply_region]}.'
 )
