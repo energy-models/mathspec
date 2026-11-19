@@ -258,6 +258,10 @@ class Namespace:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
         return not labels_of(self.spec, name).ordered
 
+    def alias_of(self, name: str) -> str | None:
+        """The dimension that the declared dimension *name* is an alias of, or ``None``."""
+        return self.spec.dimensions[name].alias
+
     def kind(self, name: str) -> NameKind | None:
         """What *name* was declared as, or ``None`` where the file declares it nowhere."""
         if name in self.variables:
