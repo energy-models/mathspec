@@ -43,12 +43,19 @@ def did_you_mean(name: str, known: Iterable[str], *, label: str = 'Declared', li
     return f'{label}: {", ".join(candidates) or "nothing"}.' if listing else ''
 
 
-def unordered(context: str, construct: str, dimension: str) -> str:
-    """The refusal for *construct* reading the order of *dimension*, which is not declared ordered."""
+def unordered(context: str, construct: str, dimension: str, alias: str | None = None) -> str:
+    """The refusal for *construct* reading the order of *dimension*, which is not declared ordered.
+
+    *alias* is the dimension that *dimension* is an alias of, if any: an alias
+    takes its order from that dimension and may not declare one, so the
+    rewrite names that dimension.
+    """
+    owner = alias or dimension
+    named = f"'{dimension}', an alias of '{alias}'" if alias else f"'{dimension}'"
     return (
-        f"{context}: {construct} reads the order of '{dimension}', which is not declared ordered, so the "
+        f'{context}: {construct} reads the order of {named}, which is not declared ordered, so the '
         f'order would come from the row order of the data. Declare '
-        f"'{dimension}: {{ordered: true}}' under dimensions:."
+        f"'{owner}: {{ordered: true}}' under dimensions:."
     )
 
 

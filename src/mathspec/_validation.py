@@ -35,8 +35,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
 
-    from mathspec.program import Program
-    from mathspec.spec import PiecewiseLinkSpec, PiecewiseSpec
+    from mathspec.program import Program, Relation
+    from mathspec.spec import PiecewiseLinkSpec, PiecewiseSpec, RelationSpec
 
 
 def to_spec(spec: str | Path | Mapping[str, object] | Spec) -> Spec:
@@ -143,8 +143,9 @@ def _name_collisions(spec: Spec) -> Iterator[str]:
     """A name is declared once, and never as a built-in operator.
 
     A relation that a dimension implies is not declared, so it collides with
-    nothing. A relation the file declares under the name of such a dimension
-    is the implied one written twice, and the rewrite deletes it.
+    nothing. A relation the file declares under the name of such a dimension,
+    with the same columns and key, is the implied one written twice, and the
+    rewrite deletes it; any other collides with the dimension as usual.
     """
     implied = implied_relations(spec)
     seen: dict[str, str] = {}
@@ -152,7 +153,7 @@ def _name_collisions(spec: Spec) -> Iterator[str]:
         for name in group:
             if name in BUILTIN_NAMES:
                 yield f"{kind.capitalize()} '{name}' collides with the built-in operator '{name}'. Rename the {kind}."
-            if kind == 'relation' and name in implied:
+            if kind == 'relation' and name in implied and _restates(spec.relations[name], implied[name]):
                 reads = ', '.join(f'{name}[{column}]' for column in implied[name].values)
                 yield (
                     f"Relation '{name}' collides with the relation that dimension '{name}' implies, read as {reads}. "
@@ -164,6 +165,11 @@ def _name_collisions(spec: Spec) -> Iterator[str]:
                 )
             else:
                 seen[name] = kind
+
+
+def _restates(declared: RelationSpec, implied: Relation) -> bool:
+    """Whether *declared* has the columns and key of *implied*, whatever else it says."""
+    return (declared.pairs, declared.key_roles) == (implied.columns, implied.key)
 
 
 def _given_constraint_collisions(spec: Spec) -> Iterator[str]:
@@ -300,7 +306,7 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not labels_of(spec, entry.along).ordered:
-            yield unordered(context, f'type: 2 along {entry.along}', entry.along)
+            yield unordered(context, f'type: 2 along {entry.along}', entry.along, spec.dimensions[entry.along].alias)
         elif entry.variable in claimed:
             yield (
                 f"{context}: variable '{entry.variable}' already carries the set declared by "
@@ -354,7 +360,7 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield undeclared_dimension('piecewise', name, pw.along)
             continue
         if not labels_of(spec, pw.along).ordered:
-            yield unordered(context, f'along: {pw.along}', pw.along)
+            yield unordered(context, f'along: {pw.along}', pw.along, spec.dimensions[pw.along].alias)
         for d in pw.dims:
             if d not in spec.dimensions:
                 yield undeclared_dimension('piecewise', name, d)

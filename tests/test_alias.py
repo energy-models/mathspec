@@ -91,6 +91,11 @@ def test_an_alias_prints_as_a_primed_index_over_the_same_set(fmt: str):
             "Delete 'from_g' under relations:.",
             id='its-relation-declared-again',
         ),
+        pytest.param(
+            {'dimensions.from_g': {'alias': 'g'}, 'relations.from_g': {'key': 'h', 'values': 'g'}},
+            "Relation 'from_g' collides with the dimension of the same name. Rename one of them.",
+            id='another-relation-under-its-name',
+        ),
     ],
 )
 def test_an_alias_that_says_more_or_less_than_its_dimension_is_refused(patch: dict[str, Any], message: str):
