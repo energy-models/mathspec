@@ -338,6 +338,15 @@ compared with a literal, or a boolean parameter. A `cases:` with one case
 may compare expressions, because its `otherwise:` claims only what the
 case leaves.
 
+A `when:` may read a condition through a relation with
+[`at`](expressions.md#at-in-a-condition). Two reads that name the same
+relation and columns reach one row, so mathspec compares the conditions they
+read. With `tech_of: { key: unit, values: tech }`, the cases
+`at(kind == 'a', by=tech_of[tech])` and `at(kind == 'b', by=tech_of[tech])`
+claim no unit together. Reads through two relations reach two rows, so
+`at(kind == 'b', by=backup_of[tech])` in place of the second overlaps the
+first.
+
 Each `when:` and each value is indexed only over dimensions that `dims:`
 lists. A value indexed over fewer of them is repeated along the others, as a
 parameter with fewer dimensions is. Each dimension in `dims:` must index

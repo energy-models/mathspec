@@ -12,6 +12,7 @@ test here matches the sentence.
 from __future__ import annotations
 
 import itertools
+import operator
 import random
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -21,10 +22,24 @@ from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
 from mathspec._resolution import Namespace, resolve_condition
 from mathspec._validation import to_spec
-from mathspec.program import And, Mask, Not, Or
+from mathspec.program import (
+    And,
+    ConditionReference,
+    DimensionComparison,
+    JoinedCondition,
+    Mask,
+    Not,
+    Or,
+    ParameterComparison,
+    ParameterDefined,
+    RelationComparison,
+    RelationDefined,
+)
 from tests.fixtures import varied
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from mathspec.program import Condition
     from mathspec.spec import Spec
 
@@ -61,6 +76,22 @@ NETWORK: dict[str, Any] = {
 #: The same network with a third end, so two pairs of columns can share one.
 THREE_ENDS: dict[str, Any] = varied(NETWORK, **{'relations.ends.values': {'bus0': 'bus', 'bus1': 'bus', 'bus2': 'bus'}})
 
+#: A unit reads `kind` at its technology, through `tech_of` or through `backup_of`, and a
+#: technology reads it at its parent through `up`, so one read can sit inside another.
+#: `is_a` is one condition a case can test at a technology and read through a relation.
+FLEET: dict[str, Any] = {
+    'dimensions': {'unit': {}, 'tech': {}},
+    'conditions': {'is_a': {'condition': "kind == 'a'"}},
+    'relations': {
+        'tech_of': {'key': 'unit', 'values': 'tech'},
+        'backup_of': {'key': 'unit', 'values': 'tech'},
+        'up': {'key': 'tech', 'values': {'parent': 'tech'}},
+    },
+    'parameters': {'kind': {'dims': ['tech'], 'dtype': 'str', 'missing': 'absent'}, 'cap': {'dims': ['unit']}},
+    'variables': {'p': {'dims': ['unit']}},
+    'constraints': {'c': {'dims': ['unit'], 'expression': 'p >= 0'}},
+}
+
 
 @pytest.fixture(scope='module')
 def spec() -> Spec:
@@ -86,6 +117,66 @@ def _mask(text: str, namespace: Namespace, name: str) -> Condition:
     assert not errors, errors
     assert mask is not None
     return mask
+
+
+_Table = dict[tuple[str, ...], Any]
+
+_OPERATORS = {'==': operator.eq, '!=': operator.ne}
+
+
+def _fleets() -> Iterator[tuple[dict[str, str], dict[str, _Table]]]:
+    """Every coordinate of one unit in every fleet over t1 and t2: each row there or not, each kind a, b, c or absent."""
+    techs = ('t1', 't2')
+    targets = [*techs, None]
+    for own, mine, backup, parents, kinds in itertools.product(
+        techs,
+        targets,
+        targets,
+        itertools.product(targets, repeat=2),
+        itertools.product(['a', 'b', 'c', None], repeat=2),
+    ):
+        data = {
+            'tech_of': {('u',): {'tech': mine}} if mine else {},
+            'backup_of': {('u',): {'tech': backup}} if backup else {},
+            'up': {(tech,): {'parent': parent} for tech, parent in zip(techs, parents, strict=True) if parent},
+            'kind': {(tech,): kind for tech, kind in zip(techs, kinds, strict=True) if kind},
+        }
+        yield {'unit': 'u', 'tech': own}, data
+
+
+def _holds(node: Condition, at: dict[str, str], data: dict[str, _Table]) -> bool:
+    """Whether *node* holds at the coordinate *at*, read off *data* without the prover."""
+    match node:
+        case Not(operand=operand):
+            return not _holds(operand, at, data)
+        case And(left=left, right=right):
+            return _holds(left, at, data) and _holds(right, at, data)
+        case Or(left=left, right=right):
+            return _holds(left, at, data) or _holds(right, at, data)
+        case ConditionReference(body=body):
+            return _holds(body, at, data)
+        case ParameterDefined(name=name, dims=dims) | RelationDefined(name=name, dims=dims):
+            return _key(at, dims) in data[name]
+        case ParameterComparison(name=name, op=op, value=value, dims=dims):
+            read = data[name].get(_key(at, dims))
+            return read is not None and _OPERATORS[op](read, value)
+        case RelationComparison(name=name, column=column, op=op, value=value, dims=dims):
+            row = data[name].get(_key(at, dims))
+            return row is not None and _OPERATORS[op](row[column], value)
+        case DimensionComparison(name=name, op=op, value=value):
+            return _OPERATORS[op](at[name], value)
+        case JoinedCondition(operand=operand, columns=columns):
+            row = data[columns.name].get(_key(at, tuple(columns.dim(role) for role in columns.relation.key)))
+            if row is None:
+                return False
+            return _holds(operand.root, at | {columns.dim(role): row[role] for role in columns.dropped}, data)
+        case _:
+            msg = f'{node} is not read off a fleet'
+            raise TypeError(msg)
+
+
+def _key(at: dict[str, str], dims: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(at[dim] for dim in dims)
 
 
 class TestProvesApart:
@@ -394,6 +485,63 @@ class TestSoundness:
                 assert not both, f'both cases claim {point} — the cells hid a witness'
         assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
 
+    JOINED_ATOMS: ClassVar[tuple[str, ...]] = (
+        'tech_of',
+        'kind',
+        "kind == 'a'",
+        "kind != 'b'",
+        'is_a',
+        "tech == 't1'",
+        "tech_of[tech] == 't1'",
+        'at(kind, by=tech_of[tech])',
+        "at(kind == 'a', by=tech_of[tech])",
+        "at(kind != 'b', by=tech_of[tech])",
+        'at(is_a, by=tech_of[tech])',
+        "at(tech == 't1', by=tech_of[tech])",
+        "at(kind == 'b', by=backup_of[tech])",
+        "at(kind == 'a', by=up[parent])",
+        'at(not is_a, by=up[parent])',
+        "at(up and kind == 'b', by=tech_of[tech])",
+        "at(at(kind == 'a', by=up[parent]), by=tech_of[tech])",
+    )
+
+    @pytest.mark.parametrize('seed', [1, 7])
+    def test_a_read_through_a_relation_proved_apart_stays_apart_in_every_fleet(self, seed: int):
+        """The same walk, with each atom read straight off every fleet of one unit and two technologies.
+
+        Reads through two relations, one read nested in another, and the same
+        parameter read at the coordinate can all reach one technology.
+        """
+        namespace = Namespace(to_spec(FLEET))
+        atoms = [_mask(text, namespace, 'a probe') for text in self.JOINED_ATOMS]
+        fleets = list(_fleets())
+        everywhere = (1 << len(fleets)) - 1
+        held = {
+            id(atom): sum(1 << i for i, (at, data) in enumerate(fleets) if _holds(atom, at, data)) for atom in atoms
+        }
+
+        def claimed(node: Condition) -> int:
+            match node:
+                case Not(operand=operand):
+                    return everywhere & ~claimed(operand)
+                case And(left=left, right=right):
+                    return claimed(left) & claimed(right)
+                case Or(left=left, right=right):
+                    return claimed(left) | claimed(right)
+                case _:
+                    return held[id(node)]
+
+        rng = random.Random(seed)
+        proved = 0
+        for _ in range(2000):
+            first, second = self._random_mask(rng, atoms), self._random_mask(rng, atoms)
+            if list(overlapping({'a': first, 'b': second}, namespace.dtypes, namespace.defaults)):
+                continue
+            proved += 1
+            both = claimed(first) & claimed(second)
+            assert not both, f'both cases claim {fleets[both.bit_length() - 1]}'
+        assert proved > 150, f'only {proved} pairs proved apart; the fuzz is not exercising the check'
+
 
 class TestAMissingRow:
     CASES: ClassVar[dict[str, str]] = {'lossless': 'efficiency == 1', 'not_given': 'not efficiency'}
@@ -504,3 +652,78 @@ class TestTwoPairsOfColumns:
         assert refusals(to_spec(THREE_ENDS), {'same': 'ends[bus0] == ends[bus1]', 'other': swapped}) == [], (
             'a line has its two columns equal or different, not both'
         )
+
+
+class TestAConditionReadThroughARelation:
+    """`at(<condition>, by=r[c])` reads one row of `r`, so two reads through one `by=` reach one label."""
+
+    @pytest.mark.parametrize(
+        'cases',
+        [
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "at(kind == 'b', by=tech_of[tech])"},
+                id='two-labels-through-one-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'rest': "not at(kind == 'a', by=tech_of[tech])"},
+                id='a-read-and-its-negation',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'left_out': 'not tech_of'},
+                id='a-read-and-the-missing-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech]) and cap > 1", 'b': "at(kind == 'b', by=tech_of[tech])"},
+                id='a-read-beside-an-atom-of-the-unit',
+            ),
+            pytest.param(
+                {
+                    'a': "at(at(kind == 'a', by=up[parent]), by=tech_of[tech])",
+                    'b': "at(at(kind == 'b', by=up[parent]), by=tech_of[tech])",
+                },
+                id='one-read-inside-another-on-both-sides',
+            ),
+        ],
+    )
+    def test_reads_through_one_row_are_told_apart_by_what_they_read(self, cases: dict[str, str]):
+        """A unit's technology has one kind, so the two cases claim no unit together.
+
+        The prover refused every condition read through a relation as
+        undecidable, so the cases did not load.
+        """
+        assert refusals(to_spec(FLEET), cases) == [], 'one row of tech_of reaches one kind'
+
+    @pytest.mark.parametrize(
+        ('cases', 'witness'),
+        [
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'not_b': "at(kind != 'b', by=tech_of[tech])"},
+                "where kind through tech_of[tech] is 'a'.",
+                id='overlapping-reads-through-one-row',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "at(kind == 'b', by=backup_of[tech])"},
+                "where kind through tech_of[tech] is 'a', kind through backup_of[tech] is 'b'.",
+                id='reads-through-two-relations',
+            ),
+            pytest.param(
+                {'a': "at(kind == 'a', by=tech_of[tech])", 'b': "kind == 'b'"},
+                "where kind through tech_of[tech] is 'a', kind is 'b'.",
+                id='a-read-and-the-same-parameter-at-the-coordinate',
+            ),
+            pytest.param(
+                {'own': 'not is_a', 'read': 'at(is_a, by=tech_of[tech])'},
+                "where kind is anything else, kind through tech_of[tech] is 'a'.",
+                id='one-condition-at-the-coordinate-and-through-a-row',
+            ),
+            pytest.param(
+                {'a': "at(at(kind == 'a', by=up[parent]), by=tech_of[tech])", 'b': "at(kind == 'b', by=up[parent])"},
+                "where kind through up[parent] through tech_of[tech] is 'a', kind through up[parent] is 'b'.",
+                id='a-read-inside-another-and-the-inner-read-alone',
+            ),
+        ],
+    )
+    def test_reads_that_can_reach_two_labels_still_overlap(self, cases: dict[str, str], witness: str):
+        """A unit is claimed by both where its reads reach labels both cases admit."""
+        [refusal] = refusals(to_spec(FLEET), cases)
+        assert witness in refusal
