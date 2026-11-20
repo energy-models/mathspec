@@ -38,6 +38,7 @@ every character a notation escapes, set as text: link\_to, 100% & \#1 costs \$5 
 / $upright("priced_dispatch")$: `priced_dispatch` over $cal(G)$
 
 == Variables
+/ $italic("bus_out")$: `bus_out` over $cal(U) times cal(T)$
 / $italic("fuel")$: `fuel` over $cal(G) times cal(T)$
 / $italic("headroom")$: `headroom` (scalar), $0$ where the mask leaves it out
 / $italic("heat")$: `heat` over $cal(G) times cal(T)$
@@ -77,7 +78,8 @@ $ upright("dispatchable") & upright("dispatchable")_(g) & arrow.l.r.double.long 
 
 == Variable domains
 #set math.equation(numbering: "(1)")
-$ upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
+$ upright("bus_out") & 0 <= italic("bus_out")_(u,t) & <= upright("zone_cap")_(upright("zone_of")(u)) & forall u in cal(U), t in cal(T) \
+  upright("fuel") & italic("fuel")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("headroom") & italic("headroom") & >= 0 & upright("where ") upright("budget") upright(" is defined") \
   upright("heat") & italic("heat")_(g,t) & >= 0 & forall g in cal(G), t in cal(T) \
   upright("on") & italic("on")_(g,t) & in {0, 1} & forall g in cal(G), t in cal(T) \

@@ -65,6 +65,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'p': 'Lower and upper bounds',
         'spill': 'Lower bound only',
         'slack': 'Upper bound only',
+        'bus_out': 'Bound looked up through a relation',
         'theta': 'Unbounded variable',
         'on': 'Binary domain',
         'units': 'Bounded integer domain',

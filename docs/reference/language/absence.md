@@ -125,9 +125,11 @@ row. Under `absent` and under a value, the result depends on the position:
 Under `missing: 0`, a `shift(x, …)` with a missing `offset=` amount is `x`
 itself. A `sum_back` with a missing `window=` amount is a sum of no terms.
 
-Three declarations set a bound only where the data has one: `missing: absent`,
-`missing: .inf` or `-.inf` on the parameter, or a `where:` on the variable.
-Elsewhere, that side of the variable is open.
+Four declarations set a bound only where the data has one: `missing: absent`,
+`missing: .inf` or `-.inf` on the parameter, `missing: absent` on the relation
+that a [looked-up bound](parameters-variables-constraints.md#a-bound-looked-up-through-a-relation)
+reads through, or a `where:` on the variable. Elsewhere, that side of the
+variable is open.
 
 A curve requires a row at each breakpoint within its `where:`, and [missing breakpoints](piecewise.md#missing-breakpoints) describes a missing row in its table.
 

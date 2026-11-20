@@ -518,6 +518,11 @@ def test_an_outer_product_is_legal_and_carries_both_dim_sets():
             r"bounds.upper parameter 'load' has dims \['bus', 'snapshot'\]",
             id='bound-parameter-dim-outside-dims',
         ),
+        pytest.param(
+            {'variables.cap': {'dims': ['generator'], 'domain': 'binary', 'bounds': {'upper': 'load'}}},
+            r"bounds.upper parameter 'load' has dims \['bus', 'snapshot'\]",
+            id='bound-parameter-dim-outside-dims-on-a-binary',
+        ),
     ],
 )
 def test_an_ill_dimensioned_entry_is_rejected(patch, match):

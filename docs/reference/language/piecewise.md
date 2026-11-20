@@ -130,7 +130,7 @@ The output of each command contains these two rows:
 The lower bound of `build` is `0`, so the expansion writes no
 `pick_one_size_nonzero_below` row.
 
-`upper` and `lower` are the `bounds:` of the member, each a number or a parameter, and for a binary member they are `1` and `0`. mathspec refuses a member
+`upper` and `lower` are the `bounds:` of the member, each a number, a parameter or a [lookup](parameters-variables-constraints.md#a-bound-looked-up-through-a-relation) of one, and for a binary member they are `1` and `0`. mathspec refuses a member
 with no `bounds.lower`, or with no `bounds.upper` and no `domain: binary`, and with `bounds: { upper: max_build }` on `build` it prints:
 
 ```text

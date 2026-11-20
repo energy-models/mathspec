@@ -22,6 +22,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from mathspec._expression_parser import FunctionCallNode, NameNode, parse_expression
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._piecewise import gate_of
@@ -262,28 +263,41 @@ def _aliases(spec: Spec) -> Iterator[str]:
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:
-    """A named bound is a numeric parameter, declared here or given."""
+    """A named bound is a numeric parameter, declared here or given, bare or looked up through a relation."""
     parameters = {**spec.parameters, **spec.given.parameters}
     for vname, vdef in spec.variables.items():
         for side in ('lower', 'upper'):
             val = getattr(vdef.bounds, side)
             if not isinstance(val, str):
                 continue
-            if val in parameters:
-                dtype = parameters[val].dtype
+            try:
+                name = _bound_parameter(val)
+            except SchemaError as error:
+                yield f"Variable '{vname}' bounds.{side}: {error}"
+                continue
+            if name in parameters:
+                dtype = parameters[name].dtype
                 if dtype not in NUMERIC_DTYPES:
                     yield (
-                        f"Variable '{vname}' bounds.{side}: '{val}' is a {dtype} parameter. Declare it "
+                        f"Variable '{vname}' bounds.{side}: '{name}' is a {dtype} parameter. Declare it "
                         f'dtype: float or int, or bound the variable by a numeric parameter.'
                     )
                 continue
             detail = (
-                f"'{val}' is not a declared parameter. Declare it under 'parameters:', or write a number"
-                if val.isidentifier()
-                else f'bounds take a parameter name or a number, not an expression (got {val!r}). '
-                f'Precompute it as a parameter'
+                f"'{name}' is not a declared parameter. Declare it under 'parameters:', or write a number"
+                if name is not None
+                else f'bounds take a number, a parameter name or at(parameter, by=relation[column]), not an '
+                f'expression (got {val!r}). Precompute it as a parameter'
             )
             yield f"Variable '{vname}' bounds.{side}: {detail}."
+
+
+def _bound_parameter(text: str) -> str | None:
+    """The name a bound reads, bare or as the operand of ``at``; ``None`` for any other expression it parses to."""
+    node = parse_expression(text)
+    if isinstance(node, FunctionCallNode) and node.name == 'at' and node.args:
+        node = node.args[0]
+    return node.name if isinstance(node, NameNode) else None
 
 
 def _sos_shapes(spec: Spec) -> Iterator[str]:

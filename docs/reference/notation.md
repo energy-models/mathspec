@@ -114,6 +114,7 @@ parameters:
 
 | Symbol | Meaning |
 |---|---|
+| $`\mathit{bus\_out}`$ | `bus_out` over $`\mathcal{U} \times \mathcal{T}`$ |
 | $`\mathit{fuel}`$ | `fuel` over $`\mathcal{G} \times \mathcal{T}`$ |
 | $`\mathit{headroom}`$ | `headroom` (scalar), $`0`$ where the mask leaves it out |
 | $`\mathit{heat}`$ | `heat` over $`\mathcal{G} \times \mathcal{T}`$ |
@@ -194,6 +195,21 @@ variables:
 
 ```math
 \mathit{slack}_{t} \le 100 \qquad \forall\, t \in \mathcal{T}
+```
+
+#### Bound looked up through a relation
+
+an upper bound read through a relation: the limit of the zone of each bus
+
+```yaml
+variables:
+  bus_out:
+    dims: [snapshot, bus]
+    bounds: { lower: 0, upper: "at(zone_cap, by=zone_of[zone])" }
+```
+
+```math
+0 \le \mathit{bus\_out}_{u,t} \le \mathrm{zone\_cap}_{\mathrm{zone\_of}(u)} \qquad \forall\, u \in \mathcal{U},\ t \in \mathcal{T}
 ```
 
 #### Unbounded variable

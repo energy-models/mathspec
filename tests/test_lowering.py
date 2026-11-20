@@ -999,6 +999,20 @@ def test_a_named_expression_is_not_in_the_footprint():
     )
 
 
+def test_a_lookup_in_a_bound_alone_is_in_the_footprint():
+    """An engine decides from `kinds` whether it takes a program, and a `Join` only in a bound was not in it."""
+    model = varied(
+        SMALL_MODEL,
+        **{
+            'parameters.ch': {'dims': ['h']},
+            'variables.p.bounds.upper': 'at(ch, by=lk[h])',
+            'constraints': {'k': {'dims': ['g'], 'expression': 'p <= c'}},
+        },
+    )
+
+    assert Join in to_spec(model).program.footprint.kinds, 'the lookup reaches the solver as a bound'
+
+
 def test_a_dimension_carries_the_dtype_its_labels_are_checked_against():
     """The declared type travels with the dimension, as a parameter's does.
 

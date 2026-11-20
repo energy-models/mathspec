@@ -30,9 +30,10 @@ def coefficients(domain: str, lower: float | str | None, upper: float | str | No
     """What a member's two linking rows multiply its binary by, ``None`` on a side the spec leaves open.
 
     The 0 and 1 a binary's domain fixes, which no ``bounds:`` carries;
-    otherwise the member's own declared bounds, each a number or the name of a
-    parameter. A parameter is a coefficient like any other: it is what the row
-    multiplies by, and no rewrite needs to know its value. Nothing else is a
+    otherwise the member's own declared bounds, each a number, the name of a
+    parameter, or its lookup through a relation. A parameter is a coefficient
+    like any other: it is what the row multiplies by, and no rewrite needs to
+    know its value. Nothing else is a
     coefficient: a number below the bound would cap a picked member the set
     does not cap, and one above it is a looser row than the bound already
     states.
@@ -142,7 +143,7 @@ def _coefficients(member: dict[str, object]) -> tuple[float | str, float | str]:
     assert declared is None or isinstance(declared, dict), 'a validated spec carries `bounds:` as a mapping'
     lower, upper = (declared.get('lower'), declared.get('upper')) if declared else (None, None)
     assert isinstance(lower, float | str | None) and isinstance(upper, float | str | None), (
-        'a bound is a number, the name of a parameter, or open'
+        'a bound is a number, a parameter or its lookup, or open'
     )
     below, above = coefficients(str(member.get('domain', 'continuous')), lower, upper)
     assert below is not None and above is not None, 'a set with a side left open is refused at load'

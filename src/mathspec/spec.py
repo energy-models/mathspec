@@ -450,7 +450,7 @@ class ParameterSpec(_StrictSpec):
 
 
 class BoundsSpec(_StrictSpec):
-    """Variable bounds — each side is a finite number, a parameter name, or ``None`` where it is open.
+    """Variable bounds — each side is a finite number, a parameter name, ``at(parameter, by=relation[column])``, or ``None`` where it is open.
 
     An omitted bound leaves the variable unbounded on that side, not
     implicitly non-negative. An infinity is refused: an open side is ``null``,
