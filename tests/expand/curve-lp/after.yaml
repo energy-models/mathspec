@@ -14,9 +14,8 @@ constraints:
     dims: [bp]
     where: position(bp) > 0
     expression: >-
-      (y) * (x_bp - shift(x_bp, along=bp, offset=1, edge=0))
-      >= (y_bp - shift(y_bp, along=bp, offset=1, edge=0)) * ((x) - x_bp)
-      + y_bp * (x_bp - shift(x_bp, along=bp, offset=1, edge=0))
+      (y) >= (y_bp - shift(y_bp, along=bp, offset=1, edge=0))
+      / (x_bp - shift(x_bp, along=bp, offset=1, edge=0)) * ((x) - x_bp) + y_bp
   curve_domain_lo:
     dims: [bp]
     where: position(bp) == 0

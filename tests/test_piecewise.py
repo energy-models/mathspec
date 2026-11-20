@@ -852,6 +852,18 @@ def test_segment_lines_carry_the_mask_that_no_weight_can_hand_them():
     assert expanded.constraints['cost_curve_domain_hi'].where == '(has_curve) AND (position(bp) == -1)'
 
 
+def test_a_segment_line_bounds_the_linked_expression_per_unit_of_it():
+    """The chord row was multiplied through by its segment's run, so its dual was the price per unit of run times cost.
+
+    Moving a breakpoint changed the dual where the solution stayed, and it no
+    longer matched linopy's `_chord`, whose row has the bounded expression
+    alone on its side.
+    """
+    chord = expand_piecewise(spec_of(LP)).constraints['cost_curve_chord'].expression
+    assert chord.startswith('(op_cost) >= '), f'the bounded expression stands alone, at coefficient 1: {chord}'
+    assert '(op_cost) *' not in chord, f'no factor scales the bounded expression: {chord}'
+
+
 @pytest.mark.parametrize(
     ('where', 'method'),
     [
