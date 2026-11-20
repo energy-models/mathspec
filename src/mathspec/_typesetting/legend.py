@@ -273,7 +273,7 @@ class Legend:
         return '' if alias is None else f', an alias of {self.format.mono(alias)}'
 
     def _coords(self, dim: str, noticed: Noticed) -> str:
-        """The dimension's carried structure: the labels its ``one_of`` allows, each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
+        """The dimension's carried structure: the labels its ``one_of`` allows, the product of its members, each relation with a column over it, as the map or relation it is, and each map that may leave a key out.
 
         The dtype is named only where an equation compared the index against a
         number, the one place "position 3" and "the coordinate 3" are both
@@ -286,6 +286,10 @@ class Legend:
             clauses.append(f' ({self.format.mono(self.program.dimensions[dim].dtype)} coordinates)')
         if (labels := self.program.dimensions[dim].one_of) is not None:
             clauses.append(f' (labels {", ".join(self.format.mono(m) for m in labels)})')
+        if members := dimensions[dim].over:
+            product = self.format.joined([self.symbols.set[d] for d in members], self._op('times'))
+            holds = self._op('subset_of' if dimensions[dim].missing == 'absent' else 'equal')
+            clauses.append(f', {self.format.math(f"{self.symbols.set[dim]} {holds} {product}")}')
         if carried:
             maps = self.format.joined([self._signature(c, lk) for c, lk in carried.items()], '')
             clauses.append(f' with {self.format.math(maps)}')

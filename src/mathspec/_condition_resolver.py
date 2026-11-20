@@ -37,7 +37,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, listed, prefixed
 from mathspec.program import (
     Add,
     And,
@@ -169,10 +169,12 @@ class ConditionResolver:
                     return node
                 return ParameterDefined(node.name, ns.leaf_dims[node.name])
             case 'dimension':
+                members = ns.spec.dimensions[node.name].members
+                compared = f"{node.name}[{members[0]}] == '...'" if members else f'{node.name} > 0'
                 self.errors.append(
                     f"{context}: '{node.name}' is a dimension, and a bare dimension "
                     f'name is true at every coordinate. '
-                    f'Remove it, or compare it: where: "{node.name} > 0".'
+                    f'Remove it, or compare it: where: "{compared}".'
                 )
             case 'relation':
                 shape = ns.relations[node.name]
@@ -243,12 +245,12 @@ class ConditionResolver:
         if along.name not in mask.dims:
             self.errors.append(
                 f"{context}: shift(<condition>, along='{along.name}') steps along a dimension the condition does "
-                f'not read. Step along one of {_listed(list(mask.dims))}.'
+                f'not read. Step along one of {listed(list(mask.dims))}.'
             )
             return node
         if self.ns.unordered(along.name):
             self.errors.append(
-                unordered(context, f'shift(<condition>, along={along.name})', along.name, self.ns.alias_of(along.name))
+                self.ns.unordered_refusal(context, f'shift(<condition>, along={along.name})', along.name)
             )
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
@@ -269,7 +271,7 @@ class ConditionResolver:
         if by is None:
             return node
         try:
-            dims = join_dims(by, frozenset(mask.dims), context, 'the condition')
+            dims = join_dims(by, frozenset(mask.dims), context, 'the condition', self.ns.spec)
         except DimensionError as refusal:
             self.errors.append(self.ns.refused_dims(refusal))
             return node
@@ -312,7 +314,7 @@ class ConditionResolver:
         if over.name not in mask.dims:
             self.errors.append(
                 f"{context}: count(<condition>, over='{over.name}') counts along a dimension the condition does "
-                f'not read. Count along one of {_listed(list(mask.dims))}.'
+                f'not read. Count along one of {listed(list(mask.dims))}.'
             )
             return node
         dims = tuple(d for d in mask.dims if d != over.name)
@@ -420,6 +422,8 @@ class ConditionResolver:
         if len(self.errors) > found:
             return node
         left, right = sides
+        if self._expressions.met(left, right, f'{node.left} {node.op} {node.right}'):
+            return node
         if all(_is_number(side) for side in sides):
             self.errors.append(
                 f"{context}: '{node.left} {node.op} {node.right}' compares two numbers. Name the parameter one "
@@ -457,7 +461,7 @@ class ConditionResolver:
             )
             return node
         if ns.unordered(dimension):
-            self.errors.append(unordered(context, f'position({dimension})', dimension, ns.alias_of(dimension)))
+            self.errors.append(ns.unordered_refusal(context, f'position({dimension})', dimension))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -511,6 +515,13 @@ class ConditionResolver:
         elif kind in ('parameter', 'dimension'):
             dtype = ns.dtypes[left_name]
             labelled = left_name if kind == 'dimension' else None
+        if labelled is not None and (members := ns.spec.dimensions[labelled].members):
+            self.errors.append(
+                f"{context}: '{plain.name}' compares a label of '{labelled}', and '{labelled}' lists its members, "
+                f"so it has no label to compare. In an entry over '{labelled}', compare a member: "
+                f'{labelled}[{members[0]}] {plain.op} {plain.value!r}.'
+            )
+            return node
         if dtype is not None:
             typed = self._typed_literal(plain, dtype)
             if typed is None:
@@ -679,7 +690,7 @@ class _Plain(NamedTuple):
 
 
 def _side_kind(ns: Namespace, name: str, column: str) -> str | None:
-    """What a side names: a relation where it reads a column of one, so an alias's ``from_region[region]`` reads its implied relation."""
+    """What a side names: a relation where it reads a column of one, so ``connection[unit]`` or an alias's ``from_region[region]`` reads the implied relation."""
     return 'relation' if column and name in ns.relations else ns.kind(name)
 
 
@@ -722,11 +733,11 @@ def _kwargs_error(
     """
     missing = [key for key in required if key not in kwargs]
     if missing:
-        return f'{context}: {name}(<condition>) needs {_listed([f"{key}=" for key in missing])}.'
+        return f'{context}: {name}(<condition>) needs {listed([f"{key}=" for key in missing])}.'
     if extra := sorted(set(kwargs) - set(required)):
         return (
-            f'{context}: {name}(<condition>) does not take {_listed([f"{key}=" for key in extra])}. '
-            f'It takes only {_listed([f"{key}=" for key in required])}.'
+            f'{context}: {name}(<condition>) does not take {listed([f"{key}=" for key in extra])}. '
+            f'It takes only {listed([f"{key}=" for key in required])}.'
         )
     return None
 
@@ -742,14 +753,6 @@ def _decided_count(op: str, value: float) -> str | None:
     if value == 0 and op in ('>=', '<'):
         return 'every' if op == '>=' else 'no'
     return None
-
-
-def _listed(items: list[str]) -> str:
-    """``'a'``, ``'a' and 'b'``, ``'a', 'b' and 'c'`` — one rule, so every message reads the same."""
-    quoted = [f"'{item}'" for item in items]
-    if len(quoted) <= 1:
-        return quoted[0] if quoted else 'nothing'
-    return f'{", ".join(quoted[:-1])} and {quoted[-1]}'
 
 
 def _is_number(side: Expression) -> bool:

@@ -35,7 +35,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed, unordered
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -258,6 +258,10 @@ class Namespace:
         """Whether the declared dimension *name* is one whose order the file does not declare part of the model."""
         return not labels_of(self.spec, name).ordered
 
+    def unordered_refusal(self, context: str, construct: str, name: str) -> str:
+        """The refusal for *construct* reading the order of the dimension *name*, with the rewrite its entry allows."""
+        return unordered(context, construct, name, self.alias_of(name), self.spec.dimensions[name].members)
+
     def alias_of(self, name: str) -> str | None:
         """The dimension that the declared dimension *name* is an alias of, or ``None``."""
         return self.spec.dimensions[name].alias
@@ -454,7 +458,7 @@ def resolve_constraint_text(
     found = len(errors)
     resolver = ExpressionResolver(ns, context, errors)
     left, right = resolver.build(ast.left), resolver.build(ast.right)
-    if len(errors) > found or left is None or right is None:
+    if len(errors) > found or left is None or right is None or resolver.met(left, right, str(ast)):
         return None
     if any(_over_the_ceiling(side, context, errors, ceiling=2) for side in (left, right)):
         return None

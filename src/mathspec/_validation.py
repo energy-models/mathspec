@@ -22,6 +22,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
+from mathspec._dimensions import aliased, keyed, overlaps, shared_refusal
 from mathspec._expression_parser import FunctionCallNode, NameNode, parse_expression
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
@@ -29,7 +30,7 @@ from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
 from mathspec._sos import coefficients
 from mathspec._yaml import read_spec
-from mathspec.errors import SchemaError, did_you_mean, unordered
+from mathspec.errors import SchemaError, did_you_mean, listed, unordered
 from mathspec.spec import NUMERIC_DTYPES, Spec, implied_relations, labels_of, side_columns
 
 if TYPE_CHECKING:
@@ -108,6 +109,8 @@ def reference_errors(spec: Spec) -> list[str]:
     return [
         *_name_collisions(spec),
         *_frame_dimensions(spec),
+        *_members(spec),
+        *_opaque_tuples(spec),
         *_relation_targets(spec),
         *_aliases(spec),
         *_bound_names(spec),
@@ -184,9 +187,9 @@ def _given_constraint_collisions(spec: Spec) -> Iterator[str]:
             yield f"Given constraint '{name}' is also declared under 'constraints:'. Delete one of the two."
 
 
-def _frame_dimensions(spec: Spec) -> Iterator[str]:
-    """Every frame is a product of distinct, declared dimensions."""
-    frames = [
+def _frames(spec: Spec) -> list[tuple[str, str, Iterable[str]]]:
+    """Each entry that declares ``dims:``, as its kind, its name and the dims."""
+    return [
         *(('Parameter', name, p.dims) for name, p in spec.parameters.items()),
         *(('Variable', name, v.dims) for name, v in spec.variables.items()),
         *(('Given parameter', name, g.dims) for name, g in spec.given.parameters.items()),
@@ -197,13 +200,76 @@ def _frame_dimensions(spec: Spec) -> Iterator[str]:
         *(('Constraint', name, c.dims) for name, c in spec.constraints.items()),
         *(('Named expression', name, e.dims or ()) for name, e in spec.expressions.items()),
     ]
-    for kind, name, dims in frames:
+
+
+def _frame_dimensions(spec: Spec) -> Iterator[str]:
+    """Every frame is a product of distinct, declared dimensions."""
+    for kind, name, dims in _frames(spec):
         yield from (undeclared_dimension(kind, name, d) for d in dims if d not in spec.dimensions)
         yield from (
             f"{kind} '{name}' names dimension '{d}' twice. Delete one."
             for d, count in Counter(dims).items()
             if count > 1
         )
+
+
+def _members(spec: Spec) -> Iterator[str]:
+    """A dimension lists plain, declared dimensions as its members, each once.
+
+    The relation the entry implies names a column after each member, so one
+    dimension twice is two columns of one name; a second name for it is an
+    alias.
+    """
+    for name, entry in spec.dimensions.items():
+        dims = entry.members
+        yield from (undeclared_dimension('Dimension', name, d) for d in dict.fromkeys(dims) if d not in spec.dimensions)
+        for d in dict.fromkeys(dims):
+            if d in spec.dimensions and (inner := spec.dimensions[d].members):
+                flat = sorted({*dims, *inner} - {d, name})
+                yield (
+                    f"Dimension '{name}' lists '{d}' under 'over:', and '{d}' has members of its own. A member is "
+                    f'a dimension without `over:`. List the members themselves: over: {flat}.'
+                )
+        yield from (
+            f"Dimension '{name}' lists '{d}' twice under 'over:'. Declare an alias of it under dimensions:, "
+            f'from_{d}: {{alias: {aliased(d, spec)}}}, and list both: over: [from_{d}, {d}].'
+            for d, count in Counter(dims).items()
+            if count > 1
+        )
+
+
+def _opaque_tuples(spec: Spec) -> Iterator[str]:
+    """No frame is over dimensions whose cross product pairs tuples that disagree on a member ([`overlaps`][]).
+
+    A dimension with members is opaque, so a frame over two that share a
+    member pairs tuples whose shared member differs, and a frame over one and
+    its member pairs each tuple with every label of the member. The ``where:``
+    of the entry does not change this. A curve is over its ``along:`` too.
+    """
+    frames = [*_frames(spec), *(('piecewise', name, pw.dims) for name, pw in spec.piecewise.items())]
+    for kind, name, dims in frames:
+        shared, beside = overlaps(dims, spec)
+        for group, members in shared:
+            flat = sorted({*dims, *(m for d in group for m in spec.dimensions[d].members)} - set(group))
+            rewrite = f'Write the entry over the members, dims: [{", ".join(flat)}], with where: {keyed(group, spec)}'
+            yield shared_refusal(
+                f"{kind} '{name}' lists", ' in dims:', dims, group, members, 'the entry', rewrite, spec
+            )
+        for one, stray in beside:
+            columns = ', '.join(stray)
+            yield (
+                f"{kind} '{name}' lists '{one}' and its member {listed(stray)} in dims:, so the entry would pair "
+                f'every {one} with every {listed(stray, quoted=False)}. Drop {listed(stray)} from dims:, and read '
+                f'it at each {one} as {one}[{columns}], as in at(<operand>, by={one}[{columns}]).'
+            )
+    for name, pw in spec.piecewise.items():
+        for one in sorted(d for d in pw.dims if d in spec.dimensions and pw.along in spec.dimensions[d].members):
+            alias = f'{name}_{pw.along}'
+            yield (
+                f"piecewise '{name}': along: '{pw.along}' is a member of '{one}' in dims:, so the curve would pair "
+                f'every {one} with every {pw.along}. Step along an alias of it, {alias}: '
+                f"{{alias: {aliased(pw.along, spec)}}}, and declare the breakpoints over '{alias}'."
+            )
 
 
 def _relation_targets(spec: Spec) -> Iterator[str]:
@@ -260,6 +326,11 @@ def _aliases(spec: Spec) -> Iterator[str]:
             yield f'{head} is no declared dimension. {did_you_mean(d.alias, spec.dimensions, label="Dimensions")}'
         elif (target := spec.dimensions[d.alias].alias) is not None:
             yield f"{head} is an alias of '{target}' itself. Write alias: {target}."
+        elif members := spec.dimensions[d.alias].members:
+            yield (
+                f"{head} is a dimension with members. Declare '{name}' with the same members instead: "
+                f'{name}: {{over: [{", ".join(members)}]}}.'
+            )
 
 
 def _bound_names(spec: Spec) -> Iterator[str]:
@@ -320,7 +391,13 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
                 f'to one of these dims.'
             )
         elif entry.type == 2 and not labels_of(spec, entry.along).ordered:
-            yield unordered(context, f'type: 2 along {entry.along}', entry.along, spec.dimensions[entry.along].alias)
+            yield unordered(
+                context,
+                f'type: 2 along {entry.along}',
+                entry.along,
+                spec.dimensions[entry.along].alias,
+                spec.dimensions[entry.along].members,
+            )
         elif entry.variable in claimed:
             yield (
                 f"{context}: variable '{entry.variable}' already carries the set declared by "
@@ -332,10 +409,10 @@ def _sos_shapes(spec: Spec) -> Iterator[str]:
 
 
 def _sos_bounds(spec: Spec) -> Iterator[str]:
-    """A set states what the binaries it expands to state: each side of a member carries a coefficient.
+    """A set states what the binaries it expands to state: each side of an element carries a coefficient.
 
-    The rewrite holds an unpicked member at zero from both sides, so a side
-    the spec leaves open leaves the member free of it. Either coefficient
+    The rewrite holds an unpicked element at zero from both sides, so a side
+    the spec leaves open leaves the element free of it. Either coefficient
     may be a parameter, because a row multiplies by it rather than reading
     it. Decided here rather than where the rewrite runs, so a set the
     language cannot state twice is refused before any data exists.
@@ -348,13 +425,13 @@ def _sos_bounds(spec: Spec) -> Iterator[str]:
         if below is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no lower bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from below as well as above. Declare bounds.lower, '
+                f'that hold an unpicked element at zero from below as well as above. Declare bounds.lower, '
                 f'as a number or a parameter.'
             )
         if above is None:
             yield (
                 f"{context}: variable '{entry.variable}' has no upper bound, and the set expands to rows "
-                f'that hold an unpicked member at zero from above as well as below. Declare bounds.upper, '
+                f'that hold an unpicked element at zero from above as well as below. Declare bounds.upper, '
                 f'as a number or a parameter.'
             )
 
@@ -374,7 +451,13 @@ def _piecewise_references(spec: Spec) -> Iterator[str]:
             yield undeclared_dimension('piecewise', name, pw.along)
             continue
         if not labels_of(spec, pw.along).ordered:
-            yield unordered(context, f'along: {pw.along}', pw.along, spec.dimensions[pw.along].alias)
+            yield unordered(
+                context,
+                f'along: {pw.along}',
+                pw.along,
+                spec.dimensions[pw.along].alias,
+                spec.dimensions[pw.along].members,
+            )
         for d in pw.dims:
             if d not in spec.dimensions:
                 yield undeclared_dimension('piecewise', name, d)

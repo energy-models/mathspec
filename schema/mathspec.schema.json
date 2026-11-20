@@ -204,6 +204,15 @@
           "title": "Dtype",
           "type": "string"
         },
+        "missing": {
+          "default": "absent",
+          "enum": [
+            "refused",
+            "absent"
+          ],
+          "title": "Missing",
+          "type": "string"
+        },
         "one_of": {
           "anyOf": [
             {
@@ -225,6 +234,21 @@
           "default": false,
           "title": "Ordered",
           "type": "boolean"
+        },
+        "over": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Over"
         }
       },
       "title": "DimensionSpec",

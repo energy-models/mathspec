@@ -11,9 +11,11 @@
 \begin{description}
 \item[{$\mathcal{B}$}] index $b$ --- \texttt{bp}
 \item[{$\mathcal{U}$}] index $u$ --- \texttt{bus} with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row, \texttt{connection} is \texttt{absent} where the data has no row
+\item[{$\mathcal{C}$}] index $c$ --- \texttt{corridor}, $\mathcal{C} = \mathcal{U} \times \mathcal{U}$
 \item[{$\mathcal{U}$}] index $u'$ --- \texttt{from\_bus}, an alias of \texttt{bus}
 \item[{$\mathcal{G}$}] index $g$ --- \texttt{generator} with $\mathrm{connection} \subseteq \mathcal{U} \times \mathcal{G},\ \mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E},\ \mathrm{gen\_bus}: \mathcal{G} \to \mathcal{U},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z}$, \texttt{connection} is \texttt{absent} where the data has no row
 \item[{$\mathcal{S}$}] index $s$ --- \texttt{season} with $\mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
+\item[{$\mathcal{I}$}] index $i$ --- \texttt{site}, $\mathcal{I} \subseteq \mathcal{U} \times \mathcal{G}$
 \item[{$\mathcal{T}$}] index $t$ --- \texttt{snapshot} (\texttt{int} coordinates) with $\mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{rep\_of}: \mathcal{T} \to \mathcal{T},\ \mathrm{season\_of}: \mathcal{T} \to \mathcal{S}$
 \item[{$\mathcal{E}$}] index $e$ --- \texttt{technology} with $\mathrm{gen\_bt}: \mathcal{G} \to \mathcal{U} \times \mathcal{E}$
 \item[{$\mathcal{Z}$}] index $z$ --- \texttt{zone} (labels \texttt{north}, \texttt{south}) with $\mathrm{area\_of}: \mathcal{U} \to \mathcal{Z},\ \mathrm{gen\_zone}: \mathcal{G} \times \mathcal{T} \to \mathcal{Z},\ \mathrm{zone\_of}: \mathcal{U} \to \mathcal{Z}$, \texttt{area\_of} is \texttt{absent} where the data has no row
@@ -26,6 +28,7 @@
 \item[{$\mathrm{bp\_x}$}] \texttt{bp\_x} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{bp\_y}$}] \texttt{bp\_y} over $\mathcal{B} \times \mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{budget}$}] \texttt{budget} (scalar)
+\item[{$\mathrm{corridor\_cap}$}] \texttt{corridor\_cap} over $\mathcal{C}$
 \item[{$\mathrm{cost}$}] \texttt{cost} over $\mathcal{G}$, $0$ where the data has no row
 \item[{$\mathrm{eta}$}] \texttt{eta} over $\mathcal{G}$
 \item[{$\mathrm{growth}$}] \texttt{growth} (scalar)
@@ -57,6 +60,7 @@
 \item[{$\mathit{op\_cost}$}] \texttt{op\_cost} over $\mathcal{G} \times \mathcal{T}$
 \item[{$p$}] \texttt{p} over $\mathcal{G} \times \mathcal{T}$
 \item[{$\mathit{reserve}$}] \texttt{reserve} (scalar)
+\item[{$\mathit{site\_out}$}] \texttt{site\_out} over $\mathcal{I} \times \mathcal{T}$
 \item[{$\mathit{slack}$}] \texttt{slack} over $\mathcal{T}$
 \item[{$\mathit{spare}$}] \texttt{spare} over $\mathcal{G}$
 \item[{$\mathit{spill}$}] \texttt{spill} over $\mathcal{T}$
@@ -103,6 +107,7 @@
 \text{op\_cost} && \mathit{op\_cost}_{g,t} & \ge 0 && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{p} && \mathrm{p}^{\mathrm{min}}_{g} \le p_{g,t} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{p}^{\mathrm{max}}_{g} > 0 \wedge \neg \mathrm{is\_flexible}_{g} \vee \mathrm{p}^{\mathrm{min}}_{g} > 0 \\
 \text{reserve} && \mathit{reserve} & \ge 0 \\
+\text{site\_out} && 0 \le \mathit{site\_out}_{i,t} & \le \mathrm{p}^{\mathrm{max}}_{\mathrm{site.generator}(i)} && \forall\, i \in \mathcal{I},\ t \in \mathcal{T} \\
 \text{slack} && \mathit{slack}_{t} & \le 100 && \forall\, t \in \mathcal{T} \\
 \text{spare} && \mathit{spare}_{g} & \in \mathbb{Z} && \forall\, g \in \mathcal{G} \\
 \text{spill} && \mathit{spill}_{t} & \ge 0 && \forall\, t \in \mathcal{T} \\

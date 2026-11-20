@@ -161,9 +161,10 @@ column. `within=<relation>[<column>]` makes `shift`, `sum_back` or
 
 ## Label
 
-A label is one member of a dimension, such as `wind` in `generator`. The
+A label is one element of a dimension, such as `wind` in `generator`. The
 labels arrive with the data, in the order that `shift`, `sum_back` and
-`position()` count along.
+`position()` count along. A label of a dimension with
+[members](#member) is one tuple of their labels.
 
 ## Load
 
@@ -178,6 +179,15 @@ A macro is a template that takes arguments and is substituted into an
 expression before any tool reads it. A file declares its own macros under
 `macros:`, so a macro is the one construct a file can add
 ([macros](language/named.md#macros)).
+
+## Member
+
+A member is a dimension that another dimension lists under `over:`. A label
+of the listing dimension combines one label of each member, and a call reads
+a member through the relation that the dimension declares
+([`over`](language/dimensions.md#over)). No entry is over a dimension and its
+member, or over two dimensions that share a member
+([two dimensions that share a member](language/dimensions.md#two-dimensions-that-share-a-member)).
 
 ## Missing row
 
@@ -273,8 +283,8 @@ costs exists.
 ## Special ordered set (SOS)
 
 A special ordered set (SOS) is an `sos:` entry over one dimension of one
-variable. With `type: 1`, at most one member is non-zero. With `type: 2`, at
-most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
+variable. With `type: 1`, at most one element is non-zero. With `type: 2`, at
+most two consecutive elements are non-zero ([sos](language/piecewise.md#sos)).
 
 ## Surface
 

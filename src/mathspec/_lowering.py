@@ -240,6 +240,8 @@ def lower(spec: Spec) -> Program:
                 one_of=labels.one_of,
                 ordered=labels.ordered,
                 alias=ddef.alias,
+                over=ddef.members,
+                missing=ddef.missing,
                 description=ddef.description,
             )
             for name, ddef in spec.dimensions.items()

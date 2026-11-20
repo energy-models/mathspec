@@ -196,6 +196,13 @@ def _as_set(model: BaseModel, written: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _aliased(dimensions: Mapping[object, object], name: object) -> object:
+    """The dimension *name* is an alias of in the raw *dimensions*, or *name* where it is no alias."""
+    entry = dimensions.get(name)
+    alias = entry.get('alias') if isinstance(entry, Mapping) else None
+    return alias or name
+
+
 def _as_yaml(v: object) -> str:
     """*v* as the file spells it, so a refusal quotes the line the author wrote."""
     return str(v).lower() if isinstance(v, bool) else str(v)
@@ -348,16 +355,73 @@ class DimensionSpec(_StrictSpec):
     """Whether the order in which the data gives the labels is part of the spec. An operator may step or count only along
     an ordered dimension. On any other dimension, the order of the rows has no meaning.
     """
+    over: Dims | None = None
+    """The members of the dimension, a list of dimensions; an alias lists one dimension twice. A label of the dimension is
+    then one tuple of member labels, and the entry implies a relation of the same name with one value column per member.
+    The order of the members has no meaning.
+    """
+    missing: RelationMissing = 'absent'
+    """Whether every combination of member labels needs a tuple. Under ``absent``, the data lists the tuples that exist.
+    Under ``refused``, a tool refuses data that leaves a combination out.
+    """
     alias: str | None = None
     """The dimension whose labels this one has, under a second name, so an entry can be over the same labels twice. It
     takes that dimension's dtype, labels and order, and has the map ``<this>[<that>]`` from each label to itself.
     """
     description: str | None = None
 
+    @property
+    def members(self) -> tuple[str, ...]:
+        """The members, sorted by name; empty for a dimension without ``over:``."""
+        return self.over or ()
+
+    @field_validator('over', mode='after')
+    @classmethod
+    def _lists_a_member(cls, v: object) -> object:
+        if v is not None and not v:
+            raise ValueError('lists no member. List at least one dimension, or leave `over:` out.')
+        return v
+
+    @field_validator('missing', mode='before')
+    @classmethod
+    def _absent_or_refused(cls, v: object) -> object:
+        """A tuple is a label, so no value fills a combination the data leaves out."""
+        if v not in get_args(RelationMissing):
+            msg = (
+                f'missing: {_as_yaml(v)} on a dimension, which takes absent or refused. A combination of member '
+                f'labels with no tuple is not in the dimension, or is refused.'
+            )
+            raise ValueError(msg)
+        return v
+
+    @model_validator(mode='after')
+    def _members_or_labels(self) -> Self:
+        """A label of a dimension with members is a tuple, so the keys that describe one plain label do not apply."""
+        if self.over is None:
+            if 'missing' in self.model_fields_set:
+                raise ValueError(
+                    '`missing:` is on a dimension without `over:`, and it states whether every combination of the '
+                    'members needs a tuple. Delete `missing:`, or list the members under `over:`.'
+                )
+            return self
+        if self.ordered:
+            raise ValueError(
+                f'`ordered: true` is on a dimension with `over:`, and a tuple of member labels has no order. '
+                f'Declare the entry that steps over {list(self.members)}, with `where:` a relation that lists the tuples, and '
+                f'declare the member it steps along `ordered: true`.'
+            )
+        for key in ('dtype', 'one_of'):
+            if key in self.model_fields_set and getattr(self, key) is not None:
+                raise ValueError(
+                    f'`{key}:` is on a dimension with `over:`, where the label is the tuple of its members. Delete '
+                    f'`{key}:` here, and write the {key}: of a member on that member.'
+                )
+        return self
+
     @model_validator(mode='after')
     def _alias_takes_the_rest(self) -> DimensionSpec:
         """An alias has the labels of its dimension, so a key that would set its own is refused."""
-        if self.alias is not None and (own := sorted(self.model_fields_set & {'dtype', 'one_of', 'ordered'})):
+        if self.alias is not None and (own := sorted(self.model_fields_set & {'dtype', 'one_of', 'ordered', 'over'})):
             listed = ', '.join(f'{key}:' for key in own)
             msg = (
                 f"is an alias of '{self.alias}', and takes its dtype, labels and order from it. Delete {listed}, or "
@@ -1270,6 +1334,38 @@ class Spec(_StrictSpec):
         )
         raise ValueError(msg)
 
+    @model_validator(mode='before')
+    @classmethod
+    def _members_listed(cls, data: object) -> object:
+        """A member is named after its dimension, so one dimension twice is an alias and the dimension, not two roles.
+
+        The rewrite of a mapping under ``over:`` declares an alias of what each
+        value is, since an alias of an alias is refused, so the check reads
+        every dimension the file declares.
+        """
+        dimensions = data.get('dimensions') if isinstance(data, Mapping) else None
+        if not isinstance(dimensions, Mapping):
+            return data
+        declared = cast('Mapping[object, object]', dimensions)
+        for name, entry in declared.items():
+            over = entry.get('over') if isinstance(entry, Mapping) else None
+            if not isinstance(over, Mapping):
+                continue
+            mapping = cast('Mapping[object, object]', over)
+            aliases = ', '.join(
+                f'{role}: {{alias: {_aliased(declared, dim)}}}' for role, dim in mapping.items() if role != dim
+            )
+            names = f'over: [{", ".join(map(str, mapping))}]'
+            rewrite = (
+                f'Name each member that repeats a dimension as an alias of it under dimensions:, {aliases}, and list '
+                f'the names: {names}.'
+                if aliases
+                else f'List the dimensions: {names}.'
+            )
+            msg = f'dimensions.{name}.over: takes a list of dimensions, not a mapping. {rewrite}'
+            raise ValueError(msg)
+        return data
+
     @model_serializer(mode='wrap')
     def _drop_absence(self, handler: SerializerFunctionWrapHandler) -> dict[str, object]:
         """Absence is not serialised: a null, an empty mapping, a section declaring nothing, each part dropping its own.
@@ -1392,14 +1488,15 @@ def implied_relations(spec: Spec) -> dict[str, Relation]:
     """Each relation a dimension implies, under the name of that dimension; the data has no table for one.
 
     An alias implies the relation from each of its labels to the same label of
-    the dimension it aliases, read as ``<alias>[<dimension>]``. The file
-    declares none of them under ``relations:``, so none collides with the
-    dimension it is named after.
+    the dimension it aliases, read as ``<alias>[<dimension>]``. A dimension
+    with members implies the relation from each tuple to its member labels,
+    read as ``<dimension>[<member>]``. The file declares none of them under
+    ``relations:``, so none collides with the dimension it is named after.
     """
     return {
-        name: Relation(((name, name), (d.alias, d.alias)), (name,))
+        name: Relation(((name, name), *columns), (name,))
         for name, d in spec.dimensions.items()
-        if d.alias is not None and d.alias in spec.dimensions
+        if (columns := ((d.alias, d.alias),) if d.alias in spec.dimensions else tuple((m, m) for m in d.members))
     }
 
 

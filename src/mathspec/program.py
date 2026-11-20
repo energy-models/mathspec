@@ -674,6 +674,15 @@ class Dimension:
     [`Program.relations`][mathspec.program.Program.relations] sends each label to itself.
     """
     description: str | None = None
+    over: tuple[str, ...] = ()
+    """The members of the dimension, sorted by name, or empty when the file lists none. A label is then one tuple of
+    member labels, which ``dtype`` does not describe. The relation of the same name in
+    [`Program.relations`][mathspec.program.Program.relations] has one value column per member.
+    """
+    missing: RelationMissing = 'absent'
+    """Whether every combination of member labels needs a tuple: ``absent`` or ``refused``. It has no meaning for a
+    dimension without members.
+    """
 
 
 @dataclass(frozen=True)
@@ -1140,8 +1149,8 @@ class Program:
     """
     dimensions: Mapping[str, Dimension] = Frozen({})
     relations: Mapping[str, Relation] = Frozen({})
-    """Each relation under ``relations:``, and the one each alias implies under the name of the alias. A tool takes the
-    rows of an implied relation from the labels of its dimension and reads no table for it.
+    """Each relation under ``relations:``, and the one each alias or dimension with members implies under the name of that
+    dimension. A tool takes the rows of an implied relation from the labels of its dimension and reads no table for it.
     """
     sos: Mapping[str, Sos] = Frozen({})
     piecewise: Mapping[str, Piecewise] = Frozen({})

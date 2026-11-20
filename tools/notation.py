@@ -66,6 +66,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'spill': 'Lower bound only',
         'slack': 'Upper bound only',
         'bus_out': 'Bound looked up through a relation',
+        'site_out': 'Variable over a dimension with members',
         'theta': 'Unbounded variable',
         'on': 'Binary domain',
         'units': 'Bounded integer domain',

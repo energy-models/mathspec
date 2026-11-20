@@ -168,6 +168,11 @@ It is
 `program.relations[name].missing` is `'refused'` or `'absent'`. The program of
 `spec.expand(...)` has the same `missing` values.
 
+`program.relations` also holds the relation that a dimension with
+[members](language/dimensions.md#over) implies, under the name of the
+dimension. A tool takes its rows from the labels of that dimension, and reads
+no table of its own for it.
+
 A [given](language/parameters-variables-constraints.md#given) parameter is a
 `GivenParameter` under `program.given.parameters`, and not under
 `program.parameters`. It has its `dims`, `dtype` and `description`, and no

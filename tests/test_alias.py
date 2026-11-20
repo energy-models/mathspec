@@ -30,17 +30,21 @@ def test_an_alias_has_the_labels_dtype_and_order_of_its_dimension():
     assert (dimension.dtype, dimension.ordered) == ('str', True), 'dtype and order come from g'
 
 
-def test_an_alias_is_ordered_where_its_dimension_is():
-    """`shift` along an alias steps as it does along the dimension it aliases."""
-    to_spec(
-        varied(
-            TWICE,
-            **{
-                'variables.x': {'dims': ['from_g']},
-                'constraints.ramp': {'dims': ['from_g'], 'expression': 'x >= shift(x, along=from_g, offset=1, edge=0)'},
-            },
-        )
-    )
+@pytest.mark.parametrize(
+    'shifted',
+    [
+        pytest.param('shift(x, along=from_g, offset=1, edge=0)', id='along'),
+        pytest.param('shift(x, along=from_g, offset=1, edge=0, within=from_g[g])', id='within-its-relation'),
+    ],
+)
+def test_an_alias_is_ordered_where_its_dimension_is(shifted: str):
+    """`shift` along an alias steps as it does along the dimension it aliases.
+
+    Was: `within=` through the relation of an alias was refused as the order of
+    a dimension that lists members.
+    """
+    ramp = {'dims': ['from_g'], 'expression': f'x >= {shifted}'}
+    to_spec(varied(TWICE, **{'variables.x': {'dims': ['from_g']}, 'constraints.ramp': ramp}))
 
 
 def test_an_alias_writes_back_only_its_alias():
@@ -69,6 +73,11 @@ def test_an_alias_prints_as_a_primed_index_over_the_same_set(fmt: str):
             {'dimensions.from_g': {'alias': 'g', 'ordered': False}},
             'Delete ordered:',
             id='an-order-of-its-own',
+        ),
+        pytest.param(
+            {'dimensions.from_g': {'alias': 'g', 'over': ['g']}},
+            'Delete over:',
+            id='members-of-its-own',
         ),
         pytest.param(
             {'dimensions.from_g': {'alias': 'nope'}},
