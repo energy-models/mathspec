@@ -983,15 +983,28 @@ class _Expansion:
         exists = _walked(exists, gate.exists.dims if isinstance(gate.read, Join) else gate.read.dims, link)
         return (('', exists, read), (_UNGATED, f'NOT {_operand(exists)}', None))
 
+    def _on_a_row(self, values: str) -> str | None:
+        """*values* as a guard where it reads a missing row as a number, so a run divided by never reads one.
+
+        A missing row read as ``0`` would make the run ``0``, and the divisor
+        is refused at load where nothing in the row's ``where`` rules that out.
+        The curve's ``_complete`` assumption already asks for every row, so the
+        guard leaves the rows of a complete curve as they were.
+        """
+        missing = self.spec.parameters[values].missing
+        return values if missing not in ('refused', 'absent') else None
+
     def _segment_lines(self) -> None:
         """The segment-line form: a row per segment, and the two domain rows.
 
         The chord sits at the later breakpoint, so the first has none and its
         ``where:`` and ``edge=0`` travel together — without the exclusion the
         vacated position is a spurious line through the origin; under a mask the
-        first breakpoint is the curve's own. The row is multiplied through by the
-        run rather than dividing, which keeps its sense only because the
-        breakpoints are strictly monotone. The domain rows are ``linopy``'s
+        first breakpoint is the curve's own. The bounded expression stands alone
+        at coefficient 1, as in ``linopy``'s ``_chord``, so the row's dual is the
+        share of that expression's price the segment carries; the run it divides
+        by is not 0 where the row stands, since the breakpoints strictly
+        increase. The domain rows are ``linopy``'s
         ``_add_lp`` rows under its names, each sitting on the edge of the curve
         the mask marks, which is why the mask has to be one run. Every row here
         is written from the link expressions and the breakpoint values, none of
@@ -1007,9 +1020,8 @@ class _Expansion:
         self._constraint(
             emitted.chord,
             dims,
-            f'({y_link.expression}) * {run} {y_link.sign} '
-            f'{rise} * (({x_link.expression}) - {x_link.values}) + {y_link.values} * {run}',
-            _all_of(frame, _neighbours(d, mask)),
+            f'({y_link.expression}) {y_link.sign} {rise} / {run} * (({x_link.expression}) - {x_link.values}) + {y_link.values}',
+            _all_of(frame, _neighbours(d, mask), self._on_a_row(x_link.values)),
         )
         for cname, sense, end in ((emitted.domain_lo, '>=', 'first'), (emitted.domain_hi, '<=', 'last')):
             self._constraint(

@@ -1317,7 +1317,7 @@ piecewise:
 Written out by `spec.expand()`:
 
 ```math
-\mathit{op\_cost}_{g,t} \cdot \left( \mathrm{x}_{b,g} - \mathrm{x}_{b \boxminus_{0} 1,g} \right) \ge \left( \mathrm{y}_{b,g} - \mathrm{y}_{b \boxminus_{0} 1,g} \right) \cdot \left( \mathit{dispatch}_{g,t} - \mathrm{x}_{b,g} \right) + \mathrm{y}_{b,g} \cdot \left( \mathrm{x}_{b,g} - \mathrm{x}_{b \boxminus_{0} 1,g} \right) \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(b) > 0
+\mathit{op\_cost}_{g,t} \ge \frac{\mathrm{y}_{b,g} - \mathrm{y}_{b \boxminus_{0} 1,g}}{\mathrm{x}_{b,g} - \mathrm{x}_{b \boxminus_{0} 1,g}} \cdot \left( \mathit{dispatch}_{g,t} - \mathrm{x}_{b,g} \right) + \mathrm{y}_{b,g} \qquad \forall\, b \in \mathcal{B},\ g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{pos}(b) > 0
 ```
 
 ```math
