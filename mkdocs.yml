@@ -112,6 +112,7 @@ nav:
           - Spec API: reference/spec.md
           - Program API: reference/program.md
       - Contributing: contributing.md
+      - The words of three packages: vocabulary.md
 
 theme:
   palette:
@@ -269,6 +270,7 @@ extra_css:
   - static/extras.css
 extra_javascript:
   - static/mathjax.js
+  - static/vocabulary.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 extra:
   social:
