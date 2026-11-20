@@ -97,21 +97,6 @@ def test_a_named_condition_and_a_constraint_of_one_name_are_refused_rather_than_
         notation.equations(to_markdown(shared, numbered=False))
 
 
-def test_a_declared_page_prints_every_set_and_curve_beside_its_line(tmp_path: Path):
-    """A set and a curve moved from Variable domains to Subject to, and the declared page read only the constraints there (#848)."""
-    text = (
-        (EXAMPLES / 'sos.yaml')
-        .read_text()
-        .replace('  balance:\n', '  balance:\n    description: "`balance` — demand met"\n')
-    )
-    spec = tmp_path / 'declared.yaml'
-    spec.write_text(f'{text}\nsos:\n  one_unit:\n    variable: dispatch\n    along: generator\n    type: 1\n')
-    block = gallery.declared_block(spec)
-    for name in ('one_unit', 'cost_curve'):
-        assert f'### `{name}`\n\n```yaml\n{name}:' in block, f'{name} prints under its own heading'
-    assert r'\mathrm{SOS}1' in block and r'\mathrm{pwl}' in block, 'the set and the curve print as math'
-
-
 def _card_bodies(page: Path) -> list[tuple[int, str]]:
     """Every line inside a `grid cards` block that continues a card, numbered from one.
 

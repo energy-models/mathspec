@@ -43,7 +43,7 @@ parameters:
     description: >-
       whether a process must be taken off for maintenance within the horizon:
       in any scenario, as PyPSA takes the union over them
-      (`components.py:1018-1021`)
+      (`components.py:1000-1003`)
     dims: [process]
     dtype: bool
   Process_maintenance_pu:

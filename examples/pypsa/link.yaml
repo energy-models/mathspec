@@ -179,7 +179,7 @@ parameters:
       `periodized_cost`), data prep. It is `overnight_cost` as an annuity over
       `lifetime` at `discount_rate`, times `nyears`, where `overnight_cost` is
       given, and `capital_cost` where it is not. Both add `fom_cost`
-      (`components.py:1176-1197`, `costs.py:102-203`)
+      (`components.py:1157-1178`, `costs.py:102-203`)
     dims: [scenario, link]
   Link_p_nom_set:
     description: a given nominal power for an extendable link. One without a value has no row here
@@ -188,7 +188,7 @@ parameters:
   Link_volume_weight:
     description: >-
       the link's length in each scenario where its carrier is in the row's set
-      (`global_constraints.py:874-875`), data prep. A link outside it, or one
+      (`global_constraints.py:882-883`), data prep. A link outside it, or one
       that is not active in the row's `investment_period`, has no row
     dims: [scenario, global_constraint, link]
     missing: absent
@@ -200,7 +200,7 @@ parameters:
       periods the link is active in. A link outside the set, or one that is not
       active in the row's period, has no row. The capital cost is PyPSA's
       `capital_cost` property, which is `Link_capital_cost` without `fom_cost`
-      (`components.py:1201-1219`, `global_constraints.py:897-906`)
+      (`components.py:1182-1200`, `global_constraints.py:905-914`)
     dims: [scenario, global_constraint, link]
     missing: absent
   Link_tech_capacity_weight:
@@ -319,14 +319,14 @@ constraints:
     where: not Link_p_nom_extendable AND not Link_committable AND Link_active
     expression: Link_p <= Link_p_max_pu * Link_p_nom * (1 - Link_maintenance_pu * Link_maintenance)
   Link_e_sum_min:
-    description: "`Link-e_sum_min` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row"
+    description: "`Link-e_sum_min` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at least its floor. A floor of minus infinity is no row, and so is a link active in no snapshot"
     dims: [scenario, link]
-    where: Link_e_sum_min
+    where: Link_e_sum_min AND count(Link_active, over=snapshot) > 0
     expression: sum(Link_p * energy_limit_weight, over=snapshot) >= Link_e_sum_min
   Link_e_sum_max:
-    description: "`Link-e_sum_max` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row"
+    description: "`Link-e_sum_max` — energy withdrawn at `bus0` over the horizon, each period weighted by its years, is at most its budget. A budget of infinity is no row, and so is a link active in no snapshot"
     dims: [scenario, link]
-    where: Link_e_sum_max
+    where: Link_e_sum_max AND count(Link_active, over=snapshot) > 0
     expression: sum(Link_p * energy_limit_weight, over=snapshot) <= Link_e_sum_max
   Link_ext_p_lower:
     description: "`Link-ext-p-lower` — an extendable link carries at least its minimum of the chosen build, negative for the other way"
