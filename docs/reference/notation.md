@@ -644,6 +644,21 @@ constraints:
 p_{g,t} \le \mathit{spill}_{t} \cdot \mathrm{zone\_cap}_{\mathrm{gen\_zone}(g,\ t)} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \,:\, \mathrm{gen\_zone}(g,\ t) = \text{'}\mathrm{north}\text{'} \wedge \mathrm{pos}_{\mathrm{gen\_zone}(g,\ t)}(g) = 0
 ```
 
+#### `at` onto the members of a dimension
+
+a variable over a dimension with members, spread onto them: its index is the tuple of their indices
+
+```yaml
+constraints:
+  site_share:
+    dims: [snapshot, generator, bus]
+    expression: at(site_out, by=site[generator, bus]) <= p
+```
+
+```math
+\mathit{site\_out}_{\left( u,\ g \right),t} \le p_{g,t} \qquad \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 ### Arithmetic and literals
 
 #### Signs, division and number literals

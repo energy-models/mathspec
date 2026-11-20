@@ -151,6 +151,61 @@ f_{l} \le \mathrm{cap}_{l} \cdot \mathit{build}_{\mathrm{line\_bus}(l)} \qquad \
 `at` removes the column in `by=`, `bus`, and adds the key, `line`, so `build`
 is read once per line.
 
+### `at` by the members of a dimension
+
+A dimension can list its [members](dimensions.md#over). On an expression over
+such a dimension, `at` by every member spreads the expression onto the
+members: the value of each tuple goes to the labels of its members. `at` adds
+nothing up here either. The dimension goes, and each member arrives as its own
+dimension:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  connection: { over: [unit, port] }
+variables:
+  flow: { dims: [connection], bounds: { lower: 0 } }
+  metered: { dims: [unit, port], bounds: { lower: 0 } }
+constraints:
+  meter:
+    dims: [unit, port]
+    expression: metered == at(flow, by=connection[unit, port])
+objective: { sense: minimize, expression: sum(metered) }
+```
+
+```math
+\mathit{metered}_{p,u} = \mathit{flow}_{\left( p,\ u \right)} \qquad \forall\, p \in \mathcal{P},\ u \in \mathcal{U}
+```
+
+<figure class="diagram">
+--8<-- "docs/static/operators-at-members.svg"
+</figure>
+
+With three connections of data, the unit `u2` has no port `in`. The result
+of `at` is [absent](absence.md#how-absence-travels) there, so `meter` has no
+row for `u2` and `in`. The `sum` by the same columns has a row there, and its
+value is `0`.
+
+`by=` lists every member, in any order. With
+`sum(metered, over=port) == at(flow, by=connection[unit])` over `[unit]`,
+mathspec prints:
+
+```text
+Constraint 'meter': at(by=connection[unit]) lists ['unit'] of the members ['port', 'unit'] of 'connection', and the operand is over 'connection'. List every member to spread the operand onto them: at(flow, by=connection[port, unit]). To add up over ['port'], write sum(flow, over=connection, by=connection[unit]).
+```
+
+mathspec suggests both rewrites: the full list, or the sum to the one member.
+
+A member arrives as its own dimension. A dimension that lists one set twice
+lists an [alias](dimensions.md#alias) beside it, as
+`trade: { over: [from_region, region] }`, so
+`at(moved, by=trade[from_region, region])` is over `from_region` and `region`.
+
+On an expression over the members, the same call is a lookup like any other.
+It [takes the value at the members of each tuple](dimensions.md#the-relation-of-the-dimension),
+and the result is over the dimension.
+
 ## `shift`
 
 `shift` takes the value of an expression a number of positions earlier along

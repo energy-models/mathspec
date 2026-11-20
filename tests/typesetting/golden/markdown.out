@@ -496,6 +496,12 @@ p_{g,t} - p_{g,t \ominus 1} \le p_{g,t - 1} + \mathrm{p}^{\mathrm{max}}_{g} \qqu
 \sum_{t' \in \mathcal{T} \,:\, 0 \le t -^{\mathrm{season\_of}(t)} t' < 3} \mathit{on}_{g,t'} \le \mathit{units}_{g} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
+**`site_share`**
+
+```math
+\mathit{site\_out}_{\left( u,\ g \right),t} \le p_{g,t} \qquad \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T}
+```
+
 **`starts`**
 
 ```math

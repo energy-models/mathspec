@@ -175,6 +175,7 @@
 \text{running} && \theta_{u} & \le \mathrm{load}_{u,t} && \forall\, u \in \mathcal{U},\ t \in \mathcal{T} \,:\, \theta_{u} \text{ exists} \wedge t \ge 3 \\
 \text{scalar} && \mathit{units}_{g} & \le \mathrm{budget} && \forall\, g \in \mathcal{G} \,:\, \mathrm{cost}_{g} \text{ is defined} \\
 \text{seasonal\_window} && \sum_{t' \in \mathcal{T} \,:\, 0 \le t -^{\mathrm{season\_of}(t)} t' < 3} \mathit{on}_{g,t'} & \le \mathit{units}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
+\text{site\_share} && \mathit{site\_out}_{\left( u,\ g \right),t} & \le p_{g,t} && \forall\, u \in \mathcal{U},\ g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{starts} && p_{g,t} & \le \mathrm{startup\_cost}_{g,t} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\
 \text{total} && \sum_{g \in \mathcal{G},\ t \in \mathcal{T}} p_{g,t} & \le \mathrm{budget} \\
 \text{uncomposed} && p_{g,\left( t - 1 \right) \boxminus_{0} \mathrm{lead}} & \le \mathrm{p}^{\mathrm{max}}_{g} && \forall\, g \in \mathcal{G},\ t \in \mathcal{T} \\

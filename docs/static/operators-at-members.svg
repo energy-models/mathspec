@@ -1,0 +1,86 @@
+<!--
+SPDX-FileCopyrightText: mathspec contributors
+SPDX-License-Identifier: CC-BY-4.0
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350" width="600" height="350" style="max-width: 100%; height: auto" role="img" aria-labelledby="oas-t oas-d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13">
+  <title id="oas-t">at by every member has no row where the dimension lists no tuple, and the sum has a 0 there</title>
+  <desc id="oas-d">The variable flow has one row per connection: unit u1 with port in, unit u1 with port out, and unit u2 with port out. at of flow by connection unit and port has one row for each of these three combinations of a unit and a port, and no row for unit u2 with port in. The sum of flow over connection by the same columns has a row for all four combinations, and its value for unit u2 with port in is 0.</desc>
+  <defs>
+    <marker id="oas-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g stroke="none">
+    <path d="M16,152 V133 A3,3 0 0 1 19,130 H143 A3,3 0 0 1 146,133 V152 Z" fill="#E69F00" fill-opacity="0.2"/>
+    <path d="M16,152 H146 V209 A3,3 0 0 1 143,212 H19 A3,3 0 0 1 16,209 Z" fill="#E69F00" fill-opacity="0.08"/>
+    <path d="M340,82 V63 A3,3 0 0 1 343,60 H581 A3,3 0 0 1 584,63 V82 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M340,82 H584 V139 A3,3 0 0 1 581,142 H343 A3,3 0 0 1 340,139 Z" fill="#009E73" fill-opacity="0.08"/>
+    <path d="M340,258 V239 A3,3 0 0 1 343,236 H581 A3,3 0 0 1 584,239 V258 Z" fill="#009E73" fill-opacity="0.2"/>
+    <path d="M340,258 H584 V333 A3,3 0 0 1 581,336 H343 A3,3 0 0 1 340,333 Z" fill="#009E73" fill-opacity="0.08"/>
+  </g>
+  <text x="16" y="120" font-weight="bold" fill="currentColor">flow</text>
+  <text x="52" y="120" fill="currentColor" fill-opacity="0.7">a variable</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="24" y="144" font-weight="bold">connection</text>
+    <text x="24" y="168">(u1, in)</text>
+    <text x="24" y="186">(u1, out)</text>
+    <text x="24" y="204">(u2, out)</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="16" y="130" width="130" height="82" rx="3"/>
+    <line x1="16" y1="152" x2="146" y2="152"/>
+  </g>
+  <text x="340" y="34" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">at(flow, by=connection[unit, port])</text>
+  <text x="340" y="50" fill="currentColor" font-size="12" fill-opacity="0.7">an expression, one row per tuple</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="348" y="74" font-weight="bold">unit</text>
+    <text x="398" y="74" font-weight="bold">port</text>
+    <text x="448" y="74" font-weight="bold">value</text>
+    <text x="348" y="98">u1</text>
+    <text x="398" y="98">in</text>
+    <text x="448" y="98">flow[(u1, in)]</text>
+    <text x="348" y="116">u1</text>
+    <text x="398" y="116">out</text>
+    <text x="448" y="116">flow[(u1, out)]</text>
+    <text x="348" y="134">u2</text>
+    <text x="398" y="134">out</text>
+    <text x="448" y="134">flow[(u2, out)]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="340" y="60" width="244" height="82" rx="3"/>
+    <line x1="340" y1="82" x2="584" y2="82"/>
+  </g>
+  <rect x="340" y="148" width="244" height="24" rx="6" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="350" y="164" fill="currentColor" font-size="12" font-style="italic">no row for u2 and in: the value is absent</text>
+  <text x="340" y="210" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">sum(flow, over=connection,</text>
+  <text x="340" y="226" fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="bold">    by=connection[unit, port])</text>
+  <g fill="currentColor" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12">
+    <text x="348" y="250" font-weight="bold">unit</text>
+    <text x="398" y="250" font-weight="bold">port</text>
+    <text x="448" y="250" font-weight="bold">value</text>
+    <text x="348" y="274">u1</text>
+    <text x="398" y="274">in</text>
+    <text x="448" y="274">flow[(u1, in)]</text>
+    <text x="348" y="292">u1</text>
+    <text x="398" y="292">out</text>
+    <text x="448" y="292">flow[(u1, out)]</text>
+    <text x="348" y="310">u2</text>
+    <text x="398" y="310">in</text>
+    <text x="448" y="310">0</text>
+    <text x="348" y="328">u2</text>
+    <text x="398" y="328">out</text>
+    <text x="448" y="328">flow[(u2, out)]</text>
+  </g>
+  <g fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="340" y="236" width="244" height="100" rx="3"/>
+    <line x1="340" y1="258" x2="584" y2="258"/>
+  </g>
+  <g stroke="currentColor" fill="none" stroke-width="1.2" marker-end="url(#oas-arrow)">
+    <path d="M156,152 C240,152 240,101 300,101 H332"/>
+    <path d="M156,190 C240,190 240,286 300,286 H332"/>
+  </g>
+  <g fill="currentColor" font-size="12">
+    <text x="176" y="96">spread onto members</text>
+    <text x="176" y="306">add up, 0 where none</text>
+  </g>
+</svg>

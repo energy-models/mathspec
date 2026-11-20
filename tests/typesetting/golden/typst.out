@@ -155,6 +155,7 @@ $ upright("ahead") & p_(g,t) & <= p_(g,t plus.o 1) & forall g in cal(G), t in ca
   upright("running") & theta_(u) & <= upright("load")_(u,t) & forall u in cal(U), t in cal(T) colon theta_(u) upright(" exists") and t >= 3 \
   upright("scalar") & italic("units")_(g) & <= upright("budget") & forall g in cal(G) colon upright("cost")_(g) upright(" is defined") \
   upright("seasonal_window") & sum_(t' in cal(T) colon 0 <= t -^(upright("season_of")(t)) t' < 3) italic("on")_(g,t') & <= italic("units")_(g) & forall g in cal(G), t in cal(T) \
+  upright("site_share") & italic("site_out")_((u, g),t) & <= p_(g,t) & forall u in cal(U), g in cal(G), t in cal(T) \
   upright("starts") & p_(g,t) & <= upright("startup_cost")_(g,t) & forall g in cal(G), t in cal(T) \
   upright("total") & sum_(g in cal(G), t in cal(T)) p_(g,t) & <= upright("budget") \
   upright("uncomposed") & p_(g,(t - 1) minus.square_(0) upright("lead")) & <= upright("p")^(upright("max"))_(g) & forall g in cal(G), t in cal(T) \

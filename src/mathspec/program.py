@@ -329,6 +329,12 @@ class Join:
     by=relation[a])``: one value per row of the result, fanned out where
     several key tuples share the values joined on.
 
+    Where ``columns.spreads``, the bare ``Join`` spreads an operand over a
+    dimension with members onto the members: the dimension goes and its
+    members arrive. The result is absent at a combination of member
+    labels that is no label of the dimension, where the ``Sum`` over the same
+    join is 0.
+
     An axis is never a dim: a join that opens axes states the ``dims`` of the
     sum that closes them, and that sum removes only the dims its plain axes
     name.
@@ -557,12 +563,20 @@ class JoinColumns:
     and not grouped by is [`dropped`][], and one grouped by and not joined
     on is [`added`][], so the frame after the call is the operand's dims,
     less the dims joined on, plus the dims grouped by.
+
+    A call that [`spreads`][] is the exception: it joins on the key column,
+    which is the dimension, groups by every member, and keeps no key column.
     """
 
     name: str
     relation: Relation
     joined: tuple[str, ...]
     grouped: tuple[str, ...]
+    spreads: bool = False
+    """Whether the call is ``at(x, by=connection[unit, port])`` on an operand over ``connection``, a dimension with members.
+    The call joins on the dimension and groups by every member. A tuple of member labels is at most one label of the
+    dimension, so each group is at most one row, and the result is absent where the dimension has no such label.
+    """
 
     def dim(self, role: str) -> str:
         """The dimension *role* ranges over."""
@@ -601,8 +615,12 @@ class JoinColumns:
 
     @property
     def one_row_per_group(self) -> bool:
-        """Whether the grouped columns hold the relation's whole key, so each group is one row: a lookup, not a sum."""
-        return set(self.relation.key) <= set(self.grouped)
+        """Whether each group is one row: a lookup, not a sum.
+
+        The grouped columns then hold the relation's whole key, or the call
+        ``spreads``.
+        """
+        return self.spreads or set(self.relation.key) <= set(self.grouped)
 
     @property
     def axes(self) -> tuple[Axis, ...]:
@@ -1007,12 +1025,17 @@ class Footprint:
         domains: Every domain declared.
         sos_types: The order of each special-ordered set declared.
         kinds: Every expression node kind that appears in a row or a variable bound.
+        spreads: Every dimension a row or a variable bound spreads onto its
+            members, as ``at(x, by=connection[unit, port])`` does. A spread is
+            a [`Join`][] among ``kinds``, and only this field tells it from a
+            lookup or a sum.
     """
 
     quadratic: frozenset[QuadraticPosition]
     domains: frozenset[VariableDomain]
     sos_types: frozenset[SosType]
     kinds: frozenset[type[Expression]]
+    spreads: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -1212,14 +1235,16 @@ class Program:
         adds no set order here; ask the program of
         ``spec.expand('piecewise')`` for its rows.
         """
-        bounds = (b for v in self.variables.values() for b in (v.lower, v.upper) if b is not None)
+        bounds = [b for v in self.variables.values() for b in (v.lower, v.upper) if b is not None]
+        nodes = list(walk(*self.roots, *bounds))
         return Footprint(
             quadratic=frozenset(
                 position for position, group in self._by_position() if any(is_quadratic(e) for e in group)
             ),
             domains=frozenset(v.domain for v in self.variables.values()),
             sos_types=frozenset(s.sos_type for s in self.sos.values()),
-            kinds=frozenset(type(node) for node in walk(*self.roots, *bounds)),
+            kinds=frozenset(type(node) for node in nodes),
+            spreads=frozenset(n.columns.name for n in nodes if isinstance(n, Join) and n.columns.spreads),
         )
 
     @cached_property
@@ -1508,7 +1533,8 @@ class JoinedCondition:
     the coordinate that row reads. False where the relation has no row, which
     is what a missing row already means in a mask. The dims ``columns``
     joins on go and the dims it groups by arrive, as a lookup
-    [`Join`][]'s do.
+    [`Join`][]'s do. Where ``columns.spreads``, the condition is false at a
+    combination of member labels that is no label of the dimension.
     """
 
     operand: Mask

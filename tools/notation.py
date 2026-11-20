@@ -98,6 +98,7 @@ FAMILIES: dict[str, dict[str, str]] = {
         'zonal_history': 'Sum over the other key of a two-key map',
         'zonal_membership': 'Sum between the two keys of a map',
         'zonal_lookup': '`at` through a two-key map',
+        'site_share': '`at` onto the members of a dimension',
     },
     'Arithmetic and literals': {
         'arithmetic': 'Signs, division and number literals',

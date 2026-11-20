@@ -243,6 +243,19 @@ Five more rules apply to a sum through a relation:
   the whole key, every group is one row. A sum whose groups are one row each
   is a join with no group-by, which is `at`.
 
+The sum by every member of a dimension is the one such sum that loads. With
+`assignment: { over: [unit, period] }`, every group of
+`sum(y, over=assignment, by=assignment[unit, period])` has at most one row.
+The sum is 0 at a unit and period that `assignment` does not list, and the
+[spread `at(y, by=assignment[unit, period])`](operators.md#at-by-the-members-of-a-dimension)
+is absent there. So in the first active period of a unit, this expression is 0:
+
+```text
+at(shift(sum(y, over=assignment, by=assignment[unit, period]), along=period, offset=1, edge=0), by=assignment[unit, period])
+```
+
+The same expression with the spread in place of the sum has no row there.
+
 Under the first rule, with `load` over `[bus]`, mathspec refuses
 `sum(load * p, over=generator, by=gen_bus[bus])` and prints:
 
@@ -267,7 +280,10 @@ mathspec suggests the rewrite: `at`, which takes one row per group.
 
 `at(x, by=l[c])` takes the value of `x` at column `c`, once for every row of
 the relation. It joins `x` on the columns in `by=` and groups by the key, so
-every group is one row. A lookup adds up nothing, and each row of the result is
+every group is one row. On an operand over a dimension with members, `at` by
+every member joins on the dimension and groups by the members, which identify
+at most one tuple
+([`at` by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)). A lookup adds up nothing, and each row of the result is
 the value of `x` at one coordinate. With `line_bus: { key: line, values: bus }`
 and a variable `build` over `[bus]`, `at(build, by=line_bus[bus])` has one row
 per line:
@@ -283,7 +299,9 @@ Three rules apply to a lookup:
 
 - A lookup uses only value columns. A key column in `by=` is refused, and so is
   a bare relation, where one key combination can have several rows.
-- The result gains every key column that the operand is not already over. A key column over a dimension that the operand is over is joined on
+- The result gains every key column that the operand is not already over,
+  except where `at` spreads the operand onto the members of its dimension: there
+  the key column goes and the members arrive. A key column over a dimension that the operand is over is joined on
   too, unless a column in `by=` already matches that dimension. With `price`
   over `[zone, period]`, `at(price, by=zone_of[zone])` joins on `zone` and
   `period`, and its result is `[generator, period]`. `at(x, by=rep_of[rep])`

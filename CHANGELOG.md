@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): at spreads a tuple over its members ([#1025](https://github.com/energy-models/mathspec/pull/1025))
 - feat(language): a dimension lists its members ([#1014](https://github.com/energy-models/mathspec/pull/1014))
 - feat(language): a bound reads a member's parameter ([#1013](https://github.com/energy-models/mathspec/pull/1013))
 - feat(language): a case may branch on at(…, by=…) ([#1012](https://github.com/energy-models/mathspec/pull/1012))

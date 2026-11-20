@@ -282,9 +282,14 @@ reads any relation column:
 | ------------------------------------------------- | ----------------------------------------------------------- |
 | `at(capacity, by=connection[unit])`               | the capacity of the unit of each connection                 |
 | `at(rating, by=connection[unit, port])`           | `rating`, a parameter over `unit` and `port`, at each tuple |
+| `at(flow, by=connection[unit, port])`             | `flow` at each unit and port that the dimension lists       |
 | `sum(flow, over=connection, by=connection[port])` | the flows of each port, added over its connections          |
 | `where: "connection[unit] == 'u1'"`               | the connections of the unit `u1`                            |
 | `where: "at(active, by=connection[unit])"`        | the connections whose unit is in the condition `active`     |
+
+In `at(flow, by=connection[unit, port])`, the operand is over `connection`, so
+`at` spreads it onto the members: the dimension goes and its members arrive
+([`at` by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)).
 
 mathspec refuses a relation under `relations:` with the name of a dimension,
 so the file does not declare this relation a second time. A fact about a tuple
@@ -322,20 +327,49 @@ tuple that the dimension does not list. A
 
 At load, mathspec also refuses each of these, and prints the rewrite:
 
-| Refused                                                                                                                     | What you write instead                                                    |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| a member that has members of its own                                                                                        | the members themselves, in one list                                       |
-| a dimension twice, as in `over: [region, region]`, or a mapping under `over:`                                               | an alias beside the dimension, as in `over: [from_region, region]`        |
-| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                                                       | the key on a member                                                       |
-| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension, or `within=` through its relation | an entry over the members, with `where:` a relation that lists the tuples |
-| a comparison of the dimension with a label, as in `connection == 'a'`                                                       | a comparison of a member, as in `connection[unit] == 'u1'`                |
-| a call through the relation of the dimension on an operand over both the dimension and a member                             | the member summed out of the operand first                                |
+| Refused                                                                                                                     | What you write instead                                               |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| a member that has members of its own                                                                                        | the members themselves, in one list                                  |
+| a dimension twice, as in `over: [region, region]`, or a mapping under `over:`                                               | an alias beside the dimension, as in `over: [from_region, region]`   |
+| `ordered: true`, `dtype:` or `one_of:` beside `over:`                                                                       | the key on a member                                                  |
+| `shift`, `sum_back`, `position`, `piecewise:` or `sos:` of `type: 2` along the dimension, or `within=` through its relation | the construct along an ordered member, as described below this table |
+| a comparison of the dimension with a label, as in `connection == 'a'`                                                       | a comparison of a member, as in `connection[unit] == 'u1'`           |
+| a call through the relation of the dimension on an operand over both the dimension and a member                             | the member summed out of the operand first                           |
 
-A set of tuples with an ordered member, such as the periods in which each unit
-is active, therefore stays a [bare relation](relations.md) over `unit` and
-`period`. An entry over `unit` and `period` uses it as `where: active`, and an
-entry over `connection` and `period` reads it as
-`where: "at(active, by=connection[unit])"`.
+A tuple has no order, and a member can declare one. `shift` and `sum_back`
+step along an ordered member of an operand that
+[`at` has spread onto the members](operators.md#at-by-the-members-of-a-dimension).
+A second `at` looks the result up at each tuple. Here `assignment` lists the
+periods in which each unit is active. In `carry`, the level of an assignment
+is the level of the same unit one period earlier, plus the charge:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  period: { dtype: int, ordered: true }
+  assignment: { over: [unit, period] }
+variables:
+  level: { dims: [assignment], bounds: { lower: 0 } }
+  charge: { dims: [assignment], bounds: { lower: 0 } }
+constraints:
+  carry:
+    dims: [assignment]
+    expression: level == at(shift(at(level, by=assignment[unit, period]), along=period, offset=1), by=assignment[unit, period]) + charge
+```
+
+```math
+\mathit{level}_{a} = \mathit{level}_{\left( \mathrm{assignment.period}(a) - 1,\ \mathrm{assignment.unit}(a) \right)} + \mathit{charge}_{a} \qquad \forall\, a \in \mathcal{A}
+```
+
+`carry` has no row for an assignment whose unit has no assignment one period
+earlier, because the shifted level is
+[absent](absence.md#how-absence-travels) there.
+
+`position`, `piecewise:` and `sos:` take no operand that `at` can spread. An
+entry that uses one of them along a member is over the members, and the set
+of tuples is a [bare relation](relations.md) over `unit` and `period`. Such an
+entry uses the relation as `where: active`, and an entry over `connection` and
+`period` uses it as `where: "at(active, by=connection[unit])"`.
 
 ### Two dimensions that share a member
 
@@ -371,33 +405,8 @@ constraints:
 ```
 
 ```text
-Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], with where: a relation keyed by [period, unit] and one keyed by [port, unit]. If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
+Constraint 'exclusive' lists 'assignment' and 'connection' in dims:, which share 'unit'. A dimension with members is opaque, so the entry would pair every assignment with every connection, whatever their unit. Write the entry over the members, dims: [period, port, unit], and spread each operand onto them: at(<operand>, by=assignment[period, unit]) and at(<operand>, by=connection[port, unit]). If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
 ```
-
-The join is an entry over the members. Each set of tuples is then a
-[bare relation](relations.md), and the `where:` tests both:
-
-```yaml
-dimensions:
-  unit: { dtype: str }
-  port: { dtype: str }
-  period: { dtype: int, ordered: true }
-relations:
-  plugged: { key: [unit, port], missing: absent }
-  active: { key: [unit, period], missing: absent }
-variables:
-  sent: { dims: [unit, port], where: plugged }
-  busy: { dims: [unit, period], where: active }
-constraints:
-  exclusive:
-    dims: [unit, port, period]
-    where: plugged AND active
-    expression: sent + busy <= 1
-```
-
-`exclusive` has a row for each unit, port and period where the unit has both
-the port and the period, which is the join on `unit`. The language has no
-outer join, which would also keep a connection whose unit has no assignment.
 
 Where every pair is meant, as when each supply ships to each demand of any
 region, each side lists its own [alias](#alias) of the shared dimension. The
@@ -430,7 +439,7 @@ operands over `connection` and `assignment` meet, as in the objective
 `sum(sent * busy)`, mathspec prints:
 
 ```text
-The objective: sent * busy is over 'assignment' and 'connection', which share 'unit'. A dimension with members is opaque, so the expression would pair every assignment with every connection, whatever their unit. Declare the operands over the members, with where: a relation keyed by [period, unit] and one keyed by [port, unit]. If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
+The objective: sent * busy is over 'assignment' and 'connection', which share 'unit'. A dimension with members is opaque, so the expression would pair every assignment with every connection, whatever their unit. Spread each operand onto its members: at(busy, by=assignment[period, unit]) and at(sent, by=connection[port, unit]). If every pair is meant, let connection list its own alias of the shared member: connection_unit: {alias: unit} and connection: {over: [connection_unit, port]}.
 ```
 
 A `sum(by=)` or an `at(by=)` that groups an operand over `connection` by
@@ -441,6 +450,94 @@ names all three.
 Two dimensions that share no member, such as `connection` and a
 `scenario_year` over `[scenario, year]`, share an entry: their cross product
 pairs no two tuples that disagree.
+
+### Joins
+
+An entry over the members states a join of two dimensions that share one.
+`at` spreads each operand onto the members, and is
+[absent](absence.md#how-absence-travels) where its dimension lists no tuple.
+So the row of `exclusive` exists only where both spreads exist, which is the
+inner join on `unit`:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+  connection: { over: [unit, port] }
+  assignment: { over: [unit, period] }
+variables:
+  sent: { dims: [connection] }
+  busy: { dims: [assignment] }
+constraints:
+  exclusive:
+    dims: [unit, port, period]
+    expression: at(sent, by=connection[unit, port]) + at(busy, by=assignment[unit, period]) <= 1
+```
+
+```math
+\mathit{sent}_{\left( o,\ u \right)} + \mathit{busy}_{\left( p,\ u \right)} \le 1 \qquad \forall\, p \in \mathcal{P},\ o \in \mathcal{O},\ u \in \mathcal{U}
+```
+
+Where the data lists the joined tuples, a third dimension declares them, as
+`slot: { over: [unit, port, period] }`. In an entry over `slot`, two calls of
+`at` take each operand to its tuple. The inner `at` spreads `sent` onto `unit`
+and `port`, and the outer `at` looks the result up at the unit and port of
+each slot:
+
+```yaml
+constraints:
+  exclusive:
+    dims: [slot]
+    expression: at(at(sent, by=connection[unit, port]), by=slot[unit, port]) + at(at(busy, by=assignment[unit, period]), by=slot[unit, period]) <= 1
+```
+
+In an entry over `connection` and `period`, two calls of `at` take `busy` to
+each row. The inner `at` spreads `busy` onto the members of `assignment`, and
+the outer `at` looks the result up at the unit of each connection. The inner
+`at` is [absent](absence.md#how-absence-travels) where `assignment` lists no
+tuple, and a `sum` by the same columns is 0 there:
+
+```yaml
+dimensions:
+  unit: { dtype: str }
+  port: { dtype: str }
+  period: { dtype: int, ordered: true }
+  connection: { over: [unit, port] }
+  assignment: { over: [unit, period] }
+variables:
+  sent: { dims: [connection, period], bounds: { lower: 0 } }
+  busy: { dims: [assignment] }
+constraints:
+  only_when_busy:
+    dims: [connection, period]
+    expression: sent <= at(at(busy, by=assignment[unit, period]), by=connection[unit])
+  idle_sends_nothing:
+    dims: [connection, period]
+    expression: sent <= at(sum(busy, over=assignment, by=assignment[unit, period]), by=connection[unit])
+```
+
+```math
+\mathit{sent}_{c,p} \le \mathit{busy}_{\left( p,\ \mathrm{connection.unit}(c) \right)} \qquad \forall\, c \in \mathcal{C},\ p \in \mathcal{P}
+```
+
+```math
+\mathit{sent}_{c,p} \le \sum_{a \in \mathcal{A} \,:\, \mathrm{assignment.period}(a) = p \wedge \mathrm{assignment.unit}(a) = \mathrm{connection.unit}(c)} \mathit{busy}_{a} \qquad \forall\, c \in \mathcal{C},\ p \in \mathcal{P}
+```
+
+Where the unit of a connection has no assignment in a period, `busy` is
+absent in `only_when_busy`, and no sum encloses it. So `only_when_busy` has no
+row there, and `sent` is free. Its rows are those of the inner join.
+In `idle_sends_nothing`, the sum has no term there and is 0. That entry has a
+row for every connection and period, which is the left join. Where nothing
+matches, its row is `sent <= 0`, and the lower bound makes `sent` 0.
+
+No entry states an outer join, which would keep the tuples of either
+dimension with no partner. A cross product is no outer join: it pairs every
+tuple of one dimension with every tuple of the other, units that differ
+included. A `where:` cannot state one either. In `exclusive` above, the sum of
+the two spreads is [absent](absence.md#how-absence-travels) where either
+spread is absent, whichever rows a `where:` keeps.
 
 ### `missing`
 

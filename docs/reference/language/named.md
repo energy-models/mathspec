@@ -347,6 +347,14 @@ claim no unit together. Reads through two relations reach two rows, so
 `at(kind == 'b', by=backup_of[tech])` in place of the second overlaps the
 first.
 
+A read [by the members of a dimension](operators.md#at-by-the-members-of-a-dimension)
+reaches one row too. With `connection: { over: [unit, port] }` and a boolean
+parameter `open` over `[connection]`, the cases
+`at(open, by=connection[unit, port])` and
+`not at(open, by=connection[unit, port])` claim no unit and port together.
+Where `connection` lists no tuple, the first is false and the second claims
+the unit and port.
+
 Each `when:` and each value is indexed only over dimensions that `dims:`
 lists. A value indexed over fewer of them is repeated along the others, as a
 parameter with fewer dimensions is. Each dimension in `dims:` must index

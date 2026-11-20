@@ -173,8 +173,10 @@ class Lookup:
     """One ``at(<condition>, by=relation[columns])``, kept to what decides the label it reaches.
 
     ``at`` names value columns and groups by the whole key, so a coordinate
-    reads one row. Two reads that name the same relation and columns read
-    that row, and so reach the same label.
+    reads one row. A spread groups by every member instead, and a tuple of
+    member labels is at most one row too, which is absent where the
+    dimension does not list the tuple. Two reads that name the same relation
+    and columns read that row, and so reach the same label.
     """
 
     relation: str
@@ -182,7 +184,7 @@ class Lookup:
 
     @classmethod
     def of(cls, join: JoinColumns) -> Lookup:
-        return cls(join.name, join.dropped)
+        return cls(join.name, join.grouped if join.spreads else join.dropped)
 
     def __str__(self) -> str:
         return f'{self.relation}[{", ".join(self.roles)}]'

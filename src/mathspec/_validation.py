@@ -22,7 +22,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import aliased, keyed, overlaps, shared_refusal
+from mathspec._dimensions import aliased, keyed, overlaps, shared_refusal, spreads
 from mathspec._expression_parser import FunctionCallNode, NameNode, parse_expression
 from mathspec._operators import BUILTIN_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
@@ -245,13 +245,20 @@ def _opaque_tuples(spec: Spec) -> Iterator[str]:
     member pairs tuples whose shared member differs, and a frame over one and
     its member pairs each tuple with every label of the member. The ``where:``
     of the entry does not change this. A curve is over its ``along:`` too.
+    The join over the members spreads the operands of an entry with an
+    expression, and is a ``where:`` on any other entry, which has none.
     """
     frames = [*_frames(spec), *(('piecewise', name, pw.dims) for name, pw in spec.piecewise.items())]
     for kind, name, dims in frames:
         shared, beside = overlaps(dims, spec)
         for group, members in shared:
             flat = sorted({*dims, *(m for d in group for m in spec.dimensions[d].members)} - set(group))
-            rewrite = f'Write the entry over the members, dims: [{", ".join(flat)}], with where: {keyed(group, spec)}'
+            join = (
+                f'and spread each operand onto them: {spreads(group, spec)}'
+                if kind in ('Constraint', 'Named expression')
+                else f'with where: {keyed(group, spec)}'
+            )
+            rewrite = f'Write the entry over the members, dims: [{", ".join(flat)}], {join}'
             yield shared_refusal(
                 f"{kind} '{name}' lists", ' in dims:', dims, group, members, 'the entry', rewrite, spec
             )

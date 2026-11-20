@@ -230,6 +230,13 @@ over. A `Join` under a sum through a relation has the dimensions of that sum.
 A `Join` also opens an index per dropped column (an `Axis`). An axis is not a dimension and is not in `dims`. An
 `ExpressionReference` has the dimensions of its body.
 
+A `Join` whose `columns.spreads` is true is
+[`at` by the members of a dimension](language/operators.md#at-by-the-members-of-a-dimension).
+It joins on the dimension, groups by every member, and opens no axis. A tool
+gives it one row for each label of the dimension, at the member labels of that
+label. With data attached, the result is absent at every other combination of
+member labels, and a `JoinedCondition` with such columns is false there.
+
 The order of `dimensions:` and the order of an entry's `dims:` do not change
 a node's `dims`. An entry that declares `dims: [snapshot, generator]` has
 `program.expressions[name].dims == ('generator', 'snapshot')`, and each
@@ -344,11 +351,18 @@ sorted(footprint.domains)  # ['continuous']
 sorted(footprint.sos_types)  # []
 kinds = sorted(kind.__name__ for kind in footprint.kinds)
 kinds  # ['Constant', 'Multiply', 'ParameterReference', 'Sum', 'VariableReference']
+sorted(footprint.spreads)  # []
 ```
 
 The expanded curve has no quadratic term, no SOS, and only continuous
 variables. Every field is a set, and an empty field means that the program
 does not use the construct.
+
+`footprint.spreads` lists each dimension that a row or a bound spreads onto
+its members, as `at(flow, by=connection[unit, port])` does. A spread is a
+`Join` among the kinds, as a lookup is, so an engine without spread support
+refuses a program where this field is not empty. Like `kinds`, it leaves out
+`where:` conditions.
 
 Each engine decides whether its solver takes a construct. The footprint has no field for convexity.
 
