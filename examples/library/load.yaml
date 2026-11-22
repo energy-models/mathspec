@@ -7,7 +7,7 @@ given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: declared by the surface, and fixed at each load's port by `Load_withdrawal`
+      description: declared by the interface, and fixed at each load's port by `Load_withdrawal`
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }

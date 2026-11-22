@@ -3,10 +3,10 @@ SPDX-FileCopyrightText: mathspec contributors
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# The coupling surface
+# The interface
 
-The [coupling surface](../../reference/glossary.md#surface) is the one file of the library (a
-[fragment](../../reference/glossary.md#fragment)) that every other fragment is written against. The surface
+The [interface](../../reference/glossary.md#interface) is the one file of the library (a
+[fragment](../../reference/glossary.md#fragment)) that every other fragment is written against. The interface
 lists `total_cost` under [`given`](../../reference/language/parameters-variables-constraints.md#given), and its objective minimises
 `total_cost`.
 
@@ -18,7 +18,7 @@ many fragments [`merge`](../../reference/composition.md#merge) joins.
 <!-- gallery:begin -->
 ```yaml
 description: >-
-  The coupling surface every component in this library is written against: one
+  The interface every component in this library is written against: one
   flow per port, one balance per bus, and one cost to minimise. A component is
   wired to a port, the port to a bus, and the balance contains no component class.
   A flow is positive where the port injects into its bus. A component that
@@ -46,7 +46,7 @@ objective:
   expression: total_cost
 ```
 
-The coupling surface every component in this library is written against: one flow per port, one balance per bus, and one cost to minimise. A component is wired to a port, the port to a bus, and the balance contains no component class. A flow is positive where the port injects into its bus. A component that costs something adds its cost to `total_cost`.
+The interface every component in this library is written against: one flow per port, one balance per bus, and one cost to minimise. A component is wired to a port, the port to a bus, and the balance contains no component class. A flow is positive where the port injects into its bus. A component that costs something adds its cost to `total_cost`.
 
 #### Given
 
@@ -94,7 +94,7 @@ f_{j,t} \in \mathbb{R} \qquad \forall\, j \in \mathcal{J},\ t \in \mathcal{T}
 !!! info "See also"
 
     - [Generators](generator.md) and [Loads](load.md), for the two component files
-      written against this surface
+      written against this interface
     - [The composed spec](composed.md), for what `merge` returns for the three
       files
     - [Compose a spec from several files](../../howto/compose.md), for the same

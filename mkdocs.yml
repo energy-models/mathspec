@@ -83,7 +83,7 @@ nav:
           - A curve filled segment by segment: examples/piecewise_incremental.md
           - A component library:
               - examples/library/index.md
-              - The coupling surface: examples/library/surface.md
+              - The interface: examples/library/interface.md
               - Generators: examples/library/generator.md
               - Loads: examples/library/load.md
               - The composed spec: examples/library/composed.md

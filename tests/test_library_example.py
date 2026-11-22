@@ -22,7 +22,7 @@ from tests.fixtures import EXAMPLES
 from tools import gallery
 
 LIBRARY = EXAMPLES / 'library'
-FRAGMENTS = {name: LIBRARY / f'{name}.yaml' for name in ('surface', 'generator', 'load')}
+FRAGMENTS = {name: LIBRARY / f'{name}.yaml' for name in ('interface', 'generator', 'load')}
 PATCH = LIBRARY / 'variants' / 'commitment.yaml'
 PATCHED = override(merge(list(FRAGMENTS.values())), [PATCH])
 
@@ -34,10 +34,10 @@ def test_every_fragment_loads_and_prints_on_its_own(name):
 
 
 @pytest.mark.parametrize('name', ['generator', 'load'])
-def test_a_component_file_reads_the_surface_and_introduces_no_flow(name):
+def test_a_component_file_reads_the_interface_and_introduces_no_flow(name):
     spec = to_spec(FRAGMENTS[name])
     assert sorted(spec.given.variables) == ['Port_p'], 'the port flow is the one name a component file reads'
-    assert 'Port_p' not in spec.variables, 'the surface introduces the flow, and a component file only reads it'
+    assert 'Port_p' not in spec.variables, 'the interface introduces the flow, and a component file only reads it'
 
 
 def test_the_library_composes_into_one_model():
@@ -48,7 +48,7 @@ def test_the_library_composes_into_one_model():
     )
     assert not spec.given, 'each read is folded into the entry that introduces it'
     assert spec.objective is not None and spec.objective.expression == 'total_cost', (
-        'the surface sets the objective on the sum the components add their cost to'
+        'the interface sets the objective on the sum the components add their cost to'
     )
     assert spec.expressions['total_cost'].expression == 'Generator_cost', 'the one priced fragment is the one term'
 
@@ -56,15 +56,15 @@ def test_the_library_composes_into_one_model():
 @pytest.mark.parametrize(
     'names',
     [
-        pytest.param(('surface', 'load'), id='one component file'),
-        pytest.param(('surface', 'generator', 'load'), id='the whole library'),
+        pytest.param(('interface', 'load'), id='one component file'),
+        pytest.param(('interface', 'generator', 'load'), id='the whole library'),
     ],
 )
 def test_the_balance_is_written_once_however_many_fragments_are_merged(names):
     merged = merge([FRAGMENTS[name] for name in names])
-    surface = to_spec(FRAGMENTS['surface'])
-    assert merged.constraints['Bus_nodal_balance'] == surface.constraints['Bus_nodal_balance'], (
-        'a component file pins the flow at its own port, so merging leaves the balance as the surface wrote it'
+    interface = to_spec(FRAGMENTS['interface'])
+    assert merged.constraints['Bus_nodal_balance'] == interface.constraints['Bus_nodal_balance'], (
+        'a component file pins the flow at its own port, so merging leaves the balance as the interface wrote it'
     )
 
 
@@ -98,7 +98,7 @@ def test_the_patched_model_prints_the_variant_math(fmt):
 
 def test_the_variant_needs_the_fragment_it_patches():
     """Picking commitment without the generator is a patch that lands on nothing, and it is refused at load."""
-    without_generator = merge([FRAGMENTS['surface'], FRAGMENTS['load']])
+    without_generator = merge([FRAGMENTS['interface'], FRAGMENTS['load']])
     with pytest.raises(LanguageError, match="edits the variable 'Generator_p', which its base does not declare"):
         override(without_generator, [PATCH])
 

@@ -56,7 +56,7 @@ like yours, and what each line of the file means.
     [Open →](piecewise_incremental.md)
 - **A component library**
     Several files compose into one spec with `merge`, each written against
-    one shared fragment, the coupling surface.
+    one shared fragment, the interface.
     [Open →](library/index.md)
 - **PyPSA**
     The model that `n.optimize()` builds in the power system modelling
