@@ -58,6 +58,7 @@ The pull requests in this release:
 - fix(language): under `missing: 0`, a divisor that a `where:`, a case or an absent variable guards loads, and so does a variable number outside its bounds ([#942](https://github.com/energy-models/mathspec/pull/942))
 - fix(language): the case check tells two pairs of columns of one relation apart ([#951](https://github.com/energy-models/mathspec/pull/951))
 - fix(language): the case check reads a comparison on a relation as false where the relation has no row ([#949](https://github.com/energy-models/mathspec/pull/949))
+- fix(sos): a late-starting curve is no longer its hull ([#994](https://github.com/energy-models/mathspec/pull/994))
 
 ### Python API and composition
 
@@ -77,7 +78,6 @@ The pull requests in this release:
 
 ### Examples
 
-- fix(sos): a late-starting curve is no longer its hull ([#994](https://github.com/energy-models/mathspec/pull/994))
 - docs(examples): TIMES examples and a sparse-set example ([#1021](https://github.com/energy-models/mathspec/pull/1021))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))
