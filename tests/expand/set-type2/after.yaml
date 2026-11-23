@@ -16,4 +16,4 @@ constraints:
     expression: sum(pick_seg, over=g) <= 1
   pick_adjacency:
     dims: [g]
-    expression: p <= 10.0 * (pick_seg + shift(pick_seg, along=g, offset=1, edge=0))
+    expression: p <= 10.0 * (sum_back(pick_seg, along=g, window=2))

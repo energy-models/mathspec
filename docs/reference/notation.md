@@ -1075,7 +1075,7 @@ Written out by `spec.expand()`:
 ```
 
 ```math
-\lambda_{b,m,p} \le \delta_{b,m,p} + \delta_{b \boxminus_{0} 1,m,p} \qquad \forall\, b \in \mathcal{B},\ m \in \mathcal{M},\ p \in \mathcal{P}
+\lambda_{b,m,p} \le \sum_{b' \in \mathcal{B} \,:\, 0 \le b - b' < 2} \delta_{b',m,p} \qquad \forall\, b \in \mathcal{B},\ m \in \mathcal{M},\ p \in \mathcal{P}
 ```
 
 ```math
@@ -1371,7 +1371,7 @@ Written out by `spec.expand()`:
 ```
 
 ```math
-\mathit{weight}_{g,t} \le \mathit{adjacent\_seg}_{g,t} + \mathit{adjacent\_seg}_{g \boxminus_{0} 1,t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
+\mathit{weight}_{g,t} \le \sum_{g' \in \mathcal{G} \,:\, 0 \le g - g' < 2} \mathit{adjacent\_seg}_{g',t} \qquad \forall\, g \in \mathcal{G},\ t \in \mathcal{T}
 ```
 
 ```math
