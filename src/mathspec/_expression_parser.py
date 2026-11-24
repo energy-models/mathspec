@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Literal, assert_never, cast, get_args
 
-from lark import Lark, Token, Transformer
+from lark import Lark, Token, Tree
 from lark.exceptions import UnexpectedCharacters, UnexpectedEOF, UnexpectedInput, UnexpectedToken
 
 from mathspec._frozen import Frozen
@@ -238,7 +238,7 @@ ARITHMETIC_RULES = (
     r"""
 ?sum: product (ADD product)*
 ?product: unary (MUL unary)*
-?unary: ADD unary -> unary
+?unary: ADD unary -> neg
       | power
 ?power: atom (_POW unary)?
 names: NAME (_COMMA NAME)*
@@ -261,15 +261,15 @@ _EQUAL: "="
 
 _EXPRESSION_RULES = r"""
 start: sum (SENSE sum)?
-?atom: NAME -> name
-     | NUMBER -> number
-     | DOTINF -> dotinf
+?atom: NAME
+     | NUMBER
+     | DOTINF
      | NAME LPAR [args] _RPAR -> call
      | LPAR sum _RPAR -> paren
 args: arg (_COMMA arg)*
 ?arg: NAME _EQUAL value -> kwarg
     | sum
-?value: STRING -> string
+?value: STRING
       | NAME LSQB names _RSQB -> columns
       | LSQB names _RSQB -> namelist
       | sum
@@ -277,133 +277,8 @@ SENSE: /<=|>=|==/
 STRING: /'[^'\n\r]*'|"[^"\n\r]*"/
 """
 
-
-@dataclass(slots=True)
-class Word:
-    """A name as written, before its place in the tree decides what it is."""
-
-    pos: int
-    text: str
-
-
-@dataclass(slots=True)
-class Number:
-    pos: int
-    value: float
-
-
-@dataclass(slots=True)
-class Quoted:
-    pos: int
-    value: str
-
-
-@dataclass(slots=True)
-class Boolean:
-    pos: int
-    value: bool
-
-
-@dataclass(slots=True)
-class Columns:
-    """``relation[a, b]``; *bracket* is where the brackets open, which is where a refusal of it points."""
-
-    pos: int
-    relation: str
-    columns: tuple[str, ...]
-    bracket: int
-
-
-@dataclass(slots=True)
-class Names:
-    pos: int
-    names: tuple[str, ...]
-
-
-@dataclass(slots=True)
-class Keyword:
-    pos: int
-    key: str
-    value: Syntax
-
-
-@dataclass(slots=True)
-class Call:
-    pos: int
-    name: str
-    args: tuple[Syntax | Keyword, ...]
-
-
-@dataclass(slots=True)
-class Paren:
-    """*count* parentheses around *inner* with nothing between them, so a run of them costs one level of the walk."""
-
-    pos: int
-    inner: Syntax
-    count: int
-
-
-@dataclass(slots=True)
-class Unary:
-    pos: int
-    op: UnaryOperator
-    operand: Syntax
-
-
-@dataclass(slots=True)
-class Chain:
-    """Operands of one precedence level and the operators between them, folded left when read."""
-
-    pos: int
-    first: Syntax
-    rest: tuple[tuple[BinaryOperator, Syntax], ...]
-
-
-@dataclass(slots=True)
-class Power:
-    pos: int
-    base: Syntax
-    exponent: Syntax
-
-
-@dataclass(slots=True)
-class Compare:
-    pos: int
-    left: Syntax
-    op: str
-    right: Syntax
-
-
-@dataclass(slots=True)
-class Negation:
-    pos: int
-    operand: Syntax
-
-
-@dataclass(slots=True)
-class Junction:
-    pos: int
-    kind: Literal['and', 'or']
-    items: tuple[Syntax, ...]
-
-
-Syntax = (
-    Word
-    | Number
-    | Quoted
-    | Boolean
-    | Columns
-    | Names
-    | Call
-    | Paren
-    | Unary
-    | Chain
-    | Power
-    | Compare
-    | Negation
-    | Junction
-)
-"""What Lark builds: the string's structure, read by [`arithmetic`][] and the condition reader into nodes."""
+type Syntax = Tree[Token] | Token
+"""What Lark builds: a rule's tree, or a token where a rule holds one token alone."""
 
 
 class ReadError(Exception):
@@ -422,121 +297,29 @@ class _TooDeepError(Exception):
 _WHITESPACE_ESCAPES = {'t': '\t', 'n': '\n', 'f': '\f', 'r': '\r'}
 
 
-def unquoter(*, escapes: bool) -> Callable[[str], str]:
+def unquoter(*, escapes: bool) -> Callable[[Token], Token]:
     r"""What a quoted label stands for: the text between its quotes, with ``\t``, ``\n``, ``\f`` and ``\r`` as the character.
 
     With *escapes*, as the where grammar's labels have, a backslash before
     any other character stands for that character, so ``'it\'s'`` is
-    ``it's``. Without, any other backslash is itself.
+    ``it's``. Without, any other backslash is itself. Applied as Lark lexes
+    the token, so the label reaches the reader unquoted.
     """
     scan = re.compile(r'\\(.)' if escapes else r'\\([tnfr])')
 
     def escaped(match: re.Match[str]) -> str:
         return _WHITESPACE_ESCAPES.get(match[1], match[1])
 
-    def unquote(token: str) -> str:
+    def unquote(token: Token) -> Token:
         inner = token[1:-1]
-        return scan.sub(escaped, inner) if '\\' in inner else inner
+        return Token.new_borrow_pos('STRING', scan.sub(escaped, inner) if '\\' in inner else inner, token)
 
     return unquote
 
 
-def _at(token: Token) -> int:
-    """Where *token* starts in the text; Lark sets it on every token it lexes."""
-    return token.start_pos or 0
-
-
-class Builder(Transformer[Token, Syntax]):
-    """Lark's callbacks, one per rule, building [`Syntax`][] as the LALR parser reduces."""
-
-    def __init__(self, unquote: Callable[[str], str]) -> None:
-        super().__init__()
-        self._unquote = unquote
-
-    def name(self, children: list[Token]) -> Word:
-        return Word(_at(children[0]), str(children[0]))
-
-    def number(self, children: list[Token]) -> Number:
-        return Number(_at(children[0]), float(children[0]))
-
-    def dotinf(self, children: list[Token]) -> Number:
-        return Number(_at(children[0]), float('inf'))
-
-    def string(self, children: list[Token]) -> Quoted:
-        return Quoted(_at(children[0]), self._unquote(str(children[0])))
-
-    def true(self, children: list[Token]) -> Boolean:
-        return Boolean(_at(children[0]), value=True)
-
-    def false(self, children: list[Token]) -> Boolean:
-        return Boolean(_at(children[0]), value=False)
-
-    def names(self, children: list[Token]) -> tuple[str, ...]:
-        return tuple(str(child) for child in children)
-
-    def columns(self, children: list[Token | tuple[str, ...]]) -> Columns:
-        relation, bracket, names = cast('tuple[Token, Token, tuple[str, ...]]', tuple(children))
-        return Columns(_at(relation), str(relation), names, _at(bracket))
-
-    def namelist(self, children: list[Token | tuple[str, ...]]) -> Names:
-        bracket, names = cast('tuple[Token, tuple[str, ...]]', tuple(children))
-        return Names(_at(bracket), names)
-
-    def kwarg(self, children: list[Token | Syntax]) -> Keyword:
-        key, value = cast('tuple[Token, Syntax]', tuple(children))
-        return Keyword(_at(key), str(key), value)
-
-    def args(self, children: list[Syntax | Keyword]) -> tuple[Syntax | Keyword, ...]:
-        return tuple(children)
-
-    def call(self, children: list[Token | tuple[Syntax | Keyword, ...] | None]) -> Call:
-        name, _, args = cast('tuple[Token, Token, tuple[Syntax | Keyword, ...] | None]', tuple(children))
-        return Call(_at(name), str(name), args or ())
-
-    def paren(self, children: list[Token | Syntax]) -> Paren:
-        bracket, inner = cast('tuple[Token, Syntax]', tuple(children))
-        if isinstance(inner, Paren):
-            return Paren(_at(bracket), inner.inner, inner.count + 1)
-        return Paren(_at(bracket), inner, 1)
-
-    def unary(self, children: list[Token | Syntax]) -> Unary:
-        op, operand = cast('tuple[Token, Syntax]', tuple(children))
-        return Unary(_at(op), cast('UnaryOperator', str(op)), operand)
-
-    def _chain(self, children: list[Token | Syntax]) -> Chain:
-        first = cast('Syntax', children[0])
-        ops = cast('list[Token]', children[1::2])
-        operands = cast('list[Syntax]', children[2::2])
-        rest = tuple((cast('BinaryOperator', str(op)), operand) for op, operand in zip(ops, operands, strict=True))
-        return Chain(first.pos, first, rest)
-
-    sum = _chain
-    product = _chain
-
-    def power(self, children: list[Syntax]) -> Power:
-        base, exponent = children
-        return Power(base.pos, base, exponent)
-
-    def cmp(self, children: list[Token | Syntax]) -> Compare:
-        left, op, right = cast('tuple[Syntax, Token, Syntax]', tuple(children))
-        return Compare(left.pos, left, str(op), right)
-
-    def start(self, children: list[Token | Syntax]) -> Syntax:
-        return cast('Syntax', children[0]) if len(children) == 1 else self.cmp(children)
-
-    def negation(self, children: list[Syntax]) -> Negation:
-        return Negation(children[0].pos, children[0])
-
-    def and_(self, children: list[Syntax]) -> Junction:
-        return Junction(children[0].pos, 'and', tuple(children))
-
-    def or_(self, children: list[Syntax]) -> Junction:
-        return Junction(children[0].pos, 'or', tuple(children))
-
-
-def grammar_parser(rules: str, unquote: Callable[[str], str]) -> Lark:
-    """An LALR parser over *rules* and the arithmetic, building [`Syntax`][] as it goes."""
-    return Lark(rules + ARITHMETIC_RULES, parser='lalr', lexer='basic', transformer=Builder(unquote))
+def grammar_parser(rules: str, unquote: Callable[[Token], Token]) -> Lark:
+    """An LALR parser over *rules* and the arithmetic, its quoted labels unquoted as they lex."""
+    return Lark(rules + ARITHMETIC_RULES, parser='lalr', lexer='basic', lexer_callbacks={'STRING': unquote})
 
 
 @cache
@@ -556,12 +339,25 @@ def keywords[V](name: str, pairs: Iterable[tuple[str, V]]) -> dict[str, V]:
     return kwargs
 
 
-def nest(parens: int, paren: Paren) -> int:
-    """*parens* deepened by *paren*'s run, refused once past [`MAX_DEPTH`][]."""
-    parens += paren.count
-    if parens > MAX_DEPTH:
+def start(syntax: Syntax) -> int:
+    """Where *syntax* starts in the text: its first token's position, which is where a refusal of it points."""
+    first = syntax if isinstance(syntax, Token) else next(syntax.scan_values(lambda v: isinstance(v, Token)))
+    return first.start_pos or 0
+
+
+def nest(parens: int) -> int:
+    """*parens* deepened by one pair, refused once past [`MAX_DEPTH`][]."""
+    if parens >= MAX_DEPTH:
         raise _TooDeepError
-    return parens
+    return parens + 1
+
+
+def fold(children: list[Syntax], read: Callable[[Syntax], ArithmeticNode]) -> ArithmeticNode:
+    """``a op b op c`` as ``(a op b) op c``, each operand *read*."""
+    result = read(children[0])
+    for op, operand in zip(children[1::2], children[2::2], strict=True):
+        result = BinaryOperatorNode(cast('BinaryOperator', str(op)), result, read(operand))
+    return result
 
 
 def arithmetic(syntax: Syntax, parens: int) -> ArithmeticNode:
@@ -570,62 +366,71 @@ def arithmetic(syntax: Syntax, parens: int) -> ArithmeticNode:
     A bare ``inf`` is the number; as a callee it is a name.
     """
     match syntax:
-        case Word(text='inf'):
+        case Token(type='NAME'):
+            return NumberNode(float('inf')) if syntax == 'inf' else NameNode(str(syntax))
+        case Token(type='NUMBER'):
+            return NumberNode(float(syntax))
+        case Token(type='DOTINF'):
             return NumberNode(float('inf'))
-        case Word(text=text):
-            return NameNode(text)
-        case Number(value=value):
-            return NumberNode(value)
-        case Chain(first=first, rest=rest):
-            result = arithmetic(first, parens)
-            for op, operand in rest:
-                result = BinaryOperatorNode(op, result, arithmetic(operand, parens))
-            return result
-        case Unary(op=op, operand=operand):
-            return UnaryOperatorNode(op, arithmetic(operand, parens))
-        case Power(base=base, exponent=exponent):
+        case Tree(data='sum' | 'product', children=children):
+            return fold(children, lambda operand: arithmetic(operand, parens))
+        case Tree(data='neg', children=[op, operand]):
+            return UnaryOperatorNode(cast('UnaryOperator', str(op)), arithmetic(operand, parens))
+        case Tree(data='power', children=[base, exponent]):
             return BinaryOperatorNode('**', arithmetic(base, parens), arithmetic(exponent, parens))
-        case Call(name=name, args=args):
+        case Tree(data='call', children=[name, _, args]):
             positional: list[ArithmeticNode] = []
             pairs: list[tuple[str, ArithmeticNode]] = []
-            for arg in args:
-                if isinstance(arg, Keyword):
-                    pairs.append((arg.key, _keyword_value(arg.value, parens)))
+            for arg in arguments(args):
+                if isinstance(arg, Tree) and arg.data == 'kwarg':
+                    key, value = arg.children
+                    pairs.append((str(key), _keyword_value(value, parens)))
                 else:
                     positional.append(arithmetic(arg, parens))
-            return FunctionCallNode(name=name, args=tuple(positional), kwargs=keywords(name, pairs))
-        case Paren(inner=inner):
-            return arithmetic(inner, nest(parens, syntax))
+            return FunctionCallNode(name=str(name), args=tuple(positional), kwargs=keywords(str(name), pairs))
+        case Tree(data='paren', children=[_, inner]):
+            return arithmetic(inner, nest(parens))
         case _:
-            raise ReadError(syntax.pos, 'arithmetic')
+            raise ReadError(start(syntax), 'arithmetic')
+
+
+def arguments(args: Syntax | None) -> list[Syntax]:
+    """A call's arguments, in the order written; none where the parentheses are empty."""
+    return [] if args is None else cast('Tree[Token]', args).children
+
+
+def label(syntax: Syntax) -> KeywordNode | ColumnsNode | NameListNode | None:
+    """*syntax* as a quoted label, a relation's columns or a list of names, or ``None`` where it is none of them."""
+    match syntax:
+        case Token(type='STRING'):
+            return KeywordNode(str(syntax))
+        case Tree(data='columns', children=[relation, _, Tree(children=names)]):
+            return ColumnsNode(str(relation), tuple(str(n) for n in names))
+        case Tree(data='namelist', children=[_, Tree(children=names)]):
+            return NameListNode(tuple(str(n) for n in names))
+        case _:
+            return None
 
 
 def _keyword_value(syntax: Syntax, parens: int) -> ArithmeticNode:
     """An arithmetic call's keyword value: a quoted label, a relation's columns, a list of names, or arithmetic."""
-    match syntax:
-        case Quoted(value=value):
-            return KeywordNode(value)
-        case Columns(relation=relation, columns=columns):
-            return ColumnsNode(relation, columns)
-        case Names(names=names):
-            return NameListNode(names)
-        case _:
-            return arithmetic(syntax, parens)
+    found = label(syntax)
+    return arithmetic(syntax, parens) if found is None else found
 
 
 def _expression(syntax: Syntax, parens: int) -> ParsedNode:
     """The top of an expression: arithmetic, or one comparison of two."""
-    if isinstance(syntax, Compare):
-        return ComparisonNode(
-            cast('Sense', syntax.op), arithmetic(syntax.left, parens), arithmetic(syntax.right, parens)
-        )
-    return arithmetic(syntax, parens)
+    children = cast('Tree[Token]', syntax).children
+    if len(children) == 3:
+        left, sense, right = children
+        return ComparisonNode(cast('Sense', str(sense)), arithmetic(left, parens), arithmetic(right, parens))
+    return arithmetic(children[0], parens)
 
 
 def _location(error: UnexpectedInput, text: str) -> int:
     """Where Lark gave up, as an index into *text*; the end of the text where the text ran out."""
     if isinstance(error, UnexpectedToken) and error.token.type != '$END':
-        return _at(error.token)
+        return error.token.start_pos or 0
     if isinstance(error, UnexpectedCharacters):
         return error.pos_in_stream or 0
     return len(text)
@@ -724,7 +529,7 @@ def parse_text[T](
     type *child_of* walks, which is the grammar's word for what it builds.
     """
     try:
-        node = read(cast('Syntax', parser.parse(text)), 0)
+        node = read(parser.parse(text), 0)
     except UnexpectedInput as e:
         loc = _location(e, text)
         expected = _expected(e)

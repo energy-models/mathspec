@@ -19,33 +19,25 @@ from dataclasses import dataclass, field
 from functools import cache, lru_cache
 from typing import TYPE_CHECKING, cast
 
+from lark import Token, Tree
+
 from mathspec._expression_parser import (
     NAME,
     ArithmeticNode,
-    Boolean,
-    Call,
-    Chain,
-    Columns,
-    ColumnsNode,
-    Compare,
-    Junction,
-    Keyword,
     KeywordNode,
+    NameListNode,
     NameNode,
-    Names,
-    Negation,
-    Paren,
-    Power,
-    Quoted,
     ReadError,
     Syntax,
-    Word,
+    arguments,
     arithmetic,
     children,
     grammar_parser,
     keywords,
+    label,
     nest,
     parse_text,
+    start,
     unquoter,
 )
 from mathspec._frozen import Frozen
@@ -157,12 +149,12 @@ start: or_
 ?not_: _NOT not_ -> negation
      | cmp
 ?cmp: sum (COMP sum)?
-?atom: NAME -> name
-     | NUMBER -> number
-     | DOTINF -> dotinf
-     | STRING -> string
-     | TRUE -> true
-     | FALSE -> false
+?atom: NAME
+     | NUMBER
+     | DOTINF
+     | STRING
+     | TRUE
+     | FALSE
      | NAME LSQB names _RSQB -> columns
      | LSQB names _RSQB -> namelist
      | NAME LPAR [args] _RPAR -> call
@@ -185,24 +177,22 @@ def _condition_parser() -> Lark:
     return grammar_parser(_CONDITION_RULES, unquoter(escapes=True))
 
 
+def _read(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
+    """The whole where string: the one condition ``start`` holds."""
+    return _condition(cast('Tree[Token]', syntax).children[0], parens)
+
+
 def _condition(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
     """*syntax* as a condition: ``OR`` over ``AND`` over ``NOT``, each folded left."""
-    if isinstance(syntax, Junction) and syntax.kind == 'or':
-        return _fold(Or, [_conjunction(item, parens) for item in syntax.items])
-    return _conjunction(syntax, parens)
-
-
-def _conjunction(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
-    if isinstance(syntax, Junction) and syntax.kind == 'and':
-        return _fold(And, [_negation(item, parens) for item in syntax.items])
-    return _negation(syntax, parens)
-
-
-def _negation(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
-    """``NOT`` takes one atom, and a second ``NOT`` is no atom."""
-    if isinstance(syntax, Negation):
-        return Not(cast('Condition', _atom(syntax.operand, parens)))
-    return _atom(syntax, parens)
+    match syntax:
+        case Tree(data='or_', children=items):
+            return _fold(Or, [_condition(item, parens) for item in items])
+        case Tree(data='and_', children=items):
+            return _fold(And, [_condition(item, parens) for item in items])
+        case Tree(data='negation', children=[operand]):
+            return Not(cast('Condition', _atom(operand, parens)))
+        case _:
+            return _atom(syntax, parens)
 
 
 def _fold(
@@ -215,47 +205,50 @@ def _fold(
 
 
 def _atom(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
-    """One operand of a connective: a literal, a comparison, a condition call, a name, or a bracketed condition."""
+    """One operand of a connective: a literal, a comparison, a condition call, a name, or a bracketed condition.
+
+    ``NOT`` takes one atom, and a second ``NOT`` is no atom.
+    """
     match syntax:
-        case Boolean(value=value):
-            return BooleanLiteral(value)
-        case Compare():
+        case Token(type='TRUE' | 'FALSE'):
+            return BooleanLiteral(syntax.type == 'TRUE')
+        case Token(type='NAME'):
+            return NameNode(str(syntax))
+        case Tree(data='cmp'):
             return _comparison(syntax, parens)
-        case Call():
-            return _condition_call(syntax, syntax.name, parens)
-        case Word(text=text):
-            return NameNode(text)
-        case Paren(inner=inner):
-            return _condition(inner, nest(parens, syntax))
+        case Tree(data='call', children=[name, _, args]):
+            return _condition_call(arguments(args), str(name), start(syntax), parens)
+        case Tree(data='paren', children=[_, inner]):
+            return _condition(inner, nest(parens))
         case _:
-            raise ReadError(syntax.pos, 'a condition')
+            raise ReadError(start(syntax), 'a condition')
 
 
-def _condition_call(call: Call, name: str, parens: int) -> UnresolvedConditionCallNode:
+def _condition_call(args: list[Syntax], name: str, pos: int, parens: int) -> UnresolvedConditionCallNode:
     """``<name>(<condition>[, <kwarg>…])``, the one call whose first argument is a condition."""
-    if not call.args or isinstance(call.args[0], Keyword):
-        raise ReadError(call.pos, 'a condition as the first argument')
-    operand = _condition(call.args[0], parens)
+    if not args or _is_kwarg(args[0]):
+        raise ReadError(pos, 'a condition as the first argument')
+    operand = _condition(args[0], parens)
     pairs: list[tuple[str, ArithmeticNode]] = []
-    for arg in call.args[1:]:
-        if not isinstance(arg, Keyword):
-            raise ReadError(arg.pos, 'a keyword argument')
-        pairs.append((arg.key, _call_keyword(arg.value, parens)))
+    for arg in args[1:]:
+        if not _is_kwarg(arg):
+            raise ReadError(start(arg), 'a keyword argument')
+        key, value = cast('Tree[Token]', arg).children
+        pairs.append((str(key), _call_keyword(value, parens)))
     return UnresolvedConditionCallNode(name, operand, keywords(name, pairs))
+
+
+def _is_kwarg(syntax: Syntax) -> bool:
+    return isinstance(syntax, Tree) and syntax.data == 'kwarg'
 
 
 def _call_keyword(syntax: Syntax, parens: int) -> ArithmeticNode:
     """A condition call's keyword value: a quoted label, a relation's columns, or arithmetic, and no list of names."""
-    match syntax:
-        case Quoted(value=value):
-            return KeywordNode(value)
-        case Columns(relation=relation, columns=columns):
-            return ColumnsNode(relation, columns)
-        case _:
-            return arithmetic(syntax, parens)
+    found = label(syntax)
+    return arithmetic(syntax, parens) if found is None or isinstance(found, NameListNode) else found
 
 
-def _comparison(compare: Compare, parens: int) -> UnresolvedConditionNode:
+def _comparison(compare: Tree[Token], parens: int) -> UnresolvedConditionNode:
     """``side <op> side``, or a count against arithmetic, which is tried first.
 
     A ``count(...)`` whose first argument is no condition, or whose right side
@@ -263,39 +256,45 @@ def _comparison(compare: Compare, parens: int) -> UnresolvedConditionNode:
     side. Once the right side starts as arithmetic, the count is kept, and a
     right side that does not stay arithmetic is refused.
     """
-    op = cast('ComparisonOperator', compare.op)
-    if isinstance(compare.left, Boolean):
-        raise ReadError(compare.left.pos, 'a comparison side')
-    if isinstance(compare.left, Call) and compare.left.name.upper() == 'COUNT':
-        try:
-            call = _condition_call(compare.left, 'count', parens)
-        except ReadError:
-            call = None
-        if call is not None and not isinstance(_leftmost(compare.right), (Quoted, Names)):
-            return UnresolvedCountNode(call, op, arithmetic(compare.right, parens))
-    return UnresolvedComparisonNode(_side(compare.left, parens), op, _right_side(compare.right, parens))
+    left, sign, right = compare.children
+    op = cast('ComparisonOperator', str(sign))
+    match left:
+        case Tree(data='call', children=[Token() as name, _, args]) if name.upper() == 'COUNT':
+            try:
+                call = _condition_call(arguments(args), 'count', start(left), parens)
+            except ReadError:
+                call = None
+            if call is not None and not _starts_unarithmetic(right):
+                return UnresolvedCountNode(call, op, arithmetic(right, parens))
+        case _:
+            pass
+    return UnresolvedComparisonNode(_side(left, parens), op, _right_side(right, parens))
 
 
-def _leftmost(syntax: Syntax) -> Syntax:
-    """The first operand *syntax* is written with, where arithmetic starts or does not."""
-    while isinstance(syntax, (Chain, Power)):
-        syntax = syntax.first if isinstance(syntax, Chain) else syntax.base
-    return syntax
+def _starts_unarithmetic(syntax: Syntax) -> bool:
+    """Whether *syntax* is written starting with a quoted label or a list of names, where arithmetic cannot start."""
+    while isinstance(syntax, Tree) and syntax.data in ('sum', 'product', 'power'):
+        syntax = syntax.children[0]
+    return (isinstance(syntax, Token) and syntax.type == 'STRING') or (
+        isinstance(syntax, Tree) and syntax.data == 'namelist'
+    )
 
 
 def _side(syntax: Syntax, parens: int) -> ArithmeticNode | ColumnNode:
     """A comparison's left side: one column of a relation, or arithmetic."""
-    if isinstance(syntax, Columns):
-        if len(syntax.columns) != 1:
-            raise ReadError(syntax.bracket, 'one column')
-        return ColumnNode(syntax.relation, syntax.columns[0])
+    if isinstance(syntax, Tree) and syntax.data == 'columns':
+        relation, bracket, names = syntax.children
+        columns = cast('Tree[Token]', names).children
+        if len(columns) != 1:
+            raise ReadError(cast('Token', bracket).start_pos or 0, 'one column')
+        return ColumnNode(str(relation), str(columns[0]))
     return arithmetic(syntax, parens)
 
 
 def _right_side(syntax: Syntax, parens: int) -> ArithmeticNode | ColumnNode | KeywordNode:
     """A comparison's right side: a quoted label too."""
-    if isinstance(syntax, Quoted):
-        return KeywordNode(syntax.value)
+    if isinstance(syntax, Token) and syntax.type == 'STRING':
+        return KeywordNode(str(syntax))
     return _side(syntax, parens)
 
 
@@ -379,5 +378,5 @@ def parse_condition(text: str) -> Condition | UnresolvedConditionNode:
     """
     return cast(
         'Condition | UnresolvedConditionNode',
-        parse_text(_condition_parser(), _condition, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
+        parse_text(_condition_parser(), _read, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
     )
