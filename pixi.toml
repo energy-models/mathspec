@@ -73,6 +73,12 @@ typst = ">=0.15.0"
 test = "pytest -q -n auto"
 test-coverage = "pytest --cov=mathspec --cov-report=xml --cov-report=term-missing"
 typecheck = "pyrefly check"
+# A thousand mutants under two hash seeds, compared seed by seed with the
+# findings the baseline holds; `fuzz-fresh` runs seeds it never ran.
+fuzz = "python -m tests.fuzz --seeds 0:1000 --hash-seeds --baseline tests/fuzz/baseline.json"
+fuzz-fresh = { cmd = "python -m tests.fuzz --seeds {{ seeds }} --hash-seeds --known tests/fuzz/kinds.json", args = [
+  { arg = "seeds", default = "1000:20000" },
+] }
 # Half the render gate: every model to standalone LaTeX. `compile-tex` in the
 # tex feature is the half that proves the LaTeX is real.
 render-tex = { cmd = "python -m tools.render_tex {{ dir }}", args = [
@@ -161,7 +167,7 @@ depends-on = [{ task = "render-tex", args = ["{{ dir }}"] }]
 # separate steps so a red run names the one that broke; this is the same list
 # for anyone who wants to know before pushing.
 [tasks.ci]
-depends-on = ["lint", "test", "docs-build", "compile-tex"]
+depends-on = ["lint", "test", "fuzz", "docs-build", "compile-tex"]
 
 [feature.template.dependencies]
 copier = ">=9.16"
