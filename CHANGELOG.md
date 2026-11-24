@@ -10,6 +10,10 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
+## Upcoming version
+
+- feat(merge): two fragments may declare one macro alike ([#1043](https://github.com/energy-models/mathspec/pull/1043)).
+
 ## 0.5.0a1 (2026-11-20)
 
 **This alpha will not load every file written for 0.4.x.**
