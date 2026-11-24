@@ -17,8 +17,10 @@ In a [constraint](parameters-variables-constraints.md#constraints), in the
 [objective](parameters-variables-constraints.md#objective), in a
 [named expression](named.md#expressions) and in a
 [macro template](named.md#macros), every `expression:` has one grammar. The
-grammar below states every form that it accepts. In it, `x?` and `[x]` are
-optional, and `x*` repeats any number of times, none included.
+grammar below states every form that it accepts, in the
+[EBNF notation of XML 1.0](https://www.w3.org/TR/xml/#sec-notation): `x?` is
+optional, `x*` repeats any number of times, none included, and `[a-z]` is one
+character of a class.
 
 <!-- expression-grammar:begin -->
 
@@ -33,7 +35,7 @@ names         ::= NAME ("," NAME)*
 atom          ::= NAME
                 | NUMBER
                 | ".inf"
-                | NAME "(" [arguments] ")"
+                | NAME "(" arguments? ")"
                 | "(" arithmetic ")"
 arguments     ::= argument ("," argument)*
 argument      ::= NAME "=" keyword_value
@@ -42,10 +44,11 @@ keyword_value ::= QUOTED
                 | NAME "[" names "]"
                 | "[" names "]"
                 | arithmetic
-NAME       ::= [a-zA-Z_][a-zA-Z0-9_]*
-NUMBER     ::= an integer, or a float as 1.5, 1. or 2.5e-3
-QUOTED     ::= "'" chars "'" | '"' chars '"'
+NAME       ::= [a-zA-Z_] [a-zA-Z0-9_]*
+NUMBER     ::= [0-9]+ "." [0-9]* ([eE] [-+]? [0-9]+)? | [0-9]+ [eE] [-+]? [0-9]+ | [0-9]+
+QUOTED     ::= "'" [^'#xA#xD]* "'" | '"' [^"#xA#xD]* '"'
 COMPARATOR ::= "<=" | ">=" | "=="
+/* [0-9] is a decimal digit of any script. */
 ```
 
 <!-- expression-grammar:end -->
@@ -356,7 +359,7 @@ names               ::= NAME ("," NAME)*
 atom                ::= NAME
                       | NUMBER
                       | ".inf"
-                      | NAME "(" [arguments] ")"
+                      | NAME "(" arguments? ")"
                       | "(" arithmetic ")"
 arguments           ::= argument ("," argument)*
 argument            ::= NAME "=" keyword_value
@@ -365,10 +368,11 @@ keyword_value       ::= QUOTED
                       | NAME "[" names "]"
                       | "[" names "]"
                       | arithmetic
-NAME       ::= [a-zA-Z_][a-zA-Z0-9_]*, other than AND, OR, NOT, True or False in any case
-NUMBER     ::= an integer, or a float as 1.5, 1. or 2.5e-3
-QUOTED     ::= "'" chars "'" | '"' chars '"'
+NAME       ::= [a-zA-Z_] [a-zA-Z0-9_]*
+NUMBER     ::= [0-9]+ "." [0-9]* ([eE] [-+]? [0-9]+)? | [0-9]+ [eE] [-+]? [0-9]+ | [0-9]+
+QUOTED     ::= "'" ("\" [^#xA] | [^'#xA#xD#x5C])* "'" | '"' ("\" [^#xA] | [^"#xA#xD#x5C])* '"'
 COMPARATOR ::= "<=" | ">=" | "==" | "!=" | "<" | ">"
+/* [0-9] is a decimal digit of any script. AND, OR, NOT, True, False and count match in any case. NAME is none of AND, OR, NOT, True and False, in any case. */
 ```
 
 <!-- where-grammar:end -->

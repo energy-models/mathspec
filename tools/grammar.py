@@ -155,6 +155,58 @@ def _spelled(name: str, definition: str) -> str:
     raise KeyError(f'terminal {name} has no spelling for the reference: name it in NAMED_TERMINALS')
 
 
+#: One piece of the regexes the terminals are written in: an escape, a class, an operator, or a character.
+_REGEX_PIECE = re.compile(r'\\d|\(\?:|\[\^?(?:\\.|[^\]])*\]|\\.|[()?*+|.]|.')
+
+#: How a W3C character class writes what a regex class escapes.
+_CLASS_ESCAPES = {'\\n': '#xA', '\\r': '#xD', '\\\\': '#x5C', '\\/': '/'}
+
+
+def _literal(char: str) -> str:
+    return f"'{char}'" if char == '"' else f'"{char}"'
+
+
+def w3c(regex: str) -> str:
+    """*regex*, of the few constructs the terminals use, in the W3C EBNF notation of XML 1.0, section 6.
+
+    Raises:
+        KeyError: A construct the notation has no spelling for, such as a
+            lookaround, so the reference cannot print it.
+    """
+    pieces = []
+    for piece in _REGEX_PIECE.findall(regex):
+        if piece == '\\d':
+            pieces.append('[0-9]')
+        elif piece == '(?:':
+            pieces.append('(')
+        elif piece.startswith('['):
+            inner = piece[1:-1]
+            for escape, spelled in _CLASS_ESCAPES.items():
+                inner = inner.replace(escape, spelled)
+            if inner.endswith('-'):
+                inner = '-' + inner[:-1]
+            pieces.append(f'[{inner}]')
+        elif piece == '.':
+            pieces.append('[^#xA]')
+        elif piece in '()?*+|':
+            pieces.append(piece)
+        elif piece.startswith('\\'):
+            pieces.append(_literal(piece[1]))
+        elif piece == '(?':
+            raise KeyError(f'{regex} has a construct W3C EBNF cannot print')
+        else:
+            pieces.append(_literal(piece))
+    text = ''
+    for piece in pieces:
+        text += piece if not text or text.endswith('(') or piece in (')', '?', '*', '+') else f' {piece}'
+    return text
+
+
+def _raw(grammar: str) -> dict[str, str]:
+    """Each regex terminal *grammar* defines, by name, as its pattern."""
+    return {m[1]: m[2] for m in re.finditer(r'^(_?[A-Z]+)(?:\.\d+)?:\s*/(.+)/$', grammar, re.MULTILINE)}
+
+
 def _terminals(grammar: str) -> dict[str, str]:
     """Each terminal *grammar* defines, by name, as the reference spells it."""
     found = {}
@@ -176,10 +228,11 @@ def _rules(grammar: str) -> list[tuple[str, list[str]]]:
 
 
 def printed(grammar: str, top: str, reserved: tuple[str, ...] = ()) -> str:
-    """*grammar* as the reference's EBNF: rule names as the reference says them, terminals spelled, aliases gone.
+    """*grammar* in the W3C EBNF notation of XML 1.0, section 6: rule names as the reference says them, aliases gone.
 
     A top rule that only names another is left out, and *top* names that one.
-    ``NAME``'s definition lists the *reserved* words it excludes.
+    What the notation cannot say, that a keyword matches in any case and that
+    ``NAME`` excludes the *reserved* words, is one comment under the rules.
 
     Raises:
         KeyError: A rule with no row in [`RULE_NAMES`][], or a terminal with no
@@ -196,7 +249,9 @@ def printed(grammar: str, top: str, reserved: tuple[str, ...] = ()) -> str:
     names[rules[0][0] if passthrough else 'start'] = top
 
     def shown(alternative: str) -> str:
-        return re.sub(r'\b[A-Za-z_]+\b', lambda m: word(m[0]), re.sub(r'\s*->\s*\w+$', '', alternative))
+        written = re.sub(r'\s*->\s*\w+$', '', alternative)
+        written = re.sub(r'\[(\w+)\]', r'\1?', re.sub(r'\[([^\[\]]+ [^\[\]]+)\]', r'(\1)?', written))
+        return re.sub(r'\b[A-Za-z_]+\b', lambda m: word(m[0]), written)
 
     def word(token: str) -> str:
         if token in inlined:
@@ -216,21 +271,27 @@ def printed(grammar: str, top: str, reserved: tuple[str, ...] = ()) -> str:
         lines.append(f'{names[rule]:<{width}} ::= {first}')
         lines.extend(f'{"":<{width}}   | {alternative}' for alternative in rest)
     body = '\n'.join(lines)
-    excluded = (
-        ', '.join(KEYWORDS[w.lower()] for w in reserved[:-1]) + f' or {KEYWORDS[reserved[-1].lower()]}'
-        if reserved
-        else ''
-    )
+    raw = _raw(grammar)
     definitions = {
-        'NAME': '[a-zA-Z_][a-zA-Z0-9_]*' + (f', other than {excluded} in any case' if reserved else ''),
-        'NUMBER': 'an integer, or a float as 1.5, 1. or 2.5e-3',
-        'QUOTED': '"\'" chars "\'" | \'"\' chars \'"\'',
+        'NAME': w3c(NAME),
+        'NUMBER': w3c(raw['NUMBER']),
+        'QUOTED': w3c(raw['STRING']),
         **{listed: terminals[t][1:-1] for t, listed in LISTED_TERMINALS.items() if t in terminals},
     }
     used = [name for name in definitions if re.search(rf'\b{name}\b', body)]
     width = max(len(name) for name in used)
-    fence = '\n'.join(['```text', body, *(f'{name:<{width}} ::= {definitions[name]}' for name in used), '```'])
+    words = [w for w in KEYWORDS.values() if f'"{w}"' in body]
+    notes = ['[0-9] is a decimal digit of any script.']
+    if reserved:
+        notes.append(f'{_listed(words)} match in any case.')
+        notes.append(f'NAME is none of {_listed([KEYWORDS[r.lower()] for r in reserved])}, in any case.')
+    comment = f'/* {" ".join(notes)} */'
+    fence = '\n'.join(['```text', body, *(f'{name:<{width}} ::= {definitions[name]}' for name in used), comment, '```'])
     return f'\n{fence}\n'
+
+
+def _listed(words: list[str]) -> str:
+    return ', '.join(words[:-1]) + f' and {words[-1]}' if len(words) > 1 else ''.join(words)
 
 
 def expression_grammar() -> str:

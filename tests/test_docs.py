@@ -151,7 +151,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
     published = re.search(r'^NAME\s*::=\s*(.+)$', page, re.MULTILINE)
     assert published is not None, 'the expressions page no longer publishes a NAME production'
 
-    assert published.group(1).strip() == NAME, (
+    assert published.group(1).strip() == grammar.w3c(NAME), (
         f'docs/reference/language/expressions.md publishes NAME as {published.group(1).strip()!r}, '
         f'and expression_parser.NAME is {NAME!r} — the page and the loader must spell a name the same way'
     )
