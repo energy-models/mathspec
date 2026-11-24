@@ -16,21 +16,37 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from functools import lru_cache
-from typing import TYPE_CHECKING, cast, get_args
-
-import pyparsing as pp
+from functools import cache, lru_cache
+from typing import TYPE_CHECKING, cast
 
 from mathspec._expression_parser import (
-    ARITHMETIC,
-    COLUMNS,
     NAME,
     ArithmeticNode,
+    Boolean,
+    Call,
+    Chain,
+    Columns,
+    ColumnsNode,
+    Compare,
+    Junction,
+    Keyword,
     KeywordNode,
     NameNode,
+    Names,
+    Negation,
+    Paren,
+    Power,
+    Quoted,
+    ReadError,
+    Syntax,
+    Word,
+    arithmetic,
     children,
+    grammar_parser,
     keywords,
+    nest,
     parse_text,
+    unquoter,
 )
 from mathspec._frozen import Frozen
 from mathspec.program import (
@@ -45,7 +61,9 @@ from mathspec.program import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
+
+    from lark import Lark
 
 # ---------------------------------------------------------------------------
 # AST nodes
@@ -123,111 +141,172 @@ ParsedCondition = Condition | UnresolvedConditionNode | ArithmeticNode | ColumnN
 # Grammar
 # ---------------------------------------------------------------------------
 
+#: The characters a reserved word may not touch on either side: whatever
+#: ``str.upper`` turns into a letter, a digit, ``_`` or ``$``. So ``0AND``
+#: holds no ``AND``.
+_KEYWORD_EDGE = r'[A-Za-z0-9_$\u0131\u017f]'
 
-def _condition_call(tokens: pp.ParseResults) -> UnresolvedConditionCallNode:
-    """The call node, with a keyword given twice refused as the arithmetic grammar refuses it."""
-    name, operand, *pairs = tokens
+#: The words of the where language, in any case. A name spelled as one of
+#: them is the word, wherever it stands.
+RESERVED = ('AND', 'OR', 'NOT', 'TRUE', 'FALSE')
+
+_CONDITION_RULES = r"""
+start: or_
+?or_: and_ (_OR and_)*
+?and_: not_ (_AND not_)*
+?not_: _NOT not_ -> negation
+     | cmp
+?cmp: sum (COMP sum)?
+?atom: NAME -> name
+     | NUMBER -> number
+     | DOTINF -> dotinf
+     | STRING -> string
+     | TRUE -> true
+     | FALSE -> false
+     | NAME LSQB names _RSQB -> columns
+     | LSQB names _RSQB -> namelist
+     | NAME LPAR [args] _RPAR -> call
+     | LPAR or_ _RPAR -> paren
+args: arg (_COMMA arg)*
+?arg: NAME _EQUAL or_ -> kwarg
+    | or_
+COMP: /<=|>=|==|!=|<|>/
+STRING: /'(?:\\.|[^'\n\r\\])*'|"(?:\\.|[^"\n\r\\])*"/
+""" + ''.join(
+    f'{"" if word in ("TRUE", "FALSE") else "_"}{word}.2: '
+    f'/(?<!{_KEYWORD_EDGE})(?i:{word.lower()})(?!{_KEYWORD_EDGE})/\n'
+    for word in RESERVED
+)
+
+
+@cache
+def _condition_parser() -> Lark:
+    """Built on first use, as the expression parser is."""
+    return grammar_parser(_CONDITION_RULES, unquoter(escapes=True))
+
+
+def _condition(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
+    """*syntax* as a condition: ``OR`` over ``AND`` over ``NOT``, each folded left."""
+    if isinstance(syntax, Junction) and syntax.kind == 'or':
+        return _fold(Or, [_conjunction(item, parens) for item in syntax.items])
+    return _conjunction(syntax, parens)
+
+
+def _conjunction(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
+    if isinstance(syntax, Junction) and syntax.kind == 'and':
+        return _fold(And, [_negation(item, parens) for item in syntax.items])
+    return _negation(syntax, parens)
+
+
+def _negation(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
+    """``NOT`` takes one atom, and a second ``NOT`` is no atom."""
+    if isinstance(syntax, Negation):
+        return Not(cast('Condition', _atom(syntax.operand, parens)))
+    return _atom(syntax, parens)
+
+
+def _fold(
+    node_type: type[And] | type[Or], items: list[Condition | UnresolvedConditionNode]
+) -> Condition | UnresolvedConditionNode:
+    result = items[0]
+    for item in items[1:]:
+        result = node_type(cast('Condition', result), cast('Condition', item))
+    return result
+
+
+def _atom(syntax: Syntax, parens: int) -> Condition | UnresolvedConditionNode:
+    """One operand of a connective: a literal, a comparison, a condition call, a name, or a bracketed condition."""
+    match syntax:
+        case Boolean(value=value):
+            return BooleanLiteral(value)
+        case Compare():
+            return _comparison(syntax, parens)
+        case Call():
+            return _condition_call(syntax, syntax.name, parens)
+        case Word(text=text):
+            return NameNode(text)
+        case Paren(inner=inner):
+            return _condition(inner, nest(parens, syntax))
+        case _:
+            raise ReadError(syntax.pos, 'a condition')
+
+
+def _condition_call(call: Call, name: str, parens: int) -> UnresolvedConditionCallNode:
+    """``<name>(<condition>[, <kwarg>…])``, the one call whose first argument is a condition."""
+    if not call.args or isinstance(call.args[0], Keyword):
+        raise ReadError(call.pos, 'a condition as the first argument')
+    operand = _condition(call.args[0], parens)
+    pairs: list[tuple[str, ArithmeticNode]] = []
+    for arg in call.args[1:]:
+        if not isinstance(arg, Keyword):
+            raise ReadError(arg.pos, 'a keyword argument')
+        pairs.append((arg.key, _call_keyword(arg.value, parens)))
     return UnresolvedConditionCallNode(name, operand, keywords(name, pairs))
 
 
-def _build_condition_grammar() -> pp.ParserElement:
-    """Build the pyparsing grammar for conditions.
+def _call_keyword(syntax: Syntax, parens: int) -> ArithmeticNode:
+    """A condition call's keyword value: a quoted label, a relation's columns, or arithmetic, and no list of names."""
+    match syntax:
+        case Quoted(value=value):
+            return KeywordNode(value)
+        case Columns(relation=relation, columns=columns):
+            return ColumnsNode(relation, columns)
+        case _:
+            return arithmetic(syntax, parens)
 
-    Both quote characters are accepted because YAML already owns one of them.
-    ``NOT`` binds tightest, then ``AND``, then ``OR``. A comparison is tried
-    before a bare name, since its left side begins with one.
+
+def _comparison(compare: Compare, parens: int) -> UnresolvedConditionNode:
+    """``side <op> side``, or a count against arithmetic, which is tried first.
+
+    A ``count(...)`` whose first argument is no condition, or whose right side
+    starts with no arithmetic, is an arithmetic call compared like any other
+    side. Once the right side starts as arithmetic, the count is kept, and a
+    right side that does not stay arithmetic is refused.
     """
-    condition = pp.Forward()
-
-    true_lit = pp.CaselessKeyword('True').set_parse_action(lambda: BooleanLiteral(True))
-    false_lit = pp.CaselessKeyword('False').set_parse_action(lambda: BooleanLiteral(False))
-
-    name = pp.Regex(NAME)
-    # pyrefly: ignore[implicit-any-lambda]
-    column = (name + pp.Suppress('[') + name + pp.Suppress(']')).set_parse_action(lambda t: ColumnNode(t[0], t[1]))
-    quoted = (pp.QuotedString("'", esc_char='\\') | pp.QuotedString('"', esc_char='\\')).set_parse_action(
-        # pyrefly: ignore[implicit-any-lambda]
-        lambda t: KeywordNode(t[0])
-    )
-    comparator = pp.one_of(list(get_args(ComparisonOperator)))
-
-    kwarg = (name + pp.Suppress('=') + (quoted | COLUMNS | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
-
-    def _call(head: pp.ParserElement) -> pp.ParserElement:
-        """``<head>(<condition>[, <kwarg>…])`` — the one shape whose operand is a condition.
-
-        ``count`` is spelled in the grammar rather than left to resolution, as
-        ``position`` is, because only the grammar can decide to read its
-        argument as a condition. Every other condition-taking call stands where
-        arithmetic cannot, so the comparison above it has already been tried
-        and the name is free.
-        """
-        return (
-            head + pp.Suppress('(') + condition + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
-        ).set_parse_action(_condition_call)
-
-    count_call = _call(pp.CaselessKeyword('count'))
-    condition_call = _call(name.copy())
-
-    count_comparison = (count_call + comparator + ARITHMETIC).set_parse_action(
-        # pyrefly: ignore[implicit-any-lambda]
-        lambda t: UnresolvedCountNode(t[0], t[1], t[2])
-    )
-    comparison = (
-        (column | ARITHMETIC) + comparator + (quoted | column | ARITHMETIC)
-        # pyrefly: ignore[implicit-any-lambda]
-    ).set_parse_action(lambda t: UnresolvedComparisonNode(t[0], t[1], t[2]))
-    # pyrefly: ignore[implicit-any-lambda]
-    existence = name.copy().set_parse_action(lambda t: NameNode(t[0]))
-
-    atom = (
-        true_lit
-        | false_lit
-        | count_comparison
-        | comparison
-        | condition_call
-        | existence
-        | (pp.Suppress('(') + condition + pp.Suppress(')'))
-    )
-
-    NOT = pp.CaselessKeyword('NOT').suppress()
-    # pyrefly: ignore[implicit-any-lambda]
-    not_expr = (NOT + atom).set_parse_action(lambda t: Not(t[0])) | atom
-
-    AND = pp.CaselessKeyword('AND').suppress()
-    and_expr = not_expr + pp.ZeroOrMore(AND + not_expr)
-    and_expr.set_parse_action(_folder(And))
-
-    OR = pp.CaselessKeyword('OR').suppress()
-    or_expr = and_expr + pp.ZeroOrMore(OR + and_expr)
-    or_expr.set_parse_action(_folder(Or))
-
-    condition <<= or_expr
-    return condition
+    op = cast('ComparisonOperator', compare.op)
+    if isinstance(compare.left, Boolean):
+        raise ReadError(compare.left.pos, 'a comparison side')
+    if isinstance(compare.left, Call) and compare.left.name.upper() == 'COUNT':
+        try:
+            call = _condition_call(compare.left, 'count', parens)
+        except ReadError:
+            call = None
+        if call is not None and not isinstance(_leftmost(compare.right), (Quoted, Names)):
+            return UnresolvedCountNode(call, op, arithmetic(compare.right, parens))
+    return UnresolvedComparisonNode(_side(compare.left, parens), op, _right_side(compare.right, parens))
 
 
-def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Condition | UnresolvedConditionNode]:
-    """A parse action left-folding a flat operator chain into *node_type*."""
-
-    def fold(tokens: pp.ParseResults) -> Condition | UnresolvedConditionNode:
-        items: list[Condition | UnresolvedConditionNode] = list(tokens)
-        result = items[0]
-        for item in items[1:]:
-            result = node_type(cast('Condition', result), cast('Condition', item))
-        return result
-
-    return fold
+def _leftmost(syntax: Syntax) -> Syntax:
+    """The first operand *syntax* is written with, where arithmetic starts or does not."""
+    while isinstance(syntax, (Chain, Power)):
+        syntax = syntax.first if isinstance(syntax, Chain) else syntax.base
+    return syntax
 
 
-_CONDITION_GRAMMAR = _build_condition_grammar()
+def _side(syntax: Syntax, parens: int) -> ArithmeticNode | ColumnNode:
+    """A comparison's left side: one column of a relation, or arithmetic."""
+    if isinstance(syntax, Columns):
+        if len(syntax.columns) != 1:
+            raise ReadError(syntax.bracket, 'one column')
+        return ColumnNode(syntax.relation, syntax.columns[0])
+    return arithmetic(syntax, parens)
+
+
+def _right_side(syntax: Syntax, parens: int) -> ArithmeticNode | ColumnNode | KeywordNode:
+    """A comparison's right side: a quoted label too."""
+    if isinstance(syntax, Quoted):
+        return KeywordNode(syntax.value)
+    return _side(syntax, parens)
 
 
 def _named_rewrite(text: str, loc: int) -> str | None:
-    """The rewrite for a connective habit of pandas or C, or a comparison of several columns, or ``None``.
+    """The rewrite for a connective habit of pandas or C, a comparison of several columns, a reserved word, or ``None``.
 
     ``!=``, ``<`` and ``>`` are legal here, so only the tokens no condition
     admits are diagnosed. The grammar gives up at the bracket of
-    ``relation[a, b]``, since a comparison reads one column.
+    ``relation[a, b]``, since a comparison reads one column. A reserved word
+    written as a name stops the grammar at the word, or, for ``NOT``,
+    ``True`` and ``False``, at what follows it.
     """
     rest = text[loc:].lstrip()
     if rest.startswith('&'):
@@ -244,7 +323,22 @@ def _named_rewrite(text: str, loc: int) -> str | None:
         relation, columns = before.group(1), [c.strip() for c in listed.group(1).split(',')]
         each = ' AND '.join(f'{relation}[{column}] == …' for column in columns)
         return f"a comparison reads one column of '{relation}'. Compare each column on its own: {each}."
-    return None
+    return _reserved_rewrite(text, loc, rest)
+
+
+def _reserved_rewrite(text: str, loc: int, rest: str) -> str | None:
+    at = re.match(NAME, rest)
+    before = re.search(rf'({NAME})\s*$', text[:loc])
+    if at and at.group().upper() in RESERVED and not text[:loc].endswith(tuple('0123456789')):
+        word = at.group()
+    elif before and before.group(1).upper() in ('NOT', 'TRUE', 'FALSE'):
+        word = before.group(1)
+    else:
+        return None
+    return (
+        f"'{word}' is one of AND, OR, NOT, True and False, which a where string reserves in any case, "
+        f'so it names no entry here. If an entry has that name, rename it.'
+    )
 
 
 _DEEP_REWRITE = (
@@ -285,5 +379,5 @@ def parse_condition(text: str) -> Condition | UnresolvedConditionNode:
     """
     return cast(
         'Condition | UnresolvedConditionNode',
-        parse_text(_CONDITION_GRAMMAR, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
+        parse_text(_condition_parser(), _condition, text, 'condition', _named_rewrite, nested, _DEEP_REWRITE),
     )
