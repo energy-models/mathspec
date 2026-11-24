@@ -346,6 +346,29 @@ def test_merge_composes_the_model_and_override_configures_the_run():
     assert to_spec(run).variables['gen_p'].where == 'gen_p_max > 0'
 
 
+def _costing(name: str, template: str = 'sum(x * c)') -> dict[str, object]:
+    """A fragment that declares the macro `cost` with *template*, and calls it on its own *name*."""
+    return {
+        'dimensions': {name: {'dtype': 'str'}},
+        'parameters': {f'{name}_c': {'dims': [name]}},
+        'variables': {f'{name}_p': {'dims': [name], 'bounds': {'lower': 0}}},
+        'macros': {'cost': {'args': ['x', 'c'], 'template': template}},
+        'expressions': {f'{name}_cost': {'expression': f'cost({name}_p, {name}_c)'}},
+    }
+
+
+def test_a_macro_two_fragments_declare_alike_is_one_macro():
+    """Two fragments that called one macro could each load alone or merge, not both."""
+    composed = merge([_costing('generator'), _costing('store')])
+    assert list(composed.macros) == ['cost'], 'the macro both fragments declare is one macro of the composition'
+    assert sorted(composed.expressions) == ['generator_cost', 'store_cost']
+
+
+def test_a_macro_two_fragments_declare_apart_is_refused():
+    with pytest.raises(LanguageError, match=r"say different things about the macro 'cost'"):
+        merge([_costing('generator'), _costing('store', template='sum(x * c) + 1')])
+
+
 def test_every_section_a_fragment_owns_reaches_the_composition():
     """`merge` listed its sections by hand, so `assumptions:` fell out of every composed spec."""
     assumed = {**DEMAND, 'assumptions': {'dem_load_positive': 'dem_load >= 0'}}

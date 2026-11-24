@@ -129,6 +129,11 @@ OWNED_SECTIONS = tuple(
     if get_origin(field.annotation) is Frozen and name not in SHARED_SECTIONS
 )
 
+ALIKE_SECTIONS = (*SHARED_SECTIONS, 'macros')
+"""The sections `merge` folds where every fragment that declares an entry declares it alike. A macro computes nothing
+of its own, so two fragments that call one macro may each declare it.
+"""
+
 GIVEN_KINDS = {
     'parameters': 'given parameter',
     'variables': 'given variable',
@@ -163,7 +168,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     Raises:
         LanguageError: A fragment does not load on its own; two fragments
             declare one name; two fragments say different things about one
-            dimension, relation or given entry; a fragment reads a name as
+            dimension, relation, macro or given entry; a fragment reads a name as
             something other than what its sibling introduces, as another kind
             of thing, or over fewer dimensions than its body carries; a fragment
             adds a term to a variable, a parameter, a constraint or a
@@ -180,7 +185,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     merged: dict[str, object] = {'version': _one_version(read)}
     if description is not None:
         merged['description'] = description
-    for section in SHARED_SECTIONS:
+    for section in ALIKE_SECTIONS:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
@@ -188,7 +193,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
         kind: _agreed(asked, kind, label, 'read it over the same dims', owner=GivenSpec)
         for kind, label in GIVEN_KINDS.items()
     }
-    for section in OWNED_SECTIONS:
+    for section in (section for section in OWNED_SECTIONS if section not in ALIKE_SECTIONS):
         if claimed := _claimed(read, section):
             merged[section] = claimed
     summed = _summed(loaded, merged, readings['expressions'], read)

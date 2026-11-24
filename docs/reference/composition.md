@@ -176,20 +176,21 @@ The objective is the one that `network.yaml` sets.
 ### Each kind of entry
 
 Two fragments may share a [dimension](language/dimensions.md), a
-[relation](language/relations.md), a given entry or a sum.
+[relation](language/relations.md), a [macro](language/named.md#macros), a
+given entry or a sum.
 
-| The entry                                         | What `merge` does                                                                                                                |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| a dimension or a relation                         | accepts it from every fragment that declares it, where every fragment declares it the same way                                   |
-| a `description` on a shared dimension or relation | keeps the first wording in the list                                                                                              |
-| `ordered: true` on a shared dimension             | makes the dimension ordered if one fragment sets it                                                                              |
-| `missing:` on a shared relation                   | requires the same value from every fragment that declares the relation, where `missing: refused` and no `missing:` are one value |
-| an entry under `given:`                           | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))                        |
-| an expression with `adds_to:`                     | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                               |
-| `objective`                                       | takes it from the one fragment that sets it, and refuses a second                                                                |
-| `version`                                         | requires the same value from every fragment                                                                                      |
-| `description` at the top of a fragment            | drops it                                                                                                                         |
-| any other entry                                   | takes it from the one fragment that declares it, and refuses a second                                                            |
+| The entry                                                | What `merge` does                                                                                                                |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| a dimension, a relation or a macro                       | accepts it from every fragment that declares it, where every fragment declares it the same way                                   |
+| a `description` on a shared dimension, relation or macro | keeps the first wording in the list                                                                                              |
+| `ordered: true` on a shared dimension                    | makes the dimension ordered if one fragment sets it                                                                              |
+| `missing:` on a shared relation                          | requires the same value from every fragment that declares the relation, where `missing: refused` and no `missing:` are one value |
+| an entry under `given:`                                  | checks it against the fragment that declares the name, then folds it in ([given entries](#given-entries))                        |
+| an expression with `adds_to:`                            | adds it as a term to the sum in its `adds_to:` ([terms and sums](#terms-and-sums))                                               |
+| `objective`                                              | takes it from the one fragment that sets it, and refuses a second                                                                |
+| `version`                                                | requires the same value from every fragment                                                                                      |
+| `description` at the top of a fragment                   | drops it                                                                                                                         |
+| any other entry                                          | takes it from the one fragment that declares it, and refuses a second                                                            |
 
 ### Terms and sums
 
