@@ -10,6 +10,10 @@ request renames that heading to the version and the day, such as
 `## 0.1.0 (2026-10-01)`, and edits the section into the release notes. Merging
 it releases that version ([RELEASING.md](https://github.com/energy-models/mathspec/blob/main/RELEASING.md)).
 
+## Upcoming version
+
+- feat(language): a dimension may alias another's labels ([#1029](https://github.com/energy-models/mathspec/pull/1029))
+
 ## 0.5.0a1 (2026-11-20)
 
 **This alpha will not load every file written for 0.4.x.**
@@ -78,7 +82,6 @@ The pull requests in this release:
 
 ### Examples
 
-- feat(language): a dimension may alias another's labels ([#1029](https://github.com/energy-models/mathspec/pull/1029))
 - docs(examples): TIMES examples and a sparse-set example ([#1021](https://github.com/energy-models/mathspec/pull/1021))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))
