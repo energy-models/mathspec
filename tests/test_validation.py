@@ -1106,6 +1106,11 @@ class TestAConditionIsAnOperand:
                 id='a-count-inside-arithmetic',
             ),
             pytest.param(
+                'count(flag, over=g) >= lk[h]',
+                ('count() is not alone on the left of its comparison',),
+                id='a-count-against-a-column',
+            ),
+            pytest.param(
                 'count(flag, over=c) >= 2',
                 ('count(<condition>, over=) is not a declared dimension',),
                 id='a-count-over-a-parameter',

@@ -4,13 +4,16 @@
 
 """Both grammars read every string as the frozen pyparsing grammars do: the same tree, or a refusal for the same cause.
 
-Two differences are deliberate, and [`excused`][] names each:
+Three differences are deliberate, and [`excused`][] names each:
 
 - a string pyparsing ran out of stack on is read, and held to the depth cap
   (#1041);
 - a where string that uses ``AND``, ``OR``, ``NOT``, ``True`` or ``False``,
   in any case, as a name is refused, since those words are reserved there
-  (#1040).
+  (#1040);
+- a ``count(...)`` compared with what pyparsing's arithmetic read only the
+  start of, as ``count(x, over=g) > rel[c]``, parses as an arithmetic call,
+  which resolution refuses with the rewrite.
 
 The oracle reads quoted labels by the rule the reference states, so labels
 are compared and not excused.
@@ -30,8 +33,8 @@ from random import Random
 
 import pytest
 
-from mathspec._condition_parser import RESERVED, parse_condition
-from mathspec._expression_parser import parse_expression
+from mathspec._condition_parser import RESERVED, UnresolvedComparisonNode, parse_condition
+from mathspec._expression_parser import FunctionCallNode, parse_expression
 from mathspec.errors import SchemaError
 from tests.grammar.generate import example_strings, nested_shapes, strings
 from tests.grammar.oracle import Grammar, Refused, oracle
@@ -89,9 +92,30 @@ def names_in(node: object) -> Iterator[str]:
                 yield from names_in(value)
 
 
+def arithmetic_counts(node: object) -> Iterator[object]:
+    """Every comparison in *node* whose left side is ``count`` read as an arithmetic call."""
+    if (
+        isinstance(node, UnresolvedComparisonNode)
+        and isinstance(node.left, FunctionCallNode)
+        and node.left.name.upper() == 'COUNT'
+    ):
+        yield node
+    if dataclasses.is_dataclass(node) and not isinstance(node, type):
+        for field in dataclasses.fields(node):
+            yield from arithmetic_counts(getattr(node, field.name))
+    elif isinstance(node, Mapping):
+        for value in node.values():
+            yield from arithmetic_counts(value)
+    elif isinstance(node, tuple):
+        for item in node:
+            yield from arithmetic_counts(item)
+
+
 def excused(grammar: Grammar, old: object, new: object) -> bool:
-    """Whether the two part in one of the two ways the module docstring names."""
+    """Whether the two part in one of the three ways the module docstring names."""
     if isinstance(old, Refused) and old.why == 'out of stack':
+        return True
+    if old == Refused('syntax') and not isinstance(new, Refused) and any(arithmetic_counts(new)):
         return True
     return (
         grammar == 'condition'
