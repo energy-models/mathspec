@@ -275,7 +275,7 @@ def test_prettier_has_not_split_a_version_placeholder(page: Path):
 @pytest.mark.parametrize(
     ('name', 'pattern'),
     [
-        pytest.param('release', r'\d+\.\d+\.\d+', id='release'),
+        pytest.param('release', r'\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?', id='release'),
         pytest.param('language_version', r'\d+', id='language-version'),
     ],
 )
