@@ -693,6 +693,37 @@ def test_a_patch_that_rewrites_a_dimension_is_refused(patch, says):
 
 
 @pytest.mark.parametrize(
+    ('patch', 'says'),
+    [
+        pytest.param(
+            {'macros': {'cost': {'template': '2 * sum(x * c)'}}},
+            'Restate the macro as its base declares it',
+            id='template-rewritten',
+        ),
+        pytest.param(
+            {'macros': {'cost': None}},
+            'remove the entries written over it one at a time',
+            id='removed',
+        ),
+    ],
+)
+def test_a_patch_that_rewrites_a_macro_is_refused(patch, says):
+    """A patch rewrote a macro's template under every call the base makes, so the base's math changed unseen."""
+    with pytest.raises(LanguageError) as raised:
+        override(_costing('generator'), [patch])
+    assert says in str(raised.value), 'the refusal names the rewrite rather than only what is wrong'
+
+
+def test_a_patch_adds_a_macro_and_may_describe_one_it_shares():
+    laid = override(
+        _costing('generator'),
+        [{'macros': {'cost': {'description': 'Cost of x at c.'}, 'twice': {'args': ['x'], 'template': '2 * x'}}}],
+    )
+    assert laid.macros['cost'].description == 'Cost of x at c.'
+    assert sorted(laid.macros) == ['cost', 'twice'], 'the patch adds its own macro beside the shared one'
+
+
+@pytest.mark.parametrize(
     'restated',
     [
         pytest.param({}, id='no-field'),

@@ -19,10 +19,10 @@ such as ``'#2'``.
 [`merge`][] writes nothing a fragment did not write, except a ``+``. It
 joins fragments' text in one place, a named expression that terms add to;
 every other entry is copied as written, refused where two fragments own it,
-or held identical where it is a dimension or a relation.
+or held identical where it is a dimension, a relation or a macro.
 What that means for each section:
 
-* **A dimension or a relation every fragment may declare**, and the ones that
+* **A dimension, a relation or a macro every fragment may declare**, and the ones that
   do have to say the same thing about it. Prose is not a claim, so two
   descriptions of one dimension agree, and the first one given is carried.
   ``ordered`` is a claim about the space, not the space, so a dimension one
@@ -79,8 +79,8 @@ What a patch may say, and what is refused:
 * **Patches are laid in order.** Each is laid on the base with every
   earlier patch laid on it, so a later patch wins a field an earlier one
   writes, and edits or removes an entry an earlier one creates.
-* **A patch adds a dimension or a relation, and does not change one its
-  base declares.** It may change only the ``description``, a dimension's
+* **A patch adds a dimension, a relation or a macro, and does not change one
+  its base declares.** It may change only the ``description``, a dimension's
   ``ordered`` and a relation's ``missing``, and may write them alone. A
   dimension may gain ``ordered: true`` and may not lose it. An entry that
   writes any other field must declare it as the base does, a field it leaves
@@ -116,11 +116,15 @@ if TYPE_CHECKING:
     from mathspec.program import Program
     from mathspec.spec import DimensionSpec
 
-SHARED_SECTIONS = ('dimensions', 'relations')
+SHARED_SECTIONS = ('dimensions', 'relations', 'macros')
 
-SETTINGS: dict[str, frozenset[str]] = {'dimensions': frozenset({'ordered'}), 'relations': frozenset({'missing'})}
-"""The fields of a dimension or a relation, other than ``description``, that a patch may change. A patch may change no
-other field of one that its base declares.
+SETTINGS: dict[str, frozenset[str]] = {
+    'dimensions': frozenset({'ordered'}),
+    'relations': frozenset({'missing'}),
+    'macros': frozenset(),
+}
+"""The fields of a shared entry, other than ``description``, that a patch may change. A patch may change no other field
+of one that its base declares.
 """
 
 OWNED_SECTIONS = tuple(
@@ -128,11 +132,6 @@ OWNED_SECTIONS = tuple(
     for name, field in Spec.model_fields.items()
     if get_origin(field.annotation) is Frozen and name not in SHARED_SECTIONS
 )
-
-ALIKE_SECTIONS = (*SHARED_SECTIONS, 'macros')
-"""The sections `merge` folds where every fragment that declares an entry declares it alike. A macro computes nothing
-of its own, so two fragments that call one macro may each declare it.
-"""
 
 GIVEN_KINDS = {
     'parameters': 'given parameter',
@@ -185,7 +184,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
     merged: dict[str, object] = {'version': _one_version(read)}
     if description is not None:
         merged['description'] = description
-    for section in ALIKE_SECTIONS:
+    for section in SHARED_SECTIONS:
         if agreed := _agreed(read, section, _singular(section), 'give one of them a name of its own'):
             merged[section] = agreed
     asked = {name: spec.given.model_dump(exclude_unset=True) for name, spec in loaded.items()}
@@ -193,7 +192,7 @@ def merge(fragments: Sequence[Source], description: str | None = None) -> Spec:
         kind: _agreed(asked, kind, label, 'read it over the same dims', owner=GivenSpec)
         for kind, label in GIVEN_KINDS.items()
     }
-    for section in (section for section in OWNED_SECTIONS if section not in ALIKE_SECTIONS):
+    for section in OWNED_SECTIONS:
         if claimed := _claimed(read, section):
             merged[section] = claimed
     summed = _summed(loaded, merged, readings['expressions'], read)
@@ -699,7 +698,7 @@ def override(base: Source, patches: Sequence[Source]) -> Spec:
         LanguageError: The base does not load; the patched spec does not
             load; a patch edits or removes an entry its base does not
             declare; a patch creates one that is not whole; a patch redeclares
-            or removes a dimension or a relation; or a patch sets a whole
+            or removes a dimension, a relation or a macro; or a patch sets a whole
             section to ``null``.
         FileNotFoundError: A ``str`` with no newline that names no file.
         TypeError: *patches* is one path rather than a list.
@@ -852,7 +851,7 @@ def _given(declared: dict[str, object], patch: dict[str, object], name: str) -> 
 
 
 def _shared(declared: dict[str, object], patch: dict[str, object], section: str, name: str) -> dict[str, object]:
-    """One ``dimensions`` or ``relations`` section: a patch adds one or restates one, never changes or drops it.
+    """One shared section: a patch adds an entry or restates one, never changes or drops it.
 
     A patch may change the description and the [`SETTINGS`][] of one its
     base declares, and ``null`` puts back the default. A dimension may gain
