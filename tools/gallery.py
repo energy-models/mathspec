@@ -55,7 +55,7 @@ MODELS = {
     'sos.md': ROOT / 'examples' / 'sos.yaml',
     'piecewise_lp.md': ROOT / 'examples' / 'piecewise_lp.yaml',
     'piecewise_incremental.md': ROOT / 'examples' / 'piecewise_incremental.yaml',
-    'library/surface.md': LIBRARY / 'surface.yaml',
+    'library/interface.md': LIBRARY / 'interface.yaml',
     'library/generator.md': LIBRARY / 'generator.yaml',
     'library/load.md': LIBRARY / 'load.yaml',
     'pypsa/generator_commitment.md': PYPSA / 'generator_commitment.yaml',
@@ -102,7 +102,7 @@ PURPOSE = {
 #: of its own, so each one prints as the spec it lands on, in a tab of its own.
 COMPOSED = {
     'library/composed.md': (
-        [LIBRARY / name for name in ('surface.yaml', 'generator.yaml', 'load.yaml')],
+        [LIBRARY / name for name in ('interface.yaml', 'generator.yaml', 'load.yaml')],
         {path.stem: path for path in sorted((LIBRARY / 'variants').glob('*.yaml'))},
     ),
 }

@@ -5,13 +5,13 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # The composed spec
 
-[`merge`](../../reference/composition.md#merge) composes [the surface](surface.md),
+[`merge`](../../reference/composition.md#merge) composes [the interface](interface.md),
 [generators](generator.md) and [loads](load.md) into one spec:
 
 ```python
 import mathspec as ms
 
-spec = ms.merge(['surface.yaml', 'generator.yaml', 'load.yaml'])
+spec = ms.merge(['interface.yaml', 'generator.yaml', 'load.yaml'])
 ```
 
 The file below is `spec` written as YAML, with every default spelled out. The
@@ -19,9 +19,9 @@ file is not one of the files under `examples/library/`.
 
 Each component fragment lists `Port_p` under
 [`given:`](../../reference/glossary.md#given), and `merge` folds each given
-`Port_p` into the entry the surface declares. So `Port_p` is one entry here.
+`Port_p` into the entry the interface declares. So `Port_p` is one entry here.
 
-The surface sets the objective, which is to minimise `total_cost`. The
+The interface sets the objective, which is to minimise `total_cost`. The
 generator file is the only fragment with a cost, so `merge` builds
 `total_cost` from the one [term](../../reference/glossary.md#term) `Generator_cost`. A second fragment with a cost
 would add its own term to `total_cost`.

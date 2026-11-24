@@ -9,7 +9,7 @@ This [fragment](../../reference/glossary.md#fragment) states `Load` from an open
 The file declares the relation `Load_port`, the parameter `Load_p_set` and the
 constraint `Load_withdrawal`. The minus sign in front of `Load_p_set` is the
 only place where the file uses the sign convention of
-[the surface](surface.md).
+[the interface](interface.md).
 
 <!-- gallery:begin -->
 ```yaml
@@ -18,7 +18,7 @@ given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: declared by the surface, and fixed at each load's port by `Load_withdrawal`
+      description: declared by the interface, and fixed at each load's port by `Load_withdrawal`
 dimensions:
   snapshot: { dtype: datetime, description: dispatch periods }
   port: { dtype: str, description: "the connections components make, one label per connection" }
@@ -42,7 +42,7 @@ PyPSA's `Load`, wired to a port rather than straight to a bus. What a load takes
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — declared by the surface, and fixed at each load's port by `Load_withdrawal` |
+| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — declared by the interface, and fixed at each load's port by `Load_withdrawal` |
 
 #### Sets
 
@@ -69,7 +69,7 @@ f_{\mathrm{Load\_port}(d),t} = -\mathrm{load}_{d,t} \qquad \forall\, d \in \math
 
 !!! info "See also"
 
-    - [The coupling surface](surface.md), for the sign convention
+    - [The interface](interface.md), for the sign convention
     - [Generators](generator.md), for the component file that has a variable and a
       cost
     - [The composed spec](composed.md), for the spec once `merge` joins this file

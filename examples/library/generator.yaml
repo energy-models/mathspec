@@ -10,7 +10,7 @@ given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: declared by the surface, and fixed at each generator's port by `Generator_injection`
+      description: declared by the interface, and fixed at each generator's port by `Generator_injection`
   expressions:
     total_cost: { dims: [] }
 dimensions:

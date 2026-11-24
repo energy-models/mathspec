@@ -153,6 +153,13 @@ column. `within=<relation>[<column>]` makes `shift`, `sum_back` or
 `position()` work separately in each group, such as each season of a year
 ([partitions](language/relations.md#partitions)).
 
+## Interface
+
+An interface is the fragment that declares what the other fragments of a
+library share, such as the flows, the balances and the objective. Each other
+fragment is written against the interface ([a library's
+interface](../examples/library/interface.md)).
+
 ## Label
 
 A label is one member of a dimension, such as `wind` in `generator`. The
@@ -269,13 +276,6 @@ costs exists.
 A special ordered set (SOS) is an `sos:` entry over one dimension of one
 variable. With `type: 1`, at most one member is non-zero. With `type: 2`, at
 most two consecutive members are non-zero ([sos](language/piecewise.md#sos)).
-
-## Surface
-
-A surface is the fragment that declares what the other fragments of a library
-share, such as the flows, the balances and the objective. Each other fragment
-is written against the surface ([the coupling
-surface](../examples/library/surface.md)).
 
 ## Term
 

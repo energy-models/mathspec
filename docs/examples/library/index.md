@@ -11,13 +11,13 @@ file is a whole spec that states one part of a larger one (a
 [fragment](../../reference/glossary.md#fragment)). mathspec loads each
 fragment on its own, and [the typesetter](../../reference/typeset.md) prints
 it. One fragment declares the names every component shares (the
-[surface](../../reference/glossary.md#surface)), and each component file
-declares its own math against the surface.
+[interface](../../reference/glossary.md#interface)), and each component file
+declares its own math against the interface.
 
 <div class="grid cards" markdown>
 
 <!-- prettier-ignore -->
-- **[The coupling surface](surface.md)** declares the flow, the balance and
+- **[The interface](interface.md)** declares the flow, the balance and
     the objective that every component file uses.
 - **[Generators](generator.md)** is a component file with a variable of its
     own and a cost that adds to `total_cost`.
@@ -39,14 +39,14 @@ symbols of that example.
 
 ```text
 examples/library/
-  surface.yaml               one flow per port, one balance per bus, the objective
+  interface.yaml             one flow per port, one balance per bus, the objective
   generator.yaml             PyPSA's Generator
   load.yaml                  PyPSA's Load
   variants/
     commitment.yaml          a patch over the composed spec
 ```
 
-Each component file sits beside the surface, and the patch sits in its own
+Each component file sits beside the interface, and the patch sits in its own
 folder.
 
 ## How the files divide the spec
@@ -59,7 +59,7 @@ folder.
   the composed spec.
 - Every entry a component file declares, apart from its dimensions, has the
   prefix of its component class. The prefixes `Generator_` and `Load_`
-  separate the names of the two component files, and the surface declares the
+  separate the names of the two component files, and the interface declares the
   names with `Port_` and `Bus_`. Every file declares `snapshot` and `port`
   alike.
 
@@ -71,5 +71,5 @@ folder.
       for a library whose components add a term to one sum instead of sharing a
       flow variable
     - [The composed spec](composed.md), for the patch and the math it adds
-    - [The glossary](../../reference/glossary.md), for fragment, surface, term and
+    - [The glossary](../../reference/glossary.md), for fragment, interface, term and
       patch

@@ -147,8 +147,7 @@ Words to avoid, and what to write instead: consumer (a tool), bind data
 (attach data), mask or predicate (a condition), reject or error out (refuse),
 normal form (the canonical form), unbuilt or masked out (absent), summand
 (a term of a sum), seam,
-surface, lane, tax, closure, sayable (say the plain thing). The coupling
-surface of a component library is a glossary term and is not this fault.
+surface, lane, tax, closure, sayable (say the plain thing).
 
 ## Messages in the code
 

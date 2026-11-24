@@ -9,11 +9,11 @@ This [fragment](../../reference/glossary.md#fragment) states `Generator` from
 an open-source power system framework ([PyPSA](https://pypsa.org)). The file declares its three dimensions, the
 relation `Generator_port`, two parameters and the variable `Generator_p`. The file
 lists `Port_p` and `total_cost` under [`given`](../../reference/language/parameters-variables-constraints.md#given), and
-[the surface](surface.md) declares them. `Generator_cost` is a
+[the interface](interface.md) declares them. `Generator_cost` is a
 [named expression](../../reference/language/named.md#expressions) that adds to
 `total_cost` (a [term](../../reference/glossary.md#term)). `Generator_injection` equates `Generator_p` with the flow at the port through
 [`at`](../../reference/language/operators.md#at), so the balance of the
-surface contains no generator variable.
+interface contains no generator variable.
 
 <!-- gallery:begin -->
 ```yaml
@@ -25,7 +25,7 @@ given:
   variables:
     Port_p:
       dims: [snapshot, port]
-      description: declared by the surface, and fixed at each generator's port by `Generator_injection`
+      description: declared by the interface, and fixed at each generator's port by `Generator_injection`
   expressions:
     total_cost: { dims: [] }
 dimensions:
@@ -61,7 +61,7 @@ PyPSA's `Generator`, wired to a port rather than straight to a bus, and cut to w
 
 | Symbol | Meaning |
 |---|---|
-| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — declared by the surface, and fixed at each generator's port by `Generator_injection` |
+| $`f`$ | `Port_p` over $`\mathcal{J} \times \mathcal{T}`$ — declared by the interface, and fixed at each generator's port by `Generator_injection` |
 | $`\mathit{total\_cost}`$ | `total_cost` (scalar), an expression this file adds `Generator_cost` to |
 
 #### Sets
@@ -118,9 +118,9 @@ f_{\mathrm{Generator\_port}(g),t} = p_{g,t} \qquad \forall\, g \in \mathcal{G},\
 
 !!! info "See also"
 
-    - [The coupling surface](surface.md), for the entries this file lists under
+    - [The interface](interface.md), for the entries this file lists under
       `given`
     - [The composed spec](composed.md), for the spec once `merge` joins this file
-      with the surface and the loads
+      with the interface and the loads
     - [PyPSA](../pypsa/index.md), for the generator with every attribute PyPSA
       has

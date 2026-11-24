@@ -40,7 +40,7 @@ SUPPLY = {
 }
 
 #: The fragment that introduces `flow`, with the bounds and the balance that go with it.
-SURFACE = {
+INTERFACE = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port'], 'bounds': {'lower': -1000, 'upper': 1000}}},
@@ -149,7 +149,7 @@ def test_an_expression_reads_a_given_column_as_it_reads_any_other():
 
 
 def test_merging_folds_the_given_entry_into_the_one_that_introduces_it():
-    spec = merge([SURFACE, SUPPLY])
+    spec = merge([INTERFACE, SUPPLY])
     assert not spec.given, 'the expectation is spent once the column is in the composition'
     assert sorted(spec.variables) == ['flow', 'gen_p']
     assert spec.variables['flow'].bounds.lower == -1000, "the introducer's entry is the one that survives"
@@ -166,7 +166,7 @@ def test_merging_folds_the_given_entry_into_the_one_that_introduces_it():
 )
 def test_a_given_entry_may_say_less_than_the_introducer(reads):
     """Bounds are the introducer's, so the reader states the frame and stops."""
-    composed = merge([SURFACE, {**SUPPLY, 'given': {'variables': {'flow': reads}}}])
+    composed = merge([INTERFACE, {**SUPPLY, 'given': {'variables': {'flow': reads}}}])
     assert composed.variables['flow'].bounds.upper == 1000
 
 
@@ -217,7 +217,7 @@ PORTS_ONLY = {
 )
 def test_a_given_entry_that_disagrees_with_the_introducer_is_refused(misread):
     with pytest.raises(LanguageError, match=r'Restate the dims as .* declares them, or leave the field out') as raised:
-        merge([SURFACE, misread])
+        merge([INTERFACE, misread])
     message = str(raised.value)
     assert "'#2'" in message and "'#1'" in message, 'both sides of a disagreement are named'
 
@@ -245,7 +245,7 @@ def test_two_fragments_must_read_one_column_the_same_way():
 def test_a_fragment_that_reads_what_it_builds_is_refused(given, says):
     """`to_spec` refuses such a file, so a composition refuses it too rather than folding the reading away."""
     with pytest.raises(LanguageError, match=r"fragment '#2' does not load on its own") as raised:
-        merge([SURFACE, {**SUPPLY, 'given': given}])
+        merge([INTERFACE, {**SUPPLY, 'given': given}])
     assert says in str(raised.value), "the fragment's own refusal names the name it reads twice"
 
 

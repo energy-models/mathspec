@@ -78,6 +78,7 @@ The pull requests in this release:
 
 ### Examples
 
+- docs: a library's shared fragment is its interface ([#1038](https://github.com/energy-models/mathspec/pull/1038))
 - docs(examples): TIMES examples and a sparse-set example ([#1021](https://github.com/energy-models/mathspec/pull/1021))
 - docs(examples): units connect to buses through numbered ports that one relation lists, and only the output ports have an efficiency ([#948](https://github.com/energy-models/mathspec/pull/948))
 - docs(pypsa): the example page shows one fragment ([#1010](https://github.com/energy-models/mathspec/pull/1010))

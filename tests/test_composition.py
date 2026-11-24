@@ -31,10 +31,10 @@ from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, varied
 if TYPE_CHECKING:
     from pathlib import Path
 
-#: The coupling surface a component library agrees on: one flow per port, and
+#: The interface a component library agrees on: one flow per port, and
 #: one balance per bus. The two fragments below read `flow` under `given:`, so
 #: each is a spec on its own as well as a piece of the composition.
-SURFACE = {
+INTERFACE = {
     'dimensions': {'snapshot': {'dtype': 'int'}, 'port': {'dtype': 'str'}, 'bus': {'dtype': 'str'}},
     'relations': {'port_bus': {'key': 'port', 'values': 'bus'}},
     'variables': {'flow': {'dims': ['snapshot', 'port']}},
@@ -71,7 +71,7 @@ DEMAND = {
     },
 }
 
-LIBRARY = [SURFACE, SUPPLY, DEMAND]
+LIBRARY = [INTERFACE, SUPPLY, DEMAND]
 
 #: The objective of a composed cost model, set by one file and read off a sum
 #: the other files add a term each to (#801).
@@ -110,7 +110,7 @@ def test_a_fragment_that_does_not_load_on_its_own_is_refused():
     """A sibling's entries must not make a broken file load: a fragment is a spec before it is a piece."""
     unread = {key: value for key, value in SUPPLY.items() if key != 'given'}
     with pytest.raises(LanguageError, match=r"fragment '#2' does not load on its own") as raised:
-        merge([SURFACE, unread, DEMAND])
+        merge([INTERFACE, unread, DEMAND])
     assert "'flow' not found" in str(raised.value), "the fragment's own refusal follows, so the fix is named"
 
 
@@ -233,9 +233,11 @@ def _mapped(missing: str | None) -> dict[str, object]:
 @pytest.mark.parametrize(
     ('fragments', 'missing'),
     [
-        pytest.param([SURFACE, _mapped('refused')], 'refused', id='the-default-written-out'),
+        pytest.param([INTERFACE, _mapped('refused')], 'refused', id='the-default-written-out'),
         pytest.param(
-            [varied(SURFACE, **{'relations.port_bus.missing': 'absent'}), _mapped('absent')], 'absent', id='both-absent'
+            [varied(INTERFACE, **{'relations.port_bus.missing': 'absent'}), _mapped('absent')],
+            'absent',
+            id='both-absent',
         ),
     ],
 )
@@ -247,8 +249,8 @@ def test_two_fragments_that_say_one_missing_agree(fragments, missing):
 @pytest.mark.parametrize(
     'fragments',
     [
-        pytest.param([SURFACE, _mapped('absent')], id='refused-against-absent'),
-        pytest.param([_mapped('absent'), SURFACE], id='absent-against-refused'),
+        pytest.param([INTERFACE, _mapped('absent')], id='refused-against-absent'),
+        pytest.param([_mapped('absent'), INTERFACE], id='absent-against-refused'),
     ],
 )
 def test_two_fragments_that_read_a_missing_key_apart_are_refused(fragments):
@@ -267,9 +269,9 @@ def test_two_fragments_that_read_a_missing_key_apart_are_refused(fragments):
 )
 def test_a_reader_s_description_fills_an_entry_that_has_none(owner, carried):
     """A reader's words about a name were dropped when the name was folded, even where the owner wrote none."""
-    surface = _said(SURFACE, 'variables', 'flow', owner) if owner else SURFACE
+    interface = _said(INTERFACE, 'variables', 'flow', owner) if owner else INTERFACE
     supply = _said(SUPPLY, 'given', 'flow', 'what a port puts into its bus')
-    composed = merge([surface, supply, DEMAND])
+    composed = merge([interface, supply, DEMAND])
     assert composed.variables['flow'].description == carried
 
 
@@ -295,7 +297,7 @@ def test_a_composed_objective_reads_the_sum_its_fragments_add_to(composed):
     'fragments',
     [
         pytest.param(
-            [SURFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
+            [INTERFACE, SUPPLY, {**DEMAND, 'objective': {'sense': 'minimize', 'expression': 'sum(dem_load)'}}],
             id='two-objectives',
         ),
         pytest.param(
@@ -333,9 +335,9 @@ def test_fragments_written_against_two_language_versions_are_refused(monkeypatch
 
 
 def test_the_description_belongs_to_the_composition():
-    described = merge([SURFACE, {**SUPPLY, 'description': 'a fleet'}, DEMAND], description='a fleet against a load')
+    described = merge([INTERFACE, {**SUPPLY, 'description': 'a fleet'}, DEMAND], description='a fleet against a load')
     assert described.description == 'a fleet against a load'
-    assert merge([SURFACE, {**SUPPLY, 'description': 'a fleet'}, DEMAND]).description is None, (
+    assert merge([INTERFACE, {**SUPPLY, 'description': 'a fleet'}, DEMAND]).description is None, (
         "no fragment's own description is carried"
     )
 
@@ -349,14 +351,14 @@ def test_merge_composes_the_model_and_override_configures_the_run():
 def test_every_section_a_fragment_owns_reaches_the_composition():
     """`merge` listed its sections by hand, so `assumptions:` fell out of every composed spec."""
     assumed = {**DEMAND, 'assumptions': {'dem_load_positive': 'dem_load >= 0'}}
-    composed = merge([SURFACE, SUPPLY, assumed])
+    composed = merge([INTERFACE, SUPPLY, assumed])
     assert sorted(composed.assumptions) == ['dem_load_positive'], "the fragment's assumption is in the one spec"
 
 
 def test_a_fragment_is_a_path_as_readily_as_a_mapping(tmp_path):
-    surface = tmp_path / 'surface.yaml'
-    surface.write_text(to_spec(SURFACE).to_yaml(), encoding='utf-8')
-    assert merge([str(surface), SUPPLY, DEMAND]) == merge(LIBRARY)
+    interface = tmp_path / 'interface.yaml'
+    interface.write_text(to_spec(INTERFACE).to_yaml(), encoding='utf-8')
+    assert merge([str(interface), SUPPLY, DEMAND]) == merge(LIBRARY)
 
 
 def _written(folder: Path, fragments: list[dict[str, object]]) -> list[Path]:
@@ -371,7 +373,7 @@ def test_a_refusal_names_a_file_by_its_path(tmp_path):
     """A file is named as the list gives it, and anything else by its place in the list."""
     unread = {key: value for key, value in SUPPLY.items() if key != 'given'}
     with pytest.raises(LanguageError, match=r'does not load on its own') as raised:
-        merge(_written(tmp_path, [SURFACE, unread, DEMAND]))
+        merge(_written(tmp_path, [INTERFACE, unread, DEMAND]))
     assert f"fragment '{tmp_path / '1.yaml'}'" in str(raised.value), 'the refusal names the file'
 
 
@@ -380,7 +382,7 @@ def test_a_refusal_names_a_file_by_its_path(tmp_path):
 )
 def test_one_path_where_a_list_is_asked_for_is_refused(tmp_path, verb):
     """A string is a sequence of letters, and each letter was read as the path of a file."""
-    path = str(_written(tmp_path, [SURFACE])[0])
+    path = str(_written(tmp_path, [INTERFACE])[0])
     with pytest.raises(TypeError, match=r'this is one path') as raised:
         verb(path)
     assert f'[{path!r}]' in str(raised.value), 'the refusal names the rewrite, which is a list of the one path'
@@ -574,7 +576,7 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
             id='a-dimension',
         ),
         pytest.param(
-            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            varied(INTERFACE, **{'relations.port_bus.description': 'where a port connects'}),
             {'relations': {'port_bus': {'key': 'port', 'values': 'bus', 'description': 'a port and its bus'}}},
             lambda spec: spec.relations['port_bus'].description,
             'a port and its bus',
@@ -595,7 +597,7 @@ def test_a_patch_restates_a_dimension_as_the_schema_reads_it(dimension, restated
             id='null-removes-a-dimension-description',
         ),
         pytest.param(
-            varied(SURFACE, **{'relations.port_bus.description': 'where a port connects'}),
+            varied(INTERFACE, **{'relations.port_bus.description': 'where a port connects'}),
             {'relations': {'port_bus': {'description': None}}},
             lambda spec: spec.relations['port_bus'].description,
             None,
@@ -684,29 +686,31 @@ def test_a_patch_that_restates_a_relation_in_part_is_refused_with_the_rewrite(re
     `dimensions:` names the patch and says how to restate the entry.
     """
     with pytest.raises(LanguageError, match=r"patch '#1' declares the relation 'port_bus'") as raised:
-        override(SURFACE, [{'relations': {'port_bus': restated}}])
+        override(INTERFACE, [{'relations': {'port_bus': restated}}])
     assert 'Restate the relation as its base declares it' in str(raised.value), 'the refusal names the rewrite'
 
 
 def test_a_misspelled_key_in_a_restated_relation_names_the_key_it_meant():
     """A restatement that misspells a key is a typo, not a second declaration, so the near-miss is named."""
     with pytest.raises(SchemaError, match=r"unknown key 'kye' in a relation entry. Did you mean 'key'\?"):
-        override(SURFACE, [{'relations': {'port_bus': {'kye': 'port', 'values': 'bus'}}}])
+        override(INTERFACE, [{'relations': {'port_bus': {'kye': 'port', 'values': 'bus'}}}])
 
 
-#: `SURFACE` with `port_bus` declared `missing: absent`.
-ABSENT_SURFACE = varied(SURFACE, **{'relations.port_bus.missing': 'absent'})
+#: `INTERFACE` with `port_bus` declared `missing: absent`.
+ABSENT_INTERFACE = varied(INTERFACE, **{'relations.port_bus.missing': 'absent'})
 
 
 @pytest.mark.parametrize(
     ('base', 'relation', 'missing'),
     [
-        pytest.param(SURFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
-        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
-        pytest.param(ABSENT_SURFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
-        pytest.param(ABSENT_SURFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
-        pytest.param(SURFACE, {'key': 'port', 'values': 'bus', 'missing': 'refused'}, 'refused', id='default-written'),
-        pytest.param(ABSENT_SURFACE, {'key': 'port', 'values': 'bus'}, 'absent', id='restated-without-one'),
+        pytest.param(INTERFACE, {'missing': 'absent'}, 'absent', id='the-reading-alone'),
+        pytest.param(INTERFACE, {'key': 'port', 'values': 'bus', 'missing': 'absent'}, 'absent', id='restated-absent'),
+        pytest.param(ABSENT_INTERFACE, {'missing': 'refused'}, 'refused', id='back-to-the-default'),
+        pytest.param(ABSENT_INTERFACE, {'missing': None}, 'refused', id='null-puts-back-the-default'),
+        pytest.param(
+            INTERFACE, {'key': 'port', 'values': 'bus', 'missing': 'refused'}, 'refused', id='default-written'
+        ),
+        pytest.param(ABSENT_INTERFACE, {'key': 'port', 'values': 'bus'}, 'absent', id='restated-without-one'),
     ],
 )
 def test_a_patch_changes_what_a_key_the_map_leaves_out_means(base, relation, missing):
@@ -872,7 +876,7 @@ def _bidder(name: str) -> dict[str, object]:
     [
         pytest.param([_bidder('buy'), _bidder('sell')], id='two-readers'),
         pytest.param(
-            [varied(SURFACE, **{'variables.flow.domain': 'binary'}), SUPPLY], id='a-reader-and-its-introducer'
+            [varied(INTERFACE, **{'variables.flow.domain': 'binary'}), SUPPLY], id='a-reader-and-its-introducer'
         ),
     ],
 )
