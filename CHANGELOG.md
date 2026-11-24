@@ -13,6 +13,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 ## Upcoming version
 
 - feat(merge): two fragments may declare one macro alike ([#1043](https://github.com/energy-models/mathspec/pull/1043)).
+- feat(override): a patch cannot rewrite a shared macro ([#1048](https://github.com/energy-models/mathspec/pull/1048)).
 
 ## 0.5.0a1 (2026-11-20)
 
