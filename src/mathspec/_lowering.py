@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._dimensions import check_spec
+from mathspec._dimensions import check_entry_dims, check_spec
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._expansion import expand, parse_template
 from mathspec._piecewise import (
@@ -31,6 +31,7 @@ from mathspec._piecewise import (
 )
 from mathspec._resolution import (
     Namespace,
+    _named,
     mask_of,
     resolve_condition_text,
     resolve_constraint_text,
@@ -69,6 +70,47 @@ if TYPE_CHECKING:
 
     from mathspec.program import Expression, Gate, JoinColumns
     from mathspec.spec import AssumptionSpec, Spec
+
+
+def compile_entry(spec: Spec, entry: str | Mapping[str, object]) -> Expression:
+    """*entry*, an ``expressions:`` entry *spec* does not declare, compiled against *spec* alone.
+
+    Held to every rule the entry would be held to as one more entry of
+    *spec*, and to no rule about the rest of *spec*, which loaded already. The
+    names it reads resolve in a fresh [`Namespace`][mathspec._resolution.Namespace],
+    so an entry it reads is resolved again, and nothing else is.
+    """
+    from pydantic import ValidationError
+
+    from mathspec.errors import schema_error
+    from mathspec.spec import ExpressionSpec
+
+    context = 'The expression'
+    try:
+        declared = ExpressionSpec.model_validate(entry)
+    except ValidationError as exc:
+        raise schema_error(exc) from None
+    errors = [
+        f"{context} references undeclared dimension '{d}'. Declare it under 'dimensions:'."
+        for d in declared.dims or ()
+        if d not in spec.dimensions
+    ]
+    if declared.adds_to is not None:
+        errors.append(
+            f'{context}: adds_to: {declared.adds_to!r} makes it a term of a sum, and an expression compiled '
+            f'against a spec is read on its own. Drop adds_to:, or add the entry with mathspec.override.'
+        )
+    if errors:
+        raise SchemaError('\n'.join(errors))
+    ns = Namespace(spec)
+    node = _named('', declared, ns, errors, context)
+    if node is not None:
+        masks = {name: v.where for name, v in spec.program.variables.items() if v.missing == 'absent'}
+        errors += zero_divisor_refusals(node.body, context, spec.parameters, masks)
+    if errors or node is None:
+        raise ns.error(errors)
+    check_entry_dims(declared, node.body, context, None)
+    return node.body
 
 
 def lower(spec: Spec) -> Program:

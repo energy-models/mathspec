@@ -54,6 +54,8 @@ if TYPE_CHECKING:
     from pydantic.config import ExtraValues
     from pydantic_core import CoreSchema
 
+    from mathspec import program
+
 
 __all__ = [
     'BUILTIN_NAMES',
@@ -1206,6 +1208,41 @@ class Spec(_StrictSpec):
         from mathspec._lowering import lower
 
         return lower(self)
+
+    def compile_expression(self, entry: str | Mapping[str, object]) -> program.Expression:
+        """One more ``expressions:`` entry compiled against this spec, without compiling the spec again.
+
+        The node is the one the entry would compile to under a name of its
+        own in ``expressions:``, as [`program`][] holds it, and the entry is
+        held to the same rules there. The spec does not change: to add the
+        entry to a spec, use [`override`][mathspec.override]. Compiling an
+        entry costs what its own text and the entries it reads cost, where
+        recompiling the spec costs every entry.
+
+        Args:
+            entry: What one ``expressions:`` entry takes: an expression
+                string, or a mapping with ``expression:``, or with ``cases:``,
+                ``otherwise:`` and ``dims:``. It may read any name the spec
+                declares, named expressions and macros included.
+
+        Returns:
+            The compiled expression.
+
+        Raises:
+            SchemaError: The entry is not one the language accepts, names
+                something the spec does not declare, or sets ``adds_to:``,
+                which makes it a term of a sum.
+            DimensionError: The entry breaks a dimension rule.
+
+        Example:
+            ```python
+            spec = mathspec.to_spec('examples/dispatch.yaml')
+            spec.compile_expression('sum(dispatch * cost)')
+            ```
+        """
+        from mathspec._lowering import compile_entry
+
+        return compile_entry(self, entry)
 
     @classmethod
     @override

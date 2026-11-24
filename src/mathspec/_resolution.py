@@ -35,7 +35,7 @@ from mathspec._expression_parser import (
     nodes,
 )
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
+from mathspec.errors import DimensionError, LanguageError, SchemaError, arm, prefixed
 from mathspec.program import (
     BooleanLiteral,
     Cases,
@@ -481,16 +481,19 @@ def _over_the_ceiling(node: Expression, context: str, errors: list[str], *, ceil
     return False
 
 
-def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -> ExpressionReference | None:
+def _named(
+    name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str], context: str | None = None
+) -> ExpressionReference | None:
     """One ``expressions:`` entry as the node every use of it holds, or ``None`` once anything in it failed.
 
     A cased entry's arms are checked one by one, so every fault is collected
     rather than the first, and proved apart only once all of them resolve.
     The ``otherwise`` arm becomes the region left over, so a consumer adds
     regions rather than working out which one is left; the language proved
-    the rest apart, so the regions are disjoint and total.
+    the rest apart, so the regions are disjoint and total. Refusals start with
+    *context*, the entry's own by default.
     """
-    context = f"Named expression '{name}'"
+    context = context or f"Named expression '{name}'"
     if not entry.cases:
         assert entry.expression is not None
         body = resolve_expression_text(entry.expression, ns, context, errors, ceiling=None)
@@ -500,7 +503,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
     regions: list[Region] = []
     masks: dict[str, Condition] = {}
     for case_name, case in entry.cases.items():
-        arm_context = case_context(name, case_name)
+        arm_context = arm(context, case_name)
         when = resolve_condition_text(case.when, ns, arm_context, errors)
         if isinstance(when, BooleanLiteral):
             errors.append(_constant_arm(arm_context, value=when.value))
@@ -510,7 +513,7 @@ def _named(name: str, entry: ExpressionSpec, ns: Namespace, errors: list[str]) -
         if when is not None and value is not None:
             regions.append(Region(Mask(when), value))
     assert entry.otherwise is not None
-    fallback = resolve_expression_text(entry.otherwise, ns, case_context(name, None), errors, ceiling=None)
+    fallback = resolve_expression_text(entry.otherwise, ns, arm(context, None), errors, ceiling=None)
     if len(errors) > found or fallback is None:
         return None
     errors.extend(f'{context}: {problem}' for problem in overlapping(masks, ns.dtypes, ns.defaults))

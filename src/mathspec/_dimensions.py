@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
-from mathspec.errors import DimensionError, case_context
+from mathspec.errors import DimensionError, arm
 from mathspec.program import (
     Cases,
     CountComparison,
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mathspec.program import Program
-    from mathspec.spec import Spec
+    from mathspec.spec import ExpressionSpec, Spec
 
 
 def check_node(node: Sum | Join | Translate | WindowSum, spec: Spec, context: str) -> None:
@@ -230,21 +230,7 @@ def check_spec(spec: Spec, program: Program) -> None:
                     )
 
     for ename, entry in program.expressions.items():
-        declared = spec.expressions[ename]
-        if declared.dims is None:
-            continue
-        frame = frozenset(declared.dims)
-        if not isinstance(entry.expression, Cases):
-            indexed = _check_body_dims(entry.expression, frame, f"Named expression '{ename}'")
-            _check_dims_are_indexed(ename, frame, indexed, 'the expression is not')
-            continue
-        indexed = frozenset[str]()
-        for region, label in zip(entry.expression.regions, [*declared.cases, None], strict=True):
-            context = case_context(ename, label)
-            if label is not None:
-                _check_condition_dims(region.when, frame, context)
-            indexed |= _check_value_dims(region.value, frame, context) | frozenset(region.when.dims)
-        _check_dims_are_indexed(ename, frame, indexed, 'no case value and no `when:` is')
+        check_entry_dims(spec.expressions[ename], entry.expression, f"Named expression '{ename}'", ename)
 
     for ename, entry in program.expressions.items():
         if entry.adds_to is None:
@@ -308,7 +294,31 @@ def _check_body_dims(node: Expression, frame: frozenset[str], context: str) -> f
     return got
 
 
-def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozenset[str], subject: str) -> None:
+def check_entry_dims(declared: ExpressionSpec, expression: Expression, context: str, name: str | None) -> None:
+    """One ``expressions:`` entry's dim rules, *expression* being what it compiled to; *name* is ``None`` for none.
+
+    Raises:
+        DimensionError: On the first rule the entry breaks.
+    """
+    if declared.dims is None:
+        return
+    frame = frozenset(declared.dims)
+    if not isinstance(expression, Cases):
+        indexed = _check_body_dims(expression, frame, context)
+        _check_dims_are_indexed(context, name, frame, indexed, 'the expression is not')
+        return
+    indexed = frozenset[str]()
+    for region, label in zip(expression.regions, [*declared.cases, None], strict=True):
+        arm_context = arm(context, label)
+        if label is not None:
+            _check_condition_dims(region.when, frame, arm_context)
+        indexed |= _check_value_dims(region.value, frame, arm_context) | frozenset(region.when.dims)
+    _check_dims_are_indexed(context, name, frame, indexed, 'no case value and no `when:` is')
+
+
+def _check_dims_are_indexed(
+    context: str, name: str | None, declared: frozenset[str], indexed: frozenset[str], subject: str
+) -> None:
     """A declared ``dims:`` gives only dims the expression is indexed over, so the entry stands for its expression.
 
     A dim the expression is not indexed over would make the entry constant
@@ -317,10 +327,13 @@ def _check_dims_are_indexed(name: str, declared: frozenset[str], indexed: frozen
     is refused.
     """
     if extra := sorted(declared - indexed):
+        repeats = (
+            '' if name is None else f"; an expression that reads '{name}' still repeats it along its own other dims"
+        )
         raise DimensionError(
-            f"Named expression '{name}': dims: gives {extra}, but {subject} indexed over {extra}. A named "
+            f'{context}: dims: gives {extra}, but {subject} indexed over {extra}. A named '
             f'expression stands for its expression, so dims: gives only the dimensions it is indexed over. Take '
-            f"{extra} out of dims:; an expression that reads '{name}' still repeats it along its own other dims."
+            f'{extra} out of dims:{repeats}.'
         )
 
 
