@@ -64,6 +64,11 @@ pyrefly = "==1.2.0"
 # stubs are what make the two `import yaml` lines in src/ answerable rather
 # than suppressed.
 types-pyyaml = ">=6.0"
+# The `benchmark` fixture of benchmarks/. Without `--codspeed` it calls each
+# benchmark once, which is how `pixi run test` keeps the suite from rotting.
+# Pinned exactly: CodSpeed compares across commits, so the plugin is part of
+# the measurement.
+pytest-codspeed = "==5.0.3"
 [feature.test.pypi-dependencies]
 # The PyPI bindings, which compile in-process — not conda-forge's `typst`,
 # which is the CLI binary and cannot be imported. Three compile tests in

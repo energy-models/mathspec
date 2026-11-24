@@ -97,6 +97,13 @@ In `src/`, `ruff` checks the form of each docstring, but it does not require a d
 
 <!--- --8<-- [end:docs] -->
 
+### Benchmarks
+
+[`benchmarks/`](https://github.com/energy-models/mathspec/tree/main/benchmarks)
+measures each public verb. `pixi run test` calls each benchmark once, and
+`pixi run pytest benchmarks --codspeed` measures them. A change that claims to
+make a verb faster puts the before and after numbers in its pull request.
+
 ## Releases
 
 A release is a PR that renames `## Upcoming version` in `CHANGELOG.md` to the

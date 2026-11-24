@@ -197,7 +197,7 @@ unused-ignore = "error"
 variance-mismatch = "error"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "benchmarks"]
 
 [tool.coverage.run]
 branch = true
