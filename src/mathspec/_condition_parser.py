@@ -249,35 +249,23 @@ def _call_keyword(syntax: Syntax, parens: int) -> ArithmeticNode:
 
 
 def _comparison(compare: Tree[Token], parens: int) -> UnresolvedConditionNode:
-    """``side <op> side``, or a count against arithmetic, which is tried first.
+    """A count against arithmetic where ``count(...)`` reads as a condition call and the right side as arithmetic.
 
-    A ``count(...)`` whose first argument is no condition, or whose right side
-    starts with no arithmetic, is an arithmetic call compared like any other
-    side. Once the right side starts as arithmetic, the count is kept, and a
-    right side that does not stay arithmetic is refused.
+    Otherwise ``side <op> side``, a ``count(...)`` on the left read as an
+    arithmetic call, which resolution then refuses with the rewrite.
     """
     left, sign, right = compare.children
     op = cast('ComparisonOperator', str(sign))
-    match left:
-        case Tree(data='call', children=[Token() as name, _, args]) if name.upper() == 'COUNT':
+    if isinstance(left, Tree) and left.data == 'call':
+        name, _, args = left.children
+        if str(name).upper() == 'COUNT':
             try:
-                call = _condition_call(arguments(args), 'count', start(left), parens)
+                return UnresolvedCountNode(
+                    _condition_call(arguments(args), 'count', start(left), parens), op, arithmetic(right, parens)
+                )
             except ReadError:
-                call = None
-            if call is not None and not _starts_unarithmetic(right):
-                return UnresolvedCountNode(call, op, arithmetic(right, parens))
-        case _:
-            pass
+                pass
     return UnresolvedComparisonNode(_side(left, parens), op, _right_side(right, parens))
-
-
-def _starts_unarithmetic(syntax: Syntax) -> bool:
-    """Whether *syntax* is written starting with a quoted label or a list of names, where arithmetic cannot start."""
-    while isinstance(syntax, Tree) and syntax.data in ('sum', 'product', 'power'):
-        syntax = syntax.children[0]
-    return (isinstance(syntax, Token) and syntax.type == 'STRING') or (
-        isinstance(syntax, Tree) and syntax.data == 'namelist'
-    )
 
 
 def _side(syntax: Syntax, parens: int) -> ArithmeticNode | ColumnNode:
