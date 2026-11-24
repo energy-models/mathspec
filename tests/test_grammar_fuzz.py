@@ -29,15 +29,19 @@ import dataclasses
 import os
 from collections import Counter
 from collections.abc import Iterator, Mapping
+from functools import cache
 from random import Random
 
 import pytest
+from lark import Lark, Token, Tree
+from lark.exceptions import LarkError
 
-from mathspec._condition_parser import RESERVED, UnresolvedComparisonNode, parse_condition
-from mathspec._expression_parser import FunctionCallNode, parse_expression
+from mathspec._condition_parser import RESERVED, UnresolvedComparisonNode, _read, parse_condition
+from mathspec._expression_parser import FunctionCallNode, ReadError, Syntax, _expression, parse_expression, unquoter
 from mathspec.errors import SchemaError
 from tests.grammar.generate import example_strings, nested_shapes, strings
 from tests.grammar.oracle import Grammar, Refused, oracle
+from tools.grammar import expression_grammar, where_grammar
 
 ROUNDS = int(os.environ.get('MATHSPEC_GRAMMAR_FUZZ', '1'))
 
@@ -180,3 +184,84 @@ def test_the_examples_give_the_fuzzer_real_strings():
     )
     assert parsed['expression'] >= 300, f'{parsed["expression"]} example strings parse as expressions, under 300'
     assert parsed['condition'] >= 300, f'{parsed["condition"]} example strings parse as conditions, under 300'
+
+
+@cache
+def _documented(grammar: Grammar, ambiguity: str) -> Lark:
+    """The grammar the language reference prints, as Lark's Earley parser reads it."""
+    text = expression_grammar() if grammar == 'expression' else where_grammar()
+    return Lark(text, parser='earley', lexer='dynamic', ambiguity=ambiguity)
+
+
+def _unquoted(syntax: Syntax, grammar: Grammar) -> Syntax:
+    """*syntax* with its labels unquoted as the parser's lexer unquotes them, which Earley's dynamic lexer cannot do."""
+    if isinstance(syntax, Token):
+        return unquoter(escapes=grammar == 'condition')(syntax) if syntax.type == 'STRING' else syntax
+    return Tree(syntax.data, [_unquoted(child, grammar) if child is not None else None for child in syntax.children])
+
+
+def _ambiguities(tree: object) -> Iterator[Tree[Token]]:
+    """Every place *tree* reads two ways, other than a ``count(...)`` the parser reads as a count and not a call."""
+    if isinstance(tree, Tree):
+        if tree.data == '_ambig' and not any(
+            isinstance(c, Tree) and c.data == 'cmp' and _counts(c) for c in tree.children
+        ):
+            yield tree
+        for child in tree.children:
+            yield from _ambiguities(child)
+
+
+def _counts(compare: Tree[Token]) -> bool:
+    left = compare.children[0]
+    return isinstance(left, Tree) and left.data == 'call' and str(left.children[0]).upper() == 'COUNT'
+
+
+def _documented_reading(grammar: Grammar, text: str) -> object:
+    """What the reference's grammar makes of *text*, read into nodes by the parser's own reader.
+
+    ``'several'`` where it reads *text* more than one way, a [`Refused`][] where
+    it does not read it, and ``None`` where Earley runs out of stack.
+    """
+    try:
+        if any(_ambiguities(_documented(grammar, 'explicit').parse(text))):
+            return 'several'
+        tree = _unquoted(_documented(grammar, 'resolve').parse(text), grammar)
+    except RecursionError:
+        return None
+    except LarkError:
+        return Refused('syntax')
+    try:
+        return _read(tree, 0) if grammar == 'condition' else _expression(tree, 0)
+    except ReadError:
+        return 'read'
+
+
+@pytest.mark.parametrize('chunk', range(4))
+def test_the_reference_s_grammars_read_each_string_as_the_parser_does(chunk):
+    """The where grammar the reference prints is not the parser's, which a reader narrows, so it is held here.
+
+    Each grammar accepts what the parser accepts, reads it one way, and its
+    tree, read by the parser's own reader, is the parser's node: so its rules
+    state the precedence the parser applies. A keyword given twice and a
+    nesting past the cap are refused by the parser and admitted by any
+    grammar, so those strings are left out.
+    """
+    found = []
+    for grammar, text in strings(Random(f'documented:{chunk}'), PER_CHUNK // 2):
+        new = package(grammar, text)
+        if new == Refused('too deep') or 'twice' in _message(grammar, text):
+            continue
+        documented = _documented_reading(grammar, text)
+        if documented is not None and shape(documented) != shape(new):
+            found.append(f'{grammar} {text!r}\n    parser:    {new!r}\n    reference: {documented!r}')
+    assert not found, _report(found)
+
+
+def _message(grammar: Grammar, text: str) -> str:
+    """The parser's refusal of *text*, or the empty string where it reads it."""
+    parse = parse_expression if grammar == 'expression' else parse_condition
+    try:
+        parse.__wrapped__(text)
+    except SchemaError as error:
+        return str(error)
+    return ''

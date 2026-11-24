@@ -141,6 +141,8 @@ class _Writer:
         roll = self.rng.random()
         if roll < 0.15:
             return f'{self.name()}[{self.name()}]'
+        if roll < 0.2:
+            return f'{self.name()}[{self.name()}, {self.name()}]'
         return self.arith(depth)
 
     def atom(self, depth: int) -> str:
