@@ -12,6 +12,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 
 ## Upcoming version
 
+- feat(language): a case may branch on at(…, by=…) ([#1012](https://github.com/energy-models/mathspec/pull/1012))
 - feat(language): a dimension may alias another's labels ([#1029](https://github.com/energy-models/mathspec/pull/1029))
 
 ## 0.5.0a1 (2026-11-20)

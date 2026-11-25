@@ -1297,22 +1297,37 @@ class TestAConditionIsAnOperand:
         )
         assert f'both claim the value where {witness}' in message, message
 
-    def test_a_read_through_a_relation_is_undecidable_in_a_case_when(self):
-        """Which rows a relation maps onto a coordinate is the data's to say, so two cases split by one are not proved apart."""
-        message = _refusal(
-            expressions={
+    @staticmethod
+    def _read_beside(other: str) -> dict[str, Any]:
+        """A case on `at(r, by=lk[h])` beside a case on *other*, over `g`."""
+        return {
+            'expressions': {
                 'pick': {
                     'dims': ['g'],
                     'cases': {
                         'mapped': {'when': 'at(r, by=lk[h])', 'expression': '1'},
-                        'some': {'when': 'c > 0', 'expression': '2'},
+                        'other': {'when': other, 'expression': '2'},
                     },
                     'otherwise': '0',
                 }
             },
-            constraints={'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
-        )
-        assert "it reads a condition through 'lk', which only the data decides" in message
+            'constraints': {'cap': {'dims': ['g'], 'expression': 'p <= pick'}},
+        }
+
+    def test_a_read_through_a_relation_and_its_negation_load_in_a_case_when(self):
+        """A coordinate reads one row of the relation, so a case split by the read is decided at load.
+
+        Before, every read through a relation was refused as undecidable, and this pair did not load.
+        """
+        assert _spec(**self._read_beside('not at(r, by=lk[h])')).expressions['pick'].cases, 'the two cases load'
+
+    def test_a_read_beside_a_free_parameter_is_refused_with_a_witness(self):
+        """`c` does not depend on the read, so one coordinate satisfies both cases.
+
+        Before, the pair was refused as undecidable, with no witness.
+        """
+        message = _refusal(**self._read_beside('c > 0'))
+        assert 'both claim the value where r through lk[h] is true, c is 1.0' in message, message
 
     def test_a_read_landing_outside_the_frame_names_the_relation(self):
         """The read adds the dims it lands on, so a mask over the coarse side cannot carry the fine one."""
