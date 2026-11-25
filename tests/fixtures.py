@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from mathspec._expansion import parse_and_expand
-from mathspec._expression_parser import ComparisonNode
 from mathspec._resolution import Namespace, mask_of, resolve_condition_text, resolve_expression
+from mathspec._syntax import ComparisonNode
 from mathspec._validation import to_spec
 from mathspec._yaml import parse_yaml, read_yaml
 from mathspec.spec import Spec

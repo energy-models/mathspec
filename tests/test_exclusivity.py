@@ -17,8 +17,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
-from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import CELL_BUDGET, Special, Subject, _evaluate, _Grid, overlapping
+from mathspec._grammar import parse_condition
 from mathspec._resolution import Namespace, resolve_condition
 from mathspec._validation import to_spec
 from mathspec.program import And, Mask, Not, Or

@@ -15,7 +15,7 @@ modules, each with one rule:
   [`Advice`][mathspec.program.Advice] the language gives about it.
 - [`mathspec.errors`][] is what a consumer catches.
 
-Everything between them — both grammars and the tree they build — is
+Everything between them — the grammar and the tree it builds — is
 package-private, because a consumer reads a program instead.
 """
 

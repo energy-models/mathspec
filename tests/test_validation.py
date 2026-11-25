@@ -996,6 +996,122 @@ class TestAWhereSideIsReadInResolution:
         assert '> 2' in printed and 'otherwise' in printed, f'{fmt} prints the comparison and its otherwise'
 
 
+class TestATermIsHeldToItsPlaceInResolution:
+    """The grammar reads a term wherever a term may stand, and what a place does not take is refused here.
+
+    So the refusal names the entry and the rewrite, where a grammar that
+    decided it could only point at a character.
+    """
+
+    @pytest.mark.parametrize(
+        ('expression', 'fragments'),
+        [
+            pytest.param('p < c', ("Constraint 'cap': '<' is not a constraint sense. Write '<=' instead.",), id='less'),
+            pytest.param('p > 0', ("'>' is not a constraint sense. Write '>=' instead.",), id='greater'),
+            pytest.param('p != 0', ("'!=' is not a constraint sense", 'move the != test to where:'), id='not-equal'),
+            pytest.param('p + [g] <= c', ('[g] is a list of names', 'only as an operator argument'), id='a-list'),
+            pytest.param('sum([p], over=g) <= k', ('[p] is a list of names',), id='a-list-as-the-operand'),
+            pytest.param("p + 'x' <= c", ("'x' is a quoted keyword",), id='a-label'),
+            pytest.param(
+                'p + lk[h] <= c', ('lk[h] names columns of a relation', 'A relation is not a value'), id='a-column'
+            ),
+            pytest.param(
+                '(p <= 1) + 1 <= c',
+                ("'p <= 1' is a condition, which is true or false, and not a number", 'Move it to a where:'),
+                id='a-comparison-under-an-operator',
+            ),
+            pytest.param('sum(p <= 1, over=g) <= k', ("'p <= 1' is a condition",), id='a-comparison-as-the-operand'),
+        ],
+    )
+    def test_a_constraint_refuses_a_term_that_is_no_number(self, expression, fragments):
+        message = _refusal(constraints={'cap': {'dims': ['g'], 'expression': expression}})
+        for fragment in fragments:
+            assert fragment in message
+
+    @pytest.mark.parametrize(
+        ('where', 'fragments'),
+        [
+            pytest.param(
+                'c + 1', ("'c + 1' is a number, and a condition is true or false", '"c + 1 > 0"'), id='arithmetic'
+            ),
+            pytest.param('flag AND (c + 1)', ("'c + 1' is a number",), id='arithmetic-under-a-connective'),
+            pytest.param('NOT 3', ("'3' is a number",), id='a-number-under-not'),
+            pytest.param("'north'", ("'north' is a quoted label", "as in tech == 'north'"), id='a-label'),
+            pytest.param(
+                'lk[h]', ("'lk[h]' names a column of 'lk' and tests nothing", "the bare name 'lk'"), id='a-column'
+            ),
+            pytest.param('[g, h]', ('[g, h] is a list of names',), id='a-list'),
+            pytest.param(
+                '(True) > 0',
+                ("'True' is one of AND, OR, NOT, True and False", 'and not a number', 'rename it'),
+                id='a-literal-compared',
+            ),
+            pytest.param('c + True > 0', ("'True' is one of AND, OR, NOT, True and False",), id='a-literal-added'),
+            pytest.param(
+                '(flag AND flag) > 0',
+                ("'flag AND flag' is a condition, which is true or false, and not a number",),
+                id='a-condition-compared',
+            ),
+            pytest.param(
+                "lk[g, h] == 'x'",
+                ("'lk[g, h]' names 2 columns", 'Compare each column on its own: lk[g] == … AND lk[h] == ….'),
+                id='two-columns-compared',
+            ),
+            pytest.param('lk[h] + 1 > 0', ('lk[h] names columns of a relation',), id='a-column-in-arithmetic'),
+            pytest.param(
+                'tag == c[x]', ("'c[x]' reads a column of 'c', which is a parameter",), id='a-column-of-a-parameter'
+            ),
+            pytest.param(
+                'shift(flag, flag, along=g, offset=1)',
+                ('shift() over a condition reads one condition, and this call passes 2',),
+                id='a-translation-of-two-conditions',
+            ),
+            pytest.param(
+                'shift(along=g, offset=1)',
+                (
+                    'reads one condition, and this call passes 0',
+                    'shift(<condition>, along=<dimension>, offset=<integer>)',
+                ),
+                id='a-translation-of-none',
+            ),
+            pytest.param(
+                'count(flag, flag, over=g) > 1',
+                ('count() over a condition reads one condition, and this call passes 2',),
+                id='a-count-of-two-conditions',
+            ),
+        ],
+    )
+    def test_a_where_refuses_a_term_that_is_no_condition(self, where, fragments):
+        with pytest.raises(LanguageError) as caught:
+            where_of(where, Namespace(_spec()), 'probe')
+        for fragment in fragments:
+            assert fragment in str(caught.value)
+
+    def test_a_column_of_an_undeclared_relation_is_no_label(self):
+        """`tag == nope[x]` loaded, as a comparison of `tag` with the label ``nope[x]``.
+
+        A side was carried as its spelling, and a spelling the file declared
+        nowhere was taken for a label, as the bare word in `tag == wind` is.
+        """
+        with pytest.raises(LanguageError, match="'nope' not found"):
+            where_of('tag == nope[x]', Namespace(_spec()), 'probe')
+
+    @pytest.mark.parametrize(
+        ('where', 'plain'),
+        [
+            pytest.param("tag == ('north')", "tag == 'north'", id='parentheses-around-a-label'),
+            pytest.param("(lk[h]) == 'north'", "lk[h] == 'north'", id='parentheses-around-a-column'),
+            pytest.param(
+                'shift(along=g, offset=1, flag)', 'shift(flag, along=g, offset=1)', id='a-keyword-before-the-condition'
+            ),
+            pytest.param('c > 0AND flag', 'c > 0 AND flag', id='a-word-against-a-number'),
+        ],
+    )
+    def test_a_spelling_the_grammar_reads_is_the_condition_it_spells(self, where, plain):
+        ns = Namespace(_spec())
+        assert where_of(where, ns, 'probe') == where_of(plain, ns, 'probe'), 'the same mask as the plain spelling'
+
+
 class TestAConditionIsAnOperand:
     """``count``, ``shift`` and ``at`` over a condition — the three calls that read one rather than arithmetic.
 
@@ -1107,7 +1223,7 @@ class TestAConditionIsAnOperand:
             ),
             pytest.param(
                 'count(flag, over=g) >= lk[h]',
-                ('count() is not alone on the left of its comparison',),
+                ('a count is compared against a value that is not a literal whole number',),
                 id='a-count-against-a-column',
             ),
             pytest.param(

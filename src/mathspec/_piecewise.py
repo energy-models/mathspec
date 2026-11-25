@@ -22,9 +22,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
-from mathspec._expression_parser import NAME, ColumnsNode, FunctionCallNode, NameNode, parse_expression
 from mathspec._expression_resolver import ExpressionResolver
+from mathspec._grammar import NAME, parse_expression
 from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
+from mathspec._syntax import ColumnsNode, FunctionCallNode, NameNode
 from mathspec.errors import DimensionError, SchemaError
 from mathspec.program import Gate, Join, Link, Piecewise, PiecewiseMethod, Variable, carries_variable
 from mathspec.spec import AssumptionSpec, Curvature, PiecewiseLinkSpec, PiecewiseSpec, Spec, VariableSpec
@@ -538,11 +539,12 @@ def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
 
 
 def _columns_of(text: str) -> ColumnsNode | None:
-    """``relation[column, ...]`` as the expression parser reads it in a kwarg, or ``None`` where it is not that."""
-    match = re.fullmatch(rf'\s*({NAME})\s*\[\s*({NAME}(?:\s*,\s*{NAME})*)\s*\]\s*', text)
-    if match is None:
+    """``relation[column, ...]`` as the grammar reads it, or ``None`` where *text* is not that."""
+    try:
+        node = parse_expression(text)
+    except SchemaError:
         return None
-    return ColumnsNode(match.group(1), tuple(c.strip() for c in match.group(2).split(',')))
+    return node if isinstance(node, ColumnsNode) else None
 
 
 def resolve_gate(

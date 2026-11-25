@@ -34,11 +34,12 @@ from pydantic import (
     model_validator,
 )
 
-from mathspec._expression_parser import NAME, Sense
 from mathspec._frozen import Frozen
+from mathspec._grammar import NAME
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
+    ConstraintSense,
     DimensionDtype,
     ObjectiveSense,
     ParameterDtype,
@@ -919,7 +920,7 @@ class PiecewiseLinkSpec(_StrictSpec):
 
     expression: str
     values: str
-    sign: Sense = '=='
+    sign: ConstraintSense = '=='
     by: str | None = None
     """The relation and column that the link reads the weights of the curve at, as ``at(..., by=)`` names them."""
 

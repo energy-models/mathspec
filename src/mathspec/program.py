@@ -26,7 +26,6 @@ from dataclasses import dataclass, field, fields, replace
 from functools import cached_property
 from typing import TYPE_CHECKING, Literal, assert_never
 
-from mathspec._expression_parser import Sense
 from mathspec._frozen import Frozen
 from mathspec.errors import did_you_mean
 
@@ -125,7 +124,7 @@ __all__ = [
 ]
 
 
-ConstraintSense = Sense
+ConstraintSense = Literal['<=', '>=', '==']
 
 QuadraticPosition = Literal['objective', 'constraint']
 """Where the math may contain a product of two variables: the objective or a constraint. A bound and a ``piecewise:`` link
@@ -1549,7 +1548,7 @@ nodes, so a walk over a condition recurses only into these.
 """
 
 Condition = BooleanLiteral | TypedCondition | Connective | ConditionReference
-"""The union of every condition node in a program. The parser's ``Unresolved*`` nodes are not part of it, because mathspec
+"""The union of every condition node in a program. The parser's nodes are not part of it, because mathspec
 replaces them at load.
 """
 
@@ -1558,8 +1557,7 @@ def condition_children(condition: Condition) -> tuple[Condition, ...]:
     """The conditions under *condition* — a connective's operands, a named condition's body, and nothing under a leaf.
 
     What every walk over a condition recurses through, as [`children`][] is
-    for an expression. A leaf has nothing under it whether or not it is
-    resolved, so the grammar measures its own output with this too.
+    for an expression.
     """
     if isinstance(condition, Not):
         return (condition.operand,)

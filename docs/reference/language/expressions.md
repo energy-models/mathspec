@@ -35,7 +35,7 @@ NAME        ::= [a-zA-Z_][a-zA-Z0-9_]*
 NUMBER      ::= integer | float | "inf" | ".inf"
 ```
 
-Five rules complete the grammar:
+Six rules complete the grammar:
 
 - mathspec applies `**` first, then unary `+` and `-`,
   then `*` and `/`, then binary `+` and `-`. So, as in Python, `-x ** 2` is
@@ -44,11 +44,36 @@ Five rules complete the grammar:
 - The same keyword twice in one call is refused, and for
   `sum(p, over=g, over=g)` mathspec prints `The objective: sum(over=) is given twice. Delete one of them.`
 - A quoted label is the text between its quotes. In a label, `\t`, `\n`,
-  `\f` and `\r` are the whitespace character, and any other backslash is
-  itself.
-- An expression and a `where:` string nest at most 100 levels deep, and
-  parentheses nest at most 100 deep. Once mathspec substitutes every named
+  `\f` and `\r` are the whitespace character, and a backslash before any
+  other character is that character. So `'it\'s'` is the label `it's`.
+- Parentheses may group any term, such as `(p + q)` or `('wrap')`, and
+  mathspec reads the term as if it had none.
+- An expression and a `where:` string nest at most 100 levels deep.
+  Parentheses add no level. Once mathspec substitutes every named
   expression, the limit is 300 levels.
+
+A constraint takes one of `<=`, `>=` and `==`, because a solver has no row for
+the other comparisons. For `p < cap` in the constraint `cap`, mathspec
+prints:
+
+```text
+Constraint 'cap': '<' is not a constraint sense. Write '<=' instead.
+Got: 'p < cap'
+```
+
+mathspec suggests the rewrite: `<=` in place of `<`.
+
+A [condition](#conditions) is written in the same grammar, with five words
+and three comparisons added. A term that its place does not accept is refused
+at load, in a message that has the name of the entry. For `p + (q >= 1) <= cap`,
+mathspec prints:
+
+```text
+Constraint 'cap': 'q >= 1' is a condition, which is true or false, and not a number. Move it to a where:, or carry its value in a parameter.
+```
+
+mathspec suggests two rewrites: a `where:` with the condition, or a parameter
+with its value.
 
 ## Where a product of two variables is allowed
 
@@ -325,11 +350,11 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 
 `AND`, `OR`, `NOT`, `True` and `False` are reserved in a `where:` string, in
 any case. mathspec refuses a `where:` string that uses one as a name, so an
-entry named `and` or `true` cannot be read in a condition.
+entry named `and` or `true` cannot be read in a condition. An expression
+reserves none of the five, so there `and` is a name.
 
-A quoted label in a `where:` string follows the rule of an expression's
-label, with one addition. A backslash before any other character is that
-character, so `'it\'s'` is the label `it's`.
+A quoted label and a pair of parentheses follow the rules of the
+[arithmetic grammar](#the-arithmetic-grammar).
 
 A name written alone is a bare name, and what it tests depends on the kind of
 its entry.

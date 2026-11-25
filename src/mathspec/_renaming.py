@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Literal, cast, get_args, get_origin
 from pydantic import BaseModel
 
 from mathspec._composition import GIVEN_KINDS, OWNED_SECTIONS, SHARED_SECTIONS, _singular
-from mathspec._expression_parser import NAME, REAL
+from mathspec._grammar import NAME, REAL
 from mathspec._validation import to_spec
 from mathspec.errors import LanguageError, did_you_mean
 from mathspec.spec import MacroSpec, Spec
