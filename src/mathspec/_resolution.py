@@ -22,7 +22,6 @@ import mathspec._degree as degree
 from mathspec._condition_resolver import ConditionResolver
 from mathspec._dimensions import sorted_dims
 from mathspec._exclusivity import overlapping
-from mathspec._expansion import expand, parse_and_expand
 from mathspec._expression_resolver import ExpressionResolver
 from mathspec._grammar import parse
 from mathspec._syntax import AndNode, ComparisonNode, NameNode, NotNode, OrNode, nodes
@@ -213,19 +212,21 @@ class Namespace:
         return self._named[name]
 
     def _references(self, name: str) -> tuple[str, ...]:
-        """The ``expressions:`` entries the texts of entry *name* read, macros expanded, in first-mention order.
+        """The ``expressions:`` entries the texts of entry *name* write, in first-mention order.
 
-        A text that does not parse or expand reads nothing here: the
-        resolution that follows reports it.
+        A text that does not parse reads nothing here: the resolution that
+        follows reports it. Nor does an entry only a macro's template
+        writes, which [`named`][] resolves when the resolution reaches the
+        read.
         """
-        entry, context = self.spec.expressions[name], f"Named expression '{name}'"
+        entry = self.spec.expressions[name]
         cases = (entry.cases or {}).values()
         texts = (entry.expression, *(text for case in cases for text in (case.expression, case.when)), entry.otherwise)
         read: list[ParsedNode] = []
         for text in texts:
             if text is not None:
                 try:
-                    read.append(expand(parse(text), self, context))
+                    read.append(parse(text))
                 except ValueError:
                     continue
         names = (n.name for n in nodes(*read) if isinstance(n, NameNode) and n.name in self.bodies)
@@ -462,9 +463,9 @@ def _not_a_sense(op: str) -> str:
 
 
 def _parsed(text: str, ns: Namespace, context: str, errors: list[str]) -> ParsedNode | None:
-    """*text* parsed and its macros expanded, or ``None`` with the refusal appended."""
+    """*text* parsed, or ``None`` with the refusal appended."""
     try:
-        return parse_and_expand(text, ns, context)
+        return parse(text)
     except ValueError as e:
         errors.append(prefixed(context, e))
         return None

@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
 from mathspec._dimensions import check_node, joined, sorted_dims
+from mathspec._expansion import expand
 from mathspec._grammar import RESERVED_WORDS
 from mathspec._operators import (
     AMOUNTS,
@@ -46,7 +47,7 @@ from mathspec._syntax import (
     names_in,
     shown,
 )
-from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
+from mathspec.errors import DimensionError, SchemaError, did_you_mean, prefixed, unordered
 from mathspec.program import (
     Add,
     Axis,
@@ -105,11 +106,19 @@ class ExpressionResolver:
     def build(self, node: ParsedNode) -> Expression | None:
         """The program tree *node* stands for, held to [`MAX_RESOLVED_DEPTH`][] before anything walks it.
 
-        The depth is measured with every named expression written in, since
-        that is the tree every later pass recurses over, and measured with an
-        explicit stack, since a recursion would be the crash it prevents.
+        Every macro call under *node* is substituted first, so nothing here
+        reads a macro, and a call may stand wherever what its template
+        expands to may. The depth is measured with every named expression
+        written in, since that is the tree every later pass recurses over,
+        and measured with an explicit stack, since a recursion would be the
+        crash it prevents.
         """
-        resolved = self.arith(node)
+        try:
+            expanded = expand(node, self.ns, self.context)
+        except SchemaError as e:
+            self.errors.append(prefixed(self.context, e))
+            return None
+        resolved = self.arith(expanded)
         if resolved is None or (found := depth(resolved, children)) <= MAX_RESOLVED_DEPTH:
             return resolved
         self.errors.append(

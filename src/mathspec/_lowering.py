@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from mathspec._dimensions import check_spec
 from mathspec._divisors import zero_divisor_refusals
-from mathspec._expansion import expand, parse_template
+from mathspec._expansion import parse_template
 from mathspec._piecewise import (
     assumptions_of,
     declaration_of,
@@ -118,7 +118,7 @@ def lower(spec: Spec) -> Program:
         context = f"Macro '{mname}'"
         formals = frozenset((*macro.args, *macro.kwargs))
         try:
-            body_ast = expand(parse_template(mname, macro, context), ns, context)
+            body_ast = parse_template(mname, macro, context)
         except ValueError as e:
             errors.append(prefixed(context, e))
             continue

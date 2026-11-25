@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, NamedTuple
 import mathspec._degree as degree
 from mathspec._dimensions import join_dims, sorted_dims
 from mathspec._divisors import zero_divisor_refusals
-from mathspec._expansion import expand
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
 from mathspec._syntax import (
     AndNode,
@@ -37,7 +36,7 @@ from mathspec._syntax import (
     literal_number,
     nodes,
 )
-from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, prefixed, unordered
+from mathspec.errors import DimensionError, LanguageError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
     Add,
     And,
@@ -421,12 +420,7 @@ class ConditionResolver:
                     f'Write count(<condition>, over=<dimension>) <op> <integer>.'
                 )
                 continue
-            try:
-                expanded = expand(side, ns, context)
-            except ValueError as e:
-                self.errors.append(prefixed(context, e))
-                continue
-            if (resolved := self._expressions.build(expanded)) is not None:
+            if (resolved := self._expressions.build(side)) is not None:
                 sides.append(resolved)
         if len(self.errors) > found:
             return None
