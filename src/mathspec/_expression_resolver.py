@@ -16,22 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, assert_never, cast
 
 from mathspec._dimensions import check_node, joined, sorted_dims
-from mathspec._expression_parser import (
-    MAX_DEPTH,
-    ArithmeticNode,
-    BinaryOperatorNode,
-    ColumnsNode,
-    FunctionCallNode,
-    KeywordNode,
-    NameListNode,
-    NameNode,
-    NumberNode,
-    UnaryOperatorNode,
-    depth,
-    literal_number,
-    names_in,
-    shown,
-)
+from mathspec._grammar import RESERVED_WORDS
 from mathspec._operators import (
     AMOUNTS,
     BUILTINS,
@@ -39,6 +24,27 @@ from mathspec._operators import (
     call_shape_error,
     edge_error,
     unknown_operator_message,
+)
+from mathspec._syntax import (
+    MAX_DEPTH,
+    AndNode,
+    BinaryOperatorNode,
+    BooleanNode,
+    ColumnsNode,
+    ComparisonNode,
+    FunctionCallNode,
+    KeywordNode,
+    NameListNode,
+    NameNode,
+    NotNode,
+    NumberNode,
+    OrNode,
+    ParsedNode,
+    UnaryOperatorNode,
+    depth,
+    literal_number,
+    names_in,
+    shown,
 )
 from mathspec.errors import DimensionError, SchemaError, did_you_mean, unordered
 from mathspec.program import (
@@ -92,11 +98,11 @@ class ExpressionResolver:
     errors: list[str]
     formals: frozenset[str] = frozenset()
 
-    def _formal(self, value: ArithmeticNode) -> bool:
+    def _formal(self, value: ParsedNode) -> bool:
         """Whether *value* is a formal, left for the call site to bind."""
         return isinstance(value, NameNode) and value.name in self.formals
 
-    def build(self, node: ArithmeticNode) -> Expression | None:
+    def build(self, node: ParsedNode) -> Expression | None:
         """The program tree *node* stands for, held to [`MAX_RESOLVED_DEPTH`][] before anything walks it.
 
         The depth is measured with every named expression written in, since
@@ -113,11 +119,11 @@ class ExpressionResolver:
         )
         return None
 
-    def arith(self, node: ArithmeticNode) -> Expression | None:
+    def arith(self, node: ParsedNode) -> Expression | None:
         """The program node *node* stands for, or ``None``.
 
-        A quoted keyword or a name list in arithmetic arrives through a macro
-        formal bound to one.
+        The grammar reads a label, a list, a column selection and a condition
+        wherever a term may stand, so what is not a number is refused here.
         """
         if isinstance(node, NumberNode):
             return Constant(node.value, dims=())
@@ -140,7 +146,7 @@ class ExpressionResolver:
             return None
         if isinstance(node, NameListNode):
             self.errors.append(
-                f'{self.context}: {node} is a list of names, which is allowed only as an operator argument, '
+                f'{self.context}: [{", ".join(node.names)}] is a list of names, which is allowed only as an operator argument, '
                 f'such as over=[snapshot, generator]. Write the terms out and add them.'
             )
             return None
@@ -148,6 +154,17 @@ class ExpressionResolver:
             self.errors.append(
                 f'{self.context}: {node} names columns of a relation, which is allowed only as an operator '
                 f'argument, such as at(x, by={node}). A relation is not a value.'
+            )
+            return None
+        if isinstance(node, BooleanNode):
+            self.errors.append(
+                f"{self.context}: '{node}' is {RESERVED_WORDS}, and not a number. If an entry has that name, rename it."
+            )
+            return None
+        if isinstance(node, ComparisonNode | NotNode | AndNode | OrNode):
+            self.errors.append(
+                f"{self.context}: '{node}' is a condition, which is true or false, and not a number. Move it to "
+                f'a where:, or carry its value in a parameter.'
             )
             return None
         assert_never(node)
@@ -386,7 +403,7 @@ class ExpressionResolver:
             return False
         return True
 
-    def _amount(self, value: ArithmeticNode, operator: str, key: str) -> int | str | None:
+    def _amount(self, value: ParsedNode, operator: str, key: str) -> int | str | None:
         """``offset=`` or ``window=``: a whole number in the operator's range, or the name of a parameter.
 
         Closed so that [`mathspec._dimensions._check_named_amount`][] sees
@@ -423,7 +440,7 @@ class ExpressionResolver:
             return None
         return bare.name
 
-    def _edge(self, value: ArithmeticNode, operator: str) -> _Edge | None:
+    def _edge(self, value: ParsedNode, operator: str) -> _Edge | None:
         """``edge=``: the closed keyword ``wrap``, or a number to contribute; a name here is a typo."""
         if self._formal(value):
             return None
@@ -448,7 +465,7 @@ class ExpressionResolver:
             return None
         return False, literal.value
 
-    def _dim_ref(self, value: ArithmeticNode, operator: str, key: str) -> str | None:
+    def _dim_ref(self, value: ParsedNode, operator: str, key: str) -> str | None:
         """An operator kwarg whose *value* must name a declared dimension."""
         if self._formal(value):
             return None
@@ -487,7 +504,7 @@ class ExpressionResolver:
         declared = {**self.ns.spec.constraints, **self.ns.spec.given.constraints}[value.name]
         return Dual(value.name, dims=sorted_dims(declared.dims))
 
-    def _over(self, value: ArithmeticNode, operator: str, *, relation: bool) -> tuple[str, ...] | None:
+    def _over(self, value: ParsedNode, operator: str, *, relation: bool) -> tuple[str, ...] | None:
         """``over=``: a dimension or a list of them, and beside ``by=`` the columns of the relation too, each a bare name.
 
         Beside ``by=`` a name is read against the relation in [`_grouping`][],
@@ -522,7 +539,7 @@ class ExpressionResolver:
             )
         return names if len(self.errors) == found else None
 
-    def columns_ref(self, value: ArithmeticNode, operator: str, key: str) -> ColumnsNode | None:
+    def columns_ref(self, value: ParsedNode, operator: str, key: str) -> ColumnsNode | None:
         """A kwarg naming columns of one relation, ``relation[column, …]``, each a column the relation declares.
 
         The relation is written once and its columns after it, so one call
@@ -552,7 +569,7 @@ class ExpressionResolver:
             return None
         return value
 
-    def _not_columns(self, value: ArithmeticNode, operator: str, key: str) -> str:
+    def _not_columns(self, value: ParsedNode, operator: str, key: str) -> str:
         """Why *value* is not a column selection, with the selection it most likely meant."""
         ns, context = self.ns, self.context
         if isinstance(value, NameNode) and value.name in ns.relations:
@@ -762,7 +779,7 @@ def _or_a_formal(formals: frozenset[str]) -> str:
     return ' or a formal argument of this macro' if formals else ''
 
 
-def _without_sign(value: ArithmeticNode) -> ArithmeticNode:
+def _without_sign(value: ParsedNode) -> ParsedNode:
     """*value* under its sign, if it carries one."""
     return value.operand if isinstance(value, UnaryOperatorNode) else value
 

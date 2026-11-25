@@ -11,13 +11,19 @@ states rather than by pyparsing's ``QuotedString``:
 
 - the text between the quotes, with ``\\t``, ``\\n``, ``\\f``, ``\\r`` as the
   character and no numeric escape (#1039);
-- in a where string, a backslash before any other character is that
-  character, in every label, an arithmetic call's included (#1042);
+- a backslash before any other character is that character, in every
+  label of either grammar (#1042);
 - a tab is a tab, where ``parse_string`` expanded it to spaces (#1044).
 
-It builds the package's own node classes, so a tree from either side
-compares with ``==``. A change to what the language accepts changes this
-file in the same commit, or the fuzzer reads the change as a regression.
+The parse actions build the package's one syntax tree, so a tree from
+either side compares with ``==``: a where string's connectives and
+literals are the ``*Node`` classes, a comparison of either grammar is a
+``ComparisonNode``, a column is a ``ColumnsNode`` of one column, and a call
+that reads a condition is a ``FunctionCallNode`` holding it as its one
+positional argument. A bare ``inf`` is the number wherever it stands, and
+``count`` keeps the case it was written in. The grammar itself is as it
+stood. A change to what the language accepts changes this file in the same
+commit, or the fuzzer reads the change as a regression.
 """
 
 # ruff: noqa: N806
@@ -30,37 +36,30 @@ from typing import TYPE_CHECKING, Literal, cast, get_args
 
 import pyparsing as pp
 
-from mathspec._condition_parser import (
-    ColumnNode,
-    UnresolvedComparisonNode,
-    UnresolvedConditionCallNode,
-    UnresolvedConditionNode,
-    UnresolvedCountNode,
-    nested,
-)
-from mathspec._expression_parser import (
-    NAME,
-    REAL,
-    ArithmeticNode,
+from mathspec._grammar import NAME, REAL
+from mathspec._syntax import (
+    AndNode,
     BinaryOperatorNode,
+    BooleanNode,
     ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
     KeywordNode,
     NameListNode,
     NameNode,
+    NotNode,
     NumberNode,
-    Sense,
+    OrNode,
+    ParsedNode,
     UnaryOperatorNode,
     children,
     depth,
-    keywords,
 )
 from mathspec.errors import SchemaError
-from mathspec.program import And, BooleanLiteral, ComparisonOperator, Condition, Not, Or
+from mathspec.program import ComparisonOperator, ConstraintSense
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
 # ---------------------------------------------------------------------------
 # Expression grammar, verbatim
@@ -123,7 +122,7 @@ def _build_grammar(esc_char: str | None = None) -> tuple[pp.ParserElement, pp.Pa
 
     arith <<= add_sub
 
-    comparator = pp.one_of(list(get_args(Sense)))
+    comparator = pp.one_of(list(get_args(ConstraintSense)))
     expression = (arith + pp.Optional(comparator + arith)).set_parse_action(
         lambda t: ComparisonNode(t[1], t[0], t[2]) if len(t) == 3 else t[0]
     )
@@ -133,39 +132,49 @@ def _build_grammar(esc_char: str | None = None) -> tuple[pp.ParserElement, pp.Pa
 def _make_func_call(tokens: pp.ParseResults) -> FunctionCallNode:
     """The callee is cast: a ParseResults element is untyped, and the grammar guarantees an identifier in position 0."""
     name = cast('str', tokens[0])
-    args: list[ArithmeticNode] = []
-    pairs: list[tuple[str, ArithmeticNode]] = []
+    args: list[ParsedNode] = []
+    pairs: list[tuple[str, ParsedNode]] = []
     for item in tokens[1:]:
         (pairs if isinstance(item, tuple) and len(item) == 2 else args).append(item)
     return FunctionCallNode(name=name, args=tuple(args), kwargs=keywords(name, pairs))
 
 
-def _make_left_assoc(tokens: pp.ParseResults) -> ArithmeticNode:
-    result: ArithmeticNode
+def keywords(name: str, pairs: Iterable[tuple[str, ParsedNode]]) -> dict[str, ParsedNode]:
+    """A call's keywords, in the order written; a keyword given twice is refused, in both grammars."""
+    kwargs: dict[str, ParsedNode] = {}
+    for key, value in pairs:
+        if key in kwargs:
+            msg = f'{name}({key}=) is given twice. Delete one of them.'
+            raise SchemaError(msg)
+        kwargs[key] = value
+    return kwargs
+
+
+def _make_left_assoc(tokens: pp.ParseResults) -> ParsedNode:
+    result: ParsedNode
     result, *rest = tokens
     for op, right in zip(rest[::2], rest[1::2], strict=True):
         result = BinaryOperatorNode(op, result, right)
     return result
 
 
-def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
+def _make_power(tokens: pp.ParseResults) -> ParsedNode:
     """A base and at most one exponent — right-associative, since the exponent is itself a ``unary``."""
-    items: list[ArithmeticNode] = list(tokens)
+    items: list[ParsedNode] = list(tokens)
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-_GRAMMAR = _build_grammar()[1]
-ARITHMETIC, _, COLUMNS = _build_grammar('\\')
+ARITHMETIC, _GRAMMAR, COLUMNS = _build_grammar('\\')
 
 # ---------------------------------------------------------------------------
 # Condition grammar, verbatim
 # ---------------------------------------------------------------------------
 
 
-def _condition_call(tokens: pp.ParseResults) -> UnresolvedConditionCallNode:
+def _condition_call(tokens: pp.ParseResults) -> FunctionCallNode:
     """The call node, with a keyword given twice refused as the arithmetic grammar refuses it."""
     name, operand, *pairs = tokens
-    return UnresolvedConditionCallNode(name, operand, keywords(name, pairs))
+    return FunctionCallNode(name, (operand,), keywords(name, pairs))
 
 
 def _build_condition_grammar() -> pp.ParserElement:
@@ -177,12 +186,12 @@ def _build_condition_grammar() -> pp.ParserElement:
     """
     condition = pp.Forward()
 
-    true_lit = pp.CaselessKeyword('True').set_parse_action(lambda: BooleanLiteral(True))
-    false_lit = pp.CaselessKeyword('False').set_parse_action(lambda: BooleanLiteral(False))
+    true_lit = pp.CaselessKeyword('True').set_parse_action(lambda: BooleanNode(True))
+    false_lit = pp.CaselessKeyword('False').set_parse_action(lambda: BooleanNode(False))
 
     name = pp.Regex(NAME)
     # pyrefly: ignore[implicit-any-lambda]
-    column = (name + pp.Suppress('[') + name + pp.Suppress(']')).set_parse_action(lambda t: ColumnNode(t[0], t[1]))
+    column = (name + pp.Suppress('[') + name + pp.Suppress(']')).set_parse_action(lambda t: ColumnsNode(t[0], (t[1],)))
     quoted = _quoted("'", '\\') | _quoted('"', '\\')
     comparator = pp.one_of(list(get_args(ComparisonOperator)))
 
@@ -201,19 +210,19 @@ def _build_condition_grammar() -> pp.ParserElement:
             head + pp.Suppress('(') + condition + pp.ZeroOrMore(pp.Suppress(',') + kwarg) + pp.Suppress(')')
         ).set_parse_action(_condition_call)
 
-    count_call = _call(pp.CaselessKeyword('count'))
+    count_call = _call(pp.original_text_for(pp.CaselessKeyword('count')))
     condition_call = _call(name.copy())
 
     count_comparison = (count_call + comparator + ARITHMETIC).set_parse_action(
         # pyrefly: ignore[implicit-any-lambda]
-        lambda t: UnresolvedCountNode(t[0], t[1], t[2])
+        lambda t: ComparisonNode(t[1], t[0], t[2])
     )
     comparison = (
         (column | ARITHMETIC) + comparator + (quoted | column | ARITHMETIC)
         # pyrefly: ignore[implicit-any-lambda]
-    ).set_parse_action(lambda t: UnresolvedComparisonNode(t[0], t[1], t[2]))
+    ).set_parse_action(lambda t: ComparisonNode(t[1], t[0], t[2]))
     # pyrefly: ignore[implicit-any-lambda]
-    existence = name.copy().set_parse_action(lambda t: NameNode(t[0]))
+    existence = name.copy().set_parse_action(lambda t: NumberNode(float('inf')) if t[0] == 'inf' else NameNode(t[0]))
 
     atom = (
         true_lit
@@ -227,28 +236,28 @@ def _build_condition_grammar() -> pp.ParserElement:
 
     NOT = pp.CaselessKeyword('NOT').suppress()
     # pyrefly: ignore[implicit-any-lambda]
-    not_expr = (NOT + atom).set_parse_action(lambda t: Not(t[0])) | atom
+    not_expr = (NOT + atom).set_parse_action(lambda t: NotNode(t[0])) | atom
 
     AND = pp.CaselessKeyword('AND').suppress()
     and_expr = not_expr + pp.ZeroOrMore(AND + not_expr)
-    and_expr.set_parse_action(_folder(And))
+    and_expr.set_parse_action(_folder(AndNode))
 
     OR = pp.CaselessKeyword('OR').suppress()
     or_expr = and_expr + pp.ZeroOrMore(OR + and_expr)
-    or_expr.set_parse_action(_folder(Or))
+    or_expr.set_parse_action(_folder(OrNode))
 
     condition <<= or_expr
     return condition
 
 
-def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Condition | UnresolvedConditionNode]:
+def _folder(node_type: type[AndNode] | type[OrNode]) -> Callable[[pp.ParseResults], ParsedNode]:
     """A parse action left-folding a flat operator chain into *node_type*."""
 
-    def fold(tokens: pp.ParseResults) -> Condition | UnresolvedConditionNode:
-        items: list[Condition | UnresolvedConditionNode] = list(tokens)
+    def fold(tokens: pp.ParseResults) -> ParsedNode:
+        items: list[ParsedNode] = list(tokens)
         result = items[0]
         for item in items[1:]:
-            result = node_type(cast('Condition', result), cast('Condition', item))
+            result = node_type(result, item)
         return result
 
     return fold
@@ -276,11 +285,11 @@ class Refused:
 
 def oracle(grammar: Grammar, text: str) -> object:
     """The tree the frozen grammar builds for *text*, or the reason it refuses it, as ``parse_text`` decided."""
-    parser, child_of = (_GRAMMAR, children) if grammar == 'expression' else (_CONDITION_GRAMMAR, nested)
+    parser = _GRAMMAR if grammar == 'expression' else _CONDITION_GRAMMAR
     try:
         node = parser.parse_string(text, parse_all=True)[0]
     except (pp.ParseException, SchemaError):
         return Refused('syntax')
     except RecursionError:
         return Refused('out of stack')
-    return Refused('too deep') if depth(node, child_of) > MAX_DEPTH else node
+    return Refused('too deep') if depth(node, children) > MAX_DEPTH else node

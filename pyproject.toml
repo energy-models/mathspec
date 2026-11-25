@@ -54,8 +54,8 @@ dependencies = [
   # `errors.schema_error` unwraps to keep the documented class; 2.0 flattens
   # every model error to SchemaError.
   "pydantic>=2.1",
-  # The two grammars — `expression:` and `where:` are strings to the schema and
-  # are parsed here (_expression_parser.py, _condition_parser.py). 1.1.3 is
+  # The grammar — `expression:` and `where:` are strings to the schema and
+  # are parsed here (_grammar.py). 1.1.3 is
   # the first release that reads a terminal's regex through `re._parser` on
   # Python 3.11 and later, rather than the deprecated `sre_parse`.
   "lark>=1.1.3",
@@ -129,9 +129,6 @@ extend-fixable = ["B", "SIM", "RUF", "C4", "UP"]
   "T20",
   "D",
 ] # likewise a generator, and only reachable as a command
-"src/mathspec/_condition_parser.py" = [
-  "N806",
-] # grammar tokens (NOT/AND/OR) are named after keywords
 "docs/static/hooks.py" = ["PERF401", "RUF015", "D"]
 
 [tool.ruff.format]

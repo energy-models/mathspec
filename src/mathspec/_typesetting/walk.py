@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     import datetime
     from collections.abc import Iterable, Mapping
 
-    from mathspec._expression_parser import BinaryOperator
+    from mathspec._syntax import BinaryOperator
     from mathspec._typesetting.format import Format
     from mathspec._typesetting.symbols import Symbols
     from mathspec.program import Link, Piecewise, Program

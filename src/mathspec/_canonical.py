@@ -6,36 +6,28 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast, overload
+from functools import partial
+from typing import TYPE_CHECKING, Literal, cast
 
-from mathspec._condition_parser import (
-    ColumnNode,
-    UnresolvedComparisonNode,
-    UnresolvedConditionCallNode,
-    UnresolvedCountNode,
-    parse_condition,
-)
-from mathspec._expression_parser import (
+from mathspec._grammar import parse_condition, parse_expression
+from mathspec._syntax import (
+    AndNode,
     BinaryOperatorNode,
     ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
-    KeywordNode,
     NameListNode,
-    NameNode,
+    OrNode,
     UnaryOperatorNode,
     operand,
-    parse_expression,
+    with_children,
 )
 from mathspec._yaml import dump_yaml
-from mathspec.program import And, BooleanLiteral, Not, Or
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from mathspec._condition_parser import UnresolvedConditionNode
-    from mathspec._expression_parser import ArithmeticNode, ParsedNode
-    from mathspec.program import Condition
+    from mathspec._syntax import ParsedNode
     from mathspec.spec import Spec
 
 Sign = Literal['+', '-']
@@ -45,7 +37,7 @@ _EXPRESSION_KEYS = ('expression', 'otherwise', 'template')
 _CONDITION_KEYS = ('where', 'when', 'condition', 'holds')
 
 
-def _signed(sign: Sign, node: ArithmeticNode) -> tuple[Sign, ArithmeticNode]:
+def _signed(sign: Sign, node: ParsedNode) -> tuple[Sign, ParsedNode]:
     """One term with a leading sign folded into the sign it is written under.
 
     ``+ -x`` is ``- x`` and ``- -x`` is ``+ x``, so a term sorts and prints
@@ -61,7 +53,7 @@ def _signed(sign: Sign, node: ArithmeticNode) -> tuple[Sign, ArithmeticNode]:
     return sign, node
 
 
-def _signed_terms(node: ArithmeticNode, sign: Sign = '+') -> Iterator[tuple[Sign, ArithmeticNode]]:
+def _signed_terms(node: ParsedNode, sign: Sign = '+') -> Iterator[tuple[Sign, ParsedNode]]:
     """The sum *node* stands for under *sign*, as each term with the sign it carries.
 
     A sum under a plus is spliced into the sum around it, on either side. A
@@ -82,7 +74,7 @@ def _signed_terms(node: ArithmeticNode, sign: Sign = '+') -> Iterator[tuple[Sign
         yield sign, node
 
 
-def _factors(node: ArithmeticNode) -> Iterator[ArithmeticNode]:
+def _factors(node: ParsedNode) -> Iterator[ParsedNode]:
     """The product *node* is, as its factors, on either side.
 
     A division stays one factor, its own node. A product is spliced for the
@@ -96,7 +88,7 @@ def _factors(node: ArithmeticNode) -> Iterator[ArithmeticNode]:
         yield node
 
 
-def _order(term: tuple[Sign, ArithmeticNode]) -> tuple[str, Sign]:
+def _order(term: tuple[Sign, ParsedNode]) -> tuple[str, Sign]:
     """The key a term of a sum sorts under: the text it prints as, then the sign it is written under.
 
     The sign is the tie-breaker rather than part of the text, so ``a - b`` and
@@ -106,31 +98,25 @@ def _order(term: tuple[Sign, ArithmeticNode]) -> tuple[str, Sign]:
     return str(node), sign
 
 
-def _sum(terms: list[tuple[Sign, ArithmeticNode]]) -> ArithmeticNode:
+def _sum(terms: list[tuple[Sign, ParsedNode]]) -> ParsedNode:
     """The terms back into one left-leaning spine, a leading minus becoming the sign it was."""
     sign, first = terms[0]
-    built: ArithmeticNode = first if sign == '+' else UnaryOperatorNode('-', first)
+    built: ParsedNode = first if sign == '+' else UnaryOperatorNode('-', first)
     for sign, term in terms[1:]:
         built = BinaryOperatorNode(sign, built, term)
     return built
 
 
-@overload
-def normalised(node: ArithmeticNode) -> ArithmeticNode: ...
-@overload
-def normalised(node: ComparisonNode) -> ComparisonNode: ...
-
-
 def normalised(node: ParsedNode) -> ParsedNode:
-    """*node* with every order the math does not fix put into one order.
+    """*node* with every order the math and the logic do not fix put into one order.
 
     Sorting is by the text an operand prints as, which is a total order over
     trees: a printed tree parses back to the tree it came from, so two
-    operands that print alike are one tree. Addition and multiplication
-    commute and are sorted. A list of names and the columns of a relation in a
-    call name a set, and are sorted too. Subtraction, division,
-    exponentiation and a call's positional arguments are not, and keep the
-    order the file wrote.
+    operands that print alike are one tree. Addition, multiplication, ``AND``
+    and ``OR`` commute and are sorted. A list of names and the columns of a
+    relation name a set, and are sorted too. Subtraction, division,
+    exponentiation, the sides of a comparison and a call's positional
+    arguments are not, and keep the order the file wrote.
 
     Each term and factor is flattened *after* it is normalised as well as
     before, because normalising reveals sums and products the written tree
@@ -138,9 +124,6 @@ def normalised(node: ParsedNode) -> ParsedNode:
     away. A group left whole here would print into flat text and read back as
     several terms, which is a different tree from the one printed.
     """
-    if isinstance(node, ComparisonNode):
-        left, right = (normalised(side) for side in (node.left, node.right))
-        return ComparisonNode(node.op, left, right)
     if isinstance(node, FunctionCallNode):
         return FunctionCallNode(
             node.name,
@@ -155,23 +138,41 @@ def normalised(node: ParsedNode) -> ParsedNode:
         sign, inner = _signed('+', node)
         under = normalised(inner)
         return under if sign == '+' else UnaryOperatorNode('-', under)
-    if isinstance(node, BinaryOperatorNode):
-        if node.op in ('+', '-'):
-            terms: list[tuple[Sign, ArithmeticNode]] = []
-            for sign, term in _signed_terms(node):
-                terms.extend(_signed_terms(normalised(term), sign))
-            return _sum(sorted(terms, key=_order))
-        if node.op == '*':
-            factors: list[ArithmeticNode] = []
-            for factor in _factors(node):
-                factors.extend(_factors(normalised(factor)))
-            factors.sort(key=str)
-            product: ArithmeticNode = factors[0]
-            for factor in factors[1:]:
-                product = BinaryOperatorNode('*', product, factor)
-            return product
-        return BinaryOperatorNode(node.op, normalised(node.left), normalised(node.right))
-    return node
+    if isinstance(node, BinaryOperatorNode) and node.op in ('+', '-'):
+        terms: list[tuple[Sign, ParsedNode]] = []
+        for sign, term in _signed_terms(node):
+            terms.extend(_signed_terms(normalised(term), sign))
+        return _sum(sorted(terms, key=_order))
+    if isinstance(node, BinaryOperatorNode) and node.op == '*':
+        factors: list[ParsedNode] = []
+        for factor in _factors(node):
+            factors.extend(_factors(normalised(factor)))
+        factors.sort(key=str)
+        product = factors[0]
+        for factor in factors[1:]:
+            product = BinaryOperatorNode('*', product, factor)
+        return product
+    if isinstance(node, (AndNode, OrNode)):
+        items = sorted((normalised(item) for item in _chain(node)), key=partial(_chained, chain=node))
+        chained = items[0]
+        for item in items[1:]:
+            chained = type(node)(chained, item)
+        return chained
+    return with_children(node, normalised)
+
+
+def _chained(item: ParsedNode, chain: AndNode | OrNode) -> str:
+    """One operand of a chain as it prints there: an ``OR`` under an ``AND``, which binds tighter, in brackets."""
+    return f'({item})' if isinstance(chain, AndNode) and isinstance(item, OrNode) else str(item)
+
+
+def _chain(node: AndNode | OrNode) -> Iterator[ParsedNode]:
+    """The operands of a chain of one connective, on either side, as the grammar folds ``a AND b AND c``."""
+    for item in (node.left, node.right):
+        if type(item) is type(node):
+            yield from _chain(item)
+        else:
+            yield item
 
 
 def laid_out(node: ParsedNode) -> str:
@@ -204,70 +205,13 @@ def canonical_text(text: str) -> str:
 
 
 def canonical_condition(text: str) -> str:
-    """One condition string in the normal form, parsed and printed rather than edited."""
-    return printed_condition(parse_condition(text))
+    """One condition string in the normal form, parsed and printed rather than edited.
 
-
-def printed_condition(node: Condition | UnresolvedConditionNode) -> str:
-    """*node* as text, with every order the logic does not fix put into one order.
-
-    ``AND`` and ``OR`` commute, so a chain of one of them is flattened and its
-    operands sorted by the text each prints as. The keywords print in upper
-    case. A side of a comparison is normalised as an expression is, and the
-    two sides keep their places, as an expression's comparison does. A
-    bracket is printed only where the grammar needs it, and around a
-    comparison under ``NOT``, which a reader would otherwise take for a
-    negated name.
-
-    Raises:
-        TypeError: If *node* is a resolved leaf, which the grammar never builds.
+    The keywords print in upper case, and a bracket only where the grammar
+    needs one, and around a comparison under ``NOT``, which a reader would
+    otherwise take for a negated name.
     """
-    if isinstance(node, (And, Or)):
-        word = ' AND ' if isinstance(node, And) else ' OR '
-        return word.join(sorted(_connected(item, node) for item in _chain(node)))
-    if isinstance(node, Not):
-        inner = printed_condition(node.operand)
-        if isinstance(node.operand, (NameNode, BooleanLiteral, UnresolvedConditionCallNode)):
-            return f'NOT {inner}'
-        return f'NOT ({inner})'
-    if isinstance(node, BooleanLiteral):
-        return str(node.value)
-    if isinstance(node, NameNode):
-        return node.name
-    if isinstance(node, UnresolvedComparisonNode):
-        return f'{_side(node.left)} {node.op} {_side(node.right)}'
-    if isinstance(node, UnresolvedConditionCallNode):
-        passed = [printed_condition(node.operand), *(f'{k}={_side(v)}' for k, v in sorted(node.kwargs.items()))]
-        return f'{node.name}({", ".join(passed)})'
-    if isinstance(node, UnresolvedCountNode):
-        return f'{printed_condition(node.call)} {node.op} {_side(node.value)}'
-    msg = f'{node!r} is not a node the condition grammar builds.'
-    raise TypeError(msg)
-
-
-def _chain(node: And | Or) -> Iterator[Condition | UnresolvedConditionNode]:
-    """The operands of a chain of one connective, on either side, as the grammar folds ``a AND b AND c``."""
-    for item in (node.left, node.right):
-        if type(item) is type(node):
-            yield from _chain(item)
-        else:
-            yield item
-
-
-def _connected(item: Condition | UnresolvedConditionNode, chain: And | Or) -> str:
-    """One operand of a chain, bracketed where it is an ``OR`` under an ``AND``, which binds tighter."""
-    text = printed_condition(item)
-    return f'({text})' if isinstance(chain, And) and isinstance(item, Or) else text
-
-
-def _side(node: ArithmeticNode | ColumnNode) -> str:
-    """A side of a comparison or a keyword's value, an arithmetic one in the normal form of an expression."""
-    if isinstance(node, ColumnNode):
-        return node.shown
-    if isinstance(node, KeywordNode):
-        escaped = node.value.replace('\\', '\\\\').replace("'", "\\'")
-        return f"'{escaped}'"
-    return str(normalised(node))
+    return str(normalised(parse_condition(text)))
 
 
 def _canonical_entry(entry: object) -> object:

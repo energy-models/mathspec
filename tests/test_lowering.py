@@ -16,8 +16,8 @@ from typing import get_args
 import pytest
 
 from mathspec import to_spec
-from mathspec._condition_parser import parse_condition
 from mathspec._exclusivity import overlapping
+from mathspec._grammar import parse_condition
 from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
 from mathspec.program import (

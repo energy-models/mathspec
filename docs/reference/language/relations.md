@@ -320,12 +320,10 @@ comparison uses one column, so `calendar[month, weekday] == 'x'` is refused,
 and mathspec suggests the rewrite:
 
 ```text
-Variable 'x': Cannot parse the condition "calendar[month, weekday] == 'x'".
-a comparison reads one column of 'calendar'. Compare each column on its own: calendar[month] == … AND calendar[weekday] == ….
-Expected end of text, found '['  (at char 8), (line:1, col:9)
+Variable 'x': 'calendar[month, weekday]' names 2 columns, and a comparison reads one column of 'calendar'. Compare each column on its own: calendar[month] == … AND calendar[weekday] == ….
 ```
 
-mathspec suggests the rewrite on the second line of the message.
+mathspec suggests the rewrite: one comparison for each column, joined by `AND`.
 
 At the key of the relation, a bare relation name in a `where:` tests that a
 row exists. On a variable, the condition leaves the variable absent at every pair

@@ -23,22 +23,24 @@ import yaml
 import mathspec as ms
 from mathspec.__main__ import main
 from mathspec._canonical import _factors, _signed_terms, canonical_condition, canonical_text, laid_out, normalised
-from mathspec._condition_parser import parse_condition
-from mathspec._expression_parser import (
+from mathspec._grammar import parse_condition, parse_expression
+from mathspec._syntax import (
+    AndNode,
     BinaryOperatorNode,
+    BooleanNode,
     ComparisonNode,
     FunctionCallNode,
     NameNode,
+    NotNode,
     NumberNode,
+    OrNode,
     UnaryOperatorNode,
     operand,
-    parse_expression,
 )
-from mathspec.program import And, BooleanLiteral, Not, Or
 from tests.fixtures import DISPATCH_MODEL, EXAMPLES, SPECS, raw_of, sets_reversed, varied
 
 if TYPE_CHECKING:
-    from mathspec._expression_parser import ArithmeticNode, ParsedNode
+    from mathspec._syntax import ParsedNode
 
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'every_program_node.yaml'
 
@@ -438,7 +440,7 @@ def test_diff_exits_2_when_either_file_is_refused(tmp_path, capsys, broken):
 LEAVES = ['a', 'b', 'c', 'd', 'long_name']
 
 
-def _tree(rng: random.Random, depth: int = 0) -> ArithmeticNode:
+def _tree(rng: random.Random, depth: int = 0) -> ParsedNode:
     """One random expression tree, every node kind an expression can carry."""
     if depth >= 4 or rng.random() < 0.28:
         return rng.choice([NameNode(rng.choice(LEAVES)), NumberNode(float(rng.randint(1, 5)))])
@@ -459,7 +461,7 @@ def _top(rng: random.Random) -> ParsedNode:
     return ComparisonNode(rng.choice(['<=', '>=', '==']), node, _tree(rng, 2)) if rng.random() < 0.3 else node
 
 
-def _value(node: ArithmeticNode, env: dict[str, float]) -> float:
+def _value(node: ParsedNode, env: dict[str, float]) -> float:
     """What the tree computes, for the one question a normal form must answer the same.
 
     A call is read as the sum of its arguments and its keywords are ignored,
@@ -644,13 +646,13 @@ def _condition_tree(rng: random.Random, depth: int = 0) -> str:
 def _truth(node: object, env: dict[str, bool]) -> bool:
     if isinstance(node, NameNode):
         return env[node.name]
-    if isinstance(node, BooleanLiteral):
+    if isinstance(node, BooleanNode):
         return node.value
-    if isinstance(node, Not):
+    if isinstance(node, NotNode):
         return not _truth(node.operand, env)
-    if isinstance(node, And):
+    if isinstance(node, AndNode):
         return _truth(node.left, env) and _truth(node.right, env)
-    assert isinstance(node, Or), f'{node} is not a kind this evaluator was given'
+    assert isinstance(node, OrNode), f'{node} is not a kind this evaluator was given'
     return _truth(node.left, env) or _truth(node.right, env)
 
 

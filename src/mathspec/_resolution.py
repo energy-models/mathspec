@@ -16,31 +16,23 @@ live in the language reference.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, cast, get_args
 
 import mathspec._degree as degree
-from mathspec._condition_parser import (
-    UnresolvedConditionNode,
-    nested,
-    parse_condition,
-)
 from mathspec._condition_resolver import ConditionResolver
 from mathspec._dimensions import sorted_dims
 from mathspec._exclusivity import overlapping
 from mathspec._expansion import expand, parse_and_expand
-from mathspec._expression_parser import (
-    ArithmeticNode,
-    ComparisonNode,
-    NameNode,
-    nodes,
-)
 from mathspec._expression_resolver import ExpressionResolver
+from mathspec._grammar import parse_condition, parse_expression
+from mathspec._syntax import ComparisonNode, NameNode, nodes
 from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
     Cases,
     Condition,
     ConditionReference,
+    ConstraintSense,
     Expression,
     ExpressionReference,
     Mask,
@@ -53,8 +45,7 @@ from mathspec.program import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from mathspec._condition_parser import ParsedCondition
-    from mathspec._expression_parser import ParsedNode, Sense
+    from mathspec._syntax import ParsedNode
     from mathspec.program import DeclaredDtype
     from mathspec.spec import ConditionSpec, ExpressionSpec, Spec
 
@@ -228,28 +219,20 @@ class Namespace:
         resolution that follows reports it.
         """
         entry, context = self.spec.expressions[name], f"Named expression '{name}'"
-        arithmetic: list[ParsedNode] = []
-        for text in (entry.expression, *(case.expression for case in (entry.cases or {}).values()), entry.otherwise):
+        cases = (entry.cases or {}).values()
+        texts = [
+            *((parse_expression, text) for text in (entry.expression, *(case.expression for case in cases))),
+            *((parse_condition, case.when) for case in cases),
+            (parse_expression, entry.otherwise),
+        ]
+        read: list[ParsedNode] = []
+        for parse, text in texts:
             if text is not None:
                 try:
-                    arithmetic.append(parse_and_expand(text, self, context))
+                    read.append(expand(parse(text), self, context))
                 except ValueError:
                     continue
-        for case in (entry.cases or {}).values():
-            try:
-                pending: list[ParsedCondition] = [parse_condition(case.when)]
-            except ValueError:
-                continue
-            while pending:
-                node = pending.pop()
-                if isinstance(node, ArithmeticNode):
-                    try:
-                        arithmetic.append(expand(node, self, context))
-                    except ValueError:
-                        continue
-                else:
-                    pending.extend(nested(node))
-        names = (n.name for n in nodes(*arithmetic) if isinstance(n, NameNode) and n.name in self.bodies)
+        names = (n.name for n in nodes(*read) if isinstance(n, NameNode) and n.name in self.bodies)
         return tuple(dict.fromkeys(names))
 
     def unordered(self, name: str) -> bool:
@@ -336,7 +319,7 @@ def remainder(masks: Iterable[Mask]) -> Mask:
 
 
 def resolve_expression(
-    node: ArithmeticNode,
+    node: ParsedNode,
     ns: Namespace,
     context: str,
     errors: list[str],
@@ -360,22 +343,21 @@ def resolve_expression(
 
 
 def resolve_condition(
-    node: Condition | UnresolvedConditionNode,
+    node: ParsedNode,
     ns: Namespace,
     context: str,
     errors: list[str],
     self_variable: str | None = None,
 ) -> Condition | None:
-    """Rewrite a parsed where AST into typed conditions, folded as [`Mask`][] folds.
+    """Read a parsed where string into typed conditions, folded as [`Mask`][] folds.
 
     Returns:
         The typed tree — a mask admitting every row or none comes back as the
         one ``BooleanLiteral`` — or ``None`` once anything failed, with the
         problems appended to *errors*.
     """
-    before = len(errors)
     resolved = ConditionResolver(ns, context, errors, self_variable).build(node)
-    return None if len(errors) > before else Mask(cast('Condition', resolved)).root
+    return None if resolved is None else Mask(resolved).root
 
 
 def resolve_condition_text(
@@ -430,7 +412,7 @@ def resolve_expression_text(
 
 def resolve_constraint_text(
     text: str, ns: Namespace, context: str, errors: list[str]
-) -> tuple[Expression, Sense, Expression] | None:
+) -> tuple[Expression, ConstraintSense, Expression] | None:
     """Parse, expand, resolve and degree-check one constraint string: exactly one comparison, a variable on a side (#1171).
 
     Returns:
@@ -444,6 +426,9 @@ def resolve_constraint_text(
         errors.append(
             f'{context}: the constraint has no comparison operator.\nGot: {text!r}\nWrite <=, >= or == between two sides.'
         )
+        return None
+    if (sense := _sense(ast.op)) is None:
+        errors.append(f'{context}: {_not_a_sense(ast.op)}\nGot: {text!r}')
         return None
     found = len(errors)
     resolver = ExpressionResolver(ns, context, errors)
@@ -459,10 +444,22 @@ def resolve_constraint_text(
             f'Name the variable it bounds, or state the fact under `assumptions:`.'
         )
         return None
-    return left, ast.op, right
+    return left, sense, right
 
 
-def _parsed(text: str, ns: Namespace, context: str, errors: list[str]) -> ComparisonNode | ArithmeticNode | None:
+def _sense(op: str) -> ConstraintSense | None:
+    """*op* as the sense of a constraint, or ``None`` where it is one of the comparisons only a condition makes."""
+    return cast('ConstraintSense', op) if op in get_args(ConstraintSense) else None
+
+
+def _not_a_sense(op: str) -> str:
+    """The refusal for a constraint written with ``<``, ``>`` or ``!=``, which a solver has no row for."""
+    if op == '!=':
+        return "'!=' is not a constraint sense. Write <=, >= or ==, or move the != test to where:."
+    return f"'{op}' is not a constraint sense. Write '{op}=' instead."
+
+
+def _parsed(text: str, ns: Namespace, context: str, errors: list[str]) -> ParsedNode | None:
     """*text* parsed and its macros expanded, or ``None`` with the refusal appended."""
     try:
         return parse_and_expand(text, ns, context)

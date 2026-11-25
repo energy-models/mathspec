@@ -199,11 +199,11 @@ conditions.
 One construct passes through three layers of the code. Each class name has a
 suffix that identifies its layer:
 
-| Layer                                                                | Suffix | Example                                |
-| -------------------------------------------------------------------- | ------ | -------------------------------------- |
-| YAML (`mathspec.spec`)                                               | `Spec` | `VariableSpec`, `PiecewiseSpec`        |
-| Syntax (`mathspec._expression_parser`, `mathspec._condition_parser`) | `Node` | `NameNode`, `UnresolvedComparisonNode` |
-| Program (`mathspec.program`)                                         | none   | `Variable`, `Piecewise`                |
+| Layer                        | Suffix | Example                         |
+| ---------------------------- | ------ | ------------------------------- |
+| YAML (`mathspec.spec`)       | `Spec` | `VariableSpec`, `PiecewiseSpec` |
+| Syntax (`mathspec._syntax`)  | `Node` | `NameNode`, `ComparisonNode`    |
+| Program (`mathspec.program`) | none   | `Variable`, `Piecewise`         |
 
 In the program, the node for a use of a name ends in `Reference`.
 `VariableReference` refers to a `Variable`, and `ExpressionReference` refers

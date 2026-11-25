@@ -10,17 +10,16 @@ node where the name stood.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING
 
-from mathspec._expression_parser import (
-    ArithmeticNode,
+from mathspec._grammar import parse_expression
+from mathspec._syntax import (
     ColumnsNode,
     ComparisonNode,
     FunctionCallNode,
     NameListNode,
     NameNode,
     ParsedNode,
-    parse_expression,
     with_children,
 )
 from mathspec.errors import SchemaError
@@ -41,22 +40,14 @@ def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
     return expand(parse_expression(text), ns, context)
 
 
-@overload
-def expand(node: ArithmeticNode, ns: Namespace, context: str) -> ArithmeticNode: ...
-@overload
-def expand(node: ComparisonNode, ns: Namespace, context: str) -> ComparisonNode: ...
-
-
 def expand(node: ParsedNode, ns: Namespace, context: str) -> ParsedNode:
-    """Expand every macro call under *node*; a comparison stays a comparison and arithmetic stays arithmetic.
+    """Expand every macro call under *node*, which keeps the kind of node it is at its top.
 
     Args:
-        node: The parsed expression.
+        node: The parsed tree.
         ns: Where the macros are declared.
         context: What an error names.
     """
-    if isinstance(node, ComparisonNode):
-        return ComparisonNode(node.op, _expand(node.left, ns, context, ()), _expand(node.right, ns, context, ()))
     return _expand(node, ns, context, ())
 
 
@@ -66,7 +57,7 @@ def macro_signature(name: str, macro: MacroSpec) -> str:
     return f'{name}({", ".join(parts)})'
 
 
-def parse_template(name: str, macro: MacroSpec, context: str) -> ArithmeticNode:
+def parse_template(name: str, macro: MacroSpec, context: str) -> ParsedNode:
     """Parse a macro template, rejecting comparisons."""
     body = parse_expression(macro.template)
     if isinstance(body, ComparisonNode):
@@ -78,7 +69,7 @@ def parse_template(name: str, macro: MacroSpec, context: str) -> ArithmeticNode:
     return body
 
 
-def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ArithmeticNode:
+def _expand(node: ParsedNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ParsedNode:
     """*node* with every macro call under it substituted; *stack* is the macros this walk is inside.
 
     A name a template reads is checked against the entries being resolved
@@ -98,7 +89,7 @@ def _expand(node: ArithmeticNode, ns: Namespace, context: str, stack: tuple[str,
     return with_children(node, lambda child: _expand(child, ns, context, stack))
 
 
-def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ArithmeticNode:
+def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tuple[str, ...]) -> ParsedNode:
     """Call-by-value: arguments are expanded before substitution, and the substituted body is expanded again."""
     macro = ns.spec.macros[call.name]
     signature = macro_signature(call.name, macro)
@@ -124,7 +115,7 @@ def _expand_macro(call: FunctionCallNode, ns: Namespace, context: str, stack: tu
     return _expand(substituted, ns, context, (*stack, call.name))
 
 
-def _substitute(node: ArithmeticNode, bindings: dict[str, ArithmeticNode], caller: str) -> ArithmeticNode:
+def _substitute(node: ParsedNode, bindings: dict[str, ParsedNode], caller: str) -> ParsedNode:
     """Replace formal-name NameNodes in *node* with their bound subtrees, and formals in a list or a column selection with the names bound to them."""
     if isinstance(node, NameNode) and node.name in bindings:
         return bindings[node.name]
@@ -135,7 +126,7 @@ def _substitute(node: ArithmeticNode, bindings: dict[str, ArithmeticNode], calle
     return with_children(node, lambda child: _substitute(child, bindings, caller))
 
 
-def _names(name: str, listed: NameListNode, bindings: dict[str, ArithmeticNode], caller: str) -> tuple[str, ...]:
+def _names(name: str, listed: NameListNode, bindings: dict[str, ParsedNode], caller: str) -> tuple[str, ...]:
     """What *name* in the list *listed* stands for: a list holds names, so a formal binds a name or a list spliced in."""
     if name not in bindings:
         return (name,)
@@ -151,7 +142,7 @@ def _names(name: str, listed: NameListNode, bindings: dict[str, ArithmeticNode],
     raise SchemaError(msg)
 
 
-def _substitute_columns(node: ColumnsNode, bindings: dict[str, ArithmeticNode], caller: str) -> ColumnsNode:
+def _substitute_columns(node: ColumnsNode, bindings: dict[str, ParsedNode], caller: str) -> ColumnsNode:
     """``relation[column, …]`` with each formal in it replaced by the bare name bound to it.
 
     A selection holds names only, so a formal there takes a name and nothing
