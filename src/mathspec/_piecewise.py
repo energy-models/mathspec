@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Literal
 
 import mathspec._sos as sos
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec._grammar import NAME, parse_expression
+from mathspec._grammar import NAME, parse
 from mathspec._resolution import mask_of, resolve_condition_text, resolve_expression_text
 from mathspec._syntax import ColumnsNode, FunctionCallNode, NameNode
 from mathspec.errors import DimensionError, SchemaError
@@ -454,7 +454,7 @@ def gate_of(text: str) -> str | None:
     the refusals ``at`` gives.
     """
     try:
-        node = parse_expression(text)
+        node = parse(text)
     except SchemaError:
         return None
     match node:
@@ -541,7 +541,7 @@ def walked_columns(by: str, resolver: ExpressionResolver) -> ColumnsNode | None:
 def _columns_of(text: str) -> ColumnsNode | None:
     """``relation[column, ...]`` as the grammar reads it, or ``None`` where *text* is not that."""
     try:
-        node = parse_expression(text)
+        node = parse(text)
     except SchemaError:
         return None
     return node if isinstance(node, ColumnsNode) else None

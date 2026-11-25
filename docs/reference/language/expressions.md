@@ -250,11 +250,11 @@ mathspec suggests the rewrite: a new name for one of the two entries.
 
 Six names are refused for an entry, for an argument of a macro and for a
 relation column. They are `and`, `or`, `not`, `true` and `false`, in any case,
-and `inf`. A `where:` string reserves the first five, and `inf` is the number
+and `inf`. The language reserves the first five, and `inf` is the number
 infinity. For a parameter called `true`, mathspec prints:
 
 ```text
-parameters: 'true' is one of AND, OR, NOT, True and False, which a where string reserves in any case, so no entry may have that name. Rename the entry.
+parameters: 'true' is one of AND, OR, NOT, True and False, which the language reserves in any case, so no entry may have that name. Rename the entry.
 ```
 
 mathspec suggests the rewrite: a new name for the entry.
@@ -359,10 +359,10 @@ COLUMNS    ::= NAME "[" NAME { "," NAME } "]"
 QUOTED     ::= "'" chars "'" | '"' chars '"'
 ```
 
-`AND`, `OR`, `NOT`, `True` and `False` are reserved in a `where:` string, in
-any case. mathspec refuses a `where:` string that uses one as a name, and no
-entry has one of these names ([name resolution](#name-resolution)). An
-expression reserves none of the five.
+`AND`, `OR`, `NOT`, `True` and `False` are reserved in an expression and in a
+`where:` string, in any case. mathspec refuses a string that uses one as a
+name, and no entry has one of these names
+([name resolution](#name-resolution)).
 
 A quoted label and a pair of parentheses follow the rules of the
 [arithmetic grammar](#the-arithmetic-grammar).

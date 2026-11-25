@@ -78,7 +78,7 @@ class TestValidateExpressions:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Cannot parse the condition',),
+                ("Cannot parse 'c >'",),
                 id='a-malformed-where-string',
             ),
             pytest.param(
@@ -1021,6 +1021,20 @@ class TestATermIsHeldToItsPlaceInResolution:
                 id='a-comparison-under-an-operator',
             ),
             pytest.param('sum(p <= 1, over=g) <= k', ("'p <= 1' is a condition",), id='a-comparison-as-the-operand'),
+            pytest.param(
+                'p <= c and q <= k',
+                (
+                    'the constraint joins conditions with AND, OR or NOT',
+                    'Write each comparison as a constraint of its own',
+                ),
+                id='two-comparisons-joined',
+            ),
+            pytest.param(
+                'not p <= c', ('the constraint joins conditions with AND, OR or NOT',), id='a-comparison-negated'
+            ),
+            pytest.param(
+                'p <= true', ("'True' is one of AND, OR, NOT, True and False", 'and not a number'), id='a-literal'
+            ),
         ],
     )
     def test_a_constraint_refuses_a_term_that_is_no_number(self, expression, fragments):
@@ -1492,7 +1506,7 @@ class TestRulesDecidedWithoutData:
             ),
             pytest.param(
                 {'constraints': {'cap': {'dims': ['g'], 'where': 'c >', 'expression': 'p <= c'}}},
-                ('Cannot parse the condition',),
+                ("Cannot parse 'c >'",),
                 id='a-malformed-where-string',
             ),
             pytest.param(
