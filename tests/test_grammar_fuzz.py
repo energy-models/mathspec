@@ -4,6 +4,17 @@
 
 """Both grammars read every string as the frozen pyparsing grammars do: the same tree, or a refusal for the same cause.
 
+Two differences are deliberate, and [`excused`][] names each:
+
+- a string pyparsing ran out of stack on is read, and held to the depth cap
+  (#1041);
+- a where string that uses ``AND``, ``OR``, ``NOT``, ``True`` or ``False``,
+  in any case, as a name is refused, since those words are reserved there
+  (#1040).
+
+The oracle reads quoted labels by the rule the reference states, so labels
+are compared and not excused.
+
 The strings are seeded, so a failure names a string that fails again. Set
 ``MATHSPEC_GRAMMAR_FUZZ`` to a number of rounds to run more of them than the
 suite does.
@@ -14,12 +25,12 @@ from __future__ import annotations
 import dataclasses
 import os
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from random import Random
 
 import pytest
 
-from mathspec._condition_parser import parse_condition
+from mathspec._condition_parser import RESERVED, parse_condition
 from mathspec._expression_parser import parse_expression
 from mathspec.errors import SchemaError
 from tests.grammar.generate import example_strings, nested_shapes, strings
@@ -32,6 +43,8 @@ CHUNKS = 16
 PER_CHUNK = 400
 
 GRAMMARS: tuple[Grammar, ...] = ('expression', 'condition')
+
+NAME_FIELDS = frozenset({'name', 'relation', 'column', 'columns', 'names'})
 
 
 def package(grammar: Grammar, text: str) -> object:
@@ -56,10 +69,42 @@ def shape(node: object) -> object:
     return (type(node).__name__, repr(node))
 
 
+def names_in(node: object) -> Iterator[str]:
+    """Every name *node* holds: of an entry, a callee, a keyword, a relation or a column."""
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            yield key
+            yield from names_in(value)
+    elif isinstance(node, tuple):
+        for item in node:
+            yield from names_in(item)
+    elif dataclasses.is_dataclass(node) and not isinstance(node, type):
+        for field in dataclasses.fields(node):
+            value = getattr(node, field.name)
+            if field.name in NAME_FIELDS and isinstance(value, str):
+                yield value
+            elif field.name in NAME_FIELDS and isinstance(value, tuple):
+                yield from value
+            else:
+                yield from names_in(value)
+
+
+def excused(grammar: Grammar, old: object, new: object) -> bool:
+    """Whether the two part in one of the two ways the module docstring names."""
+    if isinstance(old, Refused) and old.why == 'out of stack':
+        return True
+    return (
+        grammar == 'condition'
+        and not isinstance(old, Refused)
+        and new == Refused('syntax')
+        and any(name.upper() in RESERVED for name in names_in(old))
+    )
+
+
 def disagreement(grammar: Grammar, text: str) -> str | None:
-    """Where the package and the oracle part on *text*, as a line to print, or ``None``."""
+    """Where the package and the oracle part on *text*, outside the excused differences, as a line to print."""
     old, new = oracle(grammar, text), package(grammar, text)
-    if shape(old) == shape(new):
+    if shape(old) == shape(new) or excused(grammar, old, new):
         return None
     return f'{grammar} {text!r}\n    oracle:  {old!r}\n    package: {new!r}'
 

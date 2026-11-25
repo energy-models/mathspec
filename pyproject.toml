@@ -55,8 +55,10 @@ dependencies = [
   # every model error to SchemaError.
   "pydantic>=2.1",
   # The two grammars — `expression:` and `where:` are strings to the schema and
-  # are parsed here (_expression_parser.py, _condition_parser.py).
-  "pyparsing>=3.1",
+  # are parsed here (_expression_parser.py, _condition_parser.py). 1.1.3 is
+  # the first release that reads a terminal's regex through `re._parser` on
+  # Python 3.11 and later, rather than the deprecated `sre_parse`.
+  "lark>=1.1.3",
   "pyyaml>=6.0",
 ]
 
@@ -169,13 +171,6 @@ strict-callable-subtyping = true
 # `explicit-any` is the one `Any` the rest of this table does not reach. An
 # *unannotated* parameter is `implicit-any-parameter`, which the preset already
 # refuses; what was left is the `Any` a signature writes down.
-#
-# `implicit-any-lambda` is left on and suppressed per line in the two grammars.
-# A lambda takes no annotation, and giving the parse action a typed callback
-# only moves the error: pyparsing returns `ParseResults`, whose `__getitem__`
-# is a union, so the body fails where the parameter used to. Kept on rather
-# than switched off so a lambda outside those grammars still has to say what
-# it takes.
 [tool.pyrefly.errors]
 explicit-any = "error"
 implicit-import = "error"

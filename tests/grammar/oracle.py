@@ -4,8 +4,17 @@
 
 """The pyparsing grammars as they stood at 0.5.0a1, frozen as the oracle the grammar fuzzer compares the package against.
 
-The grammar code between the banners is copied verbatim from
-``src/mathspec/_expression_parser.py`` and ``src/mathspec/_condition_parser.py``.
+The grammar code between the banners is copied from
+``src/mathspec/_expression_parser.py`` and ``src/mathspec/_condition_parser.py``
+at 0.5.0a1, with quoted labels read by the rule the language reference now
+states rather than by pyparsing's ``QuotedString``:
+
+- the text between the quotes, with ``\\t``, ``\\n``, ``\\f``, ``\\r`` as the
+  character and no numeric escape (#1039);
+- in a where string, a backslash before any other character is that
+  character, in every label, an arithmetic call's included (#1042);
+- a tab is a tab, where ``parse_string`` expanded it to spaces (#1044).
+
 It builds the package's own node classes, so a tree from either side
 compares with ``==``. A change to what the language accepts changes this
 file in the same commit, or the fuzzer reads the change as a regression.
@@ -15,6 +24,7 @@ file in the same commit, or the fuzzer reads the change as a regression.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, cast, get_args
 
@@ -57,12 +67,23 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
+_WHITESPACE = {'t': '\t', 'n': '\n', 'f': '\f', 'r': '\r'}
+
+
+def _quoted(quote: str, esc_char: str | None) -> pp.ParserElement:
+    """A label delimited as ``QuotedString`` delimits it, and unquoted by the reference's rule."""
+    escape = re.compile(r'\\(.)' if esc_char else r'\\([tnfr])')
+    return pp.QuotedString(quote, esc_char=esc_char, unquote_results=False).set_parse_action(
+        lambda t: KeywordNode(escape.sub(lambda m: _WHITESPACE.get(m[1], m[1]), str(t[0])[1:-1]))
+    )
+
+
 NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
     lambda t: NameListNode(tuple(str(x) for x in t))
 )
 
 
-def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserElement]:
+def _build_grammar(esc_char: str | None = None) -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserElement]:
     """The arithmetic grammar, the expression grammar that puts one comparison over it, and a column selection.
 
     ``inf`` is a ``pp.Keyword`` rather than a ``pp.Literal``, which would
@@ -76,7 +97,7 @@ def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserEleme
 
     name = pp.Regex(NAME)
 
-    quoted = (pp.QuotedString("'") | pp.QuotedString('"')).set_parse_action(lambda t: KeywordNode(str(t[0])))
+    quoted = _quoted("'", esc_char) | _quoted('"', esc_char)
     columns = (name + pp.Suppress('[') + pp.DelimitedList(name) + pp.Suppress(']')).set_parse_action(
         lambda t: ColumnsNode(str(t[0]), tuple(str(x) for x in t[1:]))
     )
@@ -133,7 +154,8 @@ def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
     return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
 
 
-ARITHMETIC, _GRAMMAR, COLUMNS = _build_grammar()
+_GRAMMAR = _build_grammar()[1]
+ARITHMETIC, _, COLUMNS = _build_grammar('\\')
 
 # ---------------------------------------------------------------------------
 # Condition grammar, verbatim
@@ -161,10 +183,7 @@ def _build_condition_grammar() -> pp.ParserElement:
     name = pp.Regex(NAME)
     # pyrefly: ignore[implicit-any-lambda]
     column = (name + pp.Suppress('[') + name + pp.Suppress(']')).set_parse_action(lambda t: ColumnNode(t[0], t[1]))
-    quoted = (pp.QuotedString("'", esc_char='\\') | pp.QuotedString('"', esc_char='\\')).set_parse_action(
-        # pyrefly: ignore[implicit-any-lambda]
-        lambda t: KeywordNode(t[0])
-    )
+    quoted = _quoted("'", '\\') | _quoted('"', '\\')
     comparator = pp.one_of(list(get_args(ComparisonOperator)))
 
     kwarg = (name + pp.Suppress('=') + (quoted | COLUMNS | ARITHMETIC)).set_parse_action(lambda t: (t[0], t[1]))
@@ -236,6 +255,8 @@ def _folder(node_type: type[And] | type[Or]) -> Callable[[pp.ParseResults], Cond
 
 
 _CONDITION_GRAMMAR = _build_condition_grammar()
+_GRAMMAR.parse_with_tabs()
+_CONDITION_GRAMMAR.parse_with_tabs()
 
 # ---------------------------------------------------------------------------
 # What the oracle says about one string
