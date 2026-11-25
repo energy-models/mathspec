@@ -366,4 +366,4 @@ def _reserved_word(text: str, at: int, rest: str) -> str | None:
         word = before.group(1)
     else:
         return None
-    return f"'{word}' is {RESERVED_WORDS}, so it names no entry here. If an entry has that name, rename it."
+    return f"'{word}' is {RESERVED_WORDS}, so it is the name of no entry. Write a name in its place, or delete it."

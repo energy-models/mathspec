@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 from pydantic import ValidationError
@@ -1043,7 +1043,7 @@ class TestATermIsHeldToItsPlaceInResolution:
             pytest.param('[g, h]', ('[g, h] is a list of names',), id='a-list'),
             pytest.param(
                 '(True) > 0',
-                ("'True' is one of AND, OR, NOT, True and False", 'and not a number', 'rename it'),
+                ("'True' is one of AND, OR, NOT, True and False", 'and not a number', 'Write a number or a parameter'),
                 id='a-literal-compared',
             ),
             pytest.param('c + True > 0', ("'True' is one of AND, OR, NOT, True and False",), id='a-literal-added'),
@@ -2558,6 +2558,35 @@ class TestAnEntryIsNamed:
     whose promise is that the file decides.
     """
 
+    SECTIONS = (
+        'dimensions',
+        'relations',
+        'parameters',
+        'variables',
+        'expressions',
+        'macros',
+        'constraints',
+        'piecewise',
+        'sos',
+    )
+
+    ENTRIES: ClassVar[dict[str, Any]] = {
+        'dimensions': {'dtype': 'str'},
+        'relations': {'key': 'g', 'values': 'h'},
+        'parameters': {'dims': ['g']},
+        'variables': {'dims': ['g']},
+        'expressions': {'expression': 'c'},
+        'macros': {'args': ['x'], 'template': 'x * 2'},
+        'constraints': {'dims': ['g'], 'expression': 'p <= c'},
+        'piecewise': {'along': 'g', 'dims': [], 'links': {'p': ['p', 'c'], 'q': ['q', 'c']}, 'method': 'convex'},
+        'sos': {'variable': 'p', 'along': 'g', 'type': 1},
+    }
+
+    def _named(self, section: str, name: str) -> dict[str, Any]:
+        model = copy.deepcopy(SMALL_MODEL)
+        model.setdefault(section, {})[name] = self.ENTRIES[section]
+        return model
+
     @pytest.mark.parametrize(
         'name',
         [
@@ -2569,36 +2598,54 @@ class TestAnEntryIsNamed:
             pytest.param('a.b', id='a-dot'),
         ],
     )
+    @pytest.mark.parametrize('section', SECTIONS)
+    def test_a_name_no_expression_could_write_is_refused(self, section: str, name: str):
+        with pytest.raises(LanguageError, match='is not a name'):
+            to_spec(self._named(section, name))
+
+    @pytest.mark.parametrize('name', ['and', 'OR', 'Not', 'true', 'False', 'inf'])
+    @pytest.mark.parametrize('section', SECTIONS)
+    def test_a_word_of_the_language_is_no_name(self, section: str, name: str):
+        """An entry named `true`, `false` or `inf` loaded, and a read of it was the literal (#1054).
+
+        With a `bool` parameter `true`, `where: NOT true` left its variable
+        with no row, and with a parameter `inf`, `p <= inf` was a bound of
+        infinity. An entry named `and`, `or` or `not` loaded and no where
+        string could read it.
+        """
+        message = _refusal(self._named(section, name))
+        assert f'{section}: {name!r} is ' in message, 'the section and the name the file wrote'
+        assert 'Rename the entry.' in message, 'and the rewrite'
+
     @pytest.mark.parametrize(
-        'section',
+        ('patch', 'fragments'),
         [
-            'dimensions',
-            'relations',
-            'parameters',
-            'variables',
-            'expressions',
-            'macros',
-            'constraints',
-            'piecewise',
-            'sos',
+            pytest.param(
+                {'macros': {'m': {'args': ['not'], 'template': 'not * 2'}}},
+                ("'not' is one of AND, OR, NOT, True and False", 'Rename the formal.'),
+                id='a-positional-formal',
+            ),
+            pytest.param(
+                {'macros': {'m': {'args': ['x'], 'kwargs': ['inf'], 'template': 'x * inf'}}},
+                ("'inf' is the number infinity", 'Rename the formal.'),
+                id='a-keyword-formal',
+            ),
+            pytest.param(
+                {'relations': {'ends': {'key': 'g', 'values': {'true': 'h'}}}},
+                ("'true' is one of AND, OR, NOT, True and False", 'Rename the column.'),
+                id='a-relation-column',
+            ),
         ],
     )
-    def test_a_name_no_expression_could_write_is_refused(self, section: str, name: str):
-        entries: dict[str, Any] = {
-            'dimensions': {'dtype': 'str'},
-            'relations': {'key': 'g', 'values': 'h'},
-            'parameters': {'dims': ['g']},
-            'variables': {'dims': ['g']},
-            'expressions': {'expression': 'c'},
-            'macros': {'args': ['x'], 'template': 'x * 2'},
-            'constraints': {'dims': ['g'], 'expression': 'p <= c'},
-            'piecewise': {'along': 'g', 'dims': [], 'links': {'p': ['p', 'c'], 'q': ['q', 'c']}, 'method': 'convex'},
-            'sos': {'variable': 'p', 'along': 'g', 'type': 1},
-        }
-        model = copy.deepcopy(SMALL_MODEL)
-        model.setdefault(section, {})[name] = entries[section]
-        with pytest.raises(LanguageError, match='is not a name'):
-            to_spec(model)
+    def test_a_formal_and_a_column_are_names_too(self, patch, fragments):
+        """A macro's formal and a relation's column are written into an expression as an entry's name is."""
+        message = _refusal(**patch)
+        for fragment in fragments:
+            assert fragment in message
+
+    @pytest.mark.parametrize('name', ['android', 'not_before', 'x_or_y', 'true_flag', 'inflow', 'Inf', 'falsetto'])
+    def test_a_name_that_only_contains_a_word_loads(self, name: str):
+        assert name in to_spec(self._named('parameters', name)).parameters
 
     def test_the_message_names_the_rewrite(self):
         model = copy.deepcopy(SMALL_MODEL)
