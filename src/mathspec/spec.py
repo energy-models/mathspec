@@ -35,7 +35,7 @@ from pydantic import (
 )
 
 from mathspec._frozen import Frozen
-from mathspec._grammar import NAME
+from mathspec._grammar import NAME, NAME_RULE, is_name
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
@@ -294,6 +294,15 @@ class RelationSpec(_StrictSpec):
             )
             raise ValueError(msg)
         return v
+
+    @model_validator(mode='after')
+    def _columns_are_names(self) -> RelationSpec:
+        """A column named apart from its dimension is a name; one named after its dimension is held to it with the dimension."""
+        named = [role for side in (self.key, self.values) if isinstance(side, Mapping) for role in side]
+        if unnamed := [role for role in named if not is_name(role)]:
+            msg = f'column {unnamed[0]!r} is not a name. {NAME_RULE}'
+            raise ValueError(msg)
+        return self
 
     @property
     def pairs(self) -> tuple[tuple[str, str], ...]:
@@ -670,6 +679,9 @@ class MacroSpec(_StrictSpec):
         formals = [*self.args, *self.kwargs]
         if twice := sorted({formal for formal in formals if formals.count(formal) > 1}):
             msg = f'formal {twice[0]!r} is named twice. Give each formal its own name.'
+            raise ValueError(msg)
+        if unnamed := [formal for formal in formals if not is_name(formal)]:
+            msg = f'formal {unnamed[0]!r} is not a name. {NAME_RULE}'
             raise ValueError(msg)
         return self
 
@@ -1332,7 +1344,7 @@ class Spec(_StrictSpec):
 
     @model_validator(mode='after')
     def _names_are_names(self) -> Spec:
-        """Every entry is keyed by something an expression could write.
+        """Every entry is keyed by something an expression could write as a name.
 
         Read off the spec's own mappings rather than a list of sections, so a
         section added later cannot be forgotten here — every mapping a Spec
@@ -1342,12 +1354,11 @@ class Spec(_StrictSpec):
         """
         sections = [*self, *((f'given: {kind}', group) for kind, group in self.given)]
         errors = [
-            f'{section}: {name!r} is not a name. Start it with a letter or an underscore, '
-            f'then use only letters, digits or underscores.'
+            f'{section}: {name!r} is not a name. {NAME_RULE}'
             for section, value in sections
             if isinstance(value, Mapping)
             for name in value
-            if not re.fullmatch(NAME, name)
+            if not is_name(name)
         ]
         if errors:
             raise ValueError('\n'.join(errors))

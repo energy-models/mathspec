@@ -248,6 +248,18 @@ Variable 'p' collides with the parameter of the same name. Rename one of them.
 
 mathspec suggests the rewrite: a new name for one of the two entries.
 
+The name of an entry, of an argument of a macro and of a relation column is
+one `NAME` of the grammar. So it is none of `and`, `or`, `not`, `true` and
+`false`, in any case, which a `where:` string reserves, and it is not `inf`,
+which is the number infinity. For a parameter called `true`, mathspec prints:
+
+```text
+parameters: 'true' is not a name. Start it with a letter or an underscore, then use only letters, digits or underscores. It may not be one of AND, OR, NOT, True and False, which a where string reserves in any case, or inf, which is the number infinity.
+```
+
+mathspec suggests the rewrite: a name of letters, digits and underscores that
+is none of the six.
+
 The place of a name in a string sets which kinds of name it may be:
 
 | Place                                  | Kinds of name it accepts                                                                                      |
@@ -349,9 +361,9 @@ QUOTED     ::= "'" chars "'" | '"' chars '"'
 ```
 
 `AND`, `OR`, `NOT`, `True` and `False` are reserved in a `where:` string, in
-any case. mathspec refuses a `where:` string that uses one as a name, so an
-entry named `and` or `true` cannot be read in a condition. An expression
-reserves none of the five, so there `and` is a name.
+any case, so mathspec refuses a `where:` string that uses one as a name
+([name resolution](#name-resolution)). An expression reserves none of the
+five.
 
 A quoted label and a pair of parentheses follow the rules of the
 [arithmetic grammar](#the-arithmetic-grammar).

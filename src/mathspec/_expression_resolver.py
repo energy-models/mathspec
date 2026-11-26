@@ -158,7 +158,7 @@ class ExpressionResolver:
             return None
         if isinstance(node, BooleanNode):
             self.errors.append(
-                f"{self.context}: '{node}' is {RESERVED_WORDS}, and not a number. If an entry has that name, rename it."
+                f"{self.context}: '{node}' is {RESERVED_WORDS}, and not a number. Write a number or a parameter in its place."
             )
             return None
         if isinstance(node, ComparisonNode | NotNode | AndNode | OrNode):
