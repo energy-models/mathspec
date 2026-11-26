@@ -5,9 +5,10 @@
 """The grammar reads every string the frozen pyparsing grammars read, as the tree they built.
 
 Where pyparsing built a tree, the package builds the same one. The package
-has one grammar where pyparsing had two, and it decides less: what a term
-may be where it stands is resolution's to say. So a string pyparsing refused
-is refused here, or is one [`respelled`][] finds no new token in:
+has one grammar and one parser where pyparsing had two of each, and it
+decides less: what a term may be where it stands is resolution's to say. So
+a string pyparsing refused is refused here, or is one [`respelled`][] finds
+no new token in:
 
 - parentheses around a term pyparsing read only bare, a keyword written
   before the condition a call reads, or a term of a kind its place does not
@@ -20,9 +21,9 @@ Two more differences are deliberate, and [`excused`][] names each:
 
 - a string pyparsing ran out of stack on is read, and held to the depth cap
   (#1041);
-- a where string that uses ``AND``, ``OR``, ``NOT``, ``True`` or ``False``,
-  in any case, as a name reads it as the word, since those words are
-  reserved there (#1040).
+- a string that uses ``AND``, ``OR``, ``NOT``, ``True`` or ``False``, in any
+  case, as a name reads it as the word, since those words are reserved
+  (#1040) and no entry has one as its name (#1054).
 
 The strings are seeded, so a failure names a string that fails again. Set
 ``MATHSPEC_GRAMMAR_FUZZ`` to a number of rounds to run more of them than the
@@ -39,7 +40,7 @@ from random import Random
 
 import pytest
 
-from mathspec._grammar import RESERVED, _parser, parse_condition, parse_expression
+from mathspec._grammar import RESERVED, _parser, parse
 from mathspec.errors import SchemaError
 from tests.grammar.generate import example_strings, nested_shapes, strings
 from tests.grammar.oracle import Grammar, Refused, oracle
@@ -55,9 +56,8 @@ GRAMMARS: tuple[Grammar, ...] = ('expression', 'condition')
 NAME_FIELDS = frozenset({'name', 'relation', 'columns', 'names'})
 
 
-def package(grammar: Grammar, text: str) -> object:
-    """What the package's own parser makes of *text*, past its memo, in the oracle's terms."""
-    parse = parse_expression if grammar == 'expression' else parse_condition
+def package(text: str) -> object:
+    """What the package's parser makes of *text*, past its memo, in the oracle's terms. It reads both grammars' strings."""
     try:
         return parse.__wrapped__(text)
     except SchemaError as error:
@@ -106,7 +106,7 @@ def respelled(grammar: Grammar, text: str) -> bool:
     a space. Any other tree means the package found a token in *text* that
     pyparsing does not have.
     """
-    tokens = _parser(grammar).lex(text)
+    tokens = _parser().lex(text)
     spaced = ' '.join(text[token.start_pos : token.end_pos] for token in tokens)
     return isinstance(oracle(grammar, spaced), Refused) or disagreement(grammar, spaced) is None
 
@@ -118,8 +118,7 @@ def excused(grammar: Grammar, text: str, old: object, new: object) -> bool:
     if old == Refused('syntax') and not isinstance(new, Refused):
         return respelled(grammar, text)
     return (
-        grammar == 'condition'
-        and not isinstance(old, Refused)
+        not isinstance(old, Refused)
         and new != Refused('too deep')
         and any(name.upper() in RESERVED for name in names_in(old))
     )
@@ -127,7 +126,7 @@ def excused(grammar: Grammar, text: str, old: object, new: object) -> bool:
 
 def disagreement(grammar: Grammar, text: str) -> str | None:
     """Where the package and the oracle part on *text*, outside the excused differences, as a line to print."""
-    old, new = oracle(grammar, text), package(grammar, text)
+    old, new = oracle(grammar, text), package(text)
     if shape(old) == shape(new) or excused(grammar, text, old, new):
         return None
     return f'{grammar} {text!r}\n    oracle:  {old!r}\n    package: {new!r}'

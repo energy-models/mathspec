@@ -51,7 +51,7 @@ class NameNode:
 
 @dataclass(frozen=True)
 class BooleanNode:
-    """``True`` or ``False``, which only a where string reserves."""
+    """``True`` or ``False``, in any case."""
 
     value: bool
 

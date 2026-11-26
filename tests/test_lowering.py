@@ -17,7 +17,7 @@ import pytest
 
 from mathspec import to_spec
 from mathspec._exclusivity import overlapping
-from mathspec._grammar import parse_condition
+from mathspec._grammar import parse
 from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
 from mathspec.program import (
@@ -384,7 +384,7 @@ def test_a_held_leaf_walk_is_taken_after_the_fold_absorbed_a_branch():
 def test_a_mask_over_an_unresolved_tree_is_refused_at_construction():
     """A tree whose leaves are unresolved is refused where it is wrapped, not where it is read."""
     with pytest.raises(AssertionError, match='reached a condition walk unresolved'):
-        Mask(parse_condition('a AND b'))
+        Mask(parse('a AND b'))
 
 
 def test_an_unwritten_where_lowers_to_none_not_an_empty_mask():

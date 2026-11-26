@@ -2,22 +2,20 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""The one grammar of the language, and the two parsers over it — package-private.
+"""The one grammar of the language, and its parser — package-private.
 
 An expression and a condition are written in one grammar and parse to one
 tree ([`mathspec._syntax`][]). The grammar reads what was written and decides
 nothing about what it means: that a constraint holds one comparison, that
 ``AND`` joins truth values, that ``edge=`` takes a label, are rules of
-[`mathspec._resolution`][], which has the spec to say them with. The two
-parsers differ in one thing: a where string reserves ``AND``, ``OR``,
-``NOT``, ``True`` and ``False``, and an expression reads them as names.
+[`mathspec._resolution`][], which has the spec to say them with.
 """
 
 from __future__ import annotations
 
 import re
 from functools import cache, lru_cache, reduce
-from typing import TYPE_CHECKING, Literal, cast, get_args
+from typing import TYPE_CHECKING, cast, get_args
 
 from lark import Lark, Token, Transformer, v_args
 from lark.exceptions import UnexpectedCharacters, UnexpectedInput, UnexpectedToken
@@ -54,12 +52,12 @@ NAME = r'[a-zA-Z_][a-zA-Z0-9_]*'
 REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 
 RESERVED = ('AND', 'OR', 'NOT', 'TRUE', 'FALSE')
-"""The words of a where string, in any case. A name spelled as one of them is the word there, wherever it stands."""
+"""The words of the language, in any case. A name spelled as one of them is the word, wherever it stands."""
 
 INFINITY = 'inf'
 """The name the grammar reads as the number, wherever it stands but before a call's bracket."""
 
-RESERVED_WORDS = 'one of AND, OR, NOT, True and False, which a where string reserves in any case'
+RESERVED_WORDS = 'one of AND, OR, NOT, True and False, which the language reserves in any case'
 """How a refusal says a word is reserved."""
 
 NAME_RULE = (
@@ -67,8 +65,6 @@ NAME_RULE = (
     f'{RESERVED_WORDS}, or inf, which is the number infinity.'
 )
 """What a refusal of a name tells the file to write instead."""
-
-Text = Literal['expression', 'condition']
 
 _GRAMMAR = rf"""
 ?start: disjunction
@@ -131,7 +127,7 @@ def _escaped(escape: re.Match[str]) -> str:
 
 
 def _reserved(token: Token) -> Token:
-    """A name spelled as a reserved word, in any case, as the word it is in a where string."""
+    """A name spelled as a reserved word, in any case, as the word it is."""
     word = token.upper()
     if word not in RESERVED:
         return token
@@ -217,29 +213,20 @@ class _Tree(Transformer[Token, ParsedNode]):
 
 
 @cache
-def _parser(text: Text) -> Lark:
-    """The parser for one kind of text, built on first use: a load that parses nothing does not pay for the tables."""
-    callbacks = {'STRING': _unquoted, **({'NAME': _reserved} if text == 'condition' else {})}
+def _parser() -> Lark:
+    """The parser, built on first use: a load that parses nothing does not pay for the tables."""
     return Lark(
-        _GRAMMAR, parser='lalr', lexer='basic', transformer=_Tree(), lexer_callbacks=callbacks, maybe_placeholders=False
+        _GRAMMAR,
+        parser='lalr',
+        lexer='basic',
+        transformer=_Tree(),
+        lexer_callbacks={'STRING': _unquoted, 'NAME': _reserved},
+        maybe_placeholders=False,
     )
 
 
-@lru_cache(maxsize=4096)
-def parse_expression(text: str) -> ParsedNode:
-    """Parse a math expression string into its tree.
-
-    Raises:
-        SchemaError: If *text* is not written in the grammar, or nests past
-            [`MAX_DEPTH`][mathspec._syntax.MAX_DEPTH]. A predictable mistake
-            — a chained comparison, a lone ``=``, ``^`` for power — is named
-            with its rewrite before the grammar's own complaint.
-    """
-    return _parse(text, 'expression')
-
-
 def is_name(text: str) -> bool:
-    """Whether a where string reads *text* as one name, which is what an entry, a macro's formal and a relation's column are keyed by.
+    """Whether the grammar reads *text* as one name, which is what an entry, a macro's formal and a relation's column are keyed by.
 
     The ``NAME`` terminal, less the spellings the grammar reads as its own: a
     reserved word, in any case, and ``inf``. Answered without the parser,
@@ -248,49 +235,35 @@ def is_name(text: str) -> bool:
     return re.fullmatch(NAME, text) is not None and text.upper() not in RESERVED and text != INFINITY
 
 
-@lru_cache(maxsize=4096)
-def parse_condition(text: str) -> ParsedNode:
-    """Parse a where string into its tree.
+@lru_cache(maxsize=8192)
+def parse(text: str) -> ParsedNode:
+    """Parse an expression or a where string into its tree.
 
     Raises:
         SchemaError: If *text* is not written in the grammar, or nests past
             [`MAX_DEPTH`][mathspec._syntax.MAX_DEPTH]. A predictable mistake
-            — ``&``, ``|``, ``~`` or ``!`` for a connective, a lone ``=``, a
-            reserved word as a name — is named with its rewrite before the
-            grammar's own complaint.
+            — a chained comparison, a lone ``=``, ``^`` for power, ``&``,
+            ``|``, ``~`` or ``!`` for a connective, a reserved word as a
+            name — is named with its rewrite before the grammar's own
+            complaint.
     """
-    return _parse(text, 'condition')
-
-
-def _parse(text: str, what: Text) -> ParsedNode:
     try:
-        node = cast('ParsedNode', _parser(what).parse(text))
+        node = cast('ParsedNode', _parser().parse(text))
     except UnexpectedInput as error:
         at = _position(error, text)
-        hint = _hint(what, text, at)
+        hint = _hint(error, text, at)
         complaint = _complaint(text, at, _expected(error))
-        msg = f'Cannot parse the {what} {text!r}.\n{f"{hint}\n" if hint is not None else ""}{complaint}'
+        msg = f'Cannot parse {text!r}.\n{f"{hint}\n" if hint is not None else ""}{complaint}'
         raise SchemaError(msg) from error
     if (found := depth(node, children)) > MAX_DEPTH:
         shown = text if len(text) <= 60 else f'{text[:60]}…'
         msg = (
-            f'The {what} nests {found} deep, past the {MAX_DEPTH} levels the language admits: {shown!r}\n'
-            f'{_DEEP_REWRITE[what]}'
+            f'{shown!r} nests {found} deep, past the {MAX_DEPTH} levels the language admits.\n'
+            f'Reduce over a dimension with sum() rather than writing the terms out, or name a part of it under '
+            f'expressions: or conditions: and refer to it by name.'
         )
         raise SchemaError(msg)
     return node
-
-
-_DEEP_REWRITE: dict[Text, str] = {
-    'expression': (
-        'Reduce over a dimension with sum() rather than writing the terms out, or name an intermediate '
-        'quantity under expressions: and refer to it by name.'
-    ),
-    'condition': (
-        'Declare a parameter or relation carrying part of the test and name that here, or split the '
-        'entry into two, each masked by one half.'
-    ),
-}
 
 
 def _position(error: UnexpectedInput, text: str) -> int:
@@ -339,40 +312,41 @@ def _complaint(text: str, at: int, expected: Iterable[str]) -> str:
     return f'Expected {", ".join(sorted(set(expected)))}, found {found}  (at char {at}), (line:{line}, col:{column})'
 
 
-_HABITS: dict[Text, tuple[tuple[str, str], ...]] = {
-    'expression': (
-        ('=', "A single '=' passes a keyword argument, as in sum(x, over=d). Write == for equality."),
-        ('^', "power is written '**', not '^'."),
+_HABITS = (
+    (
+        '=',
+        "'=' is not a comparison. Write == for equality. A single '=' passes a keyword argument, as in sum(x, over=d).",
     ),
-    'condition': (
-        ('&', "'&' is not a condition operator. Write AND."),
-        ('|', "'|' is not a condition operator. Write OR."),
-        ('~', "'~' is not a condition operator. Write NOT before the condition."),
-        ('!', "'!' is not a condition operator. Write NOT before the condition."),
-        ('=', "'=' is not a comparison. Write ==."),
-    ),
-}
+    ('^', "power is written '**', not '^'."),
+    ('&', "'&' is not an operator. Write AND."),
+    ('|', "'|' is not an operator. Write OR."),
+    ('~', "'~' is not an operator. Write NOT before the condition."),
+    ('!', "'!' is not an operator. Write NOT before the condition."),
+)
 
 
-def _hint(what: Text, text: str, at: int) -> str | None:
+def _hint(error: UnexpectedInput, text: str, at: int) -> str | None:
     """The rewrite for a predictable mistake at the token where the parser gave up, or ``None``.
 
     A comparator there is tested first, since ``==`` and ``!=`` begin with a
-    character that is the habit of another language alone. In an expression
-    it is a chained comparison where one came before it. In a where string,
-    a reserved word written as a name stops the parser at the word, or, for
-    ``NOT``, ``True`` and ``False``, at what follows it.
+    character that is the habit of another language alone. It is a chained
+    comparison where the parser stood after a whole one, which is where it
+    would have taken no name. A reserved word written as a name stops the
+    parser at the word, or, for ``NOT``, ``True`` and ``False``, at what
+    follows it.
     """
     rest = text[at:].lstrip()
-    comparators = get_args(ComparisonOperator)
-    if (found := next((c for c in comparators if rest.startswith(c)), None)) is not None:
-        if what == 'expression' and any(comparator in text[:at] for comparator in comparators):
-            return f"'{found}' follows a complete comparison. Split the chain into two constraints."
+    if (found := next((c for c in get_args(ComparisonOperator) if rest.startswith(c)), None)) is not None:
+        if isinstance(error, UnexpectedToken) and 'NAME' not in error.expected:
+            return (
+                f"'{found}' follows a complete comparison. Split the chain into two comparisons: two constraints, "
+                f'or two conditions joined by AND.'
+            )
         return None
-    for habit, rewrite in _HABITS[what]:
+    for habit, rewrite in _HABITS:
         if rest.startswith(habit):
             return rewrite
-    return _reserved_word(text, at, rest) if what == 'condition' else None
+    return _reserved_word(text, at, rest)
 
 
 def _reserved_word(text: str, at: int, rest: str) -> str | None:

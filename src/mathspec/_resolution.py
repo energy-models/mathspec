@@ -24,8 +24,8 @@ from mathspec._dimensions import sorted_dims
 from mathspec._exclusivity import overlapping
 from mathspec._expansion import expand, parse_and_expand
 from mathspec._expression_resolver import ExpressionResolver
-from mathspec._grammar import parse_condition, parse_expression
-from mathspec._syntax import ComparisonNode, NameNode, nodes
+from mathspec._grammar import parse
+from mathspec._syntax import AndNode, ComparisonNode, NameNode, NotNode, OrNode, nodes
 from mathspec.errors import DimensionError, LanguageError, SchemaError, case_context, prefixed
 from mathspec.program import (
     BooleanLiteral,
@@ -220,13 +220,9 @@ class Namespace:
         """
         entry, context = self.spec.expressions[name], f"Named expression '{name}'"
         cases = (entry.cases or {}).values()
-        texts = [
-            *((parse_expression, text) for text in (entry.expression, *(case.expression for case in cases))),
-            *((parse_condition, case.when) for case in cases),
-            (parse_expression, entry.otherwise),
-        ]
+        texts = (entry.expression, *(text for case in cases for text in (case.expression, case.when)), entry.otherwise)
         read: list[ParsedNode] = []
-        for parse, text in texts:
+        for text in texts:
             if text is not None:
                 try:
                     read.append(expand(parse(text), self, context))
@@ -375,7 +371,7 @@ def resolve_condition_text(
     if text is None:
         return None
     try:
-        node = parse_condition(text)
+        node = parse(text)
     except ValueError as e:
         errors.append(f'{context}: {e}')
         return None
@@ -421,6 +417,12 @@ def resolve_constraint_text(
     """
     ast = _parsed(text, ns, context, errors)
     if ast is None:
+        return None
+    if isinstance(ast, AndNode | OrNode | NotNode):
+        errors.append(
+            f'{context}: the constraint joins conditions with AND, OR or NOT, and a constraint is one comparison.\n'
+            f'Got: {text!r}\nWrite each comparison as a constraint of its own, or move the condition to where:.'
+        )
         return None
     if not isinstance(ast, ComparisonNode):
         errors.append(

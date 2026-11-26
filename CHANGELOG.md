@@ -15,6 +15,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - perf(language): a large spec loads 2.6 times as fast ([#1045](https://github.com/energy-models/mathspec/pull/1045))
 - refactor(language): one grammar reads every string ([#1058](https://github.com/energy-models/mathspec/pull/1058))
 - fix(language): a word of the language names no entry ([#1059](https://github.com/energy-models/mathspec/pull/1059))
+- refactor(language): one parser reads every string ([#1060](https://github.com/energy-models/mathspec/pull/1060))
 
 ## 0.5.0a1 (2026-11-20)
 

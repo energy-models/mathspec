@@ -23,7 +23,7 @@ import yaml
 import mathspec as ms
 from mathspec.__main__ import main
 from mathspec._canonical import _factors, _signed_terms, canonical_condition, canonical_text, laid_out, normalised
-from mathspec._grammar import parse_condition, parse_expression
+from mathspec._grammar import parse
 from mathspec._syntax import (
     AndNode,
     BinaryOperatorNode,
@@ -496,7 +496,7 @@ def test_a_sum_flattens_into_the_terms_its_text_shows(written, terms):
     """What the flatten owes the layout: the terms it yields are the lines that
     get printed, so a group it leaves whole must be one the text brackets. A
     group under a plus is not, which is why it is spliced."""
-    found = [f'{sign} {operand(node)}' for sign, node in _signed_terms(parse_expression(written))]
+    found = [f'{sign} {operand(node)}' for sign, node in _signed_terms(parse(written))]
     assert found == terms, 'every term of the sum, in the order the spine holds them, and no group left flat'
 
 
@@ -511,7 +511,7 @@ def test_a_sum_flattens_into_the_terms_its_text_shows(written, terms):
 def test_a_product_flattens_from_either_side(written, factors):
     """Both sides, for the sum's reason: `(a * b) * c` and `a * (b * c)` print
     the same flat text, so a group left whole here would not survive it."""
-    assert [str(node) for node in _factors(parse_expression(written))] == factors, (
+    assert [str(node) for node in _factors(parse(written))] == factors, (
         'every factor of the product, and no group left flat'
     )
 
@@ -524,7 +524,7 @@ def test_the_form_is_a_fixed_point_on_any_tree_at_all():
     for seed in range(2000):
         node = _top(random.Random(seed))
         printed = laid_out(normalised(node))
-        assert normalised(parse_expression(printed)) == normalised(node), (
+        assert normalised(parse(printed)) == normalised(node), (
             f'seed {seed}: `{node}` printed as `{printed}`, which reads back as another tree'
         )
 
@@ -535,7 +535,7 @@ def test_the_form_computes_what_the_expression_it_came_from_computes():
     be a wrong answer rather than an untidy file."""
     for seed in range(500):
         node = _tree(random.Random(seed))
-        rewritten = parse_expression(laid_out(normalised(node)))
+        rewritten = parse(laid_out(normalised(node)))
         env = {name: 1.5 + index for index, name in enumerate(LEAVES)}
         try:
             before, after = _value(node, env), _value(rewritten, env)
@@ -663,7 +663,7 @@ def test_a_condition_in_the_form_holds_where_the_one_it_came_from_holds():
     for seed in range(500):
         written = _condition_tree(random.Random(seed))
         printed = canonical_condition(written)
-        before, after = parse_condition(written), parse_condition(printed)
+        before, after = parse(written), parse(printed)
         for values in itertools.product([False, True], repeat=len(FLAGS)):
             env = dict(zip(FLAGS, values, strict=True))
             assert _truth(before, env) == _truth(after, env), f'seed {seed}: `{written}` printed as `{printed}`'

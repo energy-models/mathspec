@@ -9,7 +9,7 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING, Literal, cast
 
-from mathspec._grammar import parse_condition, parse_expression
+from mathspec._grammar import parse
 from mathspec._syntax import (
     AndNode,
     BinaryOperatorNode,
@@ -201,7 +201,7 @@ def laid_out(node: ParsedNode) -> str:
 
 def canonical_text(text: str) -> str:
     """One expression string in the normal form, parsed and printed rather than edited."""
-    return laid_out(normalised(parse_expression(text)))
+    return laid_out(normalised(parse(text)))
 
 
 def canonical_condition(text: str) -> str:
@@ -211,7 +211,7 @@ def canonical_condition(text: str) -> str:
     needs one, and around a comparison under ``NOT``, which a reader would
     otherwise take for a negated name.
     """
-    return str(normalised(parse_condition(text)))
+    return str(normalised(parse(text)))
 
 
 def _canonical_entry(entry: object) -> object:

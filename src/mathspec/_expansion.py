@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mathspec._grammar import parse_expression
+from mathspec._grammar import parse
 from mathspec._syntax import (
     ColumnsNode,
     ComparisonNode,
@@ -37,7 +37,7 @@ def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
         ns: Where the macros are declared.
         context: What an error names.
     """
-    return expand(parse_expression(text), ns, context)
+    return expand(parse(text), ns, context)
 
 
 def expand(node: ParsedNode, ns: Namespace, context: str) -> ParsedNode:
@@ -59,7 +59,7 @@ def macro_signature(name: str, macro: MacroSpec) -> str:
 
 def parse_template(name: str, macro: MacroSpec, context: str) -> ParsedNode:
     """Parse a macro template, rejecting comparisons."""
-    body = parse_expression(macro.template)
+    body = parse(macro.template)
     if isinstance(body, ComparisonNode):
         msg = (
             f"{context}: macro '{name}' template {macro.template!r} holds a comparison. "
