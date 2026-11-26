@@ -17,6 +17,7 @@ it releases that version ([RELEASING.md](https://github.com/energy-models/mathsp
 - fix(language): a word of the language names no entry ([#1059](https://github.com/energy-models/mathspec/pull/1059))
 - refactor(language): one parser reads every string ([#1060](https://github.com/energy-models/mathspec/pull/1060))
 - fix(language): no entry is named count or position ([#1063](https://github.com/energy-models/mathspec/pull/1063))
+- fix(language): a number is not written against a name ([#1064](https://github.com/energy-models/mathspec/pull/1064))
 
 ## 0.5.0a1 (2026-11-20)
 

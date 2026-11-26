@@ -295,8 +295,26 @@ def test_a_keyword_may_stand_before_a_positional_argument():
     assert parse('shift(along=t, offset=1, a > 0)') == parse('shift(a > 0, along=t, offset=1)')
 
 
-def test_a_token_needs_no_space_before_the_next():
-    assert parse('p>0AND q<.infOR r') == parse('p > 0 AND q < .inf OR r')
+@pytest.mark.parametrize(
+    'text',
+    [
+        pytest.param('p > 0AND q', id='a-word-after-a-number'),
+        pytest.param('p > 1.AND q', id='a-word-after-a-trailing-point'),
+        pytest.param('p > 1e5OR q', id='a-word-after-an-exponent'),
+        pytest.param('q < .infOR r', id='a-word-after-dot-inf'),
+        pytest.param('p > 0 AND.inf > q', id='dot-inf-after-a-word'),
+        pytest.param('2x <= c', id='a-name-after-a-number'),
+        pytest.param('12abc', id='a-name-after-two-digits'),
+    ],
+)
+def test_a_number_is_not_written_against_a_name(text):
+    """`p > 0AND q` read as `p > 0 AND q`, and before the grammars became one `1.AND` did where `0AND` did not."""
+    with pytest.raises(SchemaError, match='Write a space or an operator between them'):
+        parse(text)
+
+
+def test_a_symbol_needs_no_space_around_it():
+    assert parse('p>0 AND q<.inf OR(r)') == parse('p > 0 AND q < .inf OR (r)')
 
 
 @pytest.mark.parametrize(

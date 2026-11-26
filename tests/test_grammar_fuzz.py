@@ -7,17 +7,16 @@
 Where pyparsing built a tree, the package builds the same one. The package
 has one grammar and one parser where pyparsing had two of each, and it
 decides less: what a term may be where it stands is resolution's to say. So
-a string pyparsing refused is refused here, or is one [`respelled`][] finds
-no new token in:
+a string pyparsing refused is refused here, or is one [`rearranged`][]
+finds no new token in: parentheses around a term pyparsing read only bare, a
+keyword written before the condition a call reads, or a term of a kind its
+place does not take, such as a label in a sum or ``<`` in a constraint,
+which resolution refuses (``tests/test_validation.py`` holds it to that).
 
-- parentheses around a term pyparsing read only bare, a keyword written
-  before the condition a call reads, or a term of a kind its place does not
-  take, such as a label in a sum or ``<`` in a constraint, which resolution
-  refuses (``tests/test_validation.py`` holds it to that);
-- a reserved word or ``.inf`` written against a number with no space, as
-  ``0AND`` or ``.infOR``, which reads as the two tokens it is.
+Three more differences are deliberate, and [`excused`][] names each:
 
-Two more differences are deliberate, and [`excused`][] names each:
+- a number written against a name is refused, as ``1.AND`` and ``٣AND``,
+  which pyparsing read where it refused ``0AND``;
 
 - a string pyparsing ran out of stack on is read, and held to the depth cap
   (#1041);
@@ -33,16 +32,18 @@ suite does.
 from __future__ import annotations
 
 import dataclasses
+import itertools
 import os
+import re
 from collections import Counter
 from collections.abc import Iterator, Mapping
 from random import Random
 
 import pytest
 
-from mathspec._grammar import RESERVED, _parser, parse
+from mathspec._grammar import NAME, RESERVED, _parser, parse
 from mathspec.errors import SchemaError
-from tests.grammar.generate import example_strings, nested_shapes, strings
+from tests.grammar.generate import TOKEN, example_strings, nested_shapes, strings
 from tests.grammar.oracle import Grammar, Refused, oracle
 
 ROUNDS = int(os.environ.get('MATHSPEC_GRAMMAR_FUZZ', '1'))
@@ -54,6 +55,10 @@ PER_CHUNK = 400
 GRAMMARS: tuple[Grammar, ...] = ('expression', 'condition')
 
 NAME_FIELDS = frozenset({'name', 'relation', 'columns', 'names'})
+
+NUMBER = re.compile(r'\d+\.?\d*(?:[eE][+-]?\d+)?|\.inf')
+
+WORD = re.compile(NAME)
 
 
 def package(text: str) -> object:
@@ -97,18 +102,25 @@ def names_in(node: object) -> Iterator[str]:
                 yield from names_in(value)
 
 
-def respelled(grammar: Grammar, text: str) -> bool:
+def rearranged(grammar: Grammar, text: str) -> bool:
     """Whether the package read *text*, which the oracle refuses, out of tokens the oracle knows.
 
-    The package's own tokens are written back with a space between each. The
-    oracle refuses that string too where the tokens are arranged as pyparsing
-    did not allow, and reads it as the package does where *text* only lacked
-    a space. Any other tree means the package found a token in *text* that
-    pyparsing does not have.
+    The package's own tokens are written back with a space between each, and
+    the oracle refuses that string too: the tokens are arranged as pyparsing
+    did not allow. Were it to read the string, the package would have found
+    a token in *text* where pyparsing has none.
     """
     tokens = _parser().lex(text)
-    spaced = ' '.join(text[token.start_pos : token.end_pos] for token in tokens)
-    return isinstance(oracle(grammar, spaced), Refused) or disagreement(grammar, spaced) is None
+    return isinstance(oracle(grammar, ' '.join(text[token.start_pos : token.end_pos] for token in tokens)), Refused)
+
+
+def against_a_name(text: str) -> bool:
+    """Whether *text* writes a number directly before a name, or ``.inf`` directly against one, by the generator's own tokens."""
+    tokens = TOKEN.findall(text)
+    return any(
+        (NUMBER.fullmatch(left) and WORD.fullmatch(right)) or (WORD.fullmatch(left) and right == '.inf')
+        for left, right in itertools.pairwise(tokens)
+    )
 
 
 def excused(grammar: Grammar, text: str, old: object, new: object) -> bool:
@@ -116,12 +128,12 @@ def excused(grammar: Grammar, text: str, old: object, new: object) -> bool:
     if isinstance(old, Refused) and old.why == 'out of stack':
         return True
     if old == Refused('syntax') and not isinstance(new, Refused):
-        return respelled(grammar, text)
-    return (
-        not isinstance(old, Refused)
-        and new != Refused('too deep')
-        and any(name.upper() in RESERVED for name in names_in(old))
-    )
+        return rearranged(grammar, text)
+    if isinstance(old, Refused) or new == Refused('too deep'):
+        return False
+    if new == Refused('syntax') and against_a_name(text):
+        return True
+    return any(name.upper() in RESERVED for name in names_in(old))
 
 
 def disagreement(grammar: Grammar, text: str) -> str | None:

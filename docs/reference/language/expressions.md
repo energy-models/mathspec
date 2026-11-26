@@ -35,12 +35,14 @@ NAME        ::= [a-zA-Z_][a-zA-Z0-9_]*
 NUMBER      ::= integer | float | "inf" | ".inf"
 ```
 
-Six rules complete the grammar:
+Seven rules complete the grammar:
 
 - mathspec applies `**` first, then unary `+` and `-`,
   then `*` and `/`, then binary `+` and `-`. So, as in Python, `-x ** 2` is
   `-(x ** 2)`.
 - A float may have an exponent, as in `1e5` or `2.5e-3`.
+- A number is not written against a name, so `0AND` and `2x` are refused.
+  Write `0 AND` and `2 * x`.
 - The same keyword twice in one call is refused, and for
   `sum(p, over=g, over=g)` mathspec prints `The objective: sum(over=) is given twice. Delete one of them.`
 - A quoted label is the text between its quotes. In a label, `\t`, `\n`,
