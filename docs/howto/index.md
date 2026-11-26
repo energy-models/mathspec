@@ -58,6 +58,9 @@ To learn the language from the start, follow the
 <div class="grid cards" markdown>
 
 <!-- prettier-ignore -->
+- **[Allow at most one of several options](at-most-one-option.md)** at each
+    site with a special ordered set, or up to a number of options with binary
+    variables.
 - **[See what a piecewise curve or an SOS expands to](see-an-expansion.md)**
     as plain variables and constraints, for a special ordered set
     ([an SOS](../reference/glossary.md#special-ordered-set-sos)).
