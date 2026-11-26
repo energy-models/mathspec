@@ -21,6 +21,7 @@ import mathspec._degree as degree
 from mathspec._dimensions import join_dims, sorted_dims
 from mathspec._divisors import zero_divisor_refusals
 from mathspec._expression_resolver import ExpressionResolver, condition_compared
+from mathspec._operators import CONDITION_CALLS
 from mathspec._syntax import (
     AndNode,
     BooleanNode,
@@ -77,12 +78,6 @@ GIVEN_IN_A_CONDITION = (
     'A given expression may hold a variable, and a condition is read before variables exist — it may test '
     'parameters and dimension coordinates only.'
 )
-
-_CONDITION_CALLS: dict[str, tuple[tuple[str, ...], str]] = {
-    'shift': (('along', 'offset'), 'shift(<condition>, along=<dimension>, offset=<integer>)'),
-    'at': (('by',), 'at(<condition>, by=<relation>[<column>])'),
-    'count': (('over',), 'count(<condition>, over=<dimension>) <op> <integer>'),
-}
 
 
 class _Entry(NamedTuple):
@@ -212,7 +207,7 @@ class ConditionResolver:
         return None
 
     def _operand(self, call: FunctionCallNode) -> Mask | None:
-        """The one condition *call* reads, held to the keywords ``_CONDITION_CALLS`` gives the operator over a condition.
+        """The one condition *call* reads, held to the keywords [`CONDITION_CALLS`][] gives the operator over a condition.
 
         The arithmetic forms of these operators take more — an ``edge=``, a
         ``within=`` — and each is refused rather than ignored, since a
@@ -220,7 +215,7 @@ class ConditionResolver:
         has nobody asking for it yet.
         """
         name = call.name.lower()
-        required, usage = _CONDITION_CALLS[name]
+        required, usage = CONDITION_CALLS[name]
         if len(call.args) != 1:
             self.errors.append(
                 f'{self.context}: {name}() over a condition reads one condition, and this call passes '

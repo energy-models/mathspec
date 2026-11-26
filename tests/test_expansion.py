@@ -12,10 +12,11 @@ from functools import partial
 import pytest
 
 from mathspec import to_spec
+from mathspec._operators import BUILTIN_NAMES, OPERATOR_NAMES
 from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
 from mathspec.program import Axis, ExpressionReference, Multiply, ParameterReference, Sum, Translate, VariableReference
-from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, spec_of
+from tests.fixtures import DISPATCH_MODEL, SMALL_MODEL, comparison_of, expression_of, spec_of, where_of
 
 WEIGHTED_SUM = {
     'args': ['array', 'weights'],
@@ -259,6 +260,30 @@ def test_macro_arity_errors(call, match):
         expression_of(call, Namespace(spec(macros={'ws': WEIGHTED_SUM})), 'expression')
 
 
+@pytest.mark.parametrize('name', sorted(OPERATOR_NAMES))
+def test_no_macro_is_named_after_an_operator(name):
+    """A macro named `count` loaded, and a where string that called it read the operator (#1057).
+
+    `count` and `position` are operators of a where string and stood in no
+    list an entry's name was held to, so `count(on, over=t) >= 2` counted,
+    whatever the macro's template said, while an expression called the macro.
+    """
+    with pytest.raises(LanguageError, match=f"Macro '{name}' collides with the built-in operator '{name}'"):
+        spec(macros={name: {'args': ['x'], 'template': 'x * 2'}})
+
+
+@pytest.mark.parametrize(
+    ('name', 'where'),
+    [
+        pytest.param('count', 'count(flag, over=g) >= 1', id='count'),
+        pytest.param('position', 'position(g) == 0', id='position'),
+    ],
+)
+def test_an_operator_only_a_where_string_calls_is_a_taken_name(name, where):
+    assert where_of(where, Namespace(spec_of(SMALL_MODEL)), 'probe') is not None, 'the where string calls the operator'
+    assert name in OPERATOR_NAMES - BUILTIN_NAMES, 'which no expression calls, and no entry is named after'
+
+
 @pytest.mark.parametrize(
     ('patch', 'match'),
     [
@@ -281,6 +306,11 @@ def test_macro_arity_errors(call, match):
             {'dimensions.sum': {'dtype': 'int'}},
             "collides with the built-in operator 'sum'",
             id='a-built-in-operator-taken-by-a-dimension',
+        ),
+        pytest.param(
+            {'dimensions.position': {'dtype': 'int'}},
+            "Dimension 'position' collides with the built-in operator 'position'",
+            id='an-operator-of-a-where-string-taken-by-a-dimension',
         ),
         pytest.param(
             {'macros': {'m': {'args': ['generator'], 'template': 'p * generator'}}},

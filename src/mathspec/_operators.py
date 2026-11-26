@@ -99,6 +99,16 @@ BUILTINS: dict[str, Builtin] = {
 
 BUILTIN_NAMES = frozenset(BUILTINS)
 
+CONDITION_CALLS: dict[str, tuple[tuple[str, ...], str]] = {
+    'shift': (('along', 'offset'), 'shift(<condition>, along=<dimension>, offset=<integer>)'),
+    'at': (('by',), 'at(<condition>, by=<relation>[<column>])'),
+    'count': (('over',), 'count(<condition>, over=<dimension>) <op> <integer>'),
+}
+"""The operators that read a condition in a where string, each with the keywords it takes there and how a refusal spells the call."""
+
+OPERATOR_NAMES = BUILTIN_NAMES | frozenset(CONDITION_CALLS) | {'position'}
+"""Every operator a string may call, which no entry of the flat namespace is named after. ``position`` reads a dimension, on the left of a where comparison."""
+
 
 class Amount(NamedTuple):
     """What the errors of an operator that steps along an axis say about the amount it takes."""
