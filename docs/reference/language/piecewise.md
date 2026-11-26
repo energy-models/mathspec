@@ -23,8 +23,8 @@ an `adjacency` curve adds. The expansion has three properties:
   `chp_lam`, and its rows include `chp_convexity` and `chp_power`.
 - No formulation writes a parameter. The same data attaches to a spec and to
   its expansion, and has the same meaning in both.
-- The [assumptions of a curve](assumptions.md#what-a-curve-assumes) become
-  `assumptions:` entries.
+- The assumptions of a [curve](assumptions.md#what-a-curve-assumes) or a
+  [set](assumptions.md#what-a-set-assumes) become `assumptions:` entries.
 
 ## `sos`
 
@@ -80,10 +80,16 @@ Sos 'again': variable 'build' already carries the set declared by 'pick_one_size
 mathspec suggests two rewrites: a second variable, or the other restriction
 written as a constraint.
 
-A member that the `where:` of the variable leaves out
-([absent](absence.md#where)) is not in the set. The members follow the order of the `along` dimension. For `type: 2`, that
+The members follow the order of the `along` dimension. For `type: 2`, that
 dimension must be declared [ordered](dimensions.md#ordered), because
 "consecutive" depends on its order.
+
+A member that the `where:` of the variable leaves out
+([absent](absence.md#where)) still takes its place along `along`. Under
+`type: 2`, the two members either side of it are not consecutive, so at most
+one of them is non-zero. Take the spec above with `type: 2`, and `size`
+ordered as `small`, `medium`, `large`. Where the `where:` of `build` leaves out
+`medium` at a site, that site builds `small` or `large`, never both.
 
 ### What a set is written out as
 
@@ -96,12 +102,13 @@ a set `s` over the variable `x` along `d`, let `admitted` be `s_seg` for
 leaves out a binary that does not exist. So the first member along `d`, and a
 member after one that the `where:` of `x` leaves out, still have a row:
 
-| Written out                                        | What it states                                                         |
-| -------------------------------------------------- | ---------------------------------------------------------------------- |
-| `s_seg`                                            | a binary variable over the dimensions of `x`, with the `where:` of `x` |
-| `s_pick`                                           | `sum(s_seg, over=d) <= 1`: at most one is picked                       |
-| `s_nonzero` (`type: 1`), `s_adjacency` (`type: 2`) | `x <= upper * admitted`                                                |
-| the same name plus `_below`                        | `x >= lower * admitted`, written only where `lower` is not `0`         |
+| Written out                                        | What it states                                                                                |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `s_seg`                                            | a binary variable over the dimensions of `x`, with the `where:` of `x`                        |
+| `s_pick`                                           | `sum(s_seg, over=d) <= 1`: at most one is picked                                              |
+| `s_nonzero` (`type: 1`), `s_adjacency` (`type: 2`) | `x <= upper * admitted`                                                                       |
+| the same name plus `_below`                        | `x >= lower * admitted`, written only where `lower` is not `0`                                |
+| `s_bounded`                                        | an [assumption](assumptions.md#what-a-set-assumes), written only where a bound is a parameter |
 
 Each command below prints the spec above with its set written out:
 
@@ -141,6 +148,17 @@ Sos 'pick_one_size': variable 'build' has no lower bound, and the set expands to
 
 The `_below` row of the expansion needs a lower bound, so that an unpicked
 `build` is zero.
+
+With `bounds: { lower: 0, upper: max_build }` on `build`, the rows multiply by
+`max_build`, so the set also assumes that `max_build` is finite at every member.
+The typesetter prints the assumption `pick_one_size_bounded` as:
+
+```math
+\mathrm{max\_build}_{i} \text{ is defined} \qquad \forall\, i \in \mathcal{I}
+```
+
+With data attached, a tool refuses a `max_build` that is missing or infinite at
+a member of the set.
 
 mathspec also refuses a name that the expansion writes when the file already declares it, such as a variable `pick_one_size_seg`:
 

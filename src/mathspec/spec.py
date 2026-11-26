@@ -1108,8 +1108,10 @@ class SosSpec(_StrictSpec):
     """A special-ordered set over one dimension of one variable.
 
     One set per coordinate of the variable's ``dims`` minus ``along``; the
-    members are the variable's *existing* coordinates along ``along``, in that
-    dimension's declared order.
+    members are the variable's coordinates along ``along``, in that
+    dimension's declared order. A coordinate the variable's ``where:`` leaves
+    out is absent and still takes its place, so under ``type: 2`` the members either
+    side of it are not consecutive.
 
     ``type: 1`` admits at most one nonzero member, ``type: 2`` at most two,
     and those two consecutive. A consumer with the concept takes the set as
