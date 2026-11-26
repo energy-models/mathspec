@@ -56,8 +56,17 @@ REAL = r'\d+\.\d*([eE][+-]?\d+)?|\d+[eE][+-]?\d+'
 RESERVED = ('AND', 'OR', 'NOT', 'TRUE', 'FALSE')
 """The words of a where string, in any case. A name spelled as one of them is the word there, wherever it stands."""
 
+INFINITY = 'inf'
+"""The name the grammar reads as the number, wherever it stands but before a call's bracket."""
+
 RESERVED_WORDS = 'one of AND, OR, NOT, True and False, which a where string reserves in any case'
 """How a refusal says a word is reserved."""
+
+NAME_RULE = (
+    f'Start it with a letter or an underscore, then use only letters, digits or underscores. It may not be '
+    f'{RESERVED_WORDS}, or inf, which is the number infinity.'
+)
+"""What a refusal of a name tells the file to write instead."""
 """How a refusal says a word is reserved."""
 
 Text = Literal['expression', 'condition']
@@ -148,7 +157,7 @@ class _Tree(Transformer[Token, ParsedNode]):
 
     def name(self, token: Token) -> NumberNode | NameNode:
         """A bare ``inf`` is the number; as a callee or a keyword it stays a name."""
-        return NumberNode(float('inf')) if token == 'inf' else NameNode(str(token))
+        return NumberNode(float('inf')) if token == INFINITY else NameNode(str(token))
 
     def label(self, token: Token) -> KeywordNode:
         return KeywordNode(str(token))
@@ -228,6 +237,16 @@ def parse_expression(text: str) -> ParsedNode:
             with its rewrite before the grammar's own complaint.
     """
     return _parse(text, 'expression')
+
+
+def is_name(text: str) -> bool:
+    """Whether a where string reads *text* as one name, which is what an entry, a macro's formal and a relation's column are keyed by.
+
+    The ``NAME`` terminal, less the spellings the grammar reads as its own: a
+    reserved word, in any case, and ``inf``. Answered without the parser,
+    which a spec would otherwise run once for every name it declares.
+    """
+    return re.fullmatch(NAME, text) is not None and text.upper() not in RESERVED and text != INFINITY
 
 
 @lru_cache(maxsize=4096)

@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 
 import mathspec.program as program_module
-from mathspec._grammar import parse_condition, parse_expression
+from mathspec._grammar import is_name, parse_condition, parse_expression
 from mathspec._syntax import (
     MAX_DEPTH,
     AndNode,
@@ -39,6 +39,7 @@ from mathspec._syntax import (
 )
 from mathspec.errors import SchemaError
 from mathspec.program import And, Not, Or, ParameterDefined, _conjuncts
+from tests.grammar.generate import NAMES, NUMBERS, ODD
 
 
 def test_a_parse_holds_no_node_of_the_program():
@@ -72,6 +73,21 @@ def test_only_a_where_string_reserves_its_words():
     """`AND`, `OR`, `NOT`, `True` and `False` are names in an expression and words in a where string."""
     assert parse_expression('not + true') == BinaryOperatorNode('+', NameNode('not'), NameNode('true'))
     assert parse_condition('not true') == NotNode(BooleanNode(True))
+
+
+def _reads_as_one_name(text: str) -> bool:
+    try:
+        return parse_condition(text) == NameNode(text)
+    except SchemaError:
+        return False
+
+
+@pytest.mark.parametrize(
+    'text', sorted({*NAMES, *NUMBERS, *ODD, '', ' ', ' x', 'x ', '(x)', 'a b', 'a-b', 'a.b', '1x', "'x'", 'f(x)'})
+)
+def test_a_name_is_what_the_parser_reads_as_one_name(text):
+    """`is_name` answers without the parser, so this holds its answer to the parser's over the fuzzer's vocabulary."""
+    assert is_name(text) == _reads_as_one_name(text), f'{text!r}: is_name and the parser part'
 
 
 @pytest.mark.parametrize(
