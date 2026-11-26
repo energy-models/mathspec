@@ -691,7 +691,8 @@ objective:
 ```
 
 The cost of each generator is bounded below by the curve, and no weight
-variable is stated.
+variable is stated. Each segment row bounds the signed link by itself, so
+the dual of a row is the share of that link's price that its segment carries.
 
 Without the sign, mathspec refuses the file at load:
 
