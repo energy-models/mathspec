@@ -394,6 +394,34 @@ As for [`shift`](#within), `within=` takes a
 [partition](relations.md#partitions), and the window then stays inside each
 group.
 
+A window at least as long as the dimension reaches past the start from every
+position, so `sum_back` then sums from the first position to the one being
+written: a running total. A carbon budget that holds for every year to date
+reads its window from a scalar parameter, `years`, set to the number of years
+or more:
+
+```yaml
+dimensions:
+  year: { dtype: int, ordered: true }
+parameters:
+  years: { dims: [], dtype: int }
+  carbon_budget: { dims: [year] }
+variables:
+  emissions: { dims: [year], bounds: { lower: 0 } }
+constraints:
+  budget_so_far:
+    dims: [year]
+    expression: sum_back(emissions, along=year, window=years) <= carbon_budget
+objective: { sense: maximize, expression: sum(emissions) }
+```
+
+```math
+\sum_{y' \in \mathcal{Y} \,:\, 0 \le y - y' < \mathrm{years}} \mathit{emissions}_{y'} \le \mathrm{carbon\_budget}_{y} \qquad \forall\, y \in \mathcal{Y}
+```
+
+The emissions of every year up to `y` count against the budget of `y`. With
+`within=`, the running total starts again at the first position of each group.
+
 ## Every operator as math
 
 The typesetter prints each form from the smallest spec that uses it.
