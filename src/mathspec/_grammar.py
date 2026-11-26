@@ -67,7 +67,6 @@ NAME_RULE = (
     f'{RESERVED_WORDS}, or inf, which is the number infinity.'
 )
 """What a refusal of a name tells the file to write instead."""
-"""How a refusal says a word is reserved."""
 
 Text = Literal['expression', 'condition']
 
