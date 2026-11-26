@@ -101,9 +101,7 @@ constraints:
 ```
 
 A technology has capacity only where its `built` is 1, and each site builds at
-most `max_technologies` of them. These are the rows that
-[`spec.expand('sos')`](../reference/spec.md#mathspec.spec.Spec.expand) writes
-for a `type: 1` set, with `max_technologies` in place of 1.
+most `max_technologies` of them.
 
 ## Check the spec
 
