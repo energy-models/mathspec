@@ -2610,6 +2610,8 @@ class TestAnEntryIsNamed:
             pytest.param('1x', id='leading-digit'),
             pytest.param('a-b', id='a-hyphen'),
             pytest.param('a.b', id='a-dot'),
+            pytest.param(' x', id='a-leading-space'),
+            pytest.param('(x)', id='a-name-in-brackets'),
         ],
     )
     @pytest.mark.parametrize('section', SECTIONS)
@@ -2628,34 +2630,40 @@ class TestAnEntryIsNamed:
         string could read it.
         """
         message = _refusal(self._named(section, name))
-        assert f'{section}: {name!r} is ' in message, 'the section and the name the file wrote'
-        assert 'Rename the entry.' in message, 'and the rewrite'
+        assert f'{section}: {name!r} is not a name.' in message, 'the section and the name the file wrote'
+        assert 'It may not be one of AND, OR, NOT, True and False' in message, 'and the rule the name breaks'
 
     @pytest.mark.parametrize(
-        ('patch', 'fragments'),
+        ('patch', 'refused'),
         [
-            pytest.param(
-                {'macros': {'m': {'args': ['not'], 'template': 'not * 2'}}},
-                ("'not' is one of AND, OR, NOT, True and False", 'Rename the formal.'),
-                id='a-positional-formal',
-            ),
+            pytest.param({'macros': {'m': {'args': ['not'], 'template': 'not * 2'}}}, "formal 'not'", id='a-formal'),
             pytest.param(
                 {'macros': {'m': {'args': ['x'], 'kwargs': ['inf'], 'template': 'x * inf'}}},
-                ("'inf' is the number infinity", 'Rename the formal.'),
+                "formal 'inf'",
                 id='a-keyword-formal',
             ),
             pytest.param(
-                {'relations': {'ends': {'key': 'g', 'values': {'true': 'h'}}}},
-                ("'true' is one of AND, OR, NOT, True and False", 'Rename the column.'),
-                id='a-relation-column',
+                {'macros': {'m': {'args': ['x-y'], 'template': 'x-y'}}}, "formal 'x-y'", id='a-formal-of-two-names'
+            ),
+            pytest.param(
+                {'relations': {'ends': {'key': 'g', 'values': {'true': 'h'}}}}, "column 'true'", id='a-column'
+            ),
+            pytest.param(
+                {'relations': {'ends': {'key': 'g', 'values': {'to bus': 'h'}}}},
+                "column 'to bus'",
+                id='a-column-of-two-words',
             ),
         ],
     )
-    def test_a_formal_and_a_column_are_names_too(self, patch, fragments):
-        """A macro's formal and a relation's column are written into an expression as an entry's name is."""
+    def test_a_formal_and_a_column_are_names_too(self, patch, refused):
+        """A macro's formal and a relation's column are written into an expression as an entry's name is.
+
+        Neither was held to anything, so a formal `x-y` loaded and no call
+        could bind it, since its template reads `x - y`.
+        """
         message = _refusal(**patch)
-        for fragment in fragments:
-            assert fragment in message
+        assert f'{refused} is not a name.' in message, 'what was named, and how the file wrote it'
+        assert 'Start it with a letter or an underscore' in message, 'and what to write instead'
 
     @pytest.mark.parametrize('name', ['android', 'not_before', 'x_or_y', 'true_flag', 'inflow', 'Inf', 'falsetto'])
     def test_a_name_that_only_contains_a_word_loads(self, name: str):

@@ -16,7 +16,7 @@ from pathlib import Path
 import pytest
 
 import mathspec.program as program_module
-from mathspec._grammar import parse
+from mathspec._grammar import is_name, parse
 from mathspec._syntax import (
     MAX_DEPTH,
     AndNode,
@@ -38,6 +38,7 @@ from mathspec._syntax import (
 )
 from mathspec.errors import SchemaError
 from mathspec.program import And, Not, Or, ParameterDefined, _conjuncts
+from tests.grammar.generate import NAMES, NUMBERS, ODD
 
 
 def test_a_parse_holds_no_node_of_the_program():
@@ -67,6 +68,21 @@ def test_the_five_words_are_words_in_every_string():
     assert parse('p <= 1 and q <= 2') == AndNode(
         ComparisonNode('<=', NameNode('p'), NumberNode(1)), ComparisonNode('<=', NameNode('q'), NumberNode(2))
     ), 'and the connective, between two comparisons of an expression'
+
+
+def _reads_as_one_name(text: str) -> bool:
+    try:
+        return parse(text) == NameNode(text)
+    except SchemaError:
+        return False
+
+
+@pytest.mark.parametrize(
+    'text', sorted({*NAMES, *NUMBERS, *ODD, '', ' ', ' x', 'x ', '(x)', 'a b', 'a-b', 'a.b', '1x', "'x'", 'f(x)'})
+)
+def test_a_name_is_what_the_parser_reads_as_one_name(text):
+    """`is_name` answers without the parser, so this holds its answer to the parser's over the fuzzer's vocabulary."""
+    assert is_name(text) == _reads_as_one_name(text), f'{text!r}: is_name and the parser part'
 
 
 @pytest.mark.parametrize(
