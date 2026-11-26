@@ -1,0 +1,19 @@
+dimensions:
+  g: { dtype: str }
+
+parameters:
+  floor: { dims: [g] }
+  cap: { dims: [g] }
+  built: { dims: [g], dtype: bool }
+
+variables:
+  p:
+    dims: [g]
+    where: built
+    bounds: { lower: floor, upper: cap }
+
+sos:
+  pick:
+    variable: p
+    along: g
+    type: 1

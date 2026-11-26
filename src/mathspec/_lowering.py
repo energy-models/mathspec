@@ -38,6 +38,8 @@ from mathspec._resolution import (
     resolve_expression_text,
     self_existence,
 )
+from mathspec._sos import assumptions_of as set_assumptions_of
+from mathspec._sos import coefficients
 from mathspec._validation import emitted_name_errors, reference_errors
 from mathspec.errors import SchemaError, did_you_mean, prefixed
 from mathspec.program import (
@@ -219,6 +221,11 @@ def lower(spec: Spec) -> Program:
         for aname, assumed in assumptions_of(pname, piecewise[pname], spec.piecewise[pname].where).items():
             assumption = _assumption(aname, assumed, ns, errors)
             assert assumption is not None and not errors, 'what a method assumes is stated in the language'
+            assumptions[aname] = assumption
+    for sname, sdef in spec.sos.items():
+        for aname, assumed in _set_assumptions(sname, sdef.variable, spec).items():
+            assumption = _assumption(aname, assumed, ns, errors)
+            assert assumption is not None and not errors, 'what a set assumes is stated in the language'
             assumptions[aname] = assumption
 
     program = Program(
@@ -412,6 +419,22 @@ def _parameter_masks(spec: Spec, ns: Namespace, errors: list[str]) -> dict[str, 
             for read in sorted(mask.names_read & masked)
         )
     return masks
+
+
+def _set_assumptions(name: str, variable: str, spec: Spec) -> dict[str, AssumptionSpec]:
+    """What set *name* assumes of its member's bounds, or nothing where the member fails to load.
+
+    A set over an undeclared variable, or over one with a side left open, is
+    refused by validation after the program exists, so here it assumes nothing
+    rather than stating a condition over a bound that is not there.
+    """
+    member = spec.variables.get(variable)
+    if member is None:
+        return {}
+    below, above = coefficients(member.domain, member.bounds.lower, member.bounds.upper)
+    if below is None or above is None:
+        return {}
+    return set_assumptions_of(name, variable, below, above, member.where)
 
 
 def _assumption(name: str, entry: AssumptionSpec, ns: Namespace, errors: list[str]) -> Assumption | None:

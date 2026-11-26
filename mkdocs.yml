@@ -46,6 +46,7 @@ nav:
       - Print a spec as math: howto/print.md
       - Compare two specs: howto/compare.md
       - Compose a spec from several files: howto/compose.md
+      - Allow at most one of several options: howto/at-most-one-option.md
       - See what a piecewise curve or an SOS expands to: howto/see-an-expansion.md
   - Reference:
       - reference/index.md

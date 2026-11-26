@@ -1,0 +1,37 @@
+dimensions:
+  g: { dtype: str }
+
+parameters:
+  floor: { dims: [g] }
+  cap: { dims: [g] }
+  built: { dims: [g], dtype: bool }
+
+variables:
+  p:
+    dims: [g]
+    where: built
+    bounds: { lower: floor, upper: cap }
+  pick_seg:
+    dims: [g]
+    where: built
+    domain: binary
+    description: a binary per member, 1 where that member may be nonzero
+
+constraints:
+  pick_pick:
+    dims: []
+    expression: sum(pick_seg, over=g) <= 1
+  pick_nonzero:
+    dims: [g]
+    expression: p <= cap * (pick_seg)
+  pick_nonzero_below:
+    dims: [g]
+    expression: p >= floor * (pick_seg)
+
+assumptions:
+  pick_bounded:
+    holds: cap AND floor
+    where: built
+    description: >-
+      sos 'pick': each member of 'p' is linked to its binary through 'cap' and 'floor', so every member needs
+      a finite value there. Attach a finite bound, or leave the member out with a where: on 'p'.

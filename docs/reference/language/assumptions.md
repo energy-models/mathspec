@@ -208,6 +208,21 @@ The first requires a row in both tables at every breakpoint. The second
 requires that `bp_x` rise from one breakpoint to the next. The third requires
 that each segment be no steeper than the one after it, which makes the curve convex.
 
+## What a set assumes
+
+An [`sos:`](piecewise.md#sos) entry named `set` adds one assumption where a
+bound of its variable is a parameter, because the
+[rows it is written out as](piecewise.md#what-a-set-is-written-out-as) multiply
+by that bound. The assumption has the `where:` of the variable, so a tool
+checks it only at the members of the set.
+[`to_spec`](../api.md#mathspec.to_spec) derives it, and
+[`spec.expand('sos')`](../spec.md#mathspec.spec.Spec.expand) writes it out
+under the same name:
+
+| Entry         | Added for                                           | What it requires                                                  |
+| ------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| `set_bounded` | a variable with a parameter as `lower:` or `upper:` | each such parameter has a row with a finite value at every member |
+
 !!! info "See also"
 
     - [Reading a spec and its program](../reading.md#what-the-data-has-to-satisfy)

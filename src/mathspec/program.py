@@ -824,6 +824,12 @@ class Sos:
     dims those are is the variable's own ``dims`` and is read from it: a
     copy here would be a second home for a fact
     ([`Program.variables`][]).
+
+    A coordinate the variable's mask leaves out still takes its place along
+    ``along``, so under ``sos_type`` 2 the members either side of
+    it are not consecutive. A tool that hands the set to a solver passes that
+    coordinate as a member fixed at zero, which states the same set
+    [`Spec.expand`][mathspec.spec.Spec.expand] writes out.
     """
 
     variable: str

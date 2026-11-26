@@ -80,6 +80,64 @@ def test_an_unpicked_member_is_held_at_zero_from_the_sides_its_bounds_state(boun
     assert written == rows, 'the rows a set states, and no row that states nothing'
 
 
+@pytest.mark.parametrize(
+    ('member', 'assumed'),
+    [
+        pytest.param({'bounds': {'lower': 0, 'upper': 10}}, {}, id='a-number-is-finite-already'),
+        pytest.param({'domain': 'binary'}, {}, id='a-binary-is-bounded-by-its-domain'),
+        pytest.param(
+            {'bounds': {'lower': 0, 'upper': 'c'}},
+            {'pick_bounded': ('c', None)},
+            id='a-parameter-above-is-assumed-finite',
+        ),
+        pytest.param(
+            {'bounds': {'lower': 'floor', 'upper': 'c'}},
+            {'pick_bounded': ('c AND floor', None)},
+            id='a-parameter-on-each-side-is-assumed-finite-on-each',
+        ),
+        pytest.param(
+            {'bounds': {'lower': 'c', 'upper': 'c'}},
+            {'pick_bounded': ('c', None)},
+            id='one-parameter-on-both-sides-is-assumed-once',
+        ),
+        pytest.param(
+            {'bounds': {'lower': 0, 'upper': 'c'}, 'where': 'flag'},
+            {'pick_bounded': ('c', 'flag')},
+            id='a-member-that-does-not-exist-needs-no-bound',
+        ),
+    ],
+)
+def test_a_set_assumes_the_parameter_it_links_through_is_finite(member, assumed):
+    """The linking row multiplies a binary by the member's bound. A bound that is a
+    parameter can be infinite in the data, and the row then carried an `inf`
+    coefficient that nothing refused (#616). The set now assumes the parameter
+    finite, in the spec as loaded and in its expansion alike, so the same data is
+    refused on either side of `expand`."""
+    spec = spec_of(varied(PICKED, **{'variables.p': {'dims': ['g'], **member}}))
+
+    written_out = {name: (a.holds, a.where) for name, a in spec.expand('sos').assumptions.items()}
+    assert written_out == assumed, 'one assumption per set, over the parameters its rows multiply by'
+    assert spec.program.assumptions.keys() == spec.expand('sos').program.assumptions.keys(), (
+        'the spec as loaded assumes what its expansion writes'
+    )
+
+
+def test_a_set_refuses_an_assumption_its_expansion_writes():
+    """The assumption is written under the set's name, so a file that already declares it is refused, not overwritten."""
+    with pytest.raises(SchemaError) as refused:
+        spec_of(
+            varied(
+                PICKED,
+                **{'variables.p.bounds': {'lower': 0, 'upper': 'c'}, 'assumptions': {'pick_bounded': 'c > 0'}},
+            )
+        )
+
+    assert (
+        "Sos 'pick': its expansion writes assumption 'pick_bounded', which this file already declares under "
+        "'assumptions:'. Rename one of them." in str(refused.value)
+    )
+
+
 def test_a_set_carries_no_coefficient_of_its_own():
     """`bound:` replaced the member's upper bound in the linking row. Below it the row
     capped a picked member the set does not cap; above it the row was a looser big-M;

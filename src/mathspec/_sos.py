@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from mathspec.spec import Spec
+from mathspec.spec import AssumptionSpec, Spec
 
 if TYPE_CHECKING:
     from mathspec.program import SosType
@@ -68,9 +68,18 @@ class Emitted:
         return f'{self.link}_below'
 
     @property
+    def bounded(self) -> str:
+        """The assumption that the parameters the linking rows multiply by are finite."""
+        return f'{self.seg.removesuffix("_seg")}_bounded'
+
+    @property
     def by_kind(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
         """Each name by the kind of entry it would collide with."""
-        return (('variable', (self.seg,)), ('constraint', (self.pick, self.link, self.below)))
+        return (
+            ('variable', (self.seg,)),
+            ('constraint', (self.pick, self.link, self.below)),
+            ('assumption', (self.bounded,)),
+        )
 
 
 _SEGMENTS = {
@@ -124,6 +133,39 @@ def emit(raw: dict[str, object], name: str) -> None:
     constraints[emitted.link] = {'dims': dims, 'expression': f'{variable} <= {_scaled(above, picked)}'}
     if below != 0.0:
         constraints[emitted.below] = {'dims': dims, 'expression': f'{variable} >= {_scaled(below, picked)}'}
+    for assumed_name, assumed in assumptions_of(name, variable, below, above, member.get('where')).items():
+        section(raw, 'assumptions')[assumed_name] = assumed.model_dump()
+
+
+def assumptions_of(
+    name: str, variable: str, below: float | str, above: float | str, where: object
+) -> dict[str, AssumptionSpec]:
+    """What set *name* assumes of the bounds it links its members through, by the name a refusal quotes.
+
+    A bound that is a parameter can be infinite, or missing, in the data,
+    and the linking row then multiplies a binary by no finite number. Nothing
+    sees a value before data is attached, so the set states the condition and
+    the tool that attaches the data checks it. A bare numeric name in a
+    condition is true where the parameter has a row and its value is finite,
+    which is the condition. The member's own ``where:`` is the assumption's, so
+    a member that does not exist needs no bound. A spec that still declares
+    the set derives the same text at load, so the data is held to what the
+    expansion needs on either side of [`Spec.expand`][mathspec.spec.Spec.expand].
+    """
+    named = [bound for bound in dict.fromkeys((above, below)) if isinstance(bound, str)]
+    if not named:
+        return {}
+    assert where is None or isinstance(where, str), 'a validated spec carries a where: as text'
+    quoted = ' and '.join(f"'{bound}'" for bound in named)
+    return {
+        Emitted.of(name, 1).bounded: AssumptionSpec(
+            holds=' AND '.join(named),
+            where=where,
+            description=f"sos '{name}': each member of '{variable}' is linked to its binary through {quoted}, "
+            'so every member needs a finite value there. Attach a finite bound, or leave the member out with '
+            f"a where: on '{variable}'.",
+        )
+    }
 
 
 def _scaled(factor: float | str, picked: str) -> str:
