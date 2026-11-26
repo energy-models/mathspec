@@ -35,7 +35,7 @@ from pydantic import (
 )
 
 from mathspec._frozen import Frozen
-from mathspec._grammar import NAME, RESERVED, RESERVED_WORDS
+from mathspec._grammar import NAME, NAME_RULE, is_name
 from mathspec._operators import BUILTIN_NAMES
 from mathspec.errors import did_you_mean, schema_error
 from mathspec.program import (
@@ -231,15 +231,6 @@ def _also_written_as(
     return {'anyOf': [dict(generated), shorthand]}
 
 
-def _word(name: str) -> str | None:
-    """Why *name* is a word of the language and so the name of nothing, or ``None`` where it is a name."""
-    if name.upper() in RESERVED:
-        return f'{name!r} is {RESERVED_WORDS}'
-    if name == 'inf':
-        return "'inf' is the number infinity wherever an expression or a where string has it"
-    return None
-
-
 def side_columns(written: str | Sequence[str] | Mapping[str, str] | None) -> tuple[tuple[str, str], ...]:
     """``(role, dimension)`` per column of one side of a relation, in written order.
 
@@ -306,10 +297,10 @@ class RelationSpec(_StrictSpec):
 
     @model_validator(mode='after')
     def _columns_are_names(self) -> RelationSpec:
-        """A column named apart from its dimension is no word of the language; one named after its dimension is refused with the dimension."""
+        """A column named apart from its dimension is a name; one named after its dimension is held to it with the dimension."""
         named = [role for side in (self.key, self.values) if isinstance(side, Mapping) for role in side]
-        if words := [word for role in named if (word := _word(role)) is not None]:
-            msg = f'{words[0]}, so no column may have that name. Rename the column.'
+        if unnamed := [role for role in named if not is_name(role)]:
+            msg = f'column {unnamed[0]!r} is not a name. {NAME_RULE}'
             raise ValueError(msg)
         return self
 
@@ -689,8 +680,8 @@ class MacroSpec(_StrictSpec):
         if twice := sorted({formal for formal in formals if formals.count(formal) > 1}):
             msg = f'formal {twice[0]!r} is named twice. Give each formal its own name.'
             raise ValueError(msg)
-        if words := [word for formal in formals if (word := _word(formal)) is not None]:
-            msg = f'{words[0]}, so no formal may have that name. Rename the formal.'
+        if unnamed := [formal for formal in formals if not is_name(formal)]:
+            msg = f'formal {unnamed[0]!r} is not a name. {NAME_RULE}'
             raise ValueError(msg)
         return self
 
@@ -1353,7 +1344,7 @@ class Spec(_StrictSpec):
 
     @model_validator(mode='after')
     def _names_are_names(self) -> Spec:
-        """Every entry is keyed by something an expression could write as a name, which a word of the language is not.
+        """Every entry is keyed by something an expression could write as a name.
 
         Read off the spec's own mappings rather than a list of sections, so a
         section added later cannot be forgotten here — every mapping a Spec
@@ -1362,17 +1353,12 @@ class Spec(_StrictSpec):
         same way.
         """
         sections = [*self, *((f'given: {kind}', group) for kind, group in self.given)]
-        names = [(section, name) for section, value in sections if isinstance(value, Mapping) for name in value]
         errors = [
-            f'{section}: {name!r} is not a name. Start it with a letter or an underscore, '
-            f'then use only letters, digits or underscores.'
-            for section, name in names
-            if not re.fullmatch(NAME, name)
-        ]
-        errors += [
-            f'{section}: {word}, so no entry may have that name. Rename the entry.'
-            for section, name in names
-            if (word := _word(name)) is not None
+            f'{section}: {name!r} is not a name. {NAME_RULE}'
+            for section, value in sections
+            if isinstance(value, Mapping)
+            for name in value
+            if not is_name(name)
         ]
         if errors:
             raise ValueError('\n'.join(errors))
