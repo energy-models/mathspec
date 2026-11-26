@@ -4,36 +4,39 @@
 
 description: >-
   Trade between regions from TIMES: IRE_FLO, the efficiency of a flow from one
-  region and commodity to another through a process, with each link a label of
-  its own.
+  region and commodity to another through a process, over each region and
+  commodity twice.
 
 dimensions:
   region: { description: a region of the model }
   commodity: { description: an energy carrier or a material }
   process: { description: a technology that carries trade }
-  trade_link: { description: "one link from a region and commodity to another, a label the data invents" }
+  from_region: { alias: region, description: the region an export leaves }
+  from_commodity: { alias: commodity, description: the commodity an export leaves as }
 
 relations:
-  link_ends:
-    description: the region and commodity at each end of a link
-    key: trade_link
-    values: { from_commodity: commodity, from_region: region, to_commodity: commodity, to_region: region }
   top_ire:
-    description: the processes that carry each link (TOP_IRE)
-    key: [trade_link, process]
+    description: the processes that carry each link from a region and commodity to another (TOP_IRE)
+    key: [from_region, from_commodity, region, commodity, process]
     missing: absent
 
 parameters:
-  ire_flo: { dims: [trade_link, process], where: top_ire, description: the share of an export that arrives as an import (IRE_FLO) }
+  ire_flo:
+    description: the share of an export that arrives as an import (IRE_FLO)
+    dims: [from_region, from_commodity, region, commodity, process]
+    where: top_ire
   demand: { dims: [commodity, region], description: what a region needs of a commodity }
   supply_cost: { dims: [commodity, region], description: the cost of a unit produced in a region }
-  trade_cost: { dims: [trade_link, process], where: top_ire, description: the cost of a unit exported along a link }
+  trade_cost:
+    description: the cost of a unit exported along a link
+    dims: [from_region, from_commodity, region, commodity, process]
+    where: top_ire
 
 variables:
   supply: { dims: [commodity, region], bounds: { lower: 0 }, description: what a region produces of a commodity }
   export:
     description: what leaves along a link through a process (VAR_IRE)
-    dims: [trade_link, process]
+    dims: [from_region, from_commodity, region, commodity, process]
     where: top_ire
     bounds: { lower: 0 }
 
@@ -43,8 +46,9 @@ constraints:
     dims: [commodity, region]
     expression: >-
       supply
-      + sum(ire_flo * export, over=[trade_link, process], by=link_ends[to_commodity, to_region])
-      - sum(export, over=[trade_link, process], by=link_ends[from_commodity, from_region])
+      + sum(ire_flo * export, over=[from_region, from_commodity, process])
+      - sum(sum(sum(export, over=[region, commodity, process]), over=from_region, by=from_region[region]),
+        over=from_commodity, by=from_commodity[commodity])
       >= demand
 
 objective:

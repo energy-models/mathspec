@@ -8,8 +8,10 @@ SPDX-License-Identifier: CC-BY-4.0
 A **relation** is a table that maps between [dimensions](dimensions.md), such
 as the bus of each generator. The period of each snapshot and the buses that a
 generator may connect to are also relations. The file declares the columns of
-the table, and the rows come with the data. This page lists the keys of a
-relation, the data it expects, and how each operator uses a relation.
+the table, and the rows come with the data. An [alias](dimensions.md#alias)
+implies a relation with no table, because its rows come from the labels of its
+dimension. This page lists the keys of a relation, the data it expects, and how
+each operator uses a relation.
 
 ## `relations`
 

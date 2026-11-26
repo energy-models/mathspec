@@ -329,7 +329,7 @@ class ExpressionResolver:
     ) -> Expression | None:
         """``shift`` or ``sum_back`` from its read arguments, or ``None`` with the refusal appended."""
         if self.ns.unordered(along):
-            self.errors.append(unordered(self.context, f'{operator}(along={along})', along))
+            self.errors.append(unordered(self.context, f'{operator}(along={along})', along, self.ns.alias_of(along)))
             return None
         wrap, fill = edge if edge is not None else (False, None)
         if operator == 'shift':

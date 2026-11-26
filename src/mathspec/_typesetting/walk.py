@@ -131,6 +131,21 @@ class _Step:
         return replace(self, by=self.by + other.by) if same else None
 
 
+def _unclaimed(index: Mapping[str, str], dim: str, primes: int, enclosing: Iterable[str]) -> str:
+    """The index of *dim* with *primes* primes, and more until no other dimension and no *enclosing* index prints with it.
+
+    An alias prints as its dimension's index primed, so a reduction over the
+    dimension inside an entry over the alias would take the alias's own index
+    as its dummy and read two indices as one. Priming past it can land on the
+    dummy of an enclosing reduction over the alias, so those are taken too.
+    """
+    taken = {symbol for other, symbol in index.items() if other != dim} | set(enclosing)
+    dummy = index[dim] + "'" * primes
+    while dummy in taken:
+        dummy += "'"
+    return dummy
+
+
 @dataclass(frozen=True)
 class _Context:
     """What a subscript means at this point in the tree.
@@ -163,8 +178,7 @@ class _Context:
         once per enclosing use of the same dimension, so ``sum(q, over=generator, by=bus_of[bus])``
         under ``∀ g`` sums over ``g'`` and its condition can still name ``g``.
         """
-        primes = "'" * self.bound.count(dim)
-        dummy = f'{self.walk.symbols.index[dim]}{primes}'
+        dummy = _unclaimed(self.walk.symbols.index, dim, self.bound.count(dim), self.lookups.values())
         body = _Context(self.walk, self.offsets, {**self.lookups, dim: dummy}, (*self.bound, dim))
         return dummy, body
 
@@ -255,9 +269,12 @@ class Walk:
 
         *at* maps each key role to the index it is read at. The function is
         named after the relation alone where the key determines one column, and
-        after the column read otherwise.
+        after the column read otherwise. The relation an alias implies sends
+        each label to itself, so its read is the index it is read at.
         """
         lk = self.program.relations[name]
+        if (dimension := self.program.dimensions.get(name)) is not None and dimension.alias == read:
+            return at[name]
         function = name if len(lk.values) == 1 else f'{name}.{read}'
         return self.format.apply(self.format.upright(function), self.format.joined([at[k] for k in lk.key], ''))
 

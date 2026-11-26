@@ -247,7 +247,9 @@ class ConditionResolver:
             )
             return node
         if self.ns.unordered(along.name):
-            self.errors.append(unordered(context, f'shift(<condition>, along={along.name})', along.name))
+            self.errors.append(
+                unordered(context, f'shift(<condition>, along={along.name})', along.name, self.ns.alias_of(along.name))
+            )
             return node
         return TranslatedCondition(mask, along.name, int(offset.value), mask.dims)
 
@@ -455,7 +457,7 @@ class ConditionResolver:
             )
             return node
         if ns.unordered(dimension):
-            self.errors.append(unordered(context, f'position({dimension})', dimension))
+            self.errors.append(unordered(context, f'position({dimension})', dimension, ns.alias_of(dimension)))
             return node
         if within is None:
             return DimensionPosition(dimension, node.op, position)
@@ -470,10 +472,11 @@ class ConditionResolver:
         ns, context = self.ns, self.context
         value = plain.value
         left_name, left_column = _split_column(plain.name)
+        kind = _side_kind(ns, left_name, left_column)
         if not plain.quoted and isinstance(value, str):
             right_name, right_column = _split_column(value)
-            if (rhs_kind := ns.kind(right_name)) is not None:
-                if rhs_kind == 'relation' and ns.kind(left_name) == 'relation':
+            if (rhs_kind := _side_kind(ns, right_name, right_column)) is not None:
+                if rhs_kind == 'relation' and kind == 'relation':
                     left = self._relation_column(left_name, left_column or None, plain.name, plain.op)
                     right = self._relation_column(right_name, right_column or None, value, plain.op)
                     if left is None or right is None:
@@ -487,7 +490,6 @@ class ConditionResolver:
                 self.errors.append(_declared_rhs_error(context, plain, value, rhs_kind, given=given))
                 return node
 
-        kind = ns.kind(left_name)
         if kind is None:
             self.errors.append(ns.unknown(left_name, context, allow_dims=True))
             return node
@@ -515,9 +517,12 @@ class ConditionResolver:
                 return node
             value = typed
         if labelled in ns.one_of and value not in ns.one_of[labelled]:
+            alias = ns.alias_of(labelled)
+            named = f"'{labelled}', an alias of '{alias}'" if alias else f"'{labelled}'"
             self.errors.append(
-                f"{context}: {value!r} is not a label of '{labelled}', which allows only "
-                f"{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '{labelled}'."
+                f'{context}: {value!r} is not a label of {named}, which allows only '
+                f'{list(ns.one_of[labelled])}. Write one of them, or add {value!r} to the one_of of '
+                f"'{alias or labelled}'."
             )
             return node
 
@@ -671,6 +676,11 @@ class _Plain(NamedTuple):
     op: ComparisonOperator
     value: float | str
     quoted: bool
+
+
+def _side_kind(ns: Namespace, name: str, column: str) -> str | None:
+    """What a side names: a relation where it reads a column of one, so an alias's ``from_region[region]`` reads its implied relation."""
+    return 'relation' if column and name in ns.relations else ns.kind(name)
 
 
 def _side_name_or_none(side: ArithmeticNode | ColumnNode | KeywordNode) -> str | None:
