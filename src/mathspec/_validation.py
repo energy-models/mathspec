@@ -22,7 +22,7 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from mathspec._operators import BUILTIN_NAMES
+from mathspec._operators import OPERATOR_NAMES
 from mathspec._piecewise import Emitted as EmittedCurve
 from mathspec._piecewise import gate_of
 from mathspec._sos import Emitted as EmittedSet
@@ -139,11 +139,11 @@ def _flat_namespace(spec: Spec) -> list[tuple[str, Iterable[str]]]:
 
 
 def _name_collisions(spec: Spec) -> Iterator[str]:
-    """A name is declared once, and never as a built-in operator."""
+    """A name is declared once, and never as an operator, of an expression or of a where string."""
     seen: dict[str, str] = {}
     for kind, group in _flat_namespace(spec):
         for name in group:
-            if name in BUILTIN_NAMES:
+            if name in OPERATOR_NAMES:
                 yield f"{kind.capitalize()} '{name}' collides with the built-in operator '{name}'. Rename the {kind}."
             if name in seen:
                 yield (

@@ -248,6 +248,15 @@ Variable 'p' collides with the parameter of the same name. Rename one of them.
 
 mathspec suggests the rewrite: a new name for one of the two entries.
 
+The operators are `sum`, `at`, `shift`, `sum_back`, `dual`, `count` and
+`position`. For a macro called `count`, mathspec prints:
+
+```text
+Macro 'count' collides with the built-in operator 'count'. Rename the macro.
+```
+
+mathspec suggests the rewrite: a new name for the macro.
+
 The name of an entry, of an argument of a macro and of a relation column is
 one `NAME` of the grammar. So it is none of `and`, `or`, `not`, `true` and
 `false`, in any case, which the language reserves, and it is not `inf`,
