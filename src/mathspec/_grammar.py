@@ -92,8 +92,8 @@ _GRAMMAR = rf"""
 names: NAME (_COMMA NAME)*
 
 NAME: /{NAME}/
-NUMBER: /{REAL}|\d+/
-DOTINF: ".inf"
+NUMBER: /(?:{REAL}|\d+)(?![A-Za-z_0-9.])/
+DOTINF: /(?<![A-Za-z0-9_])\.inf(?![A-Za-z0-9_])/
 STRING: /'(?:\\.|[^'\n\r\\])*'|"(?:\\.|[^"\n\r\\])*"/
 COMPARATOR: /<=|>=|==|!=|<|>/
 ADD: /[+-]/
@@ -331,7 +331,8 @@ def _hint(error: UnexpectedInput, text: str, at: int) -> str | None:
     A comparator there is tested first, since ``==`` and ``!=`` begin with a
     character that is the habit of another language alone. It is a chained
     comparison where the parser stood after a whole one, which is where it
-    would have taken no name. A reserved word written as a name stops the
+    would have taken no name. A number against a name is no token, so the
+    parser stops at the number. A reserved word written as a name stops the
     parser at the word, or, for ``NOT``, ``True`` and ``False``, at what
     follows it.
     """
@@ -346,7 +347,16 @@ def _hint(error: UnexpectedInput, text: str, at: int) -> str | None:
     for habit, rewrite in _HABITS:
         if rest.startswith(habit):
             return rewrite
-    return _reserved_word(text, at, rest)
+    return _against_a_name(text, at, rest) or _reserved_word(text, at, rest)
+
+
+def _against_a_name(text: str, at: int, rest: str) -> str | None:
+    """The rewrite for a number with a name directly after it, or ``.inf`` with one on either side, which is no token."""
+    if (number := re.match(rf'(?:{REAL}|\d+|\.inf)(?=[A-Za-z_])', rest)) is not None:
+        return f"'{number[0]}' is written against the name after it. Write a space or an operator between them."
+    if rest.startswith('.inf') and re.search(r'[A-Za-z0-9_]$', text[:at]) is not None:
+        return "'.inf' is written against the name before it. Write a space or an operator between them."
+    return None
 
 
 def _reserved_word(text: str, at: int, rest: str) -> str | None:

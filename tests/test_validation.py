@@ -1118,7 +1118,6 @@ class TestATermIsHeldToItsPlaceInResolution:
             pytest.param(
                 'shift(along=g, offset=1, flag)', 'shift(flag, along=g, offset=1)', id='a-keyword-before-the-condition'
             ),
-            pytest.param('c > 0AND flag', 'c > 0 AND flag', id='a-word-against-a-number'),
         ],
     )
     def test_a_spelling_the_grammar_reads_is_the_condition_it_spells(self, where, plain):
