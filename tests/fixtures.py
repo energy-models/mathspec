@@ -10,7 +10,7 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from mathspec._expansion import parse_and_expand
+from mathspec._grammar import parse
 from mathspec._resolution import Namespace, mask_of, resolve_condition_text, resolve_expression
 from mathspec._syntax import ComparisonNode
 from mathspec._validation import to_spec
@@ -176,7 +176,7 @@ def raw_of(source: str | Path | dict[str, Any]) -> dict[str, Any]:
 def expression_of(text: str, ns: Namespace, context: str) -> Expression:
     """Parse, expand and resolve one expression into its program tree, raising every problem at once as `to_spec` would."""
     errors: list[str] = []
-    ast = parse_and_expand(text, ns, context)
+    ast = parse(text)
     assert not isinstance(ast, ComparisonNode), 'a comparison is a constraint, which comparison_of reads'
     resolved = resolve_expression(ast, ns, context, errors)
     if errors:
@@ -188,7 +188,7 @@ def expression_of(text: str, ns: Namespace, context: str) -> Expression:
 def comparison_of(text: str, ns: Namespace, context: str) -> tuple[Expression, str, Expression]:
     """Parse, expand and resolve one comparison into its two program trees and the sense between them."""
     errors: list[str] = []
-    ast = parse_and_expand(text, ns, context)
+    ast = parse(text)
     assert isinstance(ast, ComparisonNode), 'a value is an expression, which expression_of reads'
     left, right = (resolve_expression(side, ns, context, errors) for side in (ast.left, ast.right))
     if errors:

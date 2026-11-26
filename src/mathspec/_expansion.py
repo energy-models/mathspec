@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-"""Macro calls, expanded into the syntax tree before resolution reads it.
+"""Macro calls, substituted into the syntax tree as the first step of resolving an expression.
 
 A named expression is resolution's: it resolves the entry once and puts that
 node where the name stood.
@@ -27,17 +27,6 @@ from mathspec.errors import SchemaError
 if TYPE_CHECKING:
     from mathspec._resolution import Namespace
     from mathspec.spec import MacroSpec
-
-
-def parse_and_expand(text: str, ns: Namespace, context: str) -> ParsedNode:
-    """Parse *text* and expand every macro call in it.
-
-    Args:
-        text: The expression as the file wrote it.
-        ns: Where the macros are declared.
-        context: What an error names.
-    """
-    return expand(parse(text), ns, context)
 
 
 def expand(node: ParsedNode, ns: Namespace, context: str) -> ParsedNode:

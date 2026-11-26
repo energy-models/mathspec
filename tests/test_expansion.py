@@ -12,7 +12,6 @@ from functools import partial
 import pytest
 
 from mathspec import to_spec
-from mathspec._expansion import parse_and_expand
 from mathspec._resolution import Namespace
 from mathspec.errors import LanguageError
 from mathspec.program import Axis, ExpressionReference, Multiply, ParameterReference, Sum, Translate, VariableReference
@@ -208,6 +207,47 @@ def test_a_refusal_names_its_context_once():
 
 
 @pytest.mark.parametrize(
+    'patch',
+    [
+        pytest.param(
+            {'macros': {'pick': {'args': ['d'], 'template': 'd'}}, 'objective': {'expression': 'sum(p, over=pick(g))'}},
+            id='a-dimension',
+        ),
+        pytest.param(
+            {
+                'macros': {'one': {'args': [], 'template': '1'}},
+                'constraints': {
+                    'cap': {'dims': ['g'], 'expression': "shift(p, along=g, offset=-one(), edge='wrap') <= c"}
+                },
+            },
+            id='a-signed-offset',
+        ),
+        pytest.param(
+            {
+                'macros': {'pick': {'args': ['d'], 'template': 'd'}},
+                'constraints': {'cap': {'dims': ['g'], 'expression': 'p <= c'}},
+                'expressions': {'price': 'dual(pick(cap))'},
+            },
+            id='the-constraint-of-a-dual',
+        ),
+    ],
+)
+def test_a_call_stands_wherever_its_expansion_may(patch):
+    """Every call is substituted before anything reads the tree, so one may stand where an operator reads a name or a literal."""
+    assert spec_of(SMALL_MODEL, **patch).program is not None, 'the spec loads, each call read as what it expands to'
+
+
+def test_a_bad_call_is_listed_beside_the_other_faults_of_its_entry():
+    """A call that does not fit its macro is one refusal among the entry's, on a side of a where as in an expression."""
+    macros = {'dbl': {'args': ['x'], 'template': 'x * 2'}}
+    with pytest.raises(LanguageError) as caught:
+        spec_of(SMALL_MODEL, macros=macros, **{'variables.p.where': 'dbl(c, k) > 1 AND nope > 0'})
+    message = str(caught.value)
+    assert "Variable 'p': macro 'dbl' expects 1 positional argument(s)" in message, 'the bad call, under its entry'
+    assert "'nope' not found" in message, 'and the fault beside it, which a raised refusal would have hidden'
+
+
+@pytest.mark.parametrize(
     ('call', 'match'),
     [
         pytest.param('ws(p, over=generator)', 'expects 2 positional', id='too-few-positionals'),
@@ -216,7 +256,7 @@ def test_a_refusal_names_its_context_once():
 )
 def test_macro_arity_errors(call, match):
     with pytest.raises(LanguageError, match=match):
-        parse_and_expand(call, Namespace(spec(macros={'ws': WEIGHTED_SUM})), 'expression')
+        expression_of(call, Namespace(spec(macros={'ws': WEIGHTED_SUM})), 'expression')
 
 
 @pytest.mark.parametrize(
