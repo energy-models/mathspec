@@ -50,7 +50,7 @@ SPEC_REEXPORTS = frozenset({'BUILTIN_NAMES'})
 #: What `Spec` promises beyond the sections a file declares: the two ways back
 #: out, the verb that writes a formulation out, and the program the file means.
 #: A `model_`-prefixed name is pydantic's, not a contract this project keeps.
-SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'program'})
+SPEC_SURFACE = frozenset({'to_dict', 'to_yaml', 'expand', 'program', 'compile_expression'})
 
 #: The submodules of `mathspec` whose names carry no leading underscore.
 PUBLIC_MODULES = frozenset({'spec', 'program', 'errors'})

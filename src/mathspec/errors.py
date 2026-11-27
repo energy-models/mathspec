@@ -85,5 +85,10 @@ def case_context(name: str, label: str | None) -> str:
         name: The named expression the arm belongs to.
         label: The case's name, or ``None`` for the entry's ``otherwise:``.
     """
+    return arm(f"Named expression '{name}'", label)
+
+
+def arm(context: str, label: str | None) -> str:
+    """The context of one arm, *label* or ``otherwise:``, of the cased expression *context* names."""
     where = 'otherwise' if label is None else f"case '{label}'"
-    return f"Named expression '{name}', {where}"
+    return f'{context}, {where}'
