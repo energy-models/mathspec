@@ -100,7 +100,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxext-1.3.7-h7cc23a3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxrender-0.9.12-hb03c661_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/yaml-0.2.5-hebe6cf0_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/zensical-0.0.63-py311h7b25dd4_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/zensical-0.1.3-py311h7b25dd4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zizmor-1.29.0-hb17b654_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.2-h25fd6f3_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb78ec9c_7.conda
@@ -119,7 +119,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.2.1-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.7-py314hd8ed1ab_100.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/deepmerge-3.0.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/editables-0.6-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
@@ -203,6 +202,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/vcs_versioning-2.3.1-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zensical-ui-0.0.43-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - conda_source: math-spec[30dcced7] @ .
       - pypi: https://files.pythonhosted.org/packages/2b/57/e2bb9b7823c049361c9e7d2d971996430b71260bfc3a7ed289ca4b37c1b0/typst-0.15.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -222,7 +222,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.2.1-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.7-py314hd8ed1ab_100.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/deepmerge-3.0.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/editables-0.6-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
@@ -304,6 +303,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/vcs_versioning-2.3.1-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zensical-ui-0.0.43-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/brotli-python-1.2.0-py314h21a1a37_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/bzip2-1.0.8-h374f1ed_10.conda
@@ -360,7 +360,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/typos-1.49.0-h19f9e61_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/watchdog-6.0.0-py314h0b69929_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/yaml-0.2.5-had63097_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-64/zensical-0.0.63-py311he606707_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/zensical-0.1.3-py311h7a64e7a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zizmor-1.29.0-h19f9e61_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zlib-1.3.2-hbb4bfdb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-hbc1a06c_7.conda
@@ -382,7 +382,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.2.1-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.7-py314hd8ed1ab_100.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/deepmerge-3.0.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/editables-0.6-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
@@ -464,6 +463,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/vcs_versioning-2.3.1-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zensical-ui-0.0.43-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/brotli-python-1.2.0-py314hee34562_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h4e30115_10.conda
@@ -521,7 +521,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/typos-1.49.0-h6fdd925_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/watchdog-6.0.0-py314ha14b1ff_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h74c22ad_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zensical-0.0.63-py311h60d8c40_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zensical-0.1.3-py311hf98a78c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zizmor-1.29.0-h6fdd925_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.2-h8088a28_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hf451053_7.conda
@@ -543,7 +543,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.2.1-pyh7428d3b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cpython-3.14.7-py314hd8ed1ab_100.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/deepmerge-3.0.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/editables-0.6-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/exceptiongroup-1.3.1-pyhd8ed1ab_0.conda
@@ -626,6 +625,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/vcs_versioning-2.3.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/win_inet_pton-1.1.0-pyh7428d3b_8.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/zensical-ui-0.0.43-pyh5ded981_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/brotli-python-1.2.0-py314h85cf176_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/bzip2-1.0.8-h0ad9c76_10.conda
@@ -680,7 +680,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/watchdog-6.0.0-py314hb821551_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h6a83c73_3.conda
-      - conda: https://conda.anaconda.org/conda-forge/win-64/zensical-0.0.63-py311hc3dac5c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/win-64/zensical-0.1.3-py311h41acc76_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zizmor-1.29.0-h18a1a76_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zlib-1.3.2-hfd05255_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_7.conda
@@ -2807,32 +2807,34 @@ packages:
     - yaml >=0.2.5,<0.3.0a0
   size: 84936
   timestamp: 1787228426393
-- conda: https://conda.anaconda.org/conda-forge/linux-64/zensical-0.0.63-py311h7b25dd4_0.conda
+- conda: https://conda.anaconda.org/conda-forge/linux-64/zensical-0.1.3-py311h7b25dd4_0.conda
   noarch: python
-  sha256: bdc948098ed0a15c387d8f2e42329ec343071a8ddc48b1970a179d8b34258117
-  md5: 8a021928e7c19cbad842f21992e478d1
+  sha256: 5d743ed63894cc791dd0e3e509d7bec7d74a03a74656343a9d8c61e9c32707e7
+  md5: 3a41dcf7c96c26fe7718965875d52ae0
   depends:
   - python
   - click >=8.1.8
-  - deepmerge >=2.0
   - markdown >=3.7
   - pygments >=2.20
   - pymdown-extensions >=11.0
   - pyyaml >=6.0.2
   - tomli >=2.4.0
   - jinja2 >=3.1
-  - __glibc >=2.17,<3.0.a0
+  - pathspec >=1.0.4
+  - zensical-ui ==0.0.43
   - libgcc >=15
+  - __glibc >=2.17,<3.0.a0
   - _python_abi3_support 1.*
   - cpython >=3.11
   constrains:
   - __glibc >=2.17
   license: MIT
+  license_family: MIT
   purls:
-  - pkg:pypi/zensical?source=compressed-mapping
+  - pkg:pypi/zensical?source=hash-mapping
   run_exports: {}
-  size: 8521821
-  timestamp: 1789838439201
+  size: 7895858
+  timestamp: 1795208672087
 - conda: https://conda.anaconda.org/conda-forge/linux-64/zizmor-1.29.0-hb17b654_0.conda
   sha256: 9d5d169aa8351e36f21bbe2b9de6bbe14e5b23f1f2f3d414d22ba187bd6ba25b
   md5: b4fc38113e926755295bff26ac065c50
@@ -3107,19 +3109,6 @@ packages:
   run_exports: {}
   size: 50365
   timestamp: 1787153603657
-- conda: https://conda.anaconda.org/conda-forge/noarch/deepmerge-3.0.1-pyhd8ed1ab_0.conda
-  sha256: f18220268a87168626cb7cfdef5ac76ff62266e66dd158c3ee1232d4388e9250
-  md5: dbcfe2c7d69b95b9317d44cce911ab48
-  depends:
-  - python >=3.11
-  - typing-extensions
-  license: MIT
-  license_family: MIT
-  purls:
-  - pkg:pypi/deepmerge?source=hash-mapping
-  run_exports: {}
-  size: 19047
-  timestamp: 1788289944856
 - conda: https://conda.anaconda.org/conda-forge/noarch/docutils-0.23-pyhcf101f3_0.conda
   sha256: def3b2566a1702fa083a8984753ac0b3e3f7381048f88714e03d55b7bd930b74
   md5: 2c3958e02221c2504ec036139e648d8b
@@ -4409,7 +4398,7 @@ packages:
   license: MIT
   license_family: MIT
   purls:
-  - pkg:pypi/typing-inspection?source=compressed-mapping
+  - pkg:pypi/typing-inspection?source=hash-mapping
   run_exports: {}
   size: 21070
   timestamp: 1786818918217
@@ -4488,6 +4477,19 @@ packages:
   run_exports: {}
   size: 9555
   timestamp: 1733130678956
+- conda: https://conda.anaconda.org/conda-forge/noarch/zensical-ui-0.0.43-pyh5ded981_0.conda
+  sha256: a42406e4e87610ff063500c2db6f6a085f672f4451c76d220a4425cc5e5af3f7
+  md5: d387440ff79a49b0900713ac8b6abdfb
+  depends:
+  - python >=3.11
+  - python
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/zensical-ui?source=hash-mapping
+  run_exports: {}
+  size: 4730916
+  timestamp: 1795160176337
 - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-4.1.0-pyhcf101f3_0.conda
   sha256: 210bd31c22bb88f5e2a167df24c95bb5f152b2ada7502f9b8c49d1f5366db423
   md5: ba3dcdc8584155c97c648ae9c044b7a3
@@ -5498,31 +5500,33 @@ packages:
     - yaml >=0.2.5,<0.3.0a0
   size: 75645
   timestamp: 1787228502493
-- conda: https://conda.anaconda.org/conda-forge/osx-64/zensical-0.0.63-py311he606707_0.conda
+- conda: https://conda.anaconda.org/conda-forge/osx-64/zensical-0.1.3-py311h7a64e7a_0.conda
   noarch: python
-  sha256: f1a6a58b93792c52890896b7179155a9075ebc2eb25629f3928890665895c858
-  md5: aaa7a23d6542d98cd7e012fb0a36bdb4
+  sha256: f4389c4921c34d5d3ab612e75140ba9b3029caaea52206014d6a705d2ab8d093
+  md5: bc71efc14fe90628555d2a3fab5df0b3
   depends:
   - python
   - click >=8.1.8
-  - deepmerge >=2.0
   - markdown >=3.7
   - pygments >=2.20
   - pymdown-extensions >=11.0
   - pyyaml >=6.0.2
   - tomli >=2.4.0
   - jinja2 >=3.1
+  - pathspec >=1.0.4
+  - zensical-ui ==0.0.43
   - __osx >=11.0
   - _python_abi3_support 1.*
   - cpython >=3.11
   constrains:
   - __osx >=11.0
   license: MIT
+  license_family: MIT
   purls:
-  - pkg:pypi/zensical?source=compressed-mapping
+  - pkg:pypi/zensical?source=hash-mapping
   run_exports: {}
-  size: 8383461
-  timestamp: 1789838473822
+  size: 7731879
+  timestamp: 1795208772827
 - conda: https://conda.anaconda.org/conda-forge/osx-64/zizmor-1.29.0-h19f9e61_0.conda
   sha256: aaa72ec28c82b9de28ce924af99172e0b3d3bbf70b35dfcdc9d59ae5059275d2
   md5: c7d23e15e37a0f9c43df9c5d312b36ab
@@ -6588,31 +6592,33 @@ packages:
     - yaml >=0.2.5,<0.3.0a0
   size: 77530
   timestamp: 1787228556857
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/zensical-0.0.63-py311h60d8c40_0.conda
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/zensical-0.1.3-py311hf98a78c_0.conda
   noarch: python
-  sha256: 46eb30c9aba57f9c9406e23a05fccb83bd5f86dd3674043b3010aa4bab9fd685
-  md5: 8c6fe287c622e303803f40d437d5f08c
+  sha256: 17c66e62eb40c243d53f113883a89d4dfb28dff4373afb758c83cc909726a3ec
+  md5: 1510fcd9a1c3f9acea5bf80beb2b9348
   depends:
   - python
   - click >=8.1.8
-  - deepmerge >=2.0
   - markdown >=3.7
   - pygments >=2.20
   - pymdown-extensions >=11.0
   - pyyaml >=6.0.2
   - tomli >=2.4.0
   - jinja2 >=3.1
+  - pathspec >=1.0.4
+  - zensical-ui ==0.0.43
   - __osx >=11.0
   - _python_abi3_support 1.*
   - cpython >=3.11
   constrains:
   - __osx >=11.0
   license: MIT
+  license_family: MIT
   purls:
-  - pkg:pypi/zensical?source=compressed-mapping
+  - pkg:pypi/zensical?source=hash-mapping
   run_exports: {}
-  size: 8078281
-  timestamp: 1789838430973
+  size: 7123081
+  timestamp: 1795208679609
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zizmor-1.29.0-h6fdd925_0.conda
   sha256: 5cec7f410a5f3b34a510f53d1369538e33cd4b2a74f95750c34f583fd7a155df
   md5: 8550674440f90ae9a846d7abbd9f039f
@@ -7678,31 +7684,33 @@ packages:
     - yaml >=0.2.5,<0.3.0a0
   size: 63944
   timestamp: 1753484092156
-- conda: https://conda.anaconda.org/conda-forge/win-64/zensical-0.0.63-py311hc3dac5c_0.conda
+- conda: https://conda.anaconda.org/conda-forge/win-64/zensical-0.1.3-py311h41acc76_0.conda
   noarch: python
-  sha256: ad715f48ca04cf1bf951df9f7fb1314dd29b00cfbf3f53eacb65cc3a29781d96
-  md5: 733e19dbbf1207088c6c2ae04e8dbfda
+  sha256: f01437cfa9093cf030543e7813135418ac7fca51e73af137d0003bd34eff1929
+  md5: 0353b45a359d4bc9f5cea91b498dc01d
   depends:
   - python
   - click >=8.1.8
-  - deepmerge >=2.0
   - markdown >=3.7
   - pygments >=2.20
   - pymdown-extensions >=11.0
   - pyyaml >=6.0.2
   - tomli >=2.4.0
   - jinja2 >=3.1
+  - pathspec >=1.0.4
+  - zensical-ui ==0.0.43
   - vc >=14.3,<15
   - vc14_runtime >=14.44.35208
   - ucrt >=10.0.20348.0
   - _python_abi3_support 1.*
   - cpython >=3.11
   license: MIT
+  license_family: MIT
   purls:
-  - pkg:pypi/zensical?source=compressed-mapping
+  - pkg:pypi/zensical?source=hash-mapping
   run_exports: {}
-  size: 8608208
-  timestamp: 1789838431539
+  size: 8322369
+  timestamp: 1795208678309
 - conda: https://conda.anaconda.org/conda-forge/win-64/zizmor-1.29.0-h18a1a76_0.conda
   sha256: 0ef5635612c25e1be879420c35fafe78370bd23fb6bcea984fa916b62aff0876
   md5: 2983d1a01bf141341d0789c21b6a1df7
