@@ -18,7 +18,7 @@ from mathspec._typesetting import to_markdown
 from mathspec._validation import to_spec
 from mathspec.spec import PIECEWISE_METHODS
 from tests.fixtures import EXAMPLES
-from tools import expansion_math, gallery, home_math, macros, notation, spec_math
+from tools import expansion_math, gallery, grammar, home_math, macros, notation, spec_math
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -38,6 +38,7 @@ GENERATED: list[tuple[str, Path, Callable[[str], str], str]] = [
     ('home:index', home_math.PAGE, home_math.rendered_page, 'home_math'),
     ('home:readme', home_math.README, home_math.rendered_readme, 'home_math'),
     ('expansion', expansion_math.PAGE, expansion_math.rendered_page, 'expansion_math'),
+    ('grammar', grammar.PAGE, grammar.rendered, 'grammar'),
 ]
 
 
@@ -150,7 +151,7 @@ def test_the_published_grammar_spells_a_name_the_way_the_code_reads_one():
     published = re.search(r'^NAME\s*::=\s*(.+)$', page, re.MULTILINE)
     assert published is not None, 'the expressions page no longer publishes a NAME production'
 
-    assert published.group(1).strip() == NAME, (
+    assert published.group(1).strip() == grammar.w3c(NAME), (
         f'docs/reference/language/expressions.md publishes NAME as {published.group(1).strip()!r}, '
         f'and expression_parser.NAME is {NAME!r} — the page and the loader must spell a name the same way'
     )

@@ -17,23 +17,41 @@ In a [constraint](parameters-variables-constraints.md#constraints), in the
 [objective](parameters-variables-constraints.md#objective), in a
 [named expression](named.md#expressions) and in a
 [macro template](named.md#macros), every `expression:` has one grammar. The
-grammar below states every form that it accepts.
+grammar below states every form that it accepts, in the
+[EBNF notation of XML 1.0](https://www.w3.org/TR/xml/#sec-notation): `x?` is
+optional, `x*` repeats any number of times, none included, and `[a-z]` is one
+character of a class.
+
+<!-- expression-grammar:begin -->
 
 ```text
-expression  ::= arithmetic | arithmetic COMPARATOR arithmetic
-arithmetic  ::= atom | unary_sign arithmetic | arithmetic binary_sign arithmetic
-             |  function_call | "(" arithmetic ")"
-atom        ::= NUMBER | NAME
-unary_sign  ::= "+" | "-"     binary_sign ::= "+" | "-" | "*" | "/" | "**"
-COMPARATOR  ::= "<=" | ">=" | "=="
-function_call ::= NAME "(" [pos_arg ("," pos_arg)*] ["," kwarg ("," kwarg)*] ")"
-pos_arg     ::= arithmetic
-kwarg       ::= NAME "=" (arithmetic | QUOTED | "[" NAME ("," NAME)* "]" | COLUMNS)
-COLUMNS     ::= NAME "[" NAME ("," NAME)* "]"
-QUOTED      ::= "'" chars "'" | '"' chars '"'
-NAME        ::= [a-zA-Z_][a-zA-Z0-9_]*
-NUMBER      ::= integer | float | "inf" | ".inf"
+expression    ::= arithmetic (COMPARATOR arithmetic)?
+arithmetic    ::= term (("+" | "-") term)*
+term          ::= factor (("*" | "/") factor)*
+factor        ::= ("+" | "-") factor
+                | power
+power         ::= atom ("**" factor)?
+names         ::= NAME ("," NAME)*
+atom          ::= NAME
+                | NUMBER
+                | ".inf"
+                | NAME "(" arguments? ")"
+                | "(" arithmetic ")"
+arguments     ::= argument ("," argument)*
+argument      ::= NAME "=" keyword_value
+                | arithmetic
+keyword_value ::= QUOTED
+                | NAME "[" names "]"
+                | "[" names "]"
+                | arithmetic
+NAME       ::= [a-zA-Z_] [a-zA-Z0-9_]*
+NUMBER     ::= [0-9]+ "." [0-9]* ([eE] [-+]? [0-9]+)? | [0-9]+ [eE] [-+]? [0-9]+ | [0-9]+
+QUOTED     ::= "'" [^'#xA#xD]* "'" | '"' [^"#xA#xD]* '"'
+COMPARATOR ::= "<=" | ">=" | "=="
+/* [0-9] is a decimal digit of any script. */
 ```
+
+<!-- expression-grammar:end -->
 
 Five rules complete the grammar:
 
@@ -305,23 +323,59 @@ With `where: capacity > 0` on the variable `dispatch`, `dispatch` has rows for
 
 All four keys take the grammar below:
 
+<!-- where-grammar:begin -->
+
 ```text
-condition ::= atom | "NOT" condition | condition ("AND"|"OR") condition
-            |  "(" condition ")"
-atom       ::= NAME | (NAME | COLUMN) COMPARATOR value | expression COMPARATOR expression
-            |  POSITION COMPARATOR INTEGER | COUNT COMPARATOR INTEGER | TRANSLATED
-            |  READ | "True" | "False"
+condition           ::= conjunction ("OR" conjunction)*
+conjunction         ::= negation ("AND" negation)*
+negation            ::= "NOT" operand
+                      | operand
+operand             ::= "True"
+                      | "False"
+                      | NAME
+                      | count
+                      | comparison
+                      | condition_call
+                      | "(" condition ")"
+count               ::= count_call COMPARATOR arithmetic
+comparison          ::= side COMPARATOR right_side
+side                ::= NAME "[" NAME "]"
+                      | arithmetic
+right_side          ::= QUOTED
+                      | side
+count_call          ::= "count" "(" condition_arguments ")"
+condition_call      ::= NAME "(" condition_arguments ")"
+condition_arguments ::= condition ("," condition_kwarg)*
+condition_kwarg     ::= NAME "=" condition_value
+condition_value     ::= QUOTED
+                      | NAME "[" names "]"
+                      | arithmetic
+arithmetic          ::= term (("+" | "-") term)*
+term                ::= factor (("*" | "/") factor)*
+factor              ::= ("+" | "-") factor
+                      | power
+power               ::= atom ("**" factor)?
+names               ::= NAME ("," NAME)*
+atom                ::= NAME
+                      | NUMBER
+                      | ".inf"
+                      | NAME "(" arguments? ")"
+                      | "(" arithmetic ")"
+arguments           ::= argument ("," argument)*
+argument            ::= NAME "=" keyword_value
+                      | arithmetic
+keyword_value       ::= QUOTED
+                      | NAME "[" names "]"
+                      | "[" names "]"
+                      | arithmetic
+NAME       ::= [a-zA-Z_] [a-zA-Z0-9_]*
+NUMBER     ::= [0-9]+ "." [0-9]* ([eE] [-+]? [0-9]+)? | [0-9]+ [eE] [-+]? [0-9]+ | [0-9]+
+QUOTED     ::= "'" ("\" [^#xA] | [^'#xA#xD#x5C])* "'" | '"' ("\" [^#xA] | [^"#xA#xD#x5C])* '"'
 COMPARATOR ::= "<=" | ">=" | "==" | "!=" | "<" | ">"
-value      ::= NUMBER | QUOTED | NAME_OR_STRING | COLUMN
-expression ::= the arithmetic grammar above, with no variable and no dual in it
-POSITION   ::= "position" "(" NAME [ "," "within" "=" COLUMNS ] ")"
-COUNT      ::= "count" "(" condition "," "over" "=" NAME ")"
-TRANSLATED ::= "shift" "(" condition "," "along" "=" NAME "," "offset" "=" INTEGER ")"
-READ       ::= "at" "(" condition "," "by" "=" COLUMNS ")"
-COLUMN     ::= NAME "[" NAME "]"
-COLUMNS    ::= NAME "[" NAME { "," NAME } "]"
-QUOTED     ::= "'" chars "'" | '"' chars '"'
+/* [0-9] is a decimal digit of any script. AND, OR, NOT, True, False and count match in any case. NAME is none of AND, OR, NOT, True and False, in any case. */
 ```
+
+<!-- where-grammar:end -->
 
 `AND`, `OR`, `NOT`, `True` and `False` are reserved in a `where:` string, in
 any case. mathspec refuses a `where:` string that uses one as a name, so an
