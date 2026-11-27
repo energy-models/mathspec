@@ -20,6 +20,7 @@ import mathspec.program as program_module
 from mathspec._condition_parser import (
     ColumnNode,
     UnresolvedComparisonNode,
+    UnresolvedConditionCallNode,
     parse_condition,
 )
 from mathspec._expression_parser import (
@@ -547,3 +548,80 @@ def test_a_parsed_tree_prints_to_text_that_parses_to_the_same_tree(text):
 )
 def test_a_node_prints_as_the_file_writes_it(text, printed):
     assert str(parse_expression(text)) == printed, 'the spelling is the one a file could be written with'
+
+
+# ---------------------------------------------------------------------------
+# Reserved words, quoted labels and parentheses
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    'text',
+    [
+        pytest.param('NOT', id='a-bare-not'),
+        pytest.param('x AND AND', id='and-after-and'),
+        pytest.param('(True) > 0', id='true-compared'),
+        pytest.param('x + True > 0', id='true-added'),
+        pytest.param('p > 0 OR or', id='lower-case-or'),
+        pytest.param('f(x, and=1)', id='a-keyword-named-and'),
+    ],
+)
+def test_a_where_string_refuses_a_reserved_word_as_a_name(text):
+    """These read an entry named ``NOT``, ``AND``, ``True`` or ``or``, where ``True > 0`` and ``NOT x`` read the word (#1040)."""
+    with pytest.raises(SchemaError, match='a where string reserves in any case'):
+        parse_condition(text)
+
+
+@pytest.mark.parametrize(
+    'text',
+    [
+        pytest.param('android', id='and-as-a-prefix'),
+        pytest.param('notional > 0', id='not-as-a-prefix'),
+        pytest.param('x_or_y', id='or-inside'),
+        pytest.param('true_flag', id='true-as-a-prefix'),
+    ],
+)
+def test_a_name_that_only_contains_a_reserved_word_is_a_name(text):
+    node = parse_condition(text)
+    name = node.left if isinstance(node, UnresolvedComparisonNode) else node
+    assert name == NameNode(text.split()[0]), 'a word inside a longer name is no keyword'
+
+
+@pytest.mark.parametrize(
+    ('parse', 'text', 'label'),
+    [
+        pytest.param(parse_expression, r"shift(p, edge='\xa2')", r'\xa2', id='a-hex-escape-stays-as-written'),
+        pytest.param(parse_expression, r"shift(p, edge='\0')", r'\0', id='a-nul-escape-stays-as-written'),
+        pytest.param(parse_expression, r"shift(p, edge='a\tb')", 'a\tb', id='a-tab-escape-is-a-tab'),
+        pytest.param(parse_expression, "shift(p,  edge='a\tb')", 'a\tb', id='a-tab-is-a-tab-wherever-it-stands'),
+        pytest.param(parse_expression, r"shift(p, edge='a\')", 'a\\', id='an-expression-label-takes-no-escape'),
+        pytest.param(parse_condition, r"x == 'it\'s'", "it's", id='a-where-label-escapes-its-quote'),
+        pytest.param(
+            parse_condition, r"shift(q, edge='it\'s') > 0", "it's", id='and-so-does-one-in-an-arithmetic-call'
+        ),
+    ],
+)
+def test_a_quoted_label_reads_its_escapes_as_the_reference_states(parse, text, label):
+    """Numeric escapes decoded as pyparsing's f-string bug decoded them (#1039), a where label inside an arithmetic call took no escape (#1042), and a tab became spaces to the next tab stop (#1044)."""
+    found = [node.value for node in _walk_labels(parse(text))]
+    assert found == [label], f'{text} holds the label {label!r}'
+
+
+def _walk_labels(node: object) -> Iterator[KeywordNode]:
+    if isinstance(node, KeywordNode):
+        yield node
+    elif isinstance(node, (FunctionCallNode, UnresolvedConditionCallNode)):
+        for value in node.kwargs.values():
+            yield from _walk_labels(value)
+        yield from (label for arg in getattr(node, 'args', ()) for label in _walk_labels(arg))
+    elif isinstance(node, (UnresolvedComparisonNode, ComparisonNode)):
+        yield from _walk_labels(node.left)
+        yield from _walk_labels(node.right)
+
+
+@pytest.mark.parametrize('parse', [parse_expression, parse_condition], ids=['expression', 'condition'])
+def test_parentheses_are_held_to_the_cap_and_not_to_the_interpreter_s_stack(parse):
+    """Sixty redundant parentheses were refused as nesting past 100 levels, when pyparsing ran out of stack (#1041)."""
+    assert parse('(' * 100 + 'x' + ')' * 100) == NameNode('x'), 'a hundred parentheses are within the cap'
+    with pytest.raises(SchemaError, match='past the 100 levels'):
+        parse('(' * 101 + 'x' + ')' * 101)

@@ -11,11 +11,13 @@ nests anywhere; a comparison appears only at the top of a parsed expression.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache, lru_cache
 from typing import TYPE_CHECKING, Literal, assert_never, cast, get_args
 
-import pyparsing as pp
+from lark import Lark, Token, Tree
+from lark.exceptions import UnexpectedCharacters, UnexpectedEOF, UnexpectedInput, UnexpectedToken
 
 from mathspec._frozen import Frozen
 from mathspec.errors import SchemaError
@@ -230,67 +232,100 @@ def with_children(node: ArithmeticNode, recurse: Callable[[ArithmeticNode], Arit
 # Grammar
 # ---------------------------------------------------------------------------
 
+#: The rules and terminals both grammars share: arithmetic below the
+#: comparison, and the tokens it is written in.
+ARITHMETIC_RULES = (
+    r"""
+?sum: product (ADD product)*
+?product: unary (MUL unary)*
+?unary: ADD unary -> neg
+      | power
+?power: atom (_POW unary)?
+names: NAME (_COMMA NAME)*
 
-NAME_LIST = (pp.Suppress('[') + pp.DelimitedList(pp.Regex(NAME)) + pp.Suppress(']')).set_parse_action(
-    lambda t: NameListNode(tuple(str(x) for x in t))
+"""
+    + f'NAME: /{NAME}/\nNUMBER: /{REAL}|\\d+/\n'
+    + r"""DOTINF: /(?<![A-Za-z0-9_$])\.inf(?![A-Za-z0-9_$])/
+ADD: /[+-]/
+MUL: /[*\/]/
+_POW: "**"
+LPAR: "("
+_RPAR: ")"
+LSQB: "["
+_RSQB: "]"
+_COMMA: ","
+_EQUAL: "="
+%ignore /[ \t\r\n]+/
+"""
 )
 
+_EXPRESSION_RULES = r"""
+start: sum (SENSE sum)?
+?atom: NAME
+     | NUMBER
+     | DOTINF
+     | NAME LPAR [args] _RPAR -> call
+     | LPAR sum _RPAR -> paren
+args: arg (_COMMA arg)*
+?arg: NAME _EQUAL value -> kwarg
+    | sum
+?value: STRING
+      | NAME LSQB names _RSQB -> columns
+      | LSQB names _RSQB -> namelist
+      | sum
+SENSE: /<=|>=|==/
+STRING: /'[^'\n\r]*'|"[^"\n\r]*"/
+"""
 
-def _build_grammar() -> tuple[pp.ParserElement, pp.ParserElement, pp.ParserElement]:
-    """The arithmetic grammar, the expression grammar that puts one comparison over it, and a column selection.
+type Syntax = Tree[Token] | Token
+"""What Lark builds: a rule's tree, or a token where a rule holds one token alone."""
 
-    ``inf`` is a ``pp.Keyword`` rather than a ``pp.Literal``, which would
-    match the prefix of ``inflow``.
+
+class ReadError(Exception):
+    """A structure the parser builds and the language does not hold, at *pos*, where *expected* was."""
+
+    def __init__(self, pos: int, expected: str) -> None:
+        super().__init__(expected)
+        self.pos = pos
+        self.expected = expected
+
+
+class _TooDeepError(Exception):
+    """Parentheses nested past [`MAX_DEPTH`][], which add no node to the tree but would deepen the walk over it."""
+
+
+_WHITESPACE_ESCAPES = {'t': '\t', 'n': '\n', 'f': '\f', 'r': '\r'}
+
+
+def unquoter(*, escapes: bool) -> Callable[[Token], Token]:
+    r"""What a quoted label stands for: the text between its quotes, with ``\t``, ``\n``, ``\f`` and ``\r`` as the character.
+
+    With *escapes*, as the where grammar's labels have, a backslash before
+    any other character stands for that character, so ``'it\'s'`` is
+    ``it's``. Without, any other backslash is itself. Applied as Lark lexes
+    the token, so the label reaches the reader unquoted.
     """
-    arith = pp.Forward()
+    scan = re.compile(r'\\(.)' if escapes else r'\\([tnfr])')
 
-    inf_literal = (pp.Keyword('.inf') | pp.Keyword('inf')).set_parse_action(lambda: NumberNode(float('inf')))
-    # pyrefly: ignore[implicit-any-lambda]
-    number = inf_literal | pp.Regex(rf'{REAL}|\d+').set_parse_action(lambda t: NumberNode(float(t[0])))
+    def escaped(match: re.Match[str]) -> str:
+        return _WHITESPACE_ESCAPES.get(match[1], match[1])
 
-    name = pp.Regex(NAME)
+    def unquote(token: Token) -> Token:
+        inner = token[1:-1]
+        return Token.new_borrow_pos('STRING', scan.sub(escaped, inner) if '\\' in inner else inner, token)
 
-    quoted = (pp.QuotedString("'") | pp.QuotedString('"')).set_parse_action(lambda t: KeywordNode(str(t[0])))
-    columns = (name + pp.Suppress('[') + pp.DelimitedList(name) + pp.Suppress(']')).set_parse_action(
-        lambda t: ColumnsNode(str(t[0]), tuple(str(x) for x in t[1:]))
-    )
-    kwarg = (name + pp.Suppress('=') + (quoted | columns | NAME_LIST | arith)).set_parse_action(lambda t: (t[0], t[1]))
-    pos_arg = arith
-    arg_list = pp.Optional(pp.DelimitedList(kwarg | pos_arg))
-    func_call = (name + pp.Suppress('(') + arg_list + pp.Suppress(')')).set_parse_action(_make_func_call)
-
-    # pyrefly: ignore[implicit-any-lambda]
-    name_node = name.copy().set_parse_action(lambda t: NameNode(t[0]))
-    atom = func_call | number | name_node | (pp.Suppress('(') + arith + pp.Suppress(')'))
-
-    unary = pp.Forward()
-    power = (atom + pp.Optional(pp.Literal('**') + unary)).set_parse_action(_make_power)
-    # pyrefly: ignore[implicit-any-lambda]
-    unary <<= (pp.one_of('+ -') + unary).set_parse_action(lambda t: UnaryOperatorNode(t[0], t[1])) | power
-
-    mul_div = unary + pp.ZeroOrMore(pp.one_of('* /') + unary)
-    mul_div.set_parse_action(_make_left_assoc)
-
-    add_sub = mul_div + pp.ZeroOrMore(pp.one_of('+ -') + mul_div)
-    add_sub.set_parse_action(_make_left_assoc)
-
-    arith <<= add_sub
-
-    comparator = pp.one_of(list(get_args(Sense)))
-    expression = (arith + pp.Optional(comparator + arith)).set_parse_action(
-        lambda t: ComparisonNode(t[1], t[0], t[2]) if len(t) == 3 else t[0]
-    )
-    return arith, expression, columns
+    return unquote
 
 
-def _make_func_call(tokens: pp.ParseResults) -> FunctionCallNode:
-    """The callee is cast: a ParseResults element is untyped, and the grammar guarantees an identifier in position 0."""
-    name = cast('str', tokens[0])
-    args: list[ArithmeticNode] = []
-    pairs: list[tuple[str, ArithmeticNode]] = []
-    for item in tokens[1:]:
-        (pairs if isinstance(item, tuple) and len(item) == 2 else args).append(item)
-    return FunctionCallNode(name=name, args=tuple(args), kwargs=keywords(name, pairs))
+def grammar_parser(rules: str, unquote: Callable[[Token], Token]) -> Lark:
+    """An LALR parser over *rules* and the arithmetic, its quoted labels unquoted as they lex."""
+    return Lark(rules + ARITHMETIC_RULES, parser='lalr', lexer='basic', lexer_callbacks={'STRING': unquote})
+
+
+@cache
+def _expression_parser() -> Lark:
+    """Built on first use, not at import: building the tables is a cost a load that parses nothing should not pay."""
+    return grammar_parser(_EXPRESSION_RULES, unquoter(escapes=False))
 
 
 def keywords[V](name: str, pairs: Iterable[tuple[str, V]]) -> dict[str, V]:
@@ -304,21 +339,147 @@ def keywords[V](name: str, pairs: Iterable[tuple[str, V]]) -> dict[str, V]:
     return kwargs
 
 
-def _make_left_assoc(tokens: pp.ParseResults) -> ArithmeticNode:
-    result: ArithmeticNode
-    result, *rest = tokens
-    for op, right in zip(rest[::2], rest[1::2], strict=True):
-        result = BinaryOperatorNode(op, result, right)
+def start(syntax: Syntax) -> int:
+    """Where *syntax* starts in the text: its first token's position, which is where a refusal of it points."""
+    first = syntax if isinstance(syntax, Token) else next(syntax.scan_values(lambda v: isinstance(v, Token)))
+    return first.start_pos or 0
+
+
+def nest(parens: int) -> int:
+    """*parens* deepened by one pair, refused once past [`MAX_DEPTH`][]."""
+    if parens >= MAX_DEPTH:
+        raise _TooDeepError
+    return parens + 1
+
+
+def fold(children: list[Syntax], read: Callable[[Syntax], ArithmeticNode]) -> ArithmeticNode:
+    """``a op b op c`` as ``(a op b) op c``, each operand *read*."""
+    result = read(children[0])
+    for op, operand in zip(children[1::2], children[2::2], strict=True):
+        result = BinaryOperatorNode(cast('BinaryOperator', str(op)), result, read(operand))
     return result
 
 
-def _make_power(tokens: pp.ParseResults) -> ArithmeticNode:
-    """A base and at most one exponent — right-associative, since the exponent is itself a ``unary``."""
-    items: list[ArithmeticNode] = list(tokens)
-    return items[0] if len(items) == 1 else BinaryOperatorNode('**', items[0], items[2])
+def arithmetic(syntax: Syntax, parens: int) -> ArithmeticNode:
+    """*syntax* as arithmetic, or [`ReadError`][] where it is not arithmetic.
+
+    A bare ``inf`` is the number; as a callee it is a name.
+    """
+    match syntax:
+        case Token(type='NAME'):
+            return NumberNode(float('inf')) if syntax == 'inf' else NameNode(str(syntax))
+        case Token(type='NUMBER'):
+            return NumberNode(float(syntax))
+        case Token(type='DOTINF'):
+            return NumberNode(float('inf'))
+        case Tree(data='sum' | 'product', children=children):
+            return fold(children, lambda operand: arithmetic(operand, parens))
+        case Tree(data='neg', children=[op, operand]):
+            return UnaryOperatorNode(cast('UnaryOperator', str(op)), arithmetic(operand, parens))
+        case Tree(data='power', children=[base, exponent]):
+            return BinaryOperatorNode('**', arithmetic(base, parens), arithmetic(exponent, parens))
+        case Tree(data='call', children=[name, _, args]):
+            positional: list[ArithmeticNode] = []
+            pairs: list[tuple[str, ArithmeticNode]] = []
+            for arg in arguments(args):
+                if isinstance(arg, Tree) and arg.data == 'kwarg':
+                    key, value = arg.children
+                    pairs.append((str(key), _keyword_value(value, parens)))
+                else:
+                    positional.append(arithmetic(arg, parens))
+            return FunctionCallNode(name=str(name), args=tuple(positional), kwargs=keywords(str(name), pairs))
+        case Tree(data='paren', children=[_, inner]):
+            return arithmetic(inner, nest(parens))
+        case _:
+            raise ReadError(start(syntax), 'arithmetic')
 
 
-ARITHMETIC, _GRAMMAR, COLUMNS = _build_grammar()
+def arguments(args: Syntax | None) -> list[Syntax]:
+    """A call's arguments, in the order written; none where the parentheses are empty."""
+    return [] if args is None else cast('Tree[Token]', args).children
+
+
+def label(syntax: Syntax) -> KeywordNode | ColumnsNode | NameListNode | None:
+    """*syntax* as a quoted label, a relation's columns or a list of names, or ``None`` where it is none of them."""
+    match syntax:
+        case Token(type='STRING'):
+            return KeywordNode(str(syntax))
+        case Tree(data='columns', children=[relation, _, Tree(children=names)]):
+            return ColumnsNode(str(relation), tuple(str(n) for n in names))
+        case Tree(data='namelist', children=[_, Tree(children=names)]):
+            return NameListNode(tuple(str(n) for n in names))
+        case _:
+            return None
+
+
+def _keyword_value(syntax: Syntax, parens: int) -> ArithmeticNode:
+    """An arithmetic call's keyword value: a quoted label, a relation's columns, a list of names, or arithmetic."""
+    found = label(syntax)
+    return arithmetic(syntax, parens) if found is None else found
+
+
+def _expression(syntax: Syntax, parens: int) -> ParsedNode:
+    """The top of an expression: arithmetic, or one comparison of two."""
+    children = cast('Tree[Token]', syntax).children
+    if len(children) == 3:
+        left, sense, right = children
+        return ComparisonNode(cast('Sense', str(sense)), arithmetic(left, parens), arithmetic(right, parens))
+    return arithmetic(children[0], parens)
+
+
+def _location(error: UnexpectedInput, text: str) -> int:
+    """Where Lark gave up, as an index into *text*; the end of the text where the text ran out."""
+    if isinstance(error, UnexpectedToken) and error.token.type != '$END':
+        return error.token.start_pos or 0
+    if isinstance(error, UnexpectedCharacters):
+        return error.pos_in_stream or 0
+    return len(text)
+
+
+_SPOKEN = {
+    'NAME': 'a name',
+    'NUMBER': 'a number',
+    'DOTINF': "'.inf'",
+    'STRING': 'a quoted label',
+    'ADD': "'+' or '-'",
+    'MUL': "'*' or '/'",
+    'SENSE': "'<=', '>=' or '=='",
+    'COMP': 'a comparison',
+    'LPAR': "'('",
+    'LSQB': "'['",
+    'a token of the language': 'a token of the language',
+    'TRUE': 'True',
+    'FALSE': 'False',
+    'AND': 'AND',
+    'OR': 'OR',
+    'NOT': 'NOT',
+    'POW': "'**'",
+    'RPAR': "')'",
+    'RSQB': "']'",
+    'COMMA': "','",
+    'EQUAL': "'='",
+    '$END': 'the end of the text',
+}
+
+
+def _expected(error: UnexpectedInput) -> Iterable[str]:
+    """The terminals Lark would have taken where it gave up."""
+    if isinstance(error, UnexpectedToken):
+        return error.accepts or error.expected
+    if isinstance(error, UnexpectedCharacters):
+        return ('a token of the language',)
+    if isinstance(error, UnexpectedEOF):
+        return error.expected
+    return ()
+
+
+def _complaint(text: str, loc: int, expected: Iterable[str]) -> str:
+    """The grammar's own complaint: what it expected, what it found, and where."""
+    spoken = sorted({_SPOKEN.get(name.strip('_'), name.strip('_')) for name in expected}) or ['nothing more']
+    found = repr(text[loc : loc + 10]) if loc < len(text) else 'the end of the text'
+    line = text.count('\n', 0, loc) + 1
+    column = loc - (text.rfind('\n', 0, loc) + 1) + 1
+    return f'Expected {", ".join(spoken)}, found {found}  (at char {loc}), (line:{line}, col:{column})'
 
 
 MAX_DEPTH = 100
@@ -350,45 +511,55 @@ def _too_deep(what: str, text: str, found: int | None, rewrite: str) -> str:
 
 
 def parse_text[T](
-    grammar: pp.ParserElement,
+    parser: Lark,
+    read: Callable[[Syntax, int], T],
     text: str,
     what: str,
     rewrite: Callable[[str, int], str | None],
     child_of: Callable[[T], tuple[T, ...]],
     deep_rewrite: str,
 ) -> T:
-    """Parse the whole of *text* with *grammar*, or raise [`SchemaError`][] naming *what* failed to parse.
+    """Parse the whole of *text* with *parser* and *read* the result, or raise [`SchemaError`][] naming *what* failed.
 
     *rewrite* is asked for the predictable mistake at the failure position; its
     sentence, if any, precedes the grammar's own complaint. A tree nesting past
     [`MAX_DEPTH`][], measured through *child_of*, is refused with
-    *deep_rewrite* — and so is one the parser itself ran out of stack on. The
-    node comes back as the type *child_of* walks, which is the grammar's word
-    for what it builds.
+    *deep_rewrite*, and so are parentheses nested past it, which would deepen
+    every walk over the text without adding a node. The node comes back as the
+    type *child_of* walks, which is the grammar's word for what it builds.
     """
     try:
-        result = grammar.parse_string(text, parse_all=True)
-    except pp.ParseException as e:
-        hint = rewrite(text, e.loc)
-        msg = f'Cannot parse the {what} {text!r}.\n{f"{hint}\n" if hint is not None else ""}{e}'
-        raise SchemaError(msg) from e
-    except RecursionError:
+        node = read(parser.parse(text), 0)
+    except UnexpectedInput as e:
+        loc = _location(e, text)
+        expected = _expected(e)
+        raise SchemaError(_cannot(what, text, rewrite(text, loc), _complaint(text, loc, expected))) from e
+    except ReadError as e:
+        raise SchemaError(_cannot(what, text, rewrite(text, e.pos), _complaint(text, e.pos, [e.expected]))) from None
+    except (_TooDeepError, RecursionError):
         raise SchemaError(_too_deep(what, text, None, deep_rewrite)) from None
-    node = cast('T', result[0])
     found = depth(node, child_of)
     if found > MAX_DEPTH:
         raise SchemaError(_too_deep(what, text, found, deep_rewrite))
     return node
 
 
+def _cannot(what: str, text: str, hint: str | None, complaint: str) -> str:
+    return f'Cannot parse the {what} {text!r}.\n{f"{hint}\n" if hint is not None else ""}{complaint}'
+
+
 def _named_rewrite(text: str, loc: int) -> str | None:
     """The rewrite for a predictable mistake at the token where the grammar gave up, or ``None``.
 
-    A two-character token is tested before its one-character prefix.
+    A two-character token is tested before its one-character prefix. A sense
+    is a chained comparison only where a sense came before it; inside a call,
+    it is a comparison where arithmetic was expected.
     """
     rest = text[loc:].lstrip()
     if rest.startswith(get_args(Sense)):
-        return f"'{rest[:2]}' follows a complete comparison. Split the chain into two constraints."
+        if any(sense in text[:loc] for sense in get_args(Sense)):
+            return f"'{rest[:2]}' follows a complete comparison. Split the chain into two constraints."
+        return None
     if rest.startswith('!='):
         return "'!=' is not a constraint sense. Write <=, >= or ==, or move the != test to where:."
     if rest.startswith(('<', '>')):
@@ -416,7 +587,7 @@ def parse_expression(text: str) -> ParsedNode:
             lone ``=``, ``^`` for power — is named with its rewrite before the
             grammar's own complaint.
     """
-    return parse_text(_GRAMMAR, text, 'expression', _named_rewrite, children, _DEEP_REWRITE)
+    return parse_text(_expression_parser(), _expression, text, 'expression', _named_rewrite, children, _DEEP_REWRITE)
 
 
 def names_in(value: ArithmeticNode) -> tuple[str, ...]:

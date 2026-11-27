@@ -35,7 +35,7 @@ NAME        ::= [a-zA-Z_][a-zA-Z0-9_]*
 NUMBER      ::= integer | float | "inf" | ".inf"
 ```
 
-Four rules complete the grammar:
+Five rules complete the grammar:
 
 - mathspec applies `**` first, then unary `+` and `-`,
   then `*` and `/`, then binary `+` and `-`. So, as in Python, `-x ** 2` is
@@ -43,8 +43,12 @@ Four rules complete the grammar:
 - A float may have an exponent, as in `1e5` or `2.5e-3`.
 - The same keyword twice in one call is refused, and for
   `sum(p, over=g, over=g)` mathspec prints `The objective: sum(over=) is given twice. Delete one of them.`
-- An expression and a `where:` string nest at most 100 levels deep. Once
-  mathspec substitutes every named expression, the limit is 300 levels.
+- A quoted label is the text between its quotes. In a label, `\t`, `\n`,
+  `\f` and `\r` are the whitespace character, and any other backslash is
+  itself.
+- An expression and a `where:` string nest at most 100 levels deep, and
+  parentheses nest at most 100 deep. Once mathspec substitutes every named
+  expression, the limit is 300 levels.
 
 ## Where a product of two variables is allowed
 
@@ -318,6 +322,14 @@ COLUMN     ::= NAME "[" NAME "]"
 COLUMNS    ::= NAME "[" NAME { "," NAME } "]"
 QUOTED     ::= "'" chars "'" | '"' chars '"'
 ```
+
+`AND`, `OR`, `NOT`, `True` and `False` are reserved in a `where:` string, in
+any case. mathspec refuses a `where:` string that uses one as a name, so an
+entry named `and` or `true` cannot be read in a condition.
+
+A quoted label in a `where:` string follows the rule of an expression's
+label, with one addition. A backslash before any other character is that
+character, so `'it\'s'` is the label `it's`.
 
 A name written alone is a bare name, and what it tests depends on the kind of
 its entry.
